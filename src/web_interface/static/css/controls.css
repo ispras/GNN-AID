@@ -1,0 +1,98 @@
+.control-block {
+    margin-bottom: 1px;
+    padding: 3px;
+    user-select: none;
+    text-align: left;
+    display: flex;
+}
+
+.control-block input[type="text"],
+.control-block input[type="number"],
+.control-block input[type="range"],
+.control-block select {
+    flex: 1;
+    box-sizing: border-box;
+    width: 100%;
+    /*border: none;*/
+    border-bottom: 1px solid #808080;
+    font-size: 13pt;
+    margin-left: 10px;
+    /*padding-top: 5px;*/
+    /*padding-bottom: 5px;*/
+    background: #fff;
+}
+
+.control-block input[type="number"].half {
+    width: 48%;
+}
+
+.control-block input[type="text"]:focus,
+.control-block input[type="range"],
+.control-block input[type="number"]:focus,
+.control-block select:focus {
+    outline: none;
+    border: 2px solid #90caf9;
+    border-bottom: 1px solid #90caf9;
+}
+
+.control-block input[type="text"]:hover,
+.control-block input[type="range"],
+.control-block input[type="number"]:hover,
+.control-block select:hover {
+    outline: none;
+    border: 2px solid #90caf9;
+    border-bottom: 1px solid #90caf9;
+}
+
+.control-block input[type="submit"] {
+    background: none;
+    padding: 5px;
+}
+
+.control-block input[type="submit"]:enabled:focus {
+    border: 2px solid #90caf9;
+}
+
+.control-block input[type="submit"]:enabled:hover {
+    border: 2px solid #90caf9;
+    color: #90caf9;
+    cursor: pointer;
+}
+
+.control-block button {
+    font-size: 18px;
+}
+
+.control-block hr {
+    margin-top: 0;
+}
+
+.controls-section {
+    /*border-top: 1px solid #000;*/
+    border-bottom: 2px solid;
+    padding: 4px;
+    font-size: 14pt;
+    display: flex;
+    align-items: center;
+}
+
+.controls-section .header {
+    padding: 5px;
+    font-weight: bold;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.controls-section h3,h4 {
+    margin: 0 0 5px 0;
+}
+
+.menu-separator {
+    border-bottom: 1px solid grey;
+    margin: 5px;
+}
+
+.disabledDiv {
+    pointer-events: none;
+    opacity: 0.4;
+}

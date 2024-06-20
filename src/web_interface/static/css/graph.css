@@ -1,0 +1,37 @@
+.graph-node-text {
+    fill: #000;
+    /*font-size: 12pt;*/
+    user-select: none;
+    pointer-events: none;
+}
+
+.graph-node {
+    /*stroke: #000;*/
+}
+
+.graph-node:hover {
+    stroke: #009688;
+    cursor: pointer;
+}
+
+.graph-node:hover + text,
+.graph-node:hover + text + text {
+    fill: #009688;
+}
+
+.graph-info-text {
+    fill: #000;
+    user-select: none;
+    pointer-events: none;
+    font-size: 10px;
+}
+
+.graph-node-active, .tree-node-active:hover {
+    stroke: #2196f3;
+    cursor: default;
+}
+
+.graph-node-active + text,
+.graph-node-active + text + text {
+    fill: #2196f3;
+}

@@ -1,0 +1,163 @@
+body {
+    margin: 1px;
+}
+
+.visualizer * {
+    font-family: Ubuntu;
+    /*font-size: 18px;*/
+}
+
+.visualizer {
+    border: 1px solid #000;
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 2px);
+    background: #fff;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.controls-zone {
+    border: 1px solid #000;
+    display: table-cell;
+    width: 320px;
+    min-width: 320px;
+    vertical-align: top;
+}
+
+/*.centered {*/
+/*    text-align: center !important;*/
+/*}*/
+
+/*.font-less {*/
+/*    font-size: 0.8em;*/
+/*}*/
+
+/*.no-margin {*/
+/*    margin: 0 !important;*/
+/*}*/
+
+/*.no-border {*/
+/*    border: none !important;*/
+/*}*/
+
+/*.no-h-padding {*/
+/*    padding-left: 0 !important;*/
+/*    padding-right: 0 !important;*/
+/*}*/
+
+.v-scrollable {
+    font-size: 18pt;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+    border-top: 1px solid #000;
+}
+
+/* Style the tab */
+.tab {
+    overflow: hidden;
+    /*border: 1px solid #ccc;*/
+    background-color: #f1f1f1;
+    display: flex;
+}
+
+/* Style the buttons inside the tab */
+.tab button.tablinks {
+    flex: 1;
+    background-color: inherit;
+    float: left;
+    border: 1px solid #f1f1f1;
+    outline: none;
+    cursor: pointer;
+    padding: 5px;
+    transition: 0.3s;
+    font-size: 17px;
+}
+
+.tab .load-update {
+    flex: 0;
+    display: flex;
+}
+
+/* Change background color of buttons on hover */
+.tab button.tablinks:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.tablinks.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    /*padding: 6px 12px;*/
+    /*border: 1px solid #ccc;*/
+    /*border-top: none;*/
+}
+
+.progress-bar {
+    border-radius: 10px;
+    background-color: #ddd;
+    position: relative;
+}
+.progress-bar > div {
+    width: 0;
+    height: 22px;
+    border-radius: 10px;
+    background-color: #09e;
+}
+.progress-bar > label {
+    position: absolute;
+    /*top: 50%;*/
+    /*left: 50%;*/
+    /*transform: translate(-50%, -50%);*/
+    width: 100%;
+    text-align: center;
+}
+
+/* Tooltips */
+/*.tooltip .tooltiptext {*/
+/*  visibility: hidden;*/
+/*  width: 120px;*/
+/*  background-color: #555;*/
+/*  color: #fff;*/
+/*  text-align: center;*/
+/*  border-radius: 6px;*/
+/*  padding: 5px 0;*/
+/*  position: absolute;*/
+/*  z-index: 1;*/
+/*  !*bottom: 125%;*!*/
+/*  !*left: 50%;*!*/
+/*  !*margin-left: -60px;*!*/
+/*  opacity: 0;*/
+/*  transition: opacity 0.3s;*/
+/*}*/
+
+/*.tooltip:hover .tooltiptext {*/
+/*  visibility: visible;*/
+/*  opacity: 1;*/
+/*}*/
+
+.tooltip-text {
+    position: absolute;
+    display: none;
+    background-color: white;
+    opacity: 0.8;
+    padding: 3px;
+    margin-left: -10px;
+    pointer-events: none;
+}
+/*.tooltip-text:hover {*/
+/*    background-color: yellow;*/
+/*    transition: all 3s 3s ease;*/
+/*}*/
+
+table {
+    border-collapse: collapse;
+}
+
+table th,td {
+    padding: 2px 2px 2px 3px;
+}

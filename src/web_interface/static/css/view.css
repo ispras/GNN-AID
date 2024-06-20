@@ -1,0 +1,129 @@
+.view-cell {
+    /*display: table-cell;*/
+    display: flex;
+    /*display: grid;*/
+    /*grid-template-columns: 2fr 1fr;*/
+    /*grid-template-rows: 1fr;*/
+    height: calc(100vh - 4px);
+}
+
+.panels-zone {
+    display: flex;
+    min-width: 300px;
+    width: 100%;
+    flex-direction: column;
+}
+
+.dragger {
+    min-width: 4px;
+}
+.left-draggable {
+    display: flex;
+    width: 600px;
+}
+.left-draggable > .dragger {
+    content: '';
+    background-color: #ccc;
+    /*border: 1px grey solid;*/
+    position: relative;
+    /*left: -1px;*/
+    width: 2px;
+    height: 100%;
+    cursor: ew-resize;
+}
+.left-draggable > .dragger :hover {
+    background-color: #888;
+}
+
+.dataset-zone {
+    flex: 2;
+    background: #e7e7e7;
+    position: relative;
+    min-width: 500px;
+    height: 100%;
+}
+
+.info-panel {
+    flex: 1;
+    min-height: 20px;
+    padding: 5px;
+    display: flex;
+    flex-flow: column;
+    overflow-y: scroll;
+}
+
+.info-panel-body {
+    flex: 1;
+    overflow-y: scroll;
+    display: flex;
+    flex-flow: column;
+}
+
+.info-panel-header {
+    border: 1px #898989 solid;
+    margin-bottom: 1px;
+    padding-left: 3px;
+    font-size: 18px;
+    /*background: #e7e7e7;*/
+}
+.info-panel-header:hover {
+    border: 1px #90caf9 solid;
+}
+
+.explanation-table {
+    display: grid;
+    width: 300px;
+}
+.explanation-table table {
+    /*margin: 4px;*/
+    user-select: text;
+    pointer-events: all;
+}
+.explanation-table table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+.explanation-table tr {
+    background-color: #efefef;
+}
+/*.explanation-table tr:nth-child(even) {*/
+/*    background-color: #eeeeee;*/
+/*}*/
+.explanation-table td {
+    padding: 4px;
+}
+
+/*.explanation-table > label {*/
+/*    margin: 0 0 12px 0;*/
+/*}*/
+
+.view-attack {
+    flex: 1;
+    background: #fffad9;
+}
+
+.dataset-zone > svg {
+    width: 100%;
+    height: calc(100% - 4px);
+}
+
+
+div.notAllowed {
+    cursor: not-allowed;
+}
+div.wait {
+    cursor: wait;
+}
+div.disabled {
+    opacity: 0.6;
+}
+div.disabled *:focus {
+    outline: 0;
+}
+div.disabled * {
+    pointer-events: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
