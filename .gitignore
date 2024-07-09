@@ -46,3 +46,7 @@ data__DatasetsTest_tmp/
 
 # Mac OS extentions
 *.DS_Store
+
+# Sphinx documentation
+docs/_build/
+
