@@ -44,12 +44,13 @@ class SocketConnect:
 
     # max_packet_size = 1024**2  # 1MB limit by default
 
-    def __init__(self, socket=None):
+    def __init__(self, socket=None, sid=None):
         if socket is None:
             from flask_socketio import SocketIO
             self.socket = SocketIO(message_queue='redis://')
         else:
             self.socket = socket
+        self.sid = sid
         self.queue = deque()  # general queue
         self.tag_queue = {}  # {tag -> Queue}
         self.obj_id = 0  # Messages ids counter
@@ -92,7 +93,7 @@ class SocketConnect:
         if data is None:
             return
 
-        self.socket.send(data)
+        self.socket.send(data, to=self.sid)
         size = len(json_dumps(data))
         if size > 25e6:
             raise RuntimeError(f"Too big package size: {size} bytes")

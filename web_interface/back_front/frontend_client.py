@@ -19,8 +19,9 @@ class FrontendClient:
 
     """
 
-    def __init__(self, socketio: SocketConnect):
-        self.socket = SocketConnect(socket=socketio)
+    def __init__(self, socketio, sid):
+        self.sid = sid  # socket ID
+        self.socket = SocketConnect(socket=socketio, sid=sid)
 
         # TODO this should be updated regularly or by some event
         self.storage_index = {  # type -> PrefixStorage
@@ -67,6 +68,7 @@ class FrontendClient:
 
     def drop(self):
         """ Drop all current data """
+        # TODO FIXME stop any running processes
         self.diagram.drop()
         # self.storage_index = {'D': None, 'DV': None, 'M': None, 'CM': None, 'E': None}
         self.parameters = {'F': None, 'FW': None, 'M': None, 'EI': None, 'ER': None, 'O': None}

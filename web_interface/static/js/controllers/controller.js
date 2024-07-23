@@ -1,10 +1,23 @@
 class Controller {
+    static sessionId // ID of session
+
     constructor() {
         this.presenter = new Presenter()
 
         // Setup socket connection
         this.socket = io()
         this.socket.on('connect', () => console.log('socket connected'))
+        this.socket.on('session_id', (data) => {
+            Controller.sessionId = data.session_id
+            console.log('session_id', Controller.sessionId)
+            this.run()
+        })
+        this.socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            // document.getElementById('connection-status').textContent = 'Disconnected';
+            // clearInterval(1000);
+        });
+
         this.socket.on('message', async (data) => {
             // Message to block listeners
             let msg = JSON_parse(data["msg"])
@@ -72,6 +85,10 @@ class Controller {
 
     static async ajaxRequest(url, data) {
         let result = null
+        console.assert(!('sessionId' in data))
+        data['sessionId'] = Controller.sessionId
+        console.log('ajaxRequest')
+        console.log(data)
         await $.ajax({
             type: 'POST',
             url: url,

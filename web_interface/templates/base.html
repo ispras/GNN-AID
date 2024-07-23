@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+
+  <link rel="shortcut icon" href="static/icons/logo.png">
+  <link rel="stylesheet" type="text/css" href="static/css/datatables.css">
+  <link rel="stylesheet" type="text/css" href="static/css/styles.css">
+  <link rel="stylesheet" type="text/css" href="static/css/controls.css">
+  <link rel="stylesheet" type="text/css" href="static/css/view.css">
+  <link rel="stylesheet" type="text/css" href="static/css/graph.css">
+
+</head>
+<body>
+  <div class="visualizer">
+    <div class="controls-zone">
+      <div class="controls-section" style="display: flex">
+        <button onclick="requestFullScreen(document.body)" style="margin-right: 8px" title="Go fullscreen">
+          <img src="../static/icons/fullscreen.svg" alt="Full" height="18px" style="align-self: center;"/>
+        </button>
+        <label for="menu-mode"><b>New session</b></label>
+        <select id="menu-mode" style="margin: 4px; font-size: 16pt;">
+          <option value="analysis">Analysis</option>
+          <option value="interpretation">Interpretation</option>
+          <option value="defense">Defense</option>
+        </select>
+      </div>
+
+      <div class="v-scrollable" id="menu-left">
+<!----------        DATASET        --------------->
+        <details class="controls-section" id="menu-dataset" open>
+          <summary class="header">Dataset</summary>
+          <div id="menu-dataset-view">
+            <!-- generated stuff -->
+          </div>
+          <div id="menu-dataset-var-view">
+            <!-- generated stuff -->
+          </div>
+        </details>
+
+<!----------        MODEL        --------------->
+        <details class="controls-section" id="menu-model" open>
+          <summary class="header">Model</summary>
+          <div id="menu-model-view">
+            <!-- generated stuff -->
+          </div>
+          <div id="menu-model-manager-view">
+            <!-- generated stuff -->
+          </div>
+          <div id="menu-model-trainer-view">
+            <!-- generated stuff -->
+          </div>
+        </details>
+
+        {% block content %}{% endblock %}
+
+{#<!----------        EXPLAINER        --------------->#}
+{#        <details class="controls-section mode explainer" id="menu-explainer" open>#}
+{#          <summary class="header">Explainer</summary>#}
+{#          <div id="menu-explainer-view">#}
+{#            <!-- generated stuff -->#}
+{#          </div>#}
+{#          <div id="menu-explainer-run-view">#}
+{#            <!-- generated stuff -->#}
+{#          </div>#}
+{#        </details>#}
+
+<!----------        ATTACK        --------------->
+<!--        <details class="controls-section mode attack" id="menu-attack" open>-->
+<!--          <summary class="header">Attack</summary>-->
+<!--          <div id="menu-attack-view">-->
+<!--            &lt;!&ndash; generated stuff &ndash;&gt;-->
+<!--          </div>-->
+<!--        </details>-->
+
+<!----------        VISUALS        --------------->
+        <details class="controls-section" id="menu-visuals" open>
+          <summary class="header">Visualization</summary>
+          <div id="menu-visuals-view">
+            <!-- generated stuff -->
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+<!----------------------------------------------->
+<!----------        PANELS        --------------->
+<!----------------------------------------------->
+
+      <div class="dataset-zone" id="dataset-graph-view">
+      </div>
+
+      <div class="left-draggable">
+        <div class="dragger"></div>
+        <div class="panels-zone">
+          <div class="info-panel" id="panel-dataset-view">
+            Dataset info panel
+            <!-- generated stuff -->
+          </div>
+
+          <div class="info-panel mode interactive model explainer" id="panel-model-view">
+            Model panel
+            <!-- generated stuff -->
+          </div>
+
+          <div class="info-panel mode explainer" id="panel-explanation-view">
+            Explainer panel
+            <!-- generated stuff -->
+          </div>
+          <!-- FIXME Kirill front attack -->
+<!--          <div class="info-panel mode attack" id="panel-attack-view" style="display: none">-->
+<!--            Attack panel-->
+<!--            &lt;!&ndash; generated stuff &ndash;&gt;-->
+<!--          </div>-->
+        </div>
+    </div>
+    <span id="main-tooltip" class="tooltip-text" style="position: fixed; display: none;">
+    </span>
+  </div>
+
+  <script src="static/js/libs/socket.io-4.0.1.js"></script>
+  <script src="static/js/libs/jquery-3.6.0.js"></script>
+  <script src="static/js/libs/chart-3.7.1.min.js"></script>
+  <script src="static/js/libs/datatables-1.13.2.min.js"></script>
+  <script src="static/js/libs/js-colormaps.js"></script>
+
+  <script src="static/js/utils.js"></script>
+  <script src="static/js/prefixStorage.js"></script>
+  <script src="static/js/dataset.js"></script>
+  <script src="static/js/explanation.js"></script>
+  <script src="static/js/paramsBuilder.js"></script>
+
+  <script src="static/js/controllers/controller.js"></script>
+
+  <script src="static/js/presentation/presenter.js"></script>
+  <script src="static/js/presentation/left_menu/visualsView.js"></script>
+  <script src="static/js/presentation/left_menu/menuView.js"></script>
+  <script src="static/js/presentation/left_menu/tabView.js"></script>
+  <script src="static/js/presentation/left_menu/progressBar.js"></script>
+  <script src="static/js/presentation/left_menu/dataset/menuDatasetView.js"></script>
+  <script src="static/js/presentation/left_menu/dataset/menuDatasetVarView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelLoadView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelConstructorView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelCustomView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelManagerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuModelTrainerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/builder/layer.js"></script>
+  <script src="static/js/presentation/left_menu/model/builder/sequential.js"></script>
+  <script src="static/js/presentation/left_menu/model/builder/connections.js"></script>
+  <script src="static/js/presentation/left_menu/explain/menuExplainerView.js"></script>
+  <script src="static/js/presentation/left_menu/explain/menuExplainerLoadView.js"></script>
+  <script src="static/js/presentation/left_menu/explain/menuExplainerInitView.js"></script>
+  <script src="static/js/presentation/left_menu/explain/menuExplainerRunView.js"></script>
+
+  <script src="static/js/presentation/dataset_vis/datasetView.js"></script>
+  <script src="static/js/presentation/dataset/svg/element.js"></script>
+  <script src="static/js/presentation/dataset/svg/satellite.js"></script>
+  <script src="static/js/presentation/dataset/svg/node.js"></script>
+  <script src="static/js/presentation/dataset/svg/edge.js"></script>
+  <script src="static/js/presentation/dataset/svg/graph.js"></script>
+  <script src="static/js/presentation/dataset/svg/svgPanel.js"></script>
+  <script src="static/js/presentation/dataset/visibleGraph.js"></script>
+  <script src="static/js/presentation/dataset/layout/layout.js"></script>
+  <script src="static/js/presentation/dataset/layout/radialNeighborhoodLayout.js"></script>
+  <script src="static/js/presentation/dataset/layout/forceNeighborhoodLayout.js"></script>
+  <script src="static/js/presentation/dataset/layout/forceLayout.js"></script>
+  <script src="static/js/presentation/dataset/neighborhood.js"></script>
+  <script src="static/js/presentation/dataset/graph.js"></script>
+  <script src="static/js/presentation/dataset/multipleGraphs.js"></script>
+  <script src="static/js/presentation/dataset/explanationGraphs.js"></script>
+  <script src="static/js/presentation/dataset/arrange.js"></script>
+
+  <script src="static/js/presentation/right_panel/panelView.js"></script>
+  <script src="static/js/presentation/right_panel/panelDatasetView.js"></script>
+  <script src="static/js/presentation/right_panel/model/panelModelView.js"></script>
+  <script src="static/js/presentation/right_panel/model/panelModelConfigView.js"></script>
+  <script src="static/js/presentation/right_panel/model/panelModelStatView.js"></script>
+  <script src="static/js/presentation/right_panel/model/panelModelArchView.js"></script>
+  <script src="static/js/presentation/right_panel/panelExplanationView.js"></script>
+<!--  <script src="static/js/presentation/right_panel/panelDatasetView.js"></script>-->
+
+  <script>
+    function switchTab(event, group, id) {
+      $(`.${group}.tabcontent`).hide()
+      $(`.${group}.tablinks`).removeClass("active")
+      document.getElementById(id).style.display = "inherit"
+      event.currentTarget.className += " active"
+    }
+
+    let $leftDraggable = $(".left-draggable")
+    let m_pos
+    function resize(e){
+      const dx = m_pos - e.x
+      m_pos = e.x
+      $leftDraggable.css("width", (parseInt(getComputedStyle($leftDraggable[0], '').width) + dx) + "px")
+    }
+    $leftDraggable.mousedown((e) => {
+      if (e.offsetX < 40) {
+        m_pos = e.x
+        document.addEventListener("mousemove", resize, false)
+      }
+    })
+    $(document).mouseup((e) => {
+      document.removeEventListener("mousemove", resize, false)
+    })
+
+    function requestFullScreen(element) {
+      // Supports most browsers and their versions.
+      let requestMethod = element.requestFullScreen || element.webkitRequestFullScreen
+        || element.mozRequestFullScreen || element.msRequestFullScreen
+
+      if (requestMethod) { // Native full screen.
+          requestMethod.call(element)
+      } else if (typeof window.ActiveXObject !== "undefined") { // Older IE.
+          let wscript = new ActiveXObject("WScript.Shell")
+          if (wscript !== null)
+              wscript.SendKeys("{F11}")
+      }
+    }
+
+    $("#menu-mode").change(() => {
+        window.open($("#menu-mode").val(), '_blank')
+    })
+
+    let controller = new Controller()
+    {#controller.run()#}
+  </script>
+</body>
+</html>

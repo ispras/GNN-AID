@@ -2,7 +2,7 @@ from web_interface.back_front.block import WrapperBlock
 
 
 class Diagram:
-    """Diagram of fontend states and transitions between them.
+    """Diagram of frontend states and transitions between them.
     """
 
     def __init__(self):
