@@ -7,6 +7,7 @@
 
   <link rel="shortcut icon" href="static/icons/logo.png">
   <link rel="stylesheet" type="text/css" href="static/css/datatables.css">
+  <link rel="stylesheet" type="text/css" href="static/css/dropdown-menu.css">
   <link rel="stylesheet" type="text/css" href="static/css/styles.css">
   <link rel="stylesheet" type="text/css" href="static/css/controls.css">
   <link rel="stylesheet" type="text/css" href="static/css/view.css">
@@ -16,16 +17,38 @@
 <body>
   <div class="visualizer">
     <div class="controls-zone">
-      <div class="controls-section" style="display: flex">
-        <button onclick="requestFullScreen(document.body)" style="margin-right: 8px" title="Go fullscreen">
-          <img src="../static/icons/fullscreen.svg" alt="Full" height="18px" style="align-self: center;"/>
+      <div class="controls-section" style="display: flex; padding: 4px">
+        <!-- Dropdown menu -->
+        <button class="dropdown-menu-button" onclick="$('#dropdown-menu-main').toggle()">
+          <svg viewBox="0 0 100 80" width="40" height="40">
+              <rect width="100" height="20"></rect>
+              <rect y="30" width="100" height="20"></rect>
+              <rect y="60" width="100" height="20"></rect>
+          </svg>
         </button>
-        <label for="menu-mode"><b>New session</b></label>
-        <select id="menu-mode" style="margin: 4px; font-size: 16pt;">
-          <option value="analysis">Analysis</option>
-          <option value="interpretation">Interpretation</option>
-          <option value="defense">Defense</option>
-        </select>
+        <div id="dropdown-menu-main" class="dropdown-menu" style="top: 50px">
+          <div class="dropdownmenuitem has-submenu">New instance
+            <div class="dropdown-submenu" id="dropdown-menu-newinstance" style="min-width: 180px">
+              <div class="dropdownmenuitem" onclick="newInstance('analysis')"><b>A</b>nalysis</div>
+              <div class="dropdownmenuitem" onclick="newInstance('interpretation')"><b>I</b>nterpretation</div>
+              <div class="dropdownmenuitem" onclick="newInstance('defense')">Attack/<b>D</b>efense</div>
+            </div>
+          </div>
+          <div class="dropdownmenuitem" onclick="requestFullScreen(document.body)">Go fullscreen</div>
+<!--          <div class="dropdownmenuitem" onclick="stopCurrent()">Stop current</div>-->
+          <div class="dropdownmenuitem" onclick="closeCurrent()">Close current</div>
+<!--          <div class="dropdownmenuitem" onclick="stopAll()">Stop all</div>-->
+        </div>
+
+<!--        &lt;!&ndash; Fullscreen button &ndash;&gt;-->
+<!--        <button onclick="requestFullScreen(document.body)" style="margin-right: 8px" title="Go fullscreen">-->
+<!--          <img src="../static/icons/fullscreen.svg" alt="Full" height="20px" style="align-self: center;"/>-->
+<!--        </button>-->
+
+        <!-- Status label -->
+        <label style="margin-left: 10px; font-size: 16pt;">
+          <b>{% block status %}{% endblock %}</b>
+        </label>
       </div>
 
       <div class="v-scrollable" id="menu-left">
@@ -54,26 +77,7 @@
           </div>
         </details>
 
-        {% block content %}{% endblock %}
-
-{#<!----------        EXPLAINER        --------------->#}
-{#        <details class="controls-section mode explainer" id="menu-explainer" open>#}
-{#          <summary class="header">Explainer</summary>#}
-{#          <div id="menu-explainer-view">#}
-{#            <!-- generated stuff -->#}
-{#          </div>#}
-{#          <div id="menu-explainer-run-view">#}
-{#            <!-- generated stuff -->#}
-{#          </div>#}
-{#        </details>#}
-
-<!----------        ATTACK        --------------->
-<!--        <details class="controls-section mode attack" id="menu-attack" open>-->
-<!--          <summary class="header">Attack</summary>-->
-<!--          <div id="menu-attack-view">-->
-<!--            &lt;!&ndash; generated stuff &ndash;&gt;-->
-<!--          </div>-->
-<!--        </details>-->
+        {% block menu_content %}{% endblock %}
 
 <!----------        VISUALS        --------------->
         <details class="controls-section" id="menu-visuals" open>
@@ -106,15 +110,8 @@
             <!-- generated stuff -->
           </div>
 
-          <div class="info-panel mode explainer" id="panel-explanation-view">
-            Explainer panel
-            <!-- generated stuff -->
-          </div>
-          <!-- FIXME Kirill front attack -->
-<!--          <div class="info-panel mode attack" id="panel-attack-view" style="display: none">-->
-<!--            Attack panel-->
-<!--            &lt;!&ndash; generated stuff &ndash;&gt;-->
-<!--          </div>-->
+          {% block panel_content %}{% endblock %}
+
         </div>
     </div>
     <span id="main-tooltip" class="tooltip-text" style="position: fixed; display: none;">
@@ -222,12 +219,71 @@
       }
     }
 
-    $("#menu-mode").change(() => {
-        window.open($("#menu-mode").val(), '_blank')
+    function newInstance(url) {
+        window.open(url, '_blank')
+    }
+
+    function closeCurrent() {
+        console.log('closeCurrent')
+        window.close()
+    }
+
+    function stopAll() {
+        console.log('stopAll')
+    }
+
+    // Dropdown menu handling
+    // When mouse is over a menu item, all the others hide
+    $(".dropdownmenuitem").mouseover(function () {
+        $(".dropdown-submenu").hide()
     })
 
+    // Any menu item with a submenu should show it when mouse is over
+    $(".has-submenu").mouseover(function () {
+        $(this).children(".dropdown-submenu").show()
+    })
+
+    // Hide menus when clicking anywhere outside
+    document.addEventListener('click', () => {
+        $(".dropdown-menu").hide()
+        $(".dropdown-submenu").hide()
+    })
+
+    // Prevent menu from closing when clicking inside it or button
+    $(".dropdown-menu-button").click(function(event) {
+        event.stopPropagation()
+    })
+    $(".dropdown-menu .has-submenu").click(function(event) {
+        event.stopPropagation()
+    })
+
+    // Throw alert when user tries to reload the page
+    window.addEventListener('beforeunload', function (e) {
+        if (Controller.isActive) {
+            e.preventDefault()
+            // Chrome requires returnValue to be set
+            e.returnValue = ''
+
+            // Custom message (note: modern browsers don't show this message for security reasons)
+            return 'Are you sure you want to leave this page? Unsaved progress will be lost.'
+        }
+    })
+    // This will run when the user actually leaves the page
+    window.addEventListener('unload', function () {
+        console.log('User has left the page')
+        // if (Controller.isActive) {
+            navigator.sendBeacon("/drop", JSON.stringify({sessionId: Controller.sessionId}))
+        // }
+
+        // // You could also send an AJAX request to log this event on your server
+        // // Note: This must be a synchronous request due to the nature of the unload event
+        // var xhr = new XMLHttpRequest();
+        // xhr.open('POST', '/log-exit', false);
+        // xhr.send('User left the page');
+    })
+
+    // Create client controller
     let controller = new Controller()
-    {#controller.run()#}
   </script>
 </body>
 </html>

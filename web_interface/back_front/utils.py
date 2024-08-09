@@ -39,7 +39,7 @@ class Queue(deque):
 
 
 class SocketConnect:
-    """ Sends messages to JS socket from python process
+    """ Sends messages to JS socket from a python process
     """
 
     # max_packet_size = 1024**2  # 1MB limit by default

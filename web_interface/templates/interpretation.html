@@ -4,9 +4,12 @@
     GNN-AID - Interpretation
 {% endblock %}
 
+{% block status %}
+    Interpretation
+{% endblock %}
 
-{% block content %}
-    <h1>Interpretation page</h1>
+
+{% block menu_content %}
 <!----------        EXPLAINER        --------------->
     <details class="controls-section mode explainer" id="menu-explainer" open>
       <summary class="header">Explainer</summary>
@@ -17,4 +20,12 @@
         <!-- generated stuff -->
       </div>
     </details>
+{% endblock %}
+
+{% block panel_content %}
+    <div class="info-panel mode explainer" id="panel-explanation-view">
+        Explainer panel
+        <!-- generated stuff -->
+        </div>
+
 {% endblock %}

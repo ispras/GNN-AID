@@ -11,18 +11,11 @@ class ParamsBuilder {
         if (type in ParamsBuilder.cachedParams)
             return ParamsBuilder.cachedParams[type]
 
-        let params = null
-        await $.ajax({
-            type: 'POST',
-            url: '/ask',
-            data: {
+        let params = await Controller.ajaxRequest('/ask', {
                 ask: "parameters",
                 type: type,
-            },
-            success: (parameters) => {
-                params = ParamsBuilder.cachedParams[type] = JSON_parse(parameters)
-            }
-        })
+            })
+        ParamsBuilder.cachedParams[type] = params
         return params
     }
 

@@ -14,20 +14,40 @@ from web_interface.back_front.utils import WebInterfaceError, SocketConnect
 
 class FrontendClient:
     """
-    Keeps data currently loaded at frontend, s.t. dataset, model, explainer to avoid loading them at
-    each call.
-
+    Frontend client.
+    Keeps data currently loaded at frontend for the client: dataset, model, explainer.
     """
 
-    def __init__(self, socketio, sid):
-        self.sid = sid  # socket ID
-        self.socket = SocketConnect(socket=socketio, sid=sid)
+    # Global values.
+    # TODO this should be updated regularly or by some event
+    storage_index = {  # type -> PrefixStorage
+        'D': None, 'DV': None, 'M': None, 'CM': None, 'E': None}
+    parameters = {  # type -> Parameters dict
+        'F': None, 'FW': None, 'M': None, 'EI': None, 'ER': None, 'O': None}
 
-        # TODO this should be updated regularly or by some event
-        self.storage_index = {  # type -> PrefixStorage
-            'D': None, 'DV': None, 'M': None, 'CM': None, 'E': None}
-        self.parameters = {  # type -> Parameters dict
-            'F': None, 'FW': None, 'M': None, 'EI': None, 'ER': None, 'O': None}
+    @staticmethod
+    def get_parameters(type):
+        """
+        """
+        if type not in FrontendClient.parameters:
+            WebInterfaceError(f"Unknown 'ask' argument 'type'={type}")
+
+        with open({
+                      'F': FUNCTIONS_PARAMETERS_PATH,
+                      'FW': FRAMEWORK_PARAMETERS_PATH,
+                      'M': MODULES_PARAMETERS_PATH,
+                      'EI': EXPLAINERS_INIT_PARAMETERS_PATH,
+                      'ELR': EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                      'EGR': EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
+                      'O': OPTIMIZERS_PARAMETERS_PATH,
+                  }[type], 'r') as f:
+            FrontendClient.parameters[type] = json.load(f)
+
+        return FrontendClient.parameters[type]
+
+    def __init__(self, sid):
+        self.sid = sid  # socket ID
+        self.socket = SocketConnect(sid=sid)
 
         # Build the diagram
         self.diagram = Diagram()
@@ -66,31 +86,10 @@ class FrontendClient:
         self.erBlock = ExplainerRunBlock("er", socket=self.socket)
         self.diagram.add_dependency(self.eiBlock, self.erBlock)
 
-    def drop(self):
-        """ Drop all current data """
-        # TODO FIXME stop any running processes
-        self.diagram.drop()
-        # self.storage_index = {'D': None, 'DV': None, 'M': None, 'CM': None, 'E': None}
-        self.parameters = {'F': None, 'FW': None, 'M': None, 'EI': None, 'ER': None, 'O': None}
-
-    def get_parameters(self, type):
-        """
-        """
-        if type not in self.parameters:
-            WebInterfaceError(f"Unknown 'ask' argument 'type'={type}")
-
-        with open({
-                      'F': FUNCTIONS_PARAMETERS_PATH,
-                      'FW': FRAMEWORK_PARAMETERS_PATH,
-                      'M': MODULES_PARAMETERS_PATH,
-                      'EI': EXPLAINERS_INIT_PARAMETERS_PATH,
-                      'ELR': EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
-                      'EGR': EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
-                      'O': OPTIMIZERS_PARAMETERS_PATH,
-                  }[type], 'r') as f:
-            self.parameters[type] = json.load(f)
-
-        return self.parameters[type]
+    # def drop(self):
+    #     """ Drop all current data
+    #     """
+    #     self.diagram.drop()
 
     def request_block(self, block, func, params: dict = None):
         """

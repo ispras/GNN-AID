@@ -1,21 +1,30 @@
 class Controller {
     static sessionId // ID of session
+    static isActive = false // this controller was started
 
     constructor() {
         this.presenter = new Presenter()
 
         // Setup socket connection
         this.socket = io()
-        this.socket.on('connect', () => console.log('socket connected'))
+        this.socket.on('connect', () => {
+            console.log('socket connected')
+            if (Controller.isActive) {
+                // Means re-connection to server. Need to reload the page
+                alert("This session is outdated. Press OK to reload the page.")
+                Controller.isActive = false
+                window.location.reload(true)
+            }
+        })
         this.socket.on('session_id', (data) => {
-            Controller.sessionId = data.session_id
+            Controller.sessionId = data["session_id"]
+            Controller.isActive = true
             console.log('session_id', Controller.sessionId)
             this.run()
         })
         this.socket.on('disconnect', () => {
+            // Controller.isActive = false
             console.log('Disconnected from server');
-            // document.getElementById('connection-status').textContent = 'Disconnected';
-            // clearInterval(1000);
         });
 
         this.socket.on('message', async (data) => {
@@ -87,16 +96,12 @@ class Controller {
         let result = null
         console.assert(!('sessionId' in data))
         data['sessionId'] = Controller.sessionId
-        console.log('ajaxRequest')
-        console.log(data)
+        // console.log('ajaxRequest', data)
         await $.ajax({
             type: 'POST',
             url: url,
             data: data,
             success: (res, status, jqXHR) => {
-                // console.log('Result: ' + res)
-                // console.log('status: ' + status)
-                // console.log('jqXHR: ' + jqXHR)
                 result = res
             }
         })

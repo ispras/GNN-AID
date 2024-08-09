@@ -190,8 +190,8 @@ class ModelManagerBlock(Block):
         assert self.gnn is not None
 
         # Import correct class
-        from web_interface.main import FRONTEND_CLIENT
-        if self.klass in FRONTEND_CLIENT.get_parameters("FW"):
+        from web_interface.main_multi import FrontendClient
+        if self.klass in FrontendClient.get_parameters("FW"):
             mm_class = import_by_name(self.klass, ["models_builder.gnn_models"])
 
         else:  # Custom MM
