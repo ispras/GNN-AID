@@ -19,7 +19,7 @@ app.config['SECRET_KEY'] = '57916211bb0b13ce0c676dfde280ba245'
 socketio = SocketIO(app, async_mode='threading', message_queue='redis://', cors_allowed_origins="*")
 
 # Store active sessions
-active_sessions = {}  # {session Id -> process, conn}
+active_sessions = {}  # {session Id -> sid, process, conn}
 
 
 def worker_process(process_id, conn, sid):
@@ -169,8 +169,19 @@ def handle_connect():
     # Start the worker process
     process = multiprocessing.Process(target=worker_process,
                                       args=(session_id, child_conn, request.sid))
-    active_sessions[session_id] = process, parent_conn
+    active_sessions[session_id] = request.sid, process, parent_conn
     process.start()
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('handle_disconnect from some websocket')
+
+    for session_id, (sid, process, parent_conn) in active_sessions.items():
+        if sid == request.sid:
+            # print(f"Disconnected: {session_id}")
+            stop_session(session_id)
+            break
 
 
 @app.route('/')
@@ -199,29 +210,32 @@ def defense():
 def drop():
     if request.method == 'POST':
         session_id = json.loads(request.data)['sessionId']
-        if session_id not in active_sessions:
-            raise WebInterfaceError(f"Session {session_id} is not active")
-        process, conn = active_sessions[session_id]
-        print("drop", session_id)
+        if session_id in active_sessions:
+            # raise WebInterfaceError(f"Session {session_id} is not active")
+            stop_session(session_id)
+        return ''
 
-        # Stop corresponding process
-        try:
-            # Send stop command
-            conn.send({'type': "STOP"})
-        except Exception as e:
-            print('exception:', e)
 
-        # Wait for the process to terminate
+def stop_session(session_id):
+    _, process, conn = active_sessions[session_id]
+
+    # Stop corresponding process
+    try:
+        # Send stop command
+        conn.send({'type': "STOP"})
+    except Exception as e:
+        print('exception:', e)
+
+    # Wait for the process to terminate
+    process.join(timeout=1)
+
+    # If the process is still alive, terminate it
+    if process.is_alive():
+        print(f"Forcefully terminating process {session_id}")
+        process.terminate()
         process.join(timeout=1)
 
-        # If the process is still alive, terminate it
-        if process.is_alive():
-            print(f"Forcefully terminating process {session_id}")
-            process.terminate()
-            process.join(timeout=1)
-
-        del active_sessions[session_id]
-        return ''
+    del active_sessions[session_id]
 
 
 @app.route("/ask", methods=['GET', 'POST'])
@@ -246,7 +260,7 @@ def block():
         session_id = request.form.get('sessionId')
         assert session_id in active_sessions
         print('block request from', session_id)
-        process, conn = active_sessions[session_id]
+        _, process, conn = active_sessions[session_id]
 
         conn.send({'type': 'block', 'args': request.form})
         return '{}'
@@ -257,7 +271,7 @@ def url(url):
     assert url in ['dataset', 'model', 'explainer']
     if request.method == 'POST':
         sid = request.form.get('sessionId')
-        process, conn = active_sessions[sid]
+        _, process, conn = active_sessions[sid]
         print(url, 'request from', sid)
 
         conn.send({'type': url, 'args': request.form})
