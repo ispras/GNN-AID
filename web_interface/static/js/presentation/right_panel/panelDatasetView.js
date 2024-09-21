@@ -47,80 +47,70 @@ class PanelDatasetView extends PanelView {
         $ddDiv.append($button)
         $button.click(async () => {
             $button.prop("disabled", true)
-            await $.ajax({
-                type: 'POST',
-                url: '/dataset',
+            let data = await Controller.ajaxRequest('/dataset', {get: "stat",stat: st})
+            // console.log(data)
+            $ddDiv.empty()
+            let scale = 'linear'
+            let type = 'bar'
+            if (Object.keys(data).length > 20) {
+                scale = 'logarithmic'
+                type = 'scatter'
+                delete data[0]
+            }
+            let $canvas = $("<canvas></canvas>").css("height", "300px")
+            $ddDiv.append($canvas)
+            const ctx = $canvas[0].getContext('2d')
+            new Chart(ctx, {
+                type: type,
                 data: {
-                    get: "stat",
-                    stat: st,
+                    datasets: [{
+                        label: lbl,
+                        data: data,
+                        backgroundColor: 'rgb(52, 132, 246, 0.6)',
+                        // borderColor: borderColor,
+                        borderWidth: 1,
+                        barPercentage: 1,
+                        categoryPercentage: 1,
+                        borderRadius: 0,
+                    }]
                 },
-                success: function (data) {
-                    data = JSON_parse(data)
-                    // console.log(data)
-                    $ddDiv.empty()
-                    let scale = 'linear'
-                    let type = 'bar'
-                    if (Object.keys(data).length > 20) {
-                        scale = 'logarithmic'
-                        type = 'scatter'
-                        delete data[0]
-                    }
-                    let $canvas = $("<canvas></canvas>").css("height", "300px")
-                    $ddDiv.append($canvas)
-                    const ctx = $canvas[0].getContext('2d')
-                    new Chart(ctx, {
-                        type: type,
-                        data: {
-                            datasets: [{
-                                label: lbl,
-                                data: data,
-                                backgroundColor: 'rgb(52, 132, 246, 0.6)',
-                                // borderColor: borderColor,
-                                borderWidth: 1,
-                                barPercentage: 1,
-                                categoryPercentage: 1,
-                                borderRadius: 0,
-                            }]
+                options: {
+                    // responsive: false,
+                    // maintainAspectRatio: true,
+                    // aspectRatio: 3,
+                    scales: {
+                        x: {
+                            type: scale,
+                            beginAtZero: false,
+                            // offset: false,
+                            // grid: {
+                            //     offset: false
+                            // },
+                            ticks: {stepSize: 1},
+                            title: {
+                                display: true,
+                                text: oX,
+                                font: {size: 14}
+                            }
                         },
-                        options: {
-                            // responsive: false,
-                            // maintainAspectRatio: true,
-                            // aspectRatio: 3,
-                            scales: {
-                                x: {
-                                    type: scale,
-                                    beginAtZero: false,
-                                    // offset: false,
-                                    // grid: {
-                                    //     offset: false
-                                    // },
-                                    ticks: {stepSize: 1},
-                                    title: {
-                                        display: true,
-                                        text: oX,
-                                        font: {size: 14}
-                                    }
-                                },
-                                y: {
-                                    type: scale,
-                                    suggestedMin: 1,
-                                    title: {
-                                        display: true,
-                                        text: oY,
-                                        font: {size: 14}
-                                    }
-                                }
-                            },
-                            plugins: {
-                                title: {
-                                    display: true,
-                                    text: name,
-                                    font: {size: 16}
-                                },
-                                legend: {display: false},
+                        y: {
+                            type: scale,
+                            suggestedMin: 1,
+                            title: {
+                                display: true,
+                                text: oY,
+                                font: {size: 14}
                             }
                         }
-                    })
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: name,
+                            font: {size: 16}
+                        },
+                        legend: {display: false},
+                    }
                 }
             })
         })
@@ -222,64 +212,54 @@ class PanelDatasetView extends PanelView {
             $acDiv.append($button1)
             $button1.click(async () => {
                 $button1.prop("disabled", true)
-                await $.ajax({
-                    type: 'POST',
-                    url: '/dataset',
-                    data: {
-                        get: "stat",
-                        stat: "attr_corr",
-                    },
-                    success: function (data) {
-                        data = JSON_parse(data)
-                        let attrs = data['attributes']
-                        let correlations = data['correlations']
-                        $acDiv.empty()
-                        $acDiv.append(name1 + ':<br>')
+                let data = Controller.ajaxRequest('/dataset', {get: "stat", stat: "attr_corr"})
 
-                        // Adds mouse listener for all elements which shows a tip with given text
-                        let $tip = $("<span></span>").addClass("tooltip-text")
-                        $acDiv.append($tip)
-                        let _addTip = (element, text) => {
-                            element.onmousemove = (e) => {
-                                $tip.show()
-                                $tip.css("left", e.pageX + 10)
-                                $tip.css("top", e.pageY + 15)
-                                $tip.html(text)
-                            }
-                            element.onmouseout = (e) => {
-                                $tip.hide()
-                            }
-                        }
+                let attrs = data['attributes']
+                let correlations = data['correlations']
+                $acDiv.empty()
+                $acDiv.append(name1 + ':<br>')
 
-                        // SVG with table
-                        let count = attrs.length
-                        let size = Math.min(30, Math.floor(300 / count))
-                        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                        let $svg = $(svg)
-                            .css("background-color", "#e7e7e7")
-                            // .css("flex-shrink", "0")
-                            .css("margin", "5px")
-                            .css("width", (count * size) + "px")
-                            .css("height", (count * size) + "px")
-                        $acDiv.append($svg)
-                        for (let j = 0; j < count; j++) {
-                            for (let i = 0; i < count; i++) {
-                                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
-                                rect.setAttribute('x', size * i)
-                                rect.setAttribute('y', size * j)
-                                rect.setAttribute('width', size)
-                                rect.setAttribute('height', size)
-                                let color = valueToColor(correlations[i][j], CORRELATION_COLORMAP, -1, 1)
-                                _addTip(rect, `Corr[${attrs[i]}][${attrs[j]}]=` + correlations[i][j])
-                                rect.setAttribute('fill', color)
-                                rect.setAttribute('stroke', '#e7e7e7')
-                                rect.setAttribute('stroke-width', 1)
-                                $svg.append(rect)
-                            }
-                        }
-
+                // Adds mouse listener for all elements which shows a tip with given text
+                let $tip = $("<span></span>").addClass("tooltip-text")
+                $acDiv.append($tip)
+                let _addTip = (element, text) => {
+                    element.onmousemove = (e) => {
+                        $tip.show()
+                        $tip.css("left", e.pageX + 10)
+                        $tip.css("top", e.pageY + 15)
+                        $tip.html(text)
                     }
-                })
+                    element.onmouseout = (e) => {
+                        $tip.hide()
+                    }
+                }
+
+                // SVG with table
+                let count = attrs.length
+                let size = Math.min(30, Math.floor(300 / count))
+                let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                let $svg = $(svg)
+                    .css("background-color", "#e7e7e7")
+                    // .css("flex-shrink", "0")
+                    .css("margin", "5px")
+                    .css("width", (count * size) + "px")
+                    .css("height", (count * size) + "px")
+                $acDiv.append($svg)
+                for (let j = 0; j < count; j++) {
+                    for (let i = 0; i < count; i++) {
+                        let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+                        rect.setAttribute('x', size * i)
+                        rect.setAttribute('y', size * j)
+                        rect.setAttribute('width', size)
+                        rect.setAttribute('height', size)
+                        let color = valueToColor(correlations[i][j], CORRELATION_COLORMAP, -1, 1)
+                        _addTip(rect, `Corr[${attrs[i]}][${attrs[j]}]=` + correlations[i][j])
+                        rect.setAttribute('fill', color)
+                        rect.setAttribute('stroke', '#e7e7e7')
+                        rect.setAttribute('stroke-width', 1)
+                        $svg.append(rect)
+                    }
+                }
             })
         }
     }

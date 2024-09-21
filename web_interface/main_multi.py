@@ -1,9 +1,7 @@
 import json
 import logging
 import multiprocessing
-import time
 from multiprocessing import Pipe
-from threading import Thread
 
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
@@ -30,12 +28,15 @@ def worker_process(process_id, conn, sid):
     client = FrontendClient(sid)
     # client.socket.socket.send('hello from subprocess')
 
-    def report(process_id):
-        while True:
-            print(f"Process {process_id} is working...")
-            time.sleep(1)
-
-    Thread(target=report, args=(process_id,)).start()
+    # import time
+    # from threading import Thread
+    # 
+    # def report(process_id):
+    #     while True:
+    #         print(f"Process {process_id} is working...")
+    #         time.sleep(1)
+    #
+    # Thread(target=report, args=(process_id,)).start()
 
     while True:
         command = conn.recv()  # This blocks until a command is received
