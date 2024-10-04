@@ -1,5 +1,4 @@
 import numpy as np
-import importlib
 import torch
 
 from attacks.attack_base import Attacker

@@ -344,7 +344,75 @@ def test_nettack_evasion():
     print(f"info_after_evasion_attack: {info_after_evasion_attack}")
 
 
+def test_pgd():
+    my_device = device('cpu')
+
+    # Load dataset
+    full_name = ("single-graph", "Planetoid", 'Cora')
+    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+        full_name=full_name,
+        dataset_ver_ind=0
+    )
+
+    # Train model on original dataset and remember the model metric and node predicted probability
+    gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_no_self_loops')
+
+    manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_class_name": "Adam",
+                "_config_kwargs": {},
+            }
+        }
+    )
+
+    gnn_model_manager = FrameworkGNNModelManager(
+        gnn=gcn_gcn,
+        dataset_path=results_dataset_path,
+        manager_config=manager_config,
+        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+    )
+
+    gnn_model_manager.gnn.to(my_device)
+
+    num_steps = 200
+    gnn_model_manager.train_model(gen_dataset=dataset,
+                                  steps=num_steps,
+                                  save_model_flag=False)
+
+    # Evaluate model before attack on it
+    acc_test_ba = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    # print(f"Before attack: Accuracy on train: {acc_train}. Accuracy on test: {acc_test}")
+
+    # Attack config
+    evasion_attack_config = ConfigPattern(
+        _class_name="PGD",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "perturb_ratio": 0.5,
+            "learning_rate": 0.01,
+            "num_iterations": 100,
+            "num_rand_trials": 100
+        }
+    )
+
+    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+    # Attack
+    acc_test_aa = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+
+    print(f"Before attack: Accuracy on test: {acc_test_ba}")
+    print(f"After PGD attack: Accuracy on test: {acc_test_aa}")
+
+
 if __name__ == '__main__':
-    #test_attack_defense()
-    torch.manual_seed(5000)
-    test_meta()
+    # test_attack_defense()
+    # test_nettack_evasion()
+    # torch.manual_seed(5000)
+    # test_meta()
+    test_pgd()
