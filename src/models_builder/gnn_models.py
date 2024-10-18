@@ -821,9 +821,13 @@ class FrameworkGNNModelManager(GNNModelManager):
         if self.evasion_defender:
             self.evasion_defender.pre_batch(model_manager=self, batch=batch)
         loss = None
+        if hasattr(batch, "edge_weight"):
+            weight = batch.edge_weight
+        else:
+            weight = None
         if task_type == "single-graph":
             self.optimizer.zero_grad()
-            logits = self.gnn(batch.x, batch.edge_index)
+            logits = self.gnn(batch.x, batch.edge_index, weight)
             loss = self.loss_function(logits, batch.y)
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
@@ -832,7 +836,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             # self.optimizer.step()
         elif task_type == "multiple-graphs":
             self.optimizer.zero_grad()
-            logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
             loss = self.loss_function(logits, batch.y)
             # loss.backward()
             # self.optimizer.step()
@@ -843,8 +847,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             pos_edge_index = edge_index[:, batch.y == 1]
             neg_edge_index = edge_index[:, batch.y == 0]
 
-            pos_out = self.gnn(batch.x, pos_edge_index)
-            neg_out = self.gnn(batch.x, neg_edge_index)
+            pos_out = self.gnn(batch.x, pos_edge_index, weight)
+            neg_out = self.gnn(batch.x, neg_edge_index, weight)
 
             pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
             neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))

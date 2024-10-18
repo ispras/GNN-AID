@@ -137,4 +137,22 @@ class NettackEvasionAttacker(EvasionAttacker):
                                         torch.tensor((edge[1], edge[0]), dtype=torch.int32).to(torch.int64).unsqueeze(1)), dim=1)
 
             gen_dataset.data.edge_index = edge_index
-    
+
+class NettackGroupEvasionAttacker(EvasionAttacker):
+    name = "NettackGroupEvasionAttacker"
+    def __init__(self,node_idxs, **kwargs):
+        super().__init__()
+        self.node_idxs = node_idxs # kwargs.get("node_idxs")
+        assert isinstance(self.node_idxs, list)
+        self.n_perturbations = kwargs.get("n_perturbations")
+        self.perturb_features = kwargs.get("perturb_features")
+        self.perturb_structure = kwargs.get("perturb_structure")
+        self.direct = kwargs.get("direct")
+        self.n_influencers = kwargs.get("n_influencers")
+        self.attacker = NettackEvasionAttacker(0, **kwargs)
+
+    def attack(self, model_manager, gen_dataset, mask_tensor):
+        for node_idx in self.node_idxs:
+            self.attacker.node_idx = node_idx
+            gen_dataset = self.attacker.attack(model_manager, gen_dataset, mask_tensor)
+        return gen_dataset

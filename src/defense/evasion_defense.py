@@ -92,7 +92,7 @@ class AdvTraining(EvasionDefender):
         if self.attack_config._class_name == "FGSM":
             self.attack_type = "EVASION"
             # get attack params
-            self.epsilon = self.attack_config._config_kwargs.epsilon
+            self.epsilon = self.attack_config._config_kwargs["epsilon"]
             # set attacker
             self.attacker = FGSMAttacker(self.epsilon)
         elif self.attack_config._class_name == "QAttack":

@@ -78,6 +78,7 @@ class QAttacker(EvasionAttacker):
         # Get labels from black-box
         labels = model.gnn.get_answer(dataset.x, dataset.edge_index)
         labeled_nodes = dict(enumerate(labels.tolist()))
+        # labeled_nodes = {n: labels.tolist()[n-1] for n in adj_list.keys()}  # FIXME check order for labels and node id consistency
 
         # Calculate modularity
         Q = self.modularity(adj_list, labeled_nodes)
@@ -204,6 +205,7 @@ class QAttacker(EvasionAttacker):
                         self.population[i][n]['del'] = np.random.choice(list(adj_list[n]), 1)
                     else:
                         selected_nodes = set(self.population[i].keys())
+                        #non_selected_nodes = non_isolated_nodes.difference(selected_nodes)
                         non_drain_nodes = non_drain_nodes.difference(selected_nodes)
                         new_node = np.random.choice(list(non_drain_nodes), size=1, replace=False)[0]
                         self.population[i].pop(n)

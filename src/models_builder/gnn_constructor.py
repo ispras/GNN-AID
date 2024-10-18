@@ -410,7 +410,7 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
         layer_emb_dict = {}
         save_emb_flag = self._save_emb_flag
 
-        x, edge_index, batch = self.arguments_read(*args, **kwargs)
+        x, edge_index, batch, edge_weight = self.arguments_read(*args, **kwargs)
         feat = x
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
@@ -539,16 +539,24 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
                 assert 'edge_index' in kwargs
                 x, edge_index = kwargs['x'], kwargs['edge_index'],
                 batch = kwargs.get('batch')
+                edge_weight = kwargs.get('edge_weight', None)
                 if batch is None:
                     batch = torch.zeros(kwargs['x'].shape[0], dtype=torch.int64, device=x.device)
             elif len(args) == 2:
                 x, edge_index = args[0], args[1]
                 batch = torch.zeros(args[0].shape[0], dtype=torch.int64, device=x.device)
+                edge_weight = None
             elif len(args) == 3:
                 x, edge_index, batch = args[0], args[1], args[2]
+                edge_weight = None
+            elif len(args) == 4:
+                x, edge_index, batch, edge_weight = args[0], args[1], args[2], args[3]
             else:
                 raise ValueError(f"forward's args should take 2 or 3 arguments but got {len(args)}")
         else:
-            x, edge_index, batch = data.x, data.edge_index, data.batch
+            if hasattr(data, "edge_weight"):
+                x, edge_index, batch, edge_weight = data.x, data.edge_index, data.batch, data.edge_weight
+            else:
+                x, edge_index, batch, edge_weight = data.x, data.edge_index, data.batch, None
 
-        return x, edge_index, batch
+        return x, edge_index, batch, edge_weight

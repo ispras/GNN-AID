@@ -12,6 +12,14 @@
   "direct": ["direct", "bool", true, {}, "Indicates whether to directly modify edges/features of the node attacked or only those of influencers"],
   "n_influencers": ["n_influencers", "int", 0, {"min":  0, "step": 1}, "Number of influencing nodes. Will be ignored if direct is True"]
  },
+ "NettackGroupEvasionAttacker": {
+
+  "n_perturbations": ["n_perturbations", "int", null, {"min":  0, "step": 1}, "Number of perturbations. If None, then n_perturbations = degree(node_idx)"],
+  "perturb_features": ["perturb_features", "bool", true, {}, "Indicates whether the features can be changed"],
+  "perturb_structure": ["perturb_structure", "bool", true, {}, "Indicates whether the structure can be changed"],
+  "direct": ["direct", "bool", true, {}, "Indicates whether to directly modify edges/features of the node attacked or only those of influencers"],
+  "n_influencers": ["n_influencers", "int", 0, {"min":  0, "step": 1}, "Number of influencing nodes. Will be ignored if direct is True"]
+ },
  "QAttack": {
   "population_size": ["Population size", "int", 50, {"min":  1, "step":  1}, "Number of genes in population"],
   "individual_size": ["Individual size", "int", 30, {"min": 1, "step":  1}, "Number of rewiring operations within one gene"],

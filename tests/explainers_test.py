@@ -1,6 +1,9 @@
 import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
+import sys
+import os
+sys.path.append(f"{os.getcwd()}/src")
 
 import unittest
 import warnings
