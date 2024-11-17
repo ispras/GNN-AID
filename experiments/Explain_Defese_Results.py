@@ -15,8 +15,8 @@ def iou(s1, s2):
         return 0
     return len(s1.intersection(s2)) / len(s1.union(s2))
 
-path_def = "/home/sazonov/PycharmProjects/GNN-AID/experiments/results/expl_Def_1.json"
-path_no_def = "/home/sazonov/PycharmProjects/GNN-AID/experiments/results/v1/expl_No_Def_1.json"
+path_def = "/experiments/cora_reverse_0.01/expl_Def_1.json"
+path_no_def = "/experiments/cora_reverse_0.01/v1/expl_No_Def_1.json"
 
 with open(path_def, 'r') as fin:
     def_data = json.load(fin)

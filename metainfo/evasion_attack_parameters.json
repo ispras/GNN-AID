@@ -27,22 +27,22 @@
  "random_rewire": ["Random rewire", "bool", false, {}, "Rewire based on random, not on explanation (for comparison)"],
  "attack_features":  ["Attack features", "bool", true, {}, "Whether features to be attacked or not"],
  "attack_edges":  ["Attack edges", "bool", false, {}, "Whether edges to be attacked or not"],
- "edge_mode": ["Edge attack type", "string", "rewire", ["remove", "add", "rewire"], "What to do with edges: remove or add or rewire (add one and remove another)"],
+ "edge_mode": ["Edge attack type", "string", "add", ["remove", "add", "rewire"], "What to do with edges: remove or add or rewire (add one and remove another)"],
  "features_mode": ["Feature attack type", "string", "reverse", ["reverse","drop"], "What to do with features: drop or reverse (binary)"],
- "edge_prob": ["Probability to attack edge", "float", 0.3, {"min":  0, "max":  1, "step": 0.01}, "Probability of drop/add/rewire edge"],
- "feature_prob": ["Probability to attack feature", "float", 0.05, {"min":  0, "max":  1, "step": 0.01}, "Probability of reverse/drop feature"]
+ "edge_prob": ["Probability to attack edge", "float", 0.02, {"min":  0, "max":  1, "step": 0.01}, "Probability of drop/add/rewire edge"],
+ "feature_prob": ["Probability to attack feature", "float", 0.2, {"min":  0, "max":  1, "step": 0.01}, "Probability of reverse/drop feature"]
 },
  "EAttackRandom": {
  "attack_size": ["Attack size (edge)", "float", 0.15, {"min":  0, "max":  1, "step":  0.01}, "Percent of nodes to be rewired"],
  "targeted": ["Targeted attack", "bool", true, {}, "Whether attack targeted or not"],
  "max_rewire": ["Max 2-hop node to rewire for target", "int", 20, {"min":  1, "step":  1}, "Not more than this amount of node from 2-hop neighbourhood will be rewired"],
  "random_rewire": ["Random rewire", "bool", true, {}, "Rewire based on random, not on explanation (for comparison)"],
- "attack_features":  ["Attack features", "bool", true, {}, "Whether features to be attacked or not"],
- "attack_edges":  ["Attack edges", "bool", false, {}, "Whether edges to be attacked or not"],
+ "attack_features":  ["Attack features", "bool", false, {}, "Whether features to be attacked or not"],
+ "attack_edges":  ["Attack edges", "bool", true, {}, "Whether edges to be attacked or not"],
  "edge_mode": ["Edge attack type", "string", "rewire", ["remove", "add", "rewire"], "What to do with edges: remove or add or rewire (add one and remove another)"],
  "features_mode": ["Feature attack type", "string", "reverse", ["reverse","drop"], "What to do with features: drop or reverse (binary)"],
- "edge_prob": ["Probability to attack", "float", 0.3, {"min":  0, "max":  1, "step": 0.01}, "Probability of drop/add/rewire edge"],
-  "feature_prob": ["Probability to attack feature", "float", 0.05, {"min":  0, "max":  1, "step": 0.01}, "Probability of reverse/drop feature"]
+ "edge_prob": ["Probability to attack", "float", 0.005, {"min":  0, "max":  1, "step": 0.01}, "Probability of drop/add/rewire edge"],
+  "feature_prob": ["Probability to attack feature", "float", 0.2, {"min":  0, "max":  1, "step": 0.01}, "Probability of reverse/drop feature"]
 },
  "QAttack": {
   "population_size": ["Population size", "int", 50, {"min":  1, "step":  1}, "Number of genes in population"],

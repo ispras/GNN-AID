@@ -459,7 +459,7 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
                                     "is not supported now")
                 if zeroing_x_flag:
                     x = connection_tensor
-                else:
+                elif connection_tensor.numel(): # FIXME only experiments
                     x = torch.cat((x_copy, connection_tensor), dim_cat)
 
             # QUE Kirill, maybe we should not off UserWarning

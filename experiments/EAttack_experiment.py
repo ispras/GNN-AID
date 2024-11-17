@@ -24,7 +24,6 @@ from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARA
 from explainers.explainers_manager import FrameworkExplainersManager
 
 from explainers.GNNExplainer.torch_geom_our.out import GNNExplainer
-from explainers.SubgraphX.out import SubgraphXExplainer
 from explainers.Zorro.out import ZorroExplainer
 from explainers.PGMExplainer.out import PGMExplainer
 
@@ -35,9 +34,12 @@ def test():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = ("single-graph", "Planetoid", 'Cora')
     # full_name = ("single-graph", "Planetoid", "CiteSeer")
+    #full_name = ('single-graph', 'Amazon', 'Computers')
     # full_name = ('single-graph', 'pytorch-geometric-other', 'KarateClub')
+    # full_name = ('single-graph', 'Amazon', 'Photo')
+    full_name = ('single-graph', 'Planetoid', 'PubMed')
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -178,10 +180,12 @@ def test():
     attacked_node_size = 100
     # attacked_node_size = int((0.002 * len(node_inds)))
     attack_inds = np.random.choice(node_inds, attacked_node_size)
-    # with open('/home/sazonovg/PycharmProjects/GNN-AID/experiments/inds.npy', 'wb') as fin:
+    # with open('/home/sazonov/PycharmProjects/GNN-AID/experiments/inds_pubmed.npy', 'wb') as fin:
     #     np.save(fin, attack_inds)
-    with open('/home/sazonovg/PycharmProjects/GNN-AID/experiments/inds.npy', 'rb') as fin:
+    with open('/home/sazonov/PycharmProjects/GNN-AID/experiments/inds_pubmed.npy', 'rb') as fin:
         attack_inds = np.load(fin)
+
+    #attack_inds = attack_inds[:25]
 
     evasion_attack_config = ConfigPattern(
         _class_name="EAttackRandom",
@@ -198,51 +202,98 @@ def test():
 
     dataset_copy = copy.deepcopy(dataset)
 
-    with open('/home/sazonovg/PycharmProjects/GNN-AID/experiments/results', 'w') as fout:
-        for j in tqdm(range(5)):
-            gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    attack_type = ['random', 'original']
+    modes = ['reverse', 'remove', 'add', 'rewire']
+    #modes = ['rewire']
+    #modes = ['drop']
+    # modes = ['reverse']
+    #probs = [0.001, 0.01, 0.05, 0.1, 0.2, 0.3]
+    probs = [0.05, 0.1, 0.15]
+    #probs = [0.005, 0.01, 0.02, 0.03]
+    #probs = [0.01, 0.03, 0.05, 0.1, 0.15]
+    # probs = [0.05, 0.1, 0.15]
+    #probs = [0.00, 0.001, 0.01, 0.015]
+    #probs = [0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]
+    # probs = [0.000]
 
-            gnn_model_manager = FrameworkGNNModelManager(
-                gnn=gcn_gcn,
-                dataset_path=results_dataset_path,
-                manager_config=manager_config,
-                modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
-            )
+    with open('/home/sazonov/PycharmProjects/GNN-AID/experiments/results', 'w') as fout:
+        for mode in modes:
+            for prob in probs:
+                for j in tqdm(range(1)):
+                    gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+                    #sage_sage = model_configs_zoo(dataset=dataset, model_name='sage_sage')
+                    #gat_gat = model_configs_zoo(dataset=dataset, model_name='gat_gat')
 
-            gnn_model_manager.train_model(gen_dataset=dataset,
-                                          steps=num_steps,
-                                          save_model_flag=False)
+                    gnn_model_manager = FrameworkGNNModelManager(
+                        gnn=gcn_gcn,
+                        dataset_path=results_dataset_path,
+                        manager_config=manager_config,
+                        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+                    )
 
-            succ_attack = 0
+                    gnn_model_manager.train_model(gen_dataset=dataset,
+                                                  steps=num_steps,
+                                                  save_model_flag=False)
 
-            for i in tqdm(attack_inds):
+                    gnn_answers = gnn_model_manager.gnn.get_answer(dataset.dataset.data.x, dataset.dataset.data.edge_index)
 
-                mask = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[i])
+                    succ_attack_acc = 0
+                    succ_attack_evasion = 0
 
-                evasion_attack_config = ConfigPattern(
-                    _class_name="EAttack",
-                    _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-                    _config_class="EvasionAttackConfig",
-                    _config_kwargs={
-                        'explainer': explainer,
-                        'run_config': explainer_run_config,
-                        'mode': 'local',
-                        'attack_inds': [i],
-                        'random_rewire': True
-                    }
-                )
+                    if mode != 'reverse' and mode != 'drop':
+                        attack_edges = True
+                        attack_features = False
+                        attack_mode = 'edge_mode'
+                    else:
+                        attack_edges = False
+                        attack_features = True
+                        attack_mode = 'features_mode'
 
-                gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+                    for i in tqdm(attack_inds):
 
-                acc_attack = gnn_model_manager.evaluate_model(gen_dataset=dataset,
-                                                             metrics=[Metric("Accuracy", mask=mask)])[mask]['Accuracy']
+                        mask = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[i])
 
-                succ_attack += acc_attack
-                # print(f"AFTER ATTACK\nAccuracy: {acc_attack}")
+                        evasion_attack_config = ConfigPattern(
+                            _class_name="EAttackRandom",
+                            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+                            _config_class="EvasionAttackConfig",
+                            _config_kwargs={
+                                'explainer': explainer,
+                                'run_config': explainer_run_config,
+                                'mode': 'local',
+                                'attack_inds': [i],
+                                'attack_features': attack_features,
+                                'attack_edges': attack_edges,
+                                'edge_prob': prob,
+                                'feature_prob': prob,
+                                attack_mode: mode
+                            }
+                        )
 
-                dataset = copy.deepcopy(dataset_copy)
-            fout.write(f"{succ_attack / len(attack_inds)}\n")
-            print(f"ACCURACY ON ATTACKED: {succ_attack / len(attack_inds)}")
+                        # gnn_model_manager.gnn.get_answer(dataset.dataset.data.x, dataset.dataset.data.edge_index)[i]
+
+                        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+                        ground_truth = dataset.dataset.data.y[i]
+                        model_answ_clear = gnn_answers[i]
+                        model_answ_attack = gnn_model_manager.gnn.get_answer(dataset.dataset.data.x, dataset.dataset.data.edge_index)[i]
+
+                        # y_pred, y_true = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                        #                                              metrics=[Metric("Accuracy", mask=mask)])[mask]['Accuracy']
+                        y_pred, y_true = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                                     metrics=[Metric("Accuracy", mask=mask)])
+
+                        # succ_attack += acc_attack
+                        if y_pred != int(model_answ_clear):
+                            succ_attack_evasion += 1
+                        if y_pred != y_true:
+                            succ_attack_acc += 1
+                        # print(f"AFTER ATTACK\nAccuracy: {acc_attack}")
+
+                        dataset = copy.deepcopy(dataset_copy)
+                    fout.write(f"mode:{mode}\tprob:{prob}\tevasion:{succ_attack_evasion / len(attack_inds)}\tacc:{succ_attack_acc/ len(attack_inds)}\n")
+                    fout.flush()
+                    #print(f"ACCURACY ON ATTACKED: {succ_attack / len(attack_inds)}")
 
 
 

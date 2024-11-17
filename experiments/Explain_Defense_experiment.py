@@ -169,7 +169,7 @@ def test():
         # with open(f"/home/sazonov/PycharmProjects/GNN-AID/experiments/results/expl_{n}.json", "w") as fout:
         #     json.dump(explainer.explanation.)
     out = {int(explaind_inds[i]): explanations[i].dictionary['data']['edges'] for i in range(len(explaind_inds))}
-    with open(f"/home/sazonov/PycharmProjects/GNN-AID/experiments/results/expl_No_Def.json", "w") as fout:
+    with open(f"/experiments/cora_reverse_0.01/expl_No_Def.json", "w") as fout:
         json.dump(out, fout)
 
     # explainer = SubgraphXExplainer(gen_dataset=dataset, model=gnn_model_manager.gnn, device=my_device, **init_kwargs)

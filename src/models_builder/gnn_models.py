@@ -1107,7 +1107,9 @@ class FrameworkGNNModelManager(GNNModelManager):
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
         if self.mi_attacker:
             self.mi_attacker.attack()
-        return metrics_values
+        # FOR EXPERIMENTS
+        # return metrics_values
+        return (int(y_pred), int(y_true))
 
     def compute_stats_data(self, gen_dataset, predictions=False, logits=False):
         """

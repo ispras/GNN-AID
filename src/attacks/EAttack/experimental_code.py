@@ -21,6 +21,8 @@ from aux.configs import CONFIG_OBJ
 from explainers.explainer import ProgressBar
 from typing import Dict, Optional
 
+from torch.masked import masked_tensor
+
 
 class EAttack(EvasionAttacker):
     name = "EAttack"
@@ -74,6 +76,7 @@ class EAttack(EvasionAttacker):
                 # get 2-hop
                 hop_1 = set()
                 hop_2 = set()
+                hop_3 = set()
                 for (u, v) in edge_index_set:
                     if u == n:
                         hop_1.add(v)
@@ -84,9 +87,17 @@ class EAttack(EvasionAttacker):
                         hop_2.add(v)
                     elif v in hop_1 and u != n and u not in hop_1:
                         hop_2.add(u)
+                for (u, v) in edge_index_set:
+                    hop_12 = hop_2.union(hop_1)
+                    if u != n and u not in hop_12 and v in hop_2:
+                        hop_3.add(u)
+                    elif v != n and v not in hop_12 and u in hop_2:
+                        hop_3.add(v)
+
+                hop_3 = set() # comment if hop_3 need
 
                 if self.edge_mode == 'remove':
-                    hop_size = len(hop_2.union(hop_1))
+                    hop_size = len(hop_3.union(hop_2.union(hop_1)))
                     max_attack = int(hop_size * self.edge_prob)
                     for e in explanations[i]['edges'].keys():
                         u, v = map(int, e.split(','))
@@ -207,7 +218,26 @@ class EAttack(EvasionAttacker):
                     # for i in hop_2.union(hop_1).union(set([int(n)])):
                     #     gen_dataset.dataset.data.x[i, f_inds] = torch.logical_xor(gen_dataset.dataset.data.x[i, f_inds], xor_mask).float()
                 elif self.features_mode == 'drop':
-                    pass
+                    f_inds = []
+                    feature_tuple = sorted(tuple((f, v) for f, v in explanations[i]['features'].items()), key=lambda x: float(x[1]), reverse=True)
+                    for f, v in feature_tuple:
+                        if v:
+                            f_inds.append(int(f))
+                            cnt += 1
+                            max_attack -= 1
+                        if max_attack < 0:
+                            break
+                    #f_inds = torch.tensor(f_inds)
+
+                    if not f_inds:
+                        continue
+
+                    feat_mask = torch.ones_like(gen_dataset.dataset.data.x)
+                    for i in f_inds:
+                        feat_mask[:, i] = 0
+
+                    gen_dataset.dataset.data.x = masked_tensor(gen_dataset.dataset.data.x, feat_mask.bool())
+
             print(cnt)
 
         return gen_dataset
@@ -264,6 +294,7 @@ class EAttackRandom(EvasionAttacker):
                 # get 2-hop
                 hop_1 = set()
                 hop_2 = set()
+                hop_3 = set()
                 for (u, v) in edge_index_set:
                     if u == n:
                         hop_1.add(v)
@@ -274,8 +305,18 @@ class EAttackRandom(EvasionAttacker):
                         hop_2.add(v)
                     elif v in hop_1 and u != n and u not in hop_1:
                         hop_2.add(u)
+                for (u, v) in edge_index_set:
+                    hop_12 = hop_2.union(hop_1)
+                    if u != n and u not in hop_12 and v in hop_2:
+                        hop_3.add(u)
+                    elif v != n and v not in hop_12 and u in hop_2:
+                        hop_3.add(v)
+
+                hop_3 = set() # comment if hop_3 need
 
                 if self.edge_mode == 'remove':
+                    hop_size = len(hop_3.union(hop_2.union(hop_1)))
+                    max_attack = int(hop_size * self.edge_prob)
                     for (u, v) in zip(edge_index[0], edge_index[1]):
                         if (u in hop_2 and v in hop_1) or (u in hop_1 and v in hop_2):
                             prob_remove = np.random.random()
@@ -283,9 +324,14 @@ class EAttackRandom(EvasionAttacker):
                                 edge_index_set.discard((u,v))
                                 edge_index_set.discard((v,u))
                                 cnt += 1
+                                max_attack -= 1
+                        if max_attack <= 0:
+                            break
                 elif self.edge_mode == 'add':
                     first_set = hop_2.union(hop_1).union({int(n)})
                     second_set = hop_1.union({int(n)})
+                    hop = list(itertools.product(first_set, second_set))
+                    max_attack = int(len(hop) * self.edge_prob)
                     for e in itertools.product(first_set, second_set):
                         if e not in edge_index_set:
                             prob_remove = np.random.random()
@@ -293,9 +339,13 @@ class EAttackRandom(EvasionAttacker):
                                 edge_index_set.add(e)
                                 edge_index_set.add((e[1], e[0]))
                                 cnt += 1
+                                max_attack -= 1
+                        if max_attack <= 0:
+                            break
                     # for (u, v) in zip(edge_index[0], edge_index[1]):
                     #     if u == n
                 elif self.edge_mode == 'rewire':
+                    max_attack = int(len(hop_2) * self.edge_prob)
                     for (u, v) in zip(edge_index[0], edge_index[1]):
                         if (u in hop_1 and v in hop_2) or (u in hop_2 and v in hop_1):
                             prob_remove = np.random.random()
@@ -303,12 +353,15 @@ class EAttackRandom(EvasionAttacker):
                                 edge_index_set.discard((u, v))
                                 edge_index_set.discard((v, u))
                                 cnt += 1
+                                max_attack -= 1
                             if u in hop_2:
                                 edge_index_set.add((n, u))
                                 edge_index_set.add((u, n))
                             else:
                                 edge_index_set.add((n, v))
                                 edge_index_set.add((v, n))
+                        if max_attack <= 0:
+                            break
 
                 # Update dataset edges
                 edge_index_new = [[], []]
