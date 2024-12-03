@@ -18,6 +18,8 @@ from defense.GNNGuard import gnnguard
 
 
 def test_attack_defense():
+    from attacks.CLGA import CLGA_gpt
+
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     full_name = None
@@ -134,6 +136,16 @@ def test_attack_defense():
         _config_class="PoisonAttackConfig",
         _config_kwargs={
             "n_edges_percent": 1.0,
+        }
+    )
+
+    clga_poison_attack_config = ConfigPattern(
+        _class_name="CLGAAttack",
+        _import_path=POISON_ATTACK_PARAMETERS_PATH,
+        _config_class="PoisonAttackConfig",
+        _config_kwargs={
+            "num_nodes": dataset.dataset.x.shape[0],
+            "feature_shape": dataset.dataset.x.shape[1]
         }
     )
 
@@ -263,7 +275,7 @@ def test_attack_defense():
         }
     )
 
-    # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
+    gnn_model_manager.set_poison_attacker(poison_attack_config=clga_poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
     # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
