@@ -184,11 +184,11 @@ class FrameworkAttackDefenseManager:
         from models_builder.gnn_models import Metric
         train_test_split_path = self.gnn_manager.train_model(
             gen_dataset=self.gen_dataset, steps=steps,
-            save_model_flag=save_model_flag,
+            save_model_flag=False,
             metrics=[Metric("F1", mask='train', average=None),
                      Metric("Accuracy", mask="train")]
         )
-
+        self.gnn_manager.modification.data_change_flag()
         if train_test_split_path is not None:
             self.gen_dataset.save_train_test_mask(train_test_split_path)
         metric_loc = self.gnn_manager.evaluate_model(
