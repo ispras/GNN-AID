@@ -84,10 +84,13 @@ class CLGAAttack(PoisonAttacker):
         z1 = self.model(data.x, edge_index_1)
         z2 = self.model(data.x, edge_index_2)
 
+        # edge_index_1.requires_grad = True
+        # edge_index_2.requires_grad = True
+
         loss = self.model.loss(z1, z2)
         loss.backward()
 
-        grad = torch.zeros_like()
+        # grad = torch.zeros_like()
         for name, layer in self.model.encoder.named_children():
             if isinstance(layer, MessagePassing):
                 #print(f"{name}: {layer.get_message_gradients()}")
