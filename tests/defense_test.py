@@ -1,3 +1,7 @@
+import collections.abc
+
+collections.Callable = collections.abc.Callable
+
 import unittest
 
 import torch
@@ -13,8 +17,7 @@ from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
 class DefenseTest(unittest.TestCase):
     def setUp(self):
         print('setup')
-        
-        from defense.poison_defense.GNNGuard_defense import GNNGuard_defense
+
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
@@ -60,7 +63,9 @@ class DefenseTest(unittest.TestCase):
             _import_path=POISON_DEFENSE_PARAMETERS_PATH,
             _config_class="PoisonDefenseConfig",
             _config_kwargs={
-                # "num_nodes": self.gen_dataset_sg_example.dataset.x.shape[0]  # is there more fancy way?
+                "lr": 0.01,
+                "train_iters": 100,
+                # "model": gnn_model_manager.gnn
             }
         )
 

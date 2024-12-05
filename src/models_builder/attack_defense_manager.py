@@ -77,6 +77,128 @@ class FrameworkAttackDefenseManager:
         self.gnn_manager.evasion_defense_flag = self.start_attack_defense_flag_state["evasion_defense"]
         self.gnn_manager.mi_defense_flag = self.start_attack_defense_flag_state["mi_defense"]
 
+    def full_pipeline_model_metrics_only(
+            self,
+            steps: int,
+            save_model_flag: bool = True,
+            model_metrics=None,
+            task: str = "tttttt",
+    ):
+        if model_metrics is None:
+            from models_builder.gnn_models import Metric
+            model_metrics = [Metric("F1", mask='train', average=None),
+                             Metric("Accuracy", mask="train")]
+
+        task = list(task)
+        if not self.available_attacks["poison"]:
+            task[0] = 'f'
+        if not self.available_defense["poison"]:
+            task[1] = 'f'
+        if not self.available_attacks["evasion"]:
+            task[2] = 'f'
+        if not self.available_attacks["mi"]:
+            task[3] = 'f'
+        if not self.available_defense["evasion"]:
+            task[4] = 'f'
+        if not self.available_defense["mi"]:
+            task[5] = 'f'
+        task = "".join(task)
+        self.run_experiments(
+            task=task,
+            steps=steps,
+            save_model_flag=save_model_flag,
+            model_metrics=model_metrics,
+        )
+
+    def run_experiments(
+            self,
+            steps: int,
+            save_model_flag: bool = True,
+            model_metrics=None,
+            task: str = 'ffffff',
+            flags=None,
+            position: int = 0,
+    ):
+        if flags is None:
+            flags = []
+
+        if position == len(task):
+            self.start(
+                flags=flags,
+                steps=steps,
+                save_model_flag=save_model_flag,
+                model_metrics=model_metrics,
+            )
+            return
+
+        if task[position] == 'f':
+            self.run_experiments(
+                steps=steps,
+                save_model_flag=save_model_flag,
+                model_metrics=model_metrics,
+                task=task,
+                flags=flags + [False],
+                position=position + 1
+            )
+        elif task[position] == 't':
+            self.run_experiments(
+                steps=steps,
+                save_model_flag=save_model_flag,
+                model_metrics=model_metrics,
+                task=task,
+                flags=flags + [False],
+                position=position + 1
+            )
+            self.run_experiments(
+                steps=steps,
+                save_model_flag=save_model_flag,
+                model_metrics=model_metrics,
+                task=task,
+                flags=flags + [True],
+                position=position + 1
+            )
+
+    def start(
+            self,
+            steps: int,
+            save_model_flag: bool = True,
+            model_metrics=None,
+            flags: list = None,
+    ):
+        if flags is None:
+            flags = [False] * 6
+        self.set_clear_model()
+        if flags[0]:
+            self.gnn_manager.poison_attack_flag = True
+        if flags[1]:
+            self.gnn_manager.poison_defense_flag = True
+        if flags[2]:
+            self.gnn_manager.evasion_attack_flag = True
+        if flags[3]:
+            self.gnn_manager.mi_attack_flag = True
+        if flags[4]:
+            self.gnn_manager.evasion_defense_flag = True
+        if flags[5]:
+            self.gnn_manager.mi_defense_flag = True
+        self.gnn_manager.epochs = self.gnn_manager.modification.epochs = 0
+        from models_builder.gnn_models import Metric
+        train_test_split_path = self.gnn_manager.train_model(
+            gen_dataset=self.gen_dataset, steps=steps,
+            save_model_flag=save_model_flag,
+            metrics=[Metric("F1", mask='train', average=None),
+                     Metric("Accuracy", mask="train")]
+        )
+
+        if train_test_split_path is not None:
+            self.gen_dataset.save_train_test_mask(train_test_split_path)
+        metric_loc = self.gnn_manager.evaluate_model(
+            gen_dataset=self.gen_dataset,
+            metrics=model_metrics,
+            save_flag=save_model_flag,
+        )
+        if not save_model_flag:
+            print(f"Model metrics in a pipeline with task sequence {flags}: {metric_loc}")
+
     def evasion_attack_pipeline(
             self,
             metrics_attack: List,

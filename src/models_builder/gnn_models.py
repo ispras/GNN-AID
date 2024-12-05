@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import random
 from math import ceil
 from pathlib import Path
@@ -409,7 +410,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **poison_attack_kwargs
         )
-        self.poison_attack_flag = True
+        self.poison_attack_flag = True if poison_attack_name != "EmptyPoisonAttacker" else False
 
     def set_evasion_attacker(
             self,
@@ -449,7 +450,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **evasion_attack_kwargs
         )
-        self.evasion_attack_flag = True
+        self.evasion_attack_flag = True if evasion_attack_name != "EmptyEvasionAttacker" else False
 
     def set_mi_attacker(
             self,
@@ -489,7 +490,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **mi_attack_kwargs
         )
-        self.mi_attack_flag = True
+        self.mi_attack_flag = True if mi_attack_name != "EmptyMIAttacker" else False
 
     def set_poison_defender(
             self,
@@ -529,7 +530,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **poison_defense_kwargs
         )
-        self.poison_defense_flag = True
+        self.poison_defense_flag = True if poison_defense_name != "EmptyPoisonDefender" else False
 
     def set_evasion_defender(
             self,
@@ -569,7 +570,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **evasion_defense_kwargs
         )
-        self.evasion_defense_flag = True
+        self.evasion_defense_flag = True if evasion_defense_name != "EmptyEvasionDefender" else False
 
     def set_mi_defender(
             self,
@@ -612,7 +613,7 @@ class GNNModelManager:
             # device=device("cpu"),
             **mi_defense_kwargs
         )
-        self.mi_defense_flag = True
+        self.mi_defense_flag = True if mi_defense_name != "EmptyMIDefender" else False
 
     @staticmethod
     def available_attacker(
@@ -1228,7 +1229,8 @@ class FrameworkGNNModelManager(GNNModelManager):
     def evaluate_model(
             self,
             gen_dataset: GeneralDataset,
-            metrics: Union[List[Metric], Metric]
+            metrics: Union[List[Metric], Metric],
+            save_flag: bool = False,
     ) -> dict:
         """
         Compute metrics for a model result on a part of dataset specified by the metric mask.
@@ -1270,7 +1272,61 @@ class FrameworkGNNModelManager(GNNModelManager):
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
         if self.mi_attacker and self.mi_attack_flag:
             self.call_mi_attack()
+        if save_flag:
+            self.save_metrics(metrics_values=metrics_values)
         return metrics_values
+
+    def save_metrics(
+            self,
+            metrics_values: dict,
+    ) -> None:
+        dir_path = self.model_path_info()
+        path = dir_path / "model_metrics.txt"
+
+        if not os.path.exists(path):
+            self.save_model_executor()
+
+        char1 = 't' if self.poison_attack_flag else 'f'
+        char2 = 't' if self.poison_defense_flag else 'f'
+        char3 = 't' if self.evasion_defense_flag else 'f'
+        char4 = 't' if self.mi_defense_flag else 'f'
+        char5 = 't' if self.evasion_attack_flag else 'f'
+        char6 = 't' if self.mi_attack_flag else 'f'
+        task_info = "" + char1 + char2 + char3 + char4 + char5 + char6
+
+        def tensor_to_str(key):
+            if isinstance(key, torch.Tensor):
+                return str(key.tolist())
+            return key
+
+        def str_to_tensor(key):
+            if isinstance(key, list):
+                return torch.tensor(key, dtype=torch.bool)
+            return key
+
+        def prepare_dict_for_json(d):
+            return {tensor_to_str(k): v for k, v in d.items()}
+
+        def restore_dict_from_json(d):
+            return {str_to_tensor(k): v for k, v in d.items()}
+
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                file_dict = restore_dict_from_json(json.load(f))
+        else:
+            file_dict = {}
+
+        if task_info not in file_dict:
+            file_dict[task_info] = metrics_values
+        else:
+            for mask, metrics in metrics_values.items():
+                for metric, value in metrics.items():
+                    if mask not in file_dict[task_info]:
+                        file_dict[task_info][mask] = {}
+                    file_dict[task_info][mask][metric] = value
+
+        with open(path, "w") as f:
+            json.dump(prepare_dict_for_json(file_dict), f, indent=2)
 
     def call_evasion_attack(
             self,

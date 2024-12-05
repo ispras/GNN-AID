@@ -14,6 +14,15 @@ from src.aux.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 
+for pack in [
+    'defense.GNNGuard.gnnguard',
+    'defense.JaccardDefense.jaccard_def',
+]:
+    try:
+        __import__(pack)
+    except ImportError:
+        print(f"Couldn't import Explainer from {pack}")
+
 
 def attack_defense_metrics():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -61,12 +70,22 @@ def attack_defense_metrics():
 
     gnn_model_manager.gnn.to(my_device)
 
-    random_poison_attack_config = ConfigPattern(
-        _class_name="RandomPoisonAttack",
+    # random_poison_attack_config = ConfigPattern(
+    #     _class_name="RandomPoisonAttack",
+    #     _import_path=POISON_ATTACK_PARAMETERS_PATH,
+    #     _config_class="PoisonAttackConfig",
+    #     _config_kwargs={
+    #         "n_edges_percent": 1.0,
+    #     }
+    # )
+
+    metafull_poison_attack_config = ConfigPattern(
+        _class_name="MetaAttackFull",
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
         _config_class="PoisonAttackConfig",
         _config_kwargs={
-            "n_edges_percent": 1.0,
+            "num_nodes": dataset.dataset.x.shape[0],
+            "lambda": 0,
         }
     )
 
@@ -86,7 +105,7 @@ def attack_defense_metrics():
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
-            "threshold": 0.05,
+            "threshold": 0.4,
         }
     )
 
@@ -95,7 +114,7 @@ def attack_defense_metrics():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "epsilon": 0.001 * 12,
+            "epsilon": 0.001 * 5,
         }
     )
 
@@ -104,12 +123,30 @@ def attack_defense_metrics():
         _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
         _config_class="EvasionDefenseConfig",
         _config_kwargs={
-            "regularization_strength": 0.1 * 1000
+            "regularization_strength": 0.1 * 500
         }
     )
 
-    gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
-    gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
+    fgsm_evasion_attack_config1 = ConfigPattern(
+        _class_name="FGSM",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "epsilon": 0.01,
+        }
+    )
+    at_evasion_defense_config = ConfigPattern(
+        _class_name="AdvTraining",
+        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+        _config_class="EvasionDefenseConfig",
+        _config_kwargs={
+            "attack_name": None,
+            "attack_config": fgsm_evasion_attack_config1
+        }
+    )
+
+    # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
     gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
@@ -117,14 +154,14 @@ def attack_defense_metrics():
     dataset.train_test_split()
 
     # try:
-    #     # raise FileNotFoundError()
-    #     gnn_model_manager.load_model_executor()
-    #     dataset = gnn_model_manager.load_train_test_split(dataset)
+    #     raise FileNotFoundError()
+    #     # gnn_model_manager.load_model_executor()
     # except FileNotFoundError:
     #     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
     #     train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
     #                                                           save_model_flag=save_model_flag,
-    #                                                           metrics=[Metric("F1", mask='train', average=None)])
+    #                                                           metrics=[Metric("F1", mask='train', average=None),
+    #                                                                    Metric("Accuracy", mask="train")])
     #
     #     if train_test_split_path is not None:
     #         dataset.save_train_test_mask(train_test_split_path)
@@ -135,10 +172,19 @@ def attack_defense_metrics():
     #
     # warnings.warn("Training was successful")
     #
+    # # mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=node_idxs)
+    #
+    # metric_loc = gnn_model_manager.evaluate_model(
+    #     gen_dataset=dataset, metrics=[Metric("F1", mask='train', average='macro'),
+    #                                   Metric("Accuracy", mask='train')],
+    #     save_flag=True
+    # )
+    # print("TRAIN", metric_loc)
+    #
     # metric_loc = gnn_model_manager.evaluate_model(
     #     gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
     #                                   Metric("Accuracy", mask='test')])
-    # print(metric_loc)
+    # print("TEST", metric_loc)
 
     adm = FrameworkAttackDefenseManager(
         gen_dataset=copy.deepcopy(dataset),
@@ -156,17 +202,25 @@ def attack_defense_metrics():
     #     metrics_attack=[AttackMetric("ASR")],
     #     mask='test'
     # )
-    adm.evasion_defense_pipeline(
+    # adm.evasion_defense_pipeline(
+    #     steps=steps_epochs,
+    #     save_model_flag=save_model_flag,
+    #     metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
+    #     metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
+    #     mask='test'
+    # )
+
+    adm.full_pipeline_model_metrics_only(
+        # steps=1,
         steps=steps_epochs,
         save_model_flag=save_model_flag,
-        metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
-        metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
-        mask='test'
+        model_metrics=[Metric("Accuracy", mask="test")],
+        task="tttttt",
     )
 
 
 if __name__ == '__main__':
     import random
 
-    random.seed(10)
+    # random.seed(10)
     attack_defense_metrics()
