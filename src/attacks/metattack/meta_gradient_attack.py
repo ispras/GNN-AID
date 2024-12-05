@@ -216,7 +216,7 @@ class MetaAttackFull(BaseMeta):
         self.b_velocities = []
         self.momentum = momentum
 
-    def attack(self, gen_dataset, attack_budget=10, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, attack_budget=0.05, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
         self.hidden_sizes = [16]   # FIXME get from model architecture
@@ -264,7 +264,7 @@ class MetaAttackFull(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
-        for i in tqdm(range(attack_budget), desc="Perturbing graph"):
+        for i in tqdm(range(int(attack_budget*gen_dataset.dataset.data.edge_index.shape[1])), desc="Perturbing graph"):
             if self.attack_structure:
                 modified_adj = self.get_modified_adj(ori_adj)
 
@@ -295,6 +295,7 @@ class MetaAttackFull(BaseMeta):
                 self.feature_changes.data[row_idx][col_idx] += (-2 * modified_features[row_idx][col_idx] + 1)
 
         if self.attack_structure:
+            print("TEST2")
             self.modified_adj = self.get_modified_adj(ori_adj).detach()
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
@@ -329,7 +330,7 @@ class MetaAttackFull(BaseMeta):
                 self.b_velocities[ix] = self.b_velocities[ix].detach()
                 self.b_velocities[ix].requires_grad = True
 
-        for j in range(self.attack_iters):
+        for j in tqdm(range(self.attack_iters)):
             hidden = features
             for ix, w in enumerate(self.weights):
                 b = self.biases[ix] if self.with_bias else 0
