@@ -57,18 +57,24 @@ def attack_defense_metrics():
         }
     )
 
-    steps_epochs = 200
-    gnn_model_manager = FrameworkGNNModelManager(
-        gnn=gnn,
-        dataset_path=results_dataset_path,
-        manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
-    )
+    steps_epochs = 1
+    for i in range(2):
+        modification = ModelModificationConfig(
+            model_ver_ind=i,
+            epochs=steps_epochs
+        )
 
-    # save_model_flag = False
-    save_model_flag = True
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gnn,
+            dataset_path=results_dataset_path,
+            manager_config=manager_config,
+            modification=modification,
+        )
 
-    gnn_model_manager.gnn.to(my_device)
+        # save_model_flag = False
+        save_model_flag = True
+
+        gnn_model_manager.gnn.to(my_device)
 
     # random_poison_attack_config = ConfigPattern(
     #     _class_name="RandomPoisonAttack",
@@ -79,144 +85,144 @@ def attack_defense_metrics():
     #     }
     # )
 
-    metafull_poison_attack_config = ConfigPattern(
-        _class_name="MetaAttackFull",
-        _import_path=POISON_ATTACK_PARAMETERS_PATH,
-        _config_class="PoisonAttackConfig",
-        _config_kwargs={
-            "num_nodes": dataset.dataset.x.shape[0],
-            "lambda": 0,
-        }
-    )
+        metafull_poison_attack_config = ConfigPattern(
+            _class_name="MetaAttackFull",
+            _import_path=POISON_ATTACK_PARAMETERS_PATH,
+            _config_class="PoisonAttackConfig",
+            _config_kwargs={
+                "num_nodes": dataset.dataset.x.shape[0],
+                "lambda": 0,
+            }
+        )
 
-    gnnguard_poison_defense_config = ConfigPattern(
-        _class_name="GNNGuard",
-        _import_path=POISON_DEFENSE_PARAMETERS_PATH,
-        _config_class="PoisonDefenseConfig",
-        _config_kwargs={
-            "lr": 0.01,
-            "train_iters": 100,
-            # "model": gnn_model_manager.gnn
-        }
-    )
+        gnnguard_poison_defense_config = ConfigPattern(
+            _class_name="GNNGuard",
+            _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+            _config_class="PoisonDefenseConfig",
+            _config_kwargs={
+                "lr": 0.01,
+                "train_iters": 100,
+                # "model": gnn_model_manager.gnn
+            }
+        )
 
-    jaccard_poison_defense_config = ConfigPattern(
-        _class_name="JaccardDefender",
-        _import_path=POISON_DEFENSE_PARAMETERS_PATH,
-        _config_class="PoisonDefenseConfig",
-        _config_kwargs={
-            "threshold": 0.4,
-        }
-    )
+        jaccard_poison_defense_config = ConfigPattern(
+            _class_name="JaccardDefender",
+            _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+            _config_class="PoisonDefenseConfig",
+            _config_kwargs={
+                "threshold": 0.4,
+            }
+        )
 
-    fgsm_evasion_attack_config = ConfigPattern(
-        _class_name="FGSM",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "epsilon": 0.001 * 5,
-        }
-    )
+        fgsm_evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "epsilon": 0.001 * 5,
+            }
+        )
 
-    gradientregularization_evasion_defense_config = ConfigPattern(
-        _class_name="GradientRegularizationDefender",
-        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
-        _config_class="EvasionDefenseConfig",
-        _config_kwargs={
-            "regularization_strength": 0.1 * 500
-        }
-    )
+        gradientregularization_evasion_defense_config = ConfigPattern(
+            _class_name="GradientRegularizationDefender",
+            _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+            _config_class="EvasionDefenseConfig",
+            _config_kwargs={
+                "regularization_strength": 0.1 * 500
+            }
+        )
 
-    fgsm_evasion_attack_config1 = ConfigPattern(
-        _class_name="FGSM",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "epsilon": 0.01,
-        }
-    )
-    at_evasion_defense_config = ConfigPattern(
-        _class_name="AdvTraining",
-        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
-        _config_class="EvasionDefenseConfig",
-        _config_kwargs={
-            "attack_name": None,
-            "attack_config": fgsm_evasion_attack_config1
-        }
-    )
+        fgsm_evasion_attack_config1 = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "epsilon": 0.01,
+            }
+        )
+        at_evasion_defense_config = ConfigPattern(
+            _class_name="AdvTraining",
+            _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+            _config_class="EvasionDefenseConfig",
+            _config_kwargs={
+                "attack_name": None,
+                "attack_config": fgsm_evasion_attack_config1
+            }
+        )
 
-    # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
-    gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
-    gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
+        # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
+        gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+        gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
-    warnings.warn("Start training")
-    dataset.train_test_split()
+        warnings.warn("Start training")
+        dataset.train_test_split()
 
-    # try:
-    #     raise FileNotFoundError()
-    #     # gnn_model_manager.load_model_executor()
-    # except FileNotFoundError:
-    #     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    #     train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
-    #                                                           save_model_flag=save_model_flag,
-    #                                                           metrics=[Metric("F1", mask='train', average=None),
-    #                                                                    Metric("Accuracy", mask="train")])
-    #
-    #     if train_test_split_path is not None:
-    #         dataset.save_train_test_mask(train_test_split_path)
-    #         train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
-    #                                                             :]
-    #         dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
-    #         data.percent_train_class, data.percent_test_class = train_test_sizes
-    #
-    # warnings.warn("Training was successful")
-    #
-    # # mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=node_idxs)
-    #
-    # metric_loc = gnn_model_manager.evaluate_model(
-    #     gen_dataset=dataset, metrics=[Metric("F1", mask='train', average='macro'),
-    #                                   Metric("Accuracy", mask='train')],
-    #     save_flag=True
-    # )
-    # print("TRAIN", metric_loc)
-    #
-    # metric_loc = gnn_model_manager.evaluate_model(
-    #     gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
-    #                                   Metric("Accuracy", mask='test')])
-    # print("TEST", metric_loc)
+        # try:
+        #     raise FileNotFoundError()
+        #     # gnn_model_manager.load_model_executor()
+        # except FileNotFoundError:
+        #     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
+        #     train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+        #                                                           save_model_flag=save_model_flag,
+        #                                                           metrics=[Metric("F1", mask='train', average=None),
+        #                                                                    Metric("Accuracy", mask="train")])
+        #
+        #     if train_test_split_path is not None:
+        #         dataset.save_train_test_mask(train_test_split_path)
+        #         train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
+        #                                                             :]
+        #         dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
+        #         data.percent_train_class, data.percent_test_class = train_test_sizes
+        #
+        # warnings.warn("Training was successful")
+        #
+        # # mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=node_idxs)
+        #
+        # metric_loc = gnn_model_manager.evaluate_model(
+        #     gen_dataset=dataset, metrics=[Metric("F1", mask='train', average='macro'),
+        #                                   Metric("Accuracy", mask='train')],
+        #     save_flag=True
+        # )
+        # print("TRAIN", metric_loc)
+        #
+        # metric_loc = gnn_model_manager.evaluate_model(
+        #     gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        #                                   Metric("Accuracy", mask='test')])
+        # print("TEST", metric_loc)
 
-    adm = FrameworkAttackDefenseManager(
-        gen_dataset=copy.deepcopy(dataset),
-        gnn_manager=gnn_model_manager,
-    )
-    # adm.evasion_attack_pipeline(
-    #     steps=steps_epochs,
-    #     save_model_flag=save_model_flag,
-    #     metrics_attack=[AttackMetric("ASR")],
-    #     mask='test'
-    # )
-    # adm.poison_attack_pipeline(
-    #     steps=steps_epochs,
-    #     save_model_flag=save_model_flag,
-    #     metrics_attack=[AttackMetric("ASR")],
-    #     mask='test'
-    # )
-    # adm.evasion_defense_pipeline(
-    #     steps=steps_epochs,
-    #     save_model_flag=save_model_flag,
-    #     metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
-    #     metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
-    #     mask='test'
-    # )
+        adm = FrameworkAttackDefenseManager(
+            gen_dataset=copy.deepcopy(dataset),
+            gnn_manager=gnn_model_manager,
+        )
+        # adm.evasion_attack_pipeline(
+        #     steps=steps_epochs,
+        #     save_model_flag=save_model_flag,
+        #     metrics_attack=[AttackMetric("ASR")],
+        #     mask='test'
+        # )
+        # adm.poison_attack_pipeline(
+        #     steps=steps_epochs,
+        #     save_model_flag=save_model_flag,
+        #     metrics_attack=[AttackMetric("ASR")],
+        #     mask='test'
+        # )
+        # adm.evasion_defense_pipeline(
+        #     steps=steps_epochs,
+        #     save_model_flag=save_model_flag,
+        #     metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
+        #     metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
+        #     mask='test'
+        # )
 
-    adm.full_pipeline_model_metrics_only(
-        # steps=1,
-        steps=steps_epochs,
-        save_model_flag=save_model_flag,
-        model_metrics=[Metric("Accuracy", mask="test")],
-        task="tttttt",
-    )
+        adm.full_pipeline_model_metrics_only(
+            # steps=1,
+            steps=steps_epochs,
+            save_model_flag=save_model_flag,
+            model_metrics=[Metric("Accuracy", mask="test")],
+            task="tt*f*f",
+        )
 
 
 if __name__ == '__main__':

@@ -82,7 +82,7 @@ class FrameworkAttackDefenseManager:
             steps: int,
             save_model_flag: bool = True,
             model_metrics=None,
-            task: str = "tttttt",
+            task: str = "******",
     ):
         if model_metrics is None:
             from models_builder.gnn_models import Metric
@@ -123,6 +123,7 @@ class FrameworkAttackDefenseManager:
             flags = []
 
         if position == len(task):
+            # print(f"Task: {task}; Flags: {flags}")
             self.start(
                 flags=flags,
                 steps=steps,
@@ -141,6 +142,15 @@ class FrameworkAttackDefenseManager:
                 position=position + 1
             )
         elif task[position] == 't':
+            self.run_experiments(
+                steps=steps,
+                save_model_flag=save_model_flag,
+                model_metrics=model_metrics,
+                task=task,
+                flags=flags + [True],
+                position=position + 1
+            )
+        elif task[position] == '*':
             self.run_experiments(
                 steps=steps,
                 save_model_flag=save_model_flag,
@@ -173,13 +183,13 @@ class FrameworkAttackDefenseManager:
         if flags[1]:
             self.gnn_manager.poison_defense_flag = True
         if flags[2]:
-            self.gnn_manager.evasion_attack_flag = True
-        if flags[3]:
-            self.gnn_manager.mi_attack_flag = True
-        if flags[4]:
             self.gnn_manager.evasion_defense_flag = True
-        if flags[5]:
+        if flags[3]:
             self.gnn_manager.mi_defense_flag = True
+        if flags[4]:
+            self.gnn_manager.evasion_attack_flag = True
+        if flags[5]:
+            self.gnn_manager.mi_attack_flag = True
         self.gnn_manager.epochs = self.gnn_manager.modification.epochs = 0
         from models_builder.gnn_models import Metric
         train_test_split_path = self.gnn_manager.train_model(
