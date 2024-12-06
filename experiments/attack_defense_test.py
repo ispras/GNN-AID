@@ -350,7 +350,7 @@ def test_attack_defense(
             save_model_flag=save_model_flag,
             model_metrics=[Metric("Accuracy", mask="test")],
             # task="*t*ftf",
-            task="*t*ftf",
+            task="*ttf*f",
         )
 
     #
