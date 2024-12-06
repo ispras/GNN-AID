@@ -983,11 +983,16 @@ class FrameworkGNNModelManager(GNNModelManager):
     ) -> torch.Tensor:
         loss = None
         if hasattr(batch, "edge_weight"):
+            if batch.edge_weight is not None:
+                batch.edge_weight.cpu()
             weight = batch.edge_weight
         else:
             weight = None
         if task_type == "single-graph":
             self.optimizer.zero_grad()
+            batch.x.cpu()
+            batch.edge_index.cpu()
+
             logits = self.gnn(batch.x, batch.edge_index, weight)
             loss = self.loss_function(logits, batch.y)
             if self.clip is not None:

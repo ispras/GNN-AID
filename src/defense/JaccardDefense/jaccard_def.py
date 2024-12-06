@@ -61,8 +61,8 @@ class JaccardDefender(PoisonDefender):
         return gen_dataset
 
     def jaccard_index(self, x, u, v):
-        im1 = x[u,:].numpy().astype(bool)
-        im2 = x[v,:].numpy().astype(bool)
+        im1 = x[u,:].cpu().numpy().astype(bool)
+        im2 = x[v,:].cpu().numpy().astype(bool)
         intersection = np.logical_and(im1, im2)
         union = np.logical_or(im1, im2)
         return intersection.sum() / float(union.sum())

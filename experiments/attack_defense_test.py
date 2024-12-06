@@ -22,7 +22,8 @@ from defense.GNNGuard import gnnguard
 
 
 def test_attack_defense(d='Cora', m='gin_2', a_e=None, d_e=None, a_p=None, d_p=None):
-    my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    # my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    my_device = device('cpu')
 
     full_name = None
 
@@ -318,8 +319,7 @@ def test_attack_defense(d='Cora', m='gin_2', a_e=None, d_e=None, a_p=None, d_p=N
     warnings.warn("Start training")
     dataset.train_test_split()
 
-
-    for i in range(3):
+    for i in range(2):
         adm = FrameworkAttackDefenseManager(
             gen_dataset=copy.deepcopy(dataset),
             gnn_manager=gnn_model_manager,
@@ -334,7 +334,7 @@ def test_attack_defense(d='Cora', m='gin_2', a_e=None, d_e=None, a_p=None, d_p=N
         adm.poison_defense_pipeline(
             steps=steps_epochs,
             save_model_flag=save_model_flag,
-            metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
+            metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"), ],
             metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
             mask='test'
         )
@@ -802,11 +802,10 @@ def test_jaccard():
         }
     )
 
-
     # gnn_model_manager.set_poison_attacker(poison_attack_config=poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=poison_defense_config)
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=netattackgroup_evasion_attack_config)
-    #gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
+    # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
     dataset.train_test_split()
@@ -832,7 +831,6 @@ def test_jaccard():
 
     mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=node_idxs)
 
-
     metric_loc = gnn_model_manager.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='train', average='macro'),
                                       Metric("Accuracy", mask='train')])
@@ -847,7 +845,6 @@ def test_jaccard():
         gen_dataset=dataset, metrics=[Metric("F1", mask=mask_loc, average='macro'),
                                       Metric("Accuracy", mask=mask_loc)])
     print(f"NODE IDXS: {node_idxs}", metric_loc)
-
 
 
 def test_adv_training():
@@ -1121,29 +1118,29 @@ def test_pgd():
     print(f"After PGD attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
-
 def exp_pipeline():
-    dataset_grid = ['Photo', 'Cora']
-    #model_grid = ['gcn_2', 'gcn_3', 'gin_2']
-    model_grid = ['gcn_2']
+    dataset_grid = ['Cora']
+    # model_grid = ['gcn_2', 'gcn_3', 'gin_2']
+    model_grid = ['gin_2']
     attack_grid_evasion = ['fgsm', 'nettack']
     attack_grid_poison = ['clga']
     defense_grid_evasion = []
-    defense_grid_poison = [None, 'jaccard']
+    defense_grid_poison = ['jaccard']
 
     for d in dataset_grid:
         for m in model_grid:
             for a_p in attack_grid_poison:
                 for d_p in defense_grid_poison:
-                    test_attack_defense(d, m, a_p=a_p,d_p=d_p)
+                    test_attack_defense(d, m, a_p=a_p, d_p=d_p)
+
 
 if __name__ == '__main__':
     import random
 
-    #random.seed(10)
-    #test_attack_defense()
+    # random.seed(10)
+    # test_attack_defense()
     exp_pipeline()
     # torch.manual_seed(5000)
     # test_gnnguard()
-    #test_jaccard()
+    # test_jaccard()
     # test_pgd()
