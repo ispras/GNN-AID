@@ -1,7 +1,0 @@
-{
-  "_class_import_info": null,
-  "_class_name": "EmptyPoisonDefender",
-  "_config_class": "PoisonDefenseConfig",
-  "_config_kwargs": {},
-  "_import_path": "/home/lukyanovkirill/Projects/GNN-AID/metainfo/poison_defense_parameters.json"
-}
