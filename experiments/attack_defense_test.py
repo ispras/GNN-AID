@@ -1,9 +1,12 @@
 import torch
+import copy
 
 import warnings
 
 from torch import device
 
+from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
+from models_builder.attack_defense_metric import AttackMetric, DefenseMetric
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
@@ -14,18 +17,22 @@ from src.models_builder.models_zoo import model_configs_zoo
 from attacks.QAttack import qattack
 from defense.JaccardDefense import jaccard_def
 from attacks.metattack import meta_gradient_attack
+from attacks.CLGA import CLGA_gpt
 from defense.GNNGuard import gnnguard
 
 
-def test_attack_defense():
-    my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+def test_attack_defense(d='Cora', m='gin_2', a_e=None, d_e=None, a_p=None, d_p=None):
+    # my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    my_device = device('cpu')
 
     full_name = None
 
     # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    # full_name = ("single-graph", "Amazon", 'Photo')
+    if d == 'Cora':
+        full_name = ("single-graph", "Planetoid", 'Cora')
+    elif d == 'Photo':
+        full_name = ("single-graph", "Amazon", 'Photo')
     # full_name = ("single-graph", "Planetoid", 'CiteSeer')
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
 
@@ -60,7 +67,12 @@ def test_attack_defense():
 
     # print(data.train_mask)
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    if m == 'gcn_2':
+        gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    elif m == 'gcn_3':
+        gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_gcn')
+    elif m == 'gin_2':
+        gnn = model_configs_zoo(dataset=dataset, model_name='gin_gin')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gat_gcn_sage_gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
     # gnn = model_configs_zoo(dataset=dataset, model_name='test_gnn')
@@ -102,8 +114,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    save_model_flag = False
-    # save_model_flag = True
+    # save_model_flag = False
+    save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
@@ -120,11 +132,12 @@ def test_attack_defense():
     # )
 
     metafull_poison_attack_config = ConfigPattern(
-        _class_name="MetaAttackFull",
+        _class_name="MetaAttackApprox",
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
         _config_class="PoisonAttackConfig",
         _config_kwargs={
-            "num_nodes": dataset.dataset.x.shape[0]
+            "num_nodes": dataset.dataset.x.shape[0],
+            "lambda_": 0,
         }
     )
 
@@ -153,7 +166,7 @@ def test_attack_defense():
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
-            "threshold": 0.05,
+            "threshold": 0.4,
         }
     )
 
@@ -250,7 +263,26 @@ def test_attack_defense():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "epsilon": 0.1 * 1,
+            "epsilon": 0.01,
+        }
+    )
+
+    clga_poison_attack_config = ConfigPattern(
+        _class_name="CLGAAttack",
+        _import_path=POISON_ATTACK_PARAMETERS_PATH,
+        _config_class="PoisonAttackConfig",
+        _config_kwargs={
+            "num_nodes": dataset.dataset.x.shape[0],
+            "feature_shape": dataset.dataset.x.shape[1]
+        }
+    )
+
+    fgsm_evasion_attack_config1 = ConfigPattern(
+        _class_name="FGSM",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "epsilon": 0.1,
         }
     )
     at_evasion_defense_config = ConfigPattern(
@@ -259,40 +291,77 @@ def test_attack_defense():
         _config_class="EvasionDefenseConfig",
         _config_kwargs={
             "attack_name": None,
-            "attack_config": fgsm_evasion_attack_config0
+            "attack_config": fgsm_evasion_attack_config1
         }
     )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
-    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
-    # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
+    if a_p is not None:
+        if a_p == 'metaattack':
+            gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
+        elif a_p == 'clga':
+            gnn_model_manager.set_poison_attacker(poison_attack_config=clga_poison_attack_config)
+    if d_p is not None:
+        if d_p == 'gnnguard':
+            gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
+        elif d_p == 'jaccard':
+            gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
+    if a_e is not None:
+        if a_e == 'fgsm':
+            gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+        elif a_e == 'nettack':
+            gnn_model_manager.set_evasion_attacker(evasion_attack_config=netattack_evasion_attack_config)
+    if d_e is not None:
+        if d_e == 'at':
+            gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 
     warnings.warn("Start training")
     dataset.train_test_split()
 
-    try:
-        raise FileNotFoundError()
-        # gnn_model_manager.load_model_executor()
-    except FileNotFoundError:
-        gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-        train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
-                                                              save_model_flag=save_model_flag,
-                                                              metrics=[Metric("F1", mask='train', average=None)])
+    for i in range(2):
+        adm = FrameworkAttackDefenseManager(
+            gen_dataset=copy.deepcopy(dataset),
+            gnn_manager=gnn_model_manager,
+        )
+        # adm.evasion_defense_pipeline(
+        #     steps=steps_epochs,
+        #     save_model_flag=save_model_flag,
+        #     metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
+        #     metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
+        #     mask='test'
+        # )
+        adm.poison_defense_pipeline(
+            steps=steps_epochs,
+            save_model_flag=save_model_flag,
+            metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"), ],
+            metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
+            mask='test'
+        )
 
-        if train_test_split_path is not None:
-            dataset.save_train_test_mask(train_test_split_path)
-            train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
-                                                                :]
-            dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
-            data.percent_train_class, data.percent_test_class = train_test_sizes
-
-    warnings.warn("Training was successful")
-
-    metric_loc = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
-                                      Metric("Accuracy", mask='test')])
-    print(metric_loc)
+    #
+    # try:
+    #     raise FileNotFoundError()
+    #     # gnn_model_manager.load_model_executor()
+    # except FileNotFoundError:
+    #     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
+    #     train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    #                                                           save_model_flag=save_model_flag,
+    #                                                           metrics=[Metric("F1", mask='train', average=None)])
+    #
+    #     if train_test_split_path is not None:
+    #         dataset.save_train_test_mask(train_test_split_path)
+    #         train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
+    #                                                             :]
+    #         dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
+    #         data.percent_train_class, data.percent_test_class = train_test_sizes
+    #
+    # warnings.warn("Training was successful")
+    #
+    # metric_loc = gnn_model_manager.evaluate_model(
+    #     gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+    #                                   Metric("Accuracy", mask='test')])
+    # print(metric_loc)
 
 
 def test_meta():
@@ -678,28 +747,65 @@ def test_jaccard():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "epsilon": 0.007 * 1,
+            "epsilon": 0.005,
         }
     )
-    # evasion_defense_config = ConfigPattern(
-    #     _class_name="JaccardDefender",
-    #     _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
-    #     _config_class="EvasionDefenseConfig",
-    #     _config_kwargs={
-    #     }
-    # )
+    fgsm_evasion_attack_config1 = ConfigPattern(
+        _class_name="FGSM",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "epsilon": 0.01,
+        }
+    )
+    at_evasion_defense_config = ConfigPattern(
+        _class_name="AdvTraining",
+        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+        _config_class="EvasionDefenseConfig",
+        _config_kwargs={
+            "attack_name": None,
+            "attack_config": fgsm_evasion_attack_config1
+        }
+    )
+
+    gradientregularization_evasion_defense_config = ConfigPattern(
+        _class_name="GradientRegularizationDefender",
+        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+        _config_class="EvasionDefenseConfig",
+        _config_kwargs={
+            "regularization_strength": 0.1 * 500
+        }
+    )
+
     poison_defense_config = ConfigPattern(
         _class_name="JaccardDefender",
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
+            'threshold': 0.4
+        }
+    )
+
+    node_idxs = [random.randint(0, 500) for _ in range(20)]
+
+    netattackgroup_evasion_attack_config = ConfigPattern(
+        _class_name="NettackGroupEvasionAttacker",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "node_idxs": node_idxs,  # Nodes for attack
+            "n_perturbations": 50,
+            "perturb_features": True,
+            "perturb_structure": True,
+            "direct": True,
+            "n_influencers": 10
         }
     )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=poison_attack_config)
-    gnn_model_manager.set_poison_defender(poison_defense_config=poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
-    # gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
+    # gnn_model_manager.set_poison_defender(poison_defense_config=poison_defense_config)
+    gnn_model_manager.set_evasion_attacker(evasion_attack_config=netattackgroup_evasion_attack_config)
+    # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
     dataset.train_test_split()
@@ -723,6 +829,8 @@ def test_jaccard():
 
     warnings.warn("Training was successful")
 
+    mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=node_idxs)
+
     metric_loc = gnn_model_manager.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='train', average='macro'),
                                       Metric("Accuracy", mask='train')])
@@ -732,6 +840,11 @@ def test_jaccard():
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     print("TEST", metric_loc)
+
+    metric_loc = gnn_model_manager.evaluate_model(
+        gen_dataset=dataset, metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                      Metric("Accuracy", mask=mask_loc)])
+    print(f"NODE IDXS: {node_idxs}", metric_loc)
 
 
 def test_adv_training():
@@ -1005,11 +1118,28 @@ def test_pgd():
     print(f"After PGD attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
+def exp_pipeline():
+    dataset_grid = ['Cora']
+    # model_grid = ['gcn_2', 'gcn_3', 'gin_2']
+    model_grid = ['gin_2']
+    attack_grid_evasion = ['fgsm', 'nettack']
+    attack_grid_poison = ['clga']
+    defense_grid_evasion = []
+    defense_grid_poison = ['jaccard']
+
+    for d in dataset_grid:
+        for m in model_grid:
+            for a_p in attack_grid_poison:
+                for d_p in defense_grid_poison:
+                    test_attack_defense(d, m, a_p=a_p, d_p=d_p)
+
+
 if __name__ == '__main__':
     import random
 
-    random.seed(10)
-    test_attack_defense()
+    # random.seed(10)
+    # test_attack_defense()
+    exp_pipeline()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()

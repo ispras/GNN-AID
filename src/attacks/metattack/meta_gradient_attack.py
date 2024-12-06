@@ -295,6 +295,7 @@ class MetaAttackFull(BaseMeta):
                 self.feature_changes.data[row_idx][col_idx] += (-2 * modified_features[row_idx][col_idx] + 1)
 
         if self.attack_structure:
+            print("TEST2")
             self.modified_adj = self.get_modified_adj(ori_adj).detach()
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
@@ -329,7 +330,7 @@ class MetaAttackFull(BaseMeta):
                 self.b_velocities[ix] = self.b_velocities[ix].detach()
                 self.b_velocities[ix].requires_grad = True
 
-        for j in range(self.attack_iters):
+        for j in tqdm(range(self.attack_iters)):
             hidden = features
             for ix, w in enumerate(self.weights):
                 b = self.biases[ix] if self.with_bias else 0
