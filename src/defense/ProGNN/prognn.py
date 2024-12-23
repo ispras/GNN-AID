@@ -1,23 +1,15 @@
-import copy
-
 import numpy as np
 import scipy as sp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torch.sparse
 from torch.optim.optimizer import required
-import torch_geometric.utils
-from torch_geometric.utils import to_torch_coo_tensor, to_edge_index, to_dense_adj, dense_to_sparse, is_sparse
-from tqdm import tqdm
 
 from defense.poison_defense import PoisonDefender
 
 class ProGNNDefender(PoisonDefender):
     name = 'ProGNNDefender'
-
-    # TODO re-write with support of sparse matrix
 
     def __init__(self, symmetric, lr_adj, alpha, beta, epochs, lambda_, phi, **kw):
         super().__init__()
@@ -32,65 +24,72 @@ class ProGNNDefender(PoisonDefender):
     def defense(self, gen_dataset, **kw):
 
         features = gen_dataset.dataset.data.x
-        # adj = to_torch_coo_tensor(gen_dataset.dataset.data.edge_index)
-        adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze(0)
+        adj = gen_dataset.dataset.data.edge_index
+        labels = gen_dataset.dataset.data.y
 
-        self.device = gen_dataset.dataset.data.x.device
-
-        estimator = EstimateAdj(adj, symmetric=self.symmetric, device=self.device).to(self.device)
+        estimator = EstimateAdj(adj, symmetric=self.symmetric, device=gen_dataset.device).to(self.device)
         self.estimator = estimator
-
         self.optimizer_adj = optim.SGD(estimator.parameters(),
                               momentum=0.9, lr=self.lr_adj)
 
         self.optimizer_l1 = PGD(estimator.parameters(),
-                        proxs=[prox_l1],
+                        proxs=[prox_operators.prox_l1],
                         lr=self.lr_adj, alphas=[self.alpha])
 
         self.optimizer_nuclear = PGD(estimator.parameters(),
-                  proxs=[prox_nuclear],
+                  proxs=[prox_operators.prox_nuclear],
                   lr=self.lr_adj, alphas=[self.beta])
 
         # Train model
-        for epoch in tqdm(range(self.epochs)):
-            self.train_adj(epoch, features, adj)
+        for epoch in range(self.epochs):
+            self.train_adj(epoch, features, adj, labels,
+                    idx_train, idx_val)
 
 
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
+        gen_dataset.dataset.data.edge_index = torch.tensor(new_edge_index).long()
         return gen_dataset
 
-    def train_adj(self, epoch, features, adj):
+    def train_adj(self, epoch, features, adj, labels, idx_train, idx_val):
         estimator = self.estimator
         estimator.train()
         self.optimizer_adj.zero_grad()
 
+        loss_l1 = torch.norm(estimator.estimated_adj, 1)
         loss_fro = torch.norm(estimator.estimated_adj - adj, p='fro')
+        normalized_adj = estimator.normalize()
 
         if self.lambda_:
             loss_smooth_feat = self.feature_smoothing(estimator.estimated_adj, features)
         else:
-            loss_smooth_feat = 0
+            loss_smooth_feat = 0 * loss_l1
 
-        loss_symmetric = torch.norm(estimator.estimated_adj - estimator.estimated_adj.t(), p="fro")
+        loss_symmetric = torch.norm(estimator.estimated_adj \
+                        - estimator.estimated_adj.t(), p="fro")
 
-        loss_diffirential = loss_fro + self.lambda_ * loss_smooth_feat + self.phi * loss_symmetric
+        loss_diffiential =  loss_fro + self.lambda_ * loss_smooth_feat + self.phi * loss_symmetric
 
-        loss_diffirential.backward()
+        loss_diffiential.backward()
 
         self.optimizer_adj.step()
+        loss_nuclear =  0 * loss_fro
         if self.beta != 0:
             self.optimizer_nuclear.zero_grad()
             self.optimizer_nuclear.step()
+            loss_nuclear = prox_operators.nuclear_norm
 
         self.optimizer_l1.zero_grad()
         self.optimizer_l1.step()
 
+        total_loss = loss_fro \
+                    + self.alpha * loss_l1 \
+                    + self.beta * loss_nuclear \
+                    + self.phi * loss_symmetric
+
         estimator.estimated_adj.data.copy_(torch.clamp(
                   estimator.estimated_adj.data, min=0, max=1))
 
-
     def feature_smoothing(self, adj, X):
-        adj = (adj.T + adj)/2
+        adj = (adj.t() + adj)/2
         rowsum = adj.sum(1)
         r_inv = rowsum.flatten()
         D = torch.diag(r_inv)
@@ -107,34 +106,47 @@ class ProGNNDefender(PoisonDefender):
         loss_smooth_feat = torch.trace(XLXT)
         return loss_smooth_feat
 
-def prox_l1(data, alpha):
-    """Proximal operator for l1 norm with sparse tensor support.
+class EstimateAdj(nn.Module):
+    """Provide a pytorch parameter matrix for estimated
+    adjacency matrix and corresponding operations.
     """
-    # if not data.is_sparse:
-    #     raise ValueError("Input data must be a sparse tensor.")
-    #
-    # values = data.values()
-    # indices = data.indices()
-    #
-    # prox_values = torch.sign(values) * torch.clamp(torch.abs(values) - alpha, min=0)
-    #
-    # return torch.sparse_coo_tensor(indices, prox_values, data.size())
-    data = torch.mul(torch.sign(data), torch.clamp(torch.abs(data) - alpha, min=0))
-    return data
 
+    def __init__(self, adj, symmetric=False, device='cpu'):
+        super(EstimateAdj, self).__init__()
+        n = len(adj)
+        self.estimated_adj = nn.Parameter(torch.FloatTensor(n, n))
+        self._init_estimation(adj)
+        self.symmetric = symmetric
+        self.device = device
 
-def prox_nuclear(data, alpha, k=50):
-    """Proximal operator for nuclear norm (trace norm).
-    """
-    device = data.device
-    # U, S, V = torch.svd_lowrank(data, q=k+5)
-    U, S, V = np.linalg.svd(data.cpu())
-    U, S, V = torch.FloatTensor(U).to(device), torch.FloatTensor(S).to(device), torch.FloatTensor(V).to(device)
+    def _init_estimation(self, adj):
+        with torch.no_grad():
+            n = len(adj)
+            self.estimated_adj.data.copy_(adj)
 
-    diag_S = torch.diag(torch.clamp(S-alpha, min=0))
-    return torch.matmul(torch.matmul(U, diag_S), V)
+    def forward(self):
+        return self.estimated_adj
 
-class PGD(torch.optim.Optimizer):
+    def normalize(self):
+
+        if self.symmetric:
+            adj = (self.estimated_adj + self.estimated_adj.t())/2
+        else:
+            adj = self.estimated_adj
+
+        normalized_adj = self._normalize(adj + torch.eye(adj.shape[0]).to(self.device))
+        return normalized_adj
+
+    def _normalize(self, mx):
+        rowsum = mx.sum(1)
+        r_inv = rowsum.pow(-1/2).flatten()
+        r_inv[torch.isinf(r_inv)] = 0.
+        r_mat_inv = torch.diag(r_inv)
+        mx = r_mat_inv @ mx
+        mx = mx @ r_mat_inv
+        return mx
+
+class PGD(optim.Optimizer):
     """Proximal gradient descent.
 
     Parameters
@@ -181,46 +193,48 @@ class PGD(torch.optim.Optimizer):
             # apply the proximal operator to each parameter in a group
             for param in group['params']:
                 for prox_operator, alpha in zip(proxs, alphas):
+                    # param.data.add_(lr, -param.grad.data)
+                    # param.data.add_(delta)
                     param.data = prox_operator(param.data, alpha=alpha*lr)
 
 
-class EstimateAdj(nn.Module):
-    """Provide a pytorch parameter matrix for estimated
-    adjacency matrix and corresponding operations.
+class ProxOperators():
+    """Proximal Operators.
     """
 
-    def __init__(self, adj, symmetric=False, device='cpu'):
-        super(EstimateAdj, self).__init__()
-        n = len(adj)
-        self.estimated_adj = nn.Parameter(torch.FloatTensor(n, n))
-        self._init_estimation(adj)
-        self.symmetric = symmetric
-        self.device = device
+    def __init__(self):
+        self.nuclear_norm = None
 
-    def _init_estimation(self, adj):
-        with torch.no_grad():
-            n = len(adj)
-            self.estimated_adj.data.copy_(adj)
+    def prox_l1(self, data, alpha):
+        """Proximal operator for l1 norm.
+        """
+        data = torch.mul(torch.sign(data), torch.clamp(torch.abs(data)-alpha, min=0))
+        return data
 
-    def forward(self):
-        return self.estimated_adj
+    def prox_nuclear(self, data, alpha):
+        """Proximal operator for nuclear norm (trace norm).
+        """
+        device = data.device
+        U, S, V = np.linalg.svd(data.cpu())
+        U, S, V = torch.FloatTensor(U).to(device), torch.FloatTensor(S).to(device), torch.FloatTensor(V).to(device)
+        self.nuclear_norm = S.sum()
+        # print("nuclear norm: %.4f" % self.nuclear_norm)
 
-    def normalize(self):
+        diag_S = torch.diag(torch.clamp(S-alpha, min=0))
+        return torch.matmul(torch.matmul(U, diag_S), V)
 
-        if self.symmetric:
-            adj = (self.estimated_adj + self.estimated_adj.t())/2
-        else:
-            adj = self.estimated_adj
 
-        normalized_adj = self._normalize(adj + torch.eye(adj.shape[0]).to(self.device))
-        return normalized_adj
+    def prox_nuclear_truncated(self, data, alpha, k=50):
+        device = data.device
+        indices = torch.nonzero(data).t()
+        values = data[indices[0], indices[1]] # modify this based on dimensionality
+        data_sparse = sp.csr_matrix((values.cpu().numpy(), indices.cpu().numpy()))
+        U, S, V = sp.linalg.svds(data_sparse, k=k)
+        U, S, V = torch.FloatTensor(U).to(device), torch.FloatTensor(S).to(device), torch.FloatTensor(V).to(device)
+        self.nuclear_norm = S.sum()
+        diag_S = torch.diag(torch.clamp(S-alpha, min=0))
+        return torch.matmul(torch.matmul(U, diag_S), V)
 
-    def _normalize(self, mx):
-        rowsum = mx.sum(1)
-        r_inv = rowsum.pow(-1/2).flatten()
-        r_inv[torch.isinf(r_inv)] = 0.
-        r_mat_inv = torch.diag(r_inv)
-        mx = r_mat_inv @ mx
-        mx = mx @ r_mat_inv
-        return mx
+
+prox_operators = ProxOperators()
 
