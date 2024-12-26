@@ -1,0 +1,7 @@
+{
+  "_class_import_info": null,
+  "_class_name": "EmptyMIAttacker",
+  "_config_class": "MIAttackConfig",
+  "_config_kwargs": {},
+  "_import_path": "/home/sazonovg/PycharmProjects/GNN-AID/metainfo/mi_attack_parameters.json"
+}

@@ -399,7 +399,7 @@ class MetaAttackApprox(BaseMeta):
     name = "MetaAttackApprox"
 
     def __init__(self, num_nodes=None, feature_shape=None, attack_structure=True, attack_features=False,
-                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200, attack_iters=10,
+                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200, attack_iters=10, attack_budget=500,
                  lr=0.01, with_relu=False):
         super().__init__(num_nodes=num_nodes, feature_shape=feature_shape, lambda_=lambda_, train_iters=train_iters,
                          attack_iters=attack_iters, lr=lr, attack_features=attack_features,
@@ -410,6 +410,7 @@ class MetaAttackApprox(BaseMeta):
         self.attack_iters = attack_iters
         self.adj_meta_grad = None
         self.features_meta_grad = None
+        self.attack_budget = attack_budget
         if self.attack_structure:
             self.adj_grad_sum = torch.zeros(num_nodes, num_nodes).to(device)
         if self.attack_features:
@@ -421,8 +422,9 @@ class MetaAttackApprox(BaseMeta):
         self.weights = []
         self.biases = []
 
-    def attack(self, gen_dataset, attack_budget=500, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
+        attack_budget = self.attack_budget
 
         self.hidden_sizes = [16]   # FIXME get from model architecture
         self.nfeat = gen_dataset.num_node_features

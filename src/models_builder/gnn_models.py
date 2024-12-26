@@ -18,6 +18,7 @@ from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
 
 from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
+from aux.custom_decorators import timing_decorator
 from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, model_managers_info_by_names_list, \
     hash_data_sha256, \
@@ -1071,6 +1072,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                         for k, v in self.stats_data.items()},
             weights={"weights": self.gnn.get_weights()}, loss=train_loss)
 
+    @timing_decorator
     def train_model(
             self,
             gen_dataset: GeneralDataset,

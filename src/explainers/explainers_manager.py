@@ -3,6 +3,7 @@ from socket import SocketIO
 from typing import Union, Type
 
 from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
+from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH
 from base.datasets_processing import GeneralDataset
@@ -158,6 +159,7 @@ class FrameworkExplainersManager:
             explainer_run_kwargs=run_config.to_saveable_dict(),
         )
 
+    @timing_decorator
     def conduct_experiment(
             self,
             run_config: Union[ConfigPattern, ExplainerRunConfig],

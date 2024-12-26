@@ -6,9 +6,11 @@ from torch import device
 
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH
+    EVASION_DEFENSE_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
 from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from src.aux.configs import ModelModificationConfig, ConfigPattern
+from explainers.explainers_manager import FrameworkExplainersManager
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 from attacks.QAttack import qattack
@@ -300,6 +302,8 @@ def test_meta():
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = ("single-graph", "Amazon", 'Photo')
+
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -335,13 +339,55 @@ def test_meta():
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
         _config_class="PoisonAttackConfig",
         _config_kwargs={
-            "num_nodes": dataset.dataset.x.shape[0]
+            "num_nodes": dataset.dataset.x.shape[0],
+            "attack_budget": 10
         }
     )
     gnn_model_manager.set_poison_attacker(poison_attack_config=poison_attack_config)
 
+    evasion_defense_config = ConfigPattern(
+        _class_name="AdvTraining",
+        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+        _config_class="EvasionDefenseConfig",
+        _config_kwargs={
+        }
+    )
+
+    fgsm_evasion_attack_config0 = ConfigPattern(
+        _class_name="FGSM",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "epsilon": 0.1 * 1,
+        }
+    )
+    at_evasion_defense_config = ConfigPattern(
+        _class_name="AdvTraining",
+        _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+        _config_class="EvasionDefenseConfig",
+        _config_kwargs={
+            "attack_name": None,
+            "attack_config": fgsm_evasion_attack_config0
+        }
+    )
+
+    # gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
+
+
+    # poison_defense_config = ConfigPattern(
+    #     _class_name="JaccardDefender",
+    #     _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+    #     _config_class="PoisonDefenseConfig",
+    #     _config_kwargs={
+    #         "threshold": 0.05,
+    #     }
+    # )
+    # gnn_model_manager.set_poison_defender(poison_defense_config=poison_defense_config)
+
     warnings.warn("Start training")
-    dataset.train_test_split(percent_train_class=0.1)
+    # dataset.train_test_split()
+
+    edge_index_before = dataset.dataset.data.edge_index
 
     try:
         raise FileNotFoundError()
@@ -365,6 +411,37 @@ def test_meta():
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
+
+    edge_index_after = dataset.dataset.data.edge_index
+    print("TEST")
+
+    # explainer_init_config = ConfigPattern(
+    #     _class_name="SubgraphX",
+    #     _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+    #     _config_class="ExplainerInitConfig",
+    #     _config_kwargs={
+    #     }
+    # )
+    # explainer_run_config = ConfigPattern(
+    #     _config_class="ExplainerRunConfig",
+    #     _config_kwargs={
+    #         "mode": "local",
+    #         "kwargs": {
+    #             "_class_name": "SubgraphX",
+    #             "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+    #             "_config_class": "Config",
+    #             "_config_kwargs": {
+    #
+    #             },
+    #         }
+    #     }
+    # )
+    # explainer = FrameworkExplainersManager(
+    #     init_config=explainer_init_config,
+    #     dataset=dataset, gnn_manager=gnn_model_manager,
+    #     explainer_name='SubgraphX',
+    # )
+    # explainer.conduct_experiment(explainer_run_config)
 
 
 def test_nettack_evasion():
@@ -1008,8 +1085,9 @@ def test_pgd():
 if __name__ == '__main__':
     import random
 
-    random.seed(10)
-    test_attack_defense()
+    # random.seed(10)
+    # test_attack_defense()
+    test_meta()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
