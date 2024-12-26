@@ -12,6 +12,15 @@
     "attention": ["attention", "bool", true, {}, "?"],
     "drop": ["drop", "bool", true, {}, "?"],
     "train_iters": ["train_iters", "int", 50, {}, "?"]
- }
+ },
+  "ProGNNDefender": {
+    "symmetric": ["symmetric", "bool", true, {}, "?"],
+    "lr_adj": ["lr_adj", "float", 0.01, {"min": 0.0001, "step": 0.005}, "?"],
+    "alpha": ["alpha", "float", 5e-4, {"min": 0.0, "step": 0.0001}, "?"],
+    "beta": ["beta", "float", 1.5, {"min": 0.0, "step": 0.01}, "?"],
+    "epochs": ["epochs", "int", 400, {"min": 1, "step":  1}, "?"],
+    "lambda_": ["lambda_", "float", 0, {"min": 0.0, "step": 0.001}, "?"],
+    "phi": ["phi", "float", 0, {"min": 0.0, "step": 0.01}, "?"]
+  }
 }
 
