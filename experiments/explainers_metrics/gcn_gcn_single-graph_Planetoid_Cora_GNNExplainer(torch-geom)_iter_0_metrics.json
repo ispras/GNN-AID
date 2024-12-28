@@ -1,0 +1,1 @@
+{"nodes": [1415], "metrics_params": {"stability_graph_perturbations_nums": 1, "stability_feature_change_percent": 0.05, "stability_node_removal_percent": 0.05, "consistency_num_explanation_runs": 1}, "num_nodes": 1, "explainer_kwargs": {}}

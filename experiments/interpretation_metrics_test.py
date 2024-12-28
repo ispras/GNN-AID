@@ -5,7 +5,7 @@ import warnings
 
 import torch
 
-from aux.custom_decorators import timing_decorator
+from aux.custom_decorators import timing_decorator, retry
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, POISON_ATTACK_PARAMETERS_PATH
 from explainers.explainers_manager import FrameworkExplainersManager
@@ -60,15 +60,16 @@ def explainer_run_config_for_node(explainer_name, node_ind, explainer_kwargs=Non
     )
 
 
+@retry(max_tries=5)
 @timing_decorator
 def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=0):
-    steps_epochs = 10
-    num_explaining_nodes = 1
+    steps_epochs = 200
+    num_explaining_nodes = 5
     explaining_metrics_params = {
-        "stability_graph_perturbations_nums": 1,
+        "stability_graph_perturbations_nums": 3,
         "stability_feature_change_percent": 0.05,
         "stability_node_removal_percent": 0.05,
-        "consistency_num_explanation_runs": 1,
+        "consistency_num_explanation_runs": 3,
     }
     # steps_epochs = 200
     # num_explaining_nodes = 30
@@ -361,7 +362,7 @@ def calculate_adversial_defence_metrics(
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "epsilon": 0.1 * 1,
+            "epsilon": 0.05 * 1,
         }
     )
     at_evasion_defense_config = ConfigPattern(
@@ -463,7 +464,7 @@ def calculate_gnnguard_defence_metrics(
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
             "lr": 0.01,
-            "train_iters": 100,
+            "train_iters": 200,
             # "model": gnn_model_manager.gnn
         }
     )
