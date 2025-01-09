@@ -143,7 +143,8 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
                 explaining_metrics_params,
                 dataset,
                 node_id_to_explainer_run_config,
-                model_name
+                model_name,
+                iteration=iter
             )
             result_dict[experiment_name] = metrics
             print(f"Calculation of explanation metrics with defence: {experiment_name} completed. Metrics:\n{metrics}")
@@ -157,7 +158,8 @@ def calculate_unprotected_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -184,7 +186,7 @@ def calculate_unprotected_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -238,7 +240,8 @@ def calculate_jaccard_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -263,7 +266,7 @@ def calculate_jaccard_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -326,7 +329,8 @@ def calculate_adversial_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -351,7 +355,7 @@ def calculate_adversial_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -452,7 +456,7 @@ def calculate_gnnguard_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -518,7 +522,8 @@ def calculate_autoencoder_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -543,7 +548,7 @@ def calculate_autoencoder_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -606,7 +611,8 @@ def calculate_gradientregularization_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -631,7 +637,7 @@ def calculate_gradientregularization_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -694,7 +700,8 @@ def calculate_quantization_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -719,7 +726,7 @@ def calculate_quantization_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -782,7 +789,8 @@ def calculate_distillation_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -807,7 +815,7 @@ def calculate_distillation_defence_metrics(
         gnn=gnn,
         dataset_path=results_dataset_path,
         manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+        modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
     gnn_model_manager.gnn.to(device)
     data.x = data.x.float()
@@ -868,7 +876,7 @@ if __name__ == '__main__':
 
     explainers = [
         'GNNExplainer(torch-geom)',
-        'SubgraphX',
+        # 'SubgraphX',
         # "Zorro",
     ]
     models = [
@@ -887,10 +895,11 @@ if __name__ == '__main__':
         ("single-graph", "Planetoid", 'PubMed'),
         ("single-graph", "Amazon", 'Computers'),
     ]
-    for i in range(0, 10):
+    for i in range(1, 10):
         for model_name in models:
             for dataset_full_name in datasets:
                 for explainer in explainers:
+                    print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
                     run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)
