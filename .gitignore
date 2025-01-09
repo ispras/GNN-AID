@@ -20,6 +20,7 @@ config
 pics
 results
 sphinx_docs
+explainers_metrics
 
 data
 explanations

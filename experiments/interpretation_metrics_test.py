@@ -431,7 +431,8 @@ def calculate_gnnguard_defence_metrics(
         explaining_metrics_params,
         dataset,
         node_id_to_explainer_run_config,
-        model_name
+        model_name,
+        iteration: int = 0
 ):
     save_model_flag = True
     device = torch.device('cpu')
