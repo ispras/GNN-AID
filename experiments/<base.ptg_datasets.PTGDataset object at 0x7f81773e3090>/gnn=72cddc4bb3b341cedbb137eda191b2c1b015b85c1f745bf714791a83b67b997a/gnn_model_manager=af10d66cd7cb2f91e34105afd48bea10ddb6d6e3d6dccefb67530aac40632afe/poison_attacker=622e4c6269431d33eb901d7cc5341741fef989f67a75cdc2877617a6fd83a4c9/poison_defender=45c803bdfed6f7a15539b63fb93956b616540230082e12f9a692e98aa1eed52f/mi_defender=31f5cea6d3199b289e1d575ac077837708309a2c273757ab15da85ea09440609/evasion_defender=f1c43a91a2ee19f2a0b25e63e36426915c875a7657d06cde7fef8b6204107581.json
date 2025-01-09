@@ -1,7 +1,0 @@
-{
-  "_class_import_info": null,
-  "_class_name": "EmptyEvasionDefender",
-  "_config_class": "EvasionDefenseConfig",
-  "_config_kwargs": {},
-  "_import_path": "/home/lukyanovkirill/Projects/GNN-AID/metainfo/evasion_defense_parameters.json"
-}
