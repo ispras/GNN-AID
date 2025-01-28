@@ -4,6 +4,7 @@ import random
 import warnings
 
 import torch
+from scipy.spatial.distance import jaccard
 
 from aux.custom_decorators import timing_decorator, retry
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
@@ -18,6 +19,7 @@ from src.models_builder.models_zoo import model_configs_zoo
 from defense.JaccardDefense import jaccard_def
 from attacks.metattack import meta_gradient_attack
 from defense.GNNGuard import gnnguard
+from typing import Optional
 
 
 def load_result_dict(path):
@@ -62,7 +64,7 @@ def explainer_run_config_for_node(explainer_name, node_ind, explainer_kwargs=Non
 
 @retry(max_tries=5)
 @timing_decorator
-def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=0):
+def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=0, hyper_ind=0):
     steps_epochs = 200
     num_explaining_nodes = 5
     explaining_metrics_params = {
@@ -121,19 +123,17 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     node_id_to_explainer_run_config = \
         {node_id: explainer_run_config_for_node(explainer_name, node_id, explainer_kwargs) for node_id in node_indices}
 
+    jaccard_grid = [0.00, 0.05, 0.35, 0.5, 0.1]  # TODO Kirill - check grid
+    gradreg_grid = [0.0001, 0.01, 50, 100, 1000]  #  TODO Kirill - check grid
+    assert hyper_ind < len(jaccard_grid)
+
     experiment_name_to_experiment = [
         ("Unprotected", calculate_unprotected_metrics),
-        ("Jaccard_defence", calculate_jaccard_defence_metrics),
-        ("GNNGuard_defence", calculate_gnnguard_defence_metrics),
-        ("AdvTraining_defence", calculate_adversial_defence_metrics),
-        ("AutoEncoderDefender", calculate_autoencoder_defence_metrics),
-        ("QuantizationDefender", calculate_quantization_defence_metrics),
-        ("GradientRegularizationDefender", calculate_gradientregularization_defence_metrics),
-        ("DistillationDefender", calculate_distillation_defence_metrics),
-
+        ("Jaccard_defence", calculate_jaccard_defence_metrics, jaccard_grid),
+        ("GradientRegularizationDefender", calculate_gradientregularization_defence_metrics, gradreg_grid),
     ]
 
-    for experiment_name, calculate_fn in experiment_name_to_experiment:
+    for experiment_name, calculate_fn, grid in experiment_name_to_experiment:
         if experiment_name not in result_dict:
             print(f"Calculation of explanation metrics with defence: {experiment_name} started.")
             explaining_metrics_params["experiment_name"] = experiment_name
@@ -144,7 +144,8 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
                 dataset,
                 node_id_to_explainer_run_config,
                 model_name,
-                iteration=iter
+                iteration=iter,
+                hyper=grid[hyper_ind],
             )
             result_dict[experiment_name] = metrics
             print(f"Calculation of explanation metrics with defence: {experiment_name} completed. Metrics:\n{metrics}")
@@ -241,7 +242,8 @@ def calculate_jaccard_defence_metrics(
         dataset,
         node_id_to_explainer_run_config,
         model_name,
-        iteration: int = 0
+        iteration: int = 0,
+        hyper: float = 0.35,
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -277,6 +279,7 @@ def calculate_jaccard_defence_metrics(
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
+            "threshold": hyper,
         }
     )
 
@@ -613,7 +616,8 @@ def calculate_gradientregularization_defence_metrics(
         dataset,
         node_id_to_explainer_run_config,
         model_name,
-        iteration: int = 0
+        iteration: int = 0,
+        hyper: float = 50,
 ):
     save_model_flag = True
     device = torch.device('cpu')
@@ -649,6 +653,7 @@ def calculate_gradientregularization_defence_metrics(
         _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
         _config_class="EvasionDefenseConfig",
         _config_kwargs={
+            "regularization_strength": hyper,
         }
     )
 
@@ -883,24 +888,18 @@ if __name__ == '__main__':
     models = [
         'gcn_gcn',
         'gcn_gcn_gcn',
-        'gat_gat',
-        'sage_sage',
-        'gin_gin',
-        'sage_sage_sage',
     ]
 
     datasets = [
         ("single-graph", "Planetoid", 'Cora'),
-        ("single-graph", "Amazon", 'Photo'),
-        ("single-graph", "Planetoid", 'CiteSeer'),
-        ("single-graph", "Planetoid", 'PubMed'),
-        ("single-graph", "Amazon", 'Computers'),
+        # ("single-graph", "Amazon", 'Photo'),
     ]
     for i in range(1, 10):
         for model_name in models:
             for dataset_full_name in datasets:
                 for explainer in explainers:
-                    print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
-                    run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    for hyper_ind in range(5):
+                        print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}; Hypeparam_value_ind: {hyper_ind}")
+                        run_interpretation_test(explainer, dataset_full_name, model_name, iter=i, hyper_ind=hyper_ind)
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)
