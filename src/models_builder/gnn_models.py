@@ -1480,7 +1480,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             batch,
             task_type: str = None
     ) -> torch.Tensor:
-        if task_type == "single-graph":
+        if task_type == "multiple-graphs":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index)
             min_distances = self.gnn.min_distances
@@ -1489,6 +1489,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self.prot_layer.prototype_class_identity = self.prot_layer.prototype_class_identity
             prototypes_of_correct_class = torch.t(
                 self.prot_layer.prototype_class_identity[:, batch.y].bool())
+
             cluster_cost = torch.mean(
                 torch.min(min_distances[prototypes_of_correct_class]
                           .reshape(-1, self.prot_layer.num_prototypes_per_class), dim=1)[0])
@@ -1520,7 +1521,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-        elif task_type == "multiple-graphs":
+        elif task_type == "signle-graph":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             loss = self.loss_function(logits, batch.y)
