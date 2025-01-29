@@ -1482,7 +1482,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
     ) -> torch.Tensor:
         if task_type == "multiple-graphs":
             self.optimizer.zero_grad()
-            logits = self.gnn(batch.x, batch.edge_index)
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             min_distances = self.gnn.min_distances
 
             # cluster loss
@@ -1556,7 +1556,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ):
-        cur_step = self.modification.epochs
+        cur_step = self.modification.epochs + 1
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
         # Prototype projection
         if cur_step > self.proj_epochs and cur_step % self.proj_epochs == 0:
