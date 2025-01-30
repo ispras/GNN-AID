@@ -18,7 +18,7 @@ from defense.GNNGuard import gnnguard
 
 
 def test_attack_defense():
-    from attacks.CLGA import CLGA_gpt
+    from attacks.CLGA import CLGA
 
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
