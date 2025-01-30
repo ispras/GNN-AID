@@ -88,7 +88,8 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     }
     dataset_key_name = "_".join(dataset_full_name)
     metrics_path = root_dir / "experiments" / "explainers_metrics"
-    dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_metrics.json"
+    # dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_metrics.json"
+    dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_hyper_ind_{hyper_ind}_metrics.json"
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=dataset_full_name,
@@ -123,12 +124,19 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     node_id_to_explainer_run_config = \
         {node_id: explainer_run_config_for_node(explainer_name, node_id, explainer_kwargs) for node_id in node_indices}
 
-    jaccard_grid = [0.00, 0.05, 0.35, 0.5, 0.1]  # TODO Kirill - check grid
-    gradreg_grid = [0.0001, 0.01, 50, 100, 1000]  #  TODO Kirill - check grid
+    jaccard_grid = [0.05, 0.1, 0.2, 0.4]
+    gradreg_grid = [1, 5, 15, 50]
     assert hyper_ind < len(jaccard_grid)
 
     experiment_name_to_experiment = [
-        ("Unprotected", calculate_unprotected_metrics),
+        # ("Unprotected", calculate_unprotected_metrics),
+        # ("Jaccard_defence", calculate_jaccard_defence_metrics),
+        # ("GNNGuard_defence", calculate_gnnguard_defence_metrics),
+        # ("AdvTraining_defence", calculate_adversial_defence_metrics),
+        # ("AutoEncoderDefender", calculate_autoencoder_defence_metrics),
+        # ("QuantizationDefender", calculate_quantization_defence_metrics),
+        # ("GradientRegularizationDefender", calculate_gradientregularization_defence_metrics),
+        # ("DistillationDefender", calculate_distillation_defence_metrics),
         ("Jaccard_defence", calculate_jaccard_defence_metrics, jaccard_grid),
         ("GradientRegularizationDefender", calculate_gradientregularization_defence_metrics, gradreg_grid),
     ]
@@ -888,17 +896,24 @@ if __name__ == '__main__':
     models = [
         'gcn_gcn',
         'gcn_gcn_gcn',
+        # 'sage_sage',
+        # 'sage_sage_sage',
+        # 'gin_gin',
+        # 'gat_gat',
     ]
 
     datasets = [
         ("single-graph", "Planetoid", 'Cora'),
         # ("single-graph", "Amazon", 'Photo'),
+        # ("single-graph", "Planetoid", 'CiteSeer'),
+        # ("single-graph", "Planetoid", 'PubMed'),
+        # ("single-graph", "Amazon", 'Computers'),
     ]
-    for i in range(1, 10):
-        for model_name in models:
-            for dataset_full_name in datasets:
+    for dataset_full_name in datasets:
+        for i in range(2):
+            for model_name in models:
                 for explainer in explainers:
-                    for hyper_ind in range(5):
+                    for hyper_ind in range(4):
                         print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}; Hypeparam_value_ind: {hyper_ind}")
                         run_interpretation_test(explainer, dataset_full_name, model_name, iter=i, hyper_ind=hyper_ind)
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
