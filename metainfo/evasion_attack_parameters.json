@@ -2,7 +2,8 @@
  "EmptyEvasionAttacker": {
  }, 
  "FGSM": {
-  "epsilon": ["epsilon", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
+  "epsilon": ["epsilon", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"],
+
  },
  "NettackEvasionAttacker": {
   "node_idx": ["node_idx", "int", 0, {"min":  0, "step": 1}, "Index of the node to attack"],

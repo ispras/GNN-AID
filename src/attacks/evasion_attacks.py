@@ -47,9 +47,13 @@ class FGSMAttacker(
 
     def __init__(
             self,
-            epsilon: float = 0.1
+            is_feature_attack: bool = False,
+            element_idx: int = 0,
+            epsilon: float = 0.5,
     ):
         super().__init__()
+        self.is_feature_attack = is_feature_attack
+        self.element_idx = element_idx
         self.epsilon = epsilon
 
     def attack(
@@ -58,16 +62,73 @@ class FGSMAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        gen_dataset.data.x.requires_grad = True
-        output = model_manager.gnn(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
-        loss = model_manager.loss_function(output[mask_tensor],
-                                           gen_dataset.data.y[mask_tensor])
-        model_manager.gnn.zero_grad()
-        loss.backward()
-        sign_data_grad = gen_dataset.data.x.grad.sign()
-        perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
-        perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-        gen_dataset.data.x = perturbed_data_x.detach()
+        if self.is_feature_attack:
+            gen_dataset.data.x.requires_grad = True
+            output = model_manager.gnn(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
+            loss = model_manager.loss_function(output[mask_tensor],
+                                               gen_dataset.data.y[mask_tensor])
+            model_manager.gnn.zero_grad()
+            loss.backward()
+            sign_data_grad = gen_dataset.data.x.grad.sign()
+            perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
+            perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
+            gen_dataset.data.x = perturbed_data_x.detach()
+        else:
+            if gen_dataset.is_multi():
+                pass
+            else:
+                node_idx = self.element_idx
+
+                edge_index = gen_dataset.data.edge_index
+                y = gen_dataset.data.y
+                x = gen_dataset.data.x
+
+                model = model_manager.gnn
+                num_hops = model.n_layers
+
+                subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
+                                                                           num_hops=num_hops,
+                                                                           edge_index=edge_index,
+                                                                           relabel_nodes=True,
+                                                                           directed=False)
+
+                edges_updated = False
+
+                while not edges_updated:
+                    max_abs_index = torch.argmax(torch.abs(g_hat[node_idx, :]))
+
+                    edge = (int(node_idx), int(max_abs_index))  # edge (i, j): i = node_idx, j = max_abs_index
+
+                    max_value = g_hat[edge]
+
+                    # A positive value of g_hat[i, j] means to add an edge (i, j), and a negative value means to remove it.
+                    sign = int(torch.sign(max_value))
+
+                    edge_value = int(A[edge])
+                    if (sign > 0) and (edge_value == 1):
+                        # if an edge (i, j) has a maximum positive gradient and at the same time the adjacency matrix has 1
+                        # in position (i, j), then we should not add the edge (i, j).
+                        # print(f"It is impossible to add edge {edge} to matrix 'A', - edge {edge} already exists in matrix 'A'")
+                        pass
+                    elif (sign < 0) and (edge_value == 0):
+                        # if an edge (i, j) has a maximum negative gradient and at the same time the adjacency matrix has 0
+                        # in position (i, j), then we can't remove the edge (i, j).
+                        # print(f"It is impossible to remove edge {edge} from matrix 'A', - edge {edge} is already absent from matrix 'A'")
+                        pass
+                    elif sign == 0:
+                        pass
+                    else:
+                        A[edge] = A[edge] + sign
+                        matrix_updated = True
+                        if sign > 0:
+                            print(f"Edge {edge} successfully added to matrix 'A'")
+                        if sign < 0:
+                            print(f"Edge {edge} successfully removed from matrix 'A'")
+
+                    if not matrix_updated:
+                        # if the matrix is not updated for one of the exceptions, then we zero out the maximum gradient and repeat
+                        # the process, i.e. we take the second largest gradient
+                        g_hat[edge] = 0
         return gen_dataset
 
 
