@@ -64,7 +64,6 @@ class PanelView extends View {
     break() {
         if (this.$body)
             this.$body.empty()
-        this.datasetInfo = null
         this._collapse(true)
     }
 

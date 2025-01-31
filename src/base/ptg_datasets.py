@@ -3,16 +3,20 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import Union, Callable
+
 import torch
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 from torch_geometric.data.data import BaseData
 
 from aux.utils import import_by_name, root_dir, root_dir_len
 from base.datasets_processing import GeneralDataset, is_in_torch_geometric_datasets, DatasetInfo
-from aux.configs import DatasetConfig, DatasetVarConfig
+from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
-class PTGDataset(GeneralDataset):
+class PTGDataset(
+    GeneralDataset
+):
     """ Contains a PTG dataset.
     """
     attr_name = 'unknown'
@@ -22,7 +26,11 @@ class PTGDataset(GeneralDataset):
         dataset_ver_ind=0
     )
 
-    def __init__(self, dataset_config: DatasetConfig, **kwargs):
+    def __init__(
+            self,
+            dataset_config: Union[ConfigPattern, DatasetConfig],
+            **kwargs
+    ):
         """
         :param dataset_config: dataset config dictionary
         :param kwargs: additional args to init torch dataset class
@@ -127,14 +135,20 @@ class PTGDataset(GeneralDataset):
                 # raise FileNotFoundError(
                 #     f"No data found for dataset '{self.dataset_config.full_name()}'")
 
-    def move_processed(self, processed: (str, Path)):
+    def move_processed(
+            self,
+            processed: Union[str, Path]
+    ) -> None:
         if not self.results_dir.exists():
             self.results_dir.mkdir(parents=True)
             os.rename(processed, self.results_dir)
         else:
             shutil.rmtree(processed)
 
-    def move_raw(self, raw: (str, Path)):
+    def move_raw(
+            self,
+            raw: Union[str, Path]
+    ) -> None:
         if Path(raw) == self.raw_dir:
             return
         if not self.raw_dir.exists():
@@ -143,25 +157,39 @@ class PTGDataset(GeneralDataset):
         else:
             raise RuntimeError(f"raw_dir '{self.raw_dir}' already exists")
 
-    def _compute_dataset_data(self, center=None, depth=None):
+    def _compute_dataset_data(
+            self,
+            center=None,
+            depth: Union[int, None] = None
+    ) -> None:
         # assert len(name_type) == 1  # FIXME
         dataset_data = super()._compute_dataset_data()
         # FIXME add features
 
         return dataset_data
 
-    def build(self, dataset_var_config: dict=None):
+    def build(
+            self,
+            dataset_var_config: dict = None
+    ) -> None:
         """ PTG dataset is already built
         """
         # Use cached ptg dataset. Only default dataset_var_config is allowed.
         assert self.dataset_var_config == dataset_var_config
 
 
-class LocalDataset(InMemoryDataset):
+class LocalDataset(
+    InMemoryDataset
+):
     """ Locally saved PTG Dataset.
     """
 
-    def __init__(self, results_dir, process_func=None, **kwargs):
+    def __init__(
+            self,
+            results_dir: Union[str, Path],
+            process_func: Union[Callable, None] = None,
+            **kwargs
+    ):
         """
 
         :param results_dir:
@@ -172,7 +200,7 @@ class LocalDataset(InMemoryDataset):
         if process_func:
             self.process = process_func
         # Init and process if needed
-        super().__init__(None,  **kwargs)
+        super().__init__(None, **kwargs)
 
         # Load
         self.data, *rest_data = torch.load(self.processed_paths[0])
@@ -180,22 +208,31 @@ class LocalDataset(InMemoryDataset):
         try:
             self.slices = rest_data[0]
             # TODO can use rest_data[1] ?
-        except IndexError: pass
+        except IndexError:
+            pass
 
     @property
-    def processed_file_names(self):
+    def processed_file_names(
+            self
+    ) -> str:
         return 'data.pt'
 
-    def process(self):
+    def process(
+            self
+    ) -> None:
         raise RuntimeError("Dataset is supposed to be processed and saved earlier.")
         # torch.save(self.collate(self.data_list), self.processed_paths[0])
 
     @property
-    def processed_dir(self) -> str:
+    def processed_dir(
+            self
+    ) -> str:
         return self.results_dir
 
 
-def is_graph_directed(data: (Data, BaseData)) -> bool:
+def is_graph_directed(
+        data: Union[Data, BaseData]
+) -> bool:
     """ Detect whether graph is directed or not (for each edge i->j, exists j->i).
     """
     # Note: this does not work correctly. E.g. for TUDataset/MUTAG it incorrectly says directed.

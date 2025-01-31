@@ -27,7 +27,6 @@ models
 models_exp
 results
 data_info
-explanations
 #user_models_obj
 #user_models_managers
 user_datasets

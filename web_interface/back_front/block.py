@@ -4,6 +4,52 @@ import functools
 from web_interface.back_front.utils import SocketConnect
 
 
+class BlockConfig(dict):
+    def __init__(
+            self
+    ):
+        super().__init__()
+
+    def init(
+            self,
+            *args
+    ):
+        pass
+
+    def modify(
+            self,
+            **kwargs
+    ):
+        for key, value in kwargs.items():
+            self[key] = value
+
+    def finalize(
+            self
+    ):
+        """ Check correctness """
+        # TODO check correctness
+        return True
+
+    def toDefaults(
+            self
+    ):
+        """ Set default values """
+        self.clear()
+
+    def breik(
+            self,
+            arg: str = None
+    ):
+        if arg is None:
+            return
+        if arg == "full":
+            self.clear()
+        elif arg == "default":
+            self.toDefaults()
+        else:
+            raise ValueError(f"Unknown argument for breik(): {arg}")
+
+
 class Block:
     """
         A logical block of a dependency diagram.
@@ -25,15 +71,16 @@ class Block:
         self._object = None  # Result of backend request, will be passed to dependent blocks
         self._result = None  # Info to be send to frontend at submit
 
-    # Whether block is defined
-    def is_set(self):
+    def is_set(
+            self
+    ) -> bool:
+        """ Whether block is defined """
         return self._is_set
 
-    # Get the config
-    def get_config(self):
-        return self._config.copy()
-
-    def init(self, *args):
+    def init(
+            self,
+            *args
+    ) -> None:
         """
         Create the default version of config.
 
@@ -49,14 +96,21 @@ class Block:
         init_params = self._init(*args)
         self._send('onInit', init_params)
 
-    def _init(self, *args):
+    def _init(
+            self,
+            *args
+    ) -> None:
         """ Returns jsonable info to be sent to front with onInit()
         """
         # To be overridden in subclass
         raise NotImplementedError
 
-    # Change some values of the config
-    def modify(self, **key_values):
+    def modify(
+            self,
+            **key_values
+    ) -> None:
+        """ Change some values of the config
+        """
         if self._is_set:
             raise RuntimeError(f'Block[{self.name}] is set and cannot be modified!')
         else:
@@ -64,8 +118,10 @@ class Block:
             self._config.modify(**key_values)
             self._send('onModify')
 
-    # Check config correctness and make block to be defined
-    def finalize(self):
+    def finalize(
+            self
+    ) -> None:
+        """ Check config correctness and make block to be defined """
         if self._is_set:
             print(f'Block[{self.name}] already set')
             return
@@ -77,14 +133,19 @@ class Block:
         else:
             raise RuntimeError(f'Block[{self.name}] failed to finalize')
 
-    def _finalize(self):
-        """ Returns True or False
+    def _finalize(
+            self
+    ) -> None:
+        """ Checks whether the config is correct to create the object.
+        Returns True if OK or False.
         # TODO can we send to front errors to be fixed?
         """
         raise NotImplementedError
 
-    # Run diagram with this block value
-    def submit(self):
+    def submit(
+            self
+    ) -> None:
+        """ Run diagram with this block value """
         self.finalize()
 
         if not self._is_set:
@@ -97,17 +158,24 @@ class Block:
         if self.diagram:
             self.diagram.on_submit(self)
 
-    # Perform back request, ect
-    def _submit(self):
+    def _submit(
+            self
+    ) -> None:
+        """ Perform back request, ect """
         # To be overridden in subclass
         raise NotImplementedError
 
-    def get_object(self):
+    def get_object(
+            self
+    ) -> object:
         """ Get contained backend object
         """
         return self._object
 
-    def unlock(self, toDefault=False):
+    def unlock(
+            self,
+            toDefault: bool = False
+    ) -> None:
         """ Make block to be undefined
         """
         if self._is_set:
@@ -124,7 +192,10 @@ class Block:
             if self.diagram:
                 self.diagram.on_drop(self)
 
-    def breik(self, arg=None):
+    def breik(
+            self,
+            arg: str = None
+    ) -> None:
         """ Break block logically
         """
         print(f'Block[{self.name}].break()')
@@ -132,7 +203,11 @@ class Block:
         self._config.breik(arg)
         self._send('onBreak')
 
-    def _send(self, func, kw_params=None):
+    def _send(
+            self,
+            func: str,
+            kw_params: dict = None
+    ) -> None:
         """ Send signal to frontend listeners. """
         kw_params_str = str(kw_params)
         if len(kw_params_str) > 30:
@@ -142,39 +217,13 @@ class Block:
             self.socket.send(block=self.name, func=func, msg=kw_params, tag=self.tag)
 
 
-class BlockConfig(dict):
-    def __init__(self):
-        super().__init__()
-
-    def init(self, *args):
-        pass
-
-    def modify(self, **kwargs):
-        for key, value in kwargs.items():
-            self[key] = value
-
-    # Check correctness
-    def finalize(self):
-        # TODO check correctness
-        return True
-
-    # Set default values
-    def toDefaults(self):
-        self.clear()
-
-    def breik(self, arg=None):
-        if arg is None:
-            return
-        if arg == "full":
-            self.clear()
-        elif arg == "default":
-            self.toDefaults()
-        else:
-            raise ValueError(f"Unknown argument for breik(): {arg}")
-
-
 class WrapperBlock(Block):
-    def __init__(self, blocks, *args, **kwargs):
+    def __init__(
+            self,
+            blocks: [Block],
+            *args,
+            **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.blocks = blocks
         # Patch submit and unlock functions
@@ -193,22 +242,35 @@ class WrapperBlock(Block):
 
             old_unlocks[b] = copy_func(b.unlock)
 
-            def new_unlock(slf, *args, **kwargs):
+            def new_unlock(
+                    slf,
+                    *args,
+                    **kwargs
+            ):
                 old_unlocks[slf](slf, *args, **kwargs)
                 self.unlock()
             b.unlock = types.MethodType(new_unlock, b)
 
-    def init(self, *args):
+    def init(
+            self,
+            *args
+    ) -> None:
         super().init(*args)
         for b in self.blocks:
             b.init(*args)
 
-    def breik(self, arg=None):
+    def breik(
+            self,
+            arg: str = None
+    ) -> None:
         for b in self.blocks:
             b.breik(arg)
         super().breik(arg)
 
-    def onsubmit(self, block):
+    def onsubmit(
+            self,
+            block
+    ) -> None:
         # # Break all but the given
         # for b in self.blocks:
         #     if b != block:
@@ -222,20 +284,29 @@ class WrapperBlock(Block):
         if self.diagram:
             self.diagram.on_submit(self)
 
-    def modify(self, **key_values):
+    def modify(
+            self,
+            **key_values
+    ) -> None:
         # Must not be called
         raise RuntimeError
 
-    def _finalize(self):
+    def _finalize(
+            self
+    ) -> None:
         # Must not be called
         raise RuntimeError
 
-    def _submit(self):
+    def _submit(
+            self
+    ) -> None:
         # Must not be called
         raise RuntimeError
 
 
-def copy_func(f):
+def copy_func(
+        f
+):
     """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
 
     g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
@@ -244,29 +315,3 @@ def copy_func(f):
     g = functools.update_wrapper(g, f)
     g.__kwdefaults__ = f.__kwdefaults__
     return g
-
-
-# if __name__ == '__main__':
-#     class A:
-#         def __init__(self, x):
-#             self.x = x
-#
-#         def f(self):
-#             print(self.x)
-#
-#     a_list = [A(1), A(2), A(3)]
-#
-#     def pf(a):
-#         print('pf', a.x)
-#
-#     # Patching
-#     for a in a_list:
-#         old_f = copy_func(a.f)
-#
-#         def new_f():
-#             pf(a)
-#             old_f(a)
-#         a.f = new_f
-#
-#     for a in a_list:
-#         a.f()

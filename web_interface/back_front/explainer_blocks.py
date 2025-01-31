@@ -1,5 +1,7 @@
 import json
 import os
+from pathlib import Path
+from typing import Union
 
 from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, ExplainerRunConfig, \
     ConfigPattern
@@ -11,26 +13,44 @@ from base.datasets_processing import GeneralDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import GNNModelManager
 from web_interface.back_front.block import Block, WrapperBlock
-from web_interface.back_front.utils import json_loads
+from web_interface.back_front.utils import json_loads, get_config_keys
 
 
 class ExplainerWBlock(WrapperBlock):
-    def __init__(self, name, blocks, *args, **kwargs):
+    def __init__(
+            self,
+            name: str,
+            blocks: [Block],
+            *args,
+            **kwargs
+    ):
         super().__init__(blocks, name, *args, **kwargs)
 
-    def _init(self, gen_dataset: GeneralDataset, gmm: GNNModelManager):
+    def _init(
+            self,
+            gen_dataset: GeneralDataset,
+            gmm: GNNModelManager
+    ) -> None:
         self.gen_dataset = gen_dataset
         self.gmm = gmm
 
-    def _finalize(self):
+    def _finalize(
+            self
+    ) -> bool:
         return True
 
-    def _submit(self):
+    def _submit(
+            self
+    ) -> None:
         pass
 
 
 class ExplainerLoadBlock(Block):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self,
+            *args,
+            **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.explainer_path = None
@@ -38,27 +58,33 @@ class ExplainerLoadBlock(Block):
         self.gen_dataset = None
         self.gmm = None
 
-    def _init(self, gen_dataset: GeneralDataset, gmm: GNNModelManager):
+    def _init(
+            self,
+            gen_dataset: GeneralDataset,
+            gmm: GNNModelManager
+    ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
         self.gmm = gmm
         return [gen_dataset.dataset.num_node_features, gen_dataset.is_multi(), self.get_index()]
         # return self.get_index()
 
-    def _finalize(self):
-        # if 1:  # TODO better check
-        #     return False
+    def _finalize(
+            self
+    ) -> bool:
+        if set(get_config_keys("explanations")) != set(self._config.keys()):
+            return False
 
         self.explainer_path = self._config
         return True
 
-    def _submit(self):
+    def _submit(
+            self
+    ) -> None:
         init_config, run_config = self._explainer_kwargs(model_path=self.gmm.model_path_info(),
                                                          explainer_path=self.explainer_path)
         modification_config = ExplainerModificationConfig(
             explainer_ver_ind=self.explainer_path["explainer_ver_ind"],
-            # FIXME Kirill front attack
-            explainer_attack_type=self.explainer_path["explainer_attack_type"]
         )
 
         from explainers.explainers_manager import FrameworkExplainersManager
@@ -74,7 +100,9 @@ class ExplainerLoadBlock(Block):
             "explanation_data": self._object.load_explanation(run_config=run_config)
         }
 
-    def get_index(self):
+    def get_index(
+            self
+    ) -> [str, str]:
         """ Get all available explanations with respect to current dataset and model
         """
         path = os.path.relpath(self.gmm.model_path_info(), MODELS_DIR)
@@ -91,7 +119,11 @@ class ExplainerLoadBlock(Block):
         # return [ps.to_json(), json_dumps(self.info)] FIXME misha parsing error on front
         return [ps.to_json(), '{}']
 
-    def _explainer_kwargs(self, model_path, explainer_path):
+    def _explainer_kwargs(
+            self,
+            model_path: Union[str, Path],
+            explainer_path: Union[str, Path]
+    ):
         init_kwargs_file, run_kwargs_file = Declare.explainer_kwargs_path_full(
             model_path=model_path, explainer_path=explainer_path)
         with open(init_kwargs_file) as f:
@@ -102,31 +134,39 @@ class ExplainerLoadBlock(Block):
 
 
 class ExplainerInitBlock(Block):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self,
+            *args,
+            **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.explainer_init_config = None
         self.gen_dataset = None
         self.gmm = None
 
-    def _init(self, gen_dataset: GeneralDataset, gmm: GNNModelManager):
+    def _init(
+            self,
+            gen_dataset: GeneralDataset,
+            gmm: GNNModelManager
+    ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
         self.gmm = gmm
         return FrameworkExplainersManager.available_explainers(self.gen_dataset, self.gmm)
 
-    def _finalize(self):
-        # if 1:  # TODO better check
-        #     return False
-
-        # self.explainer_init_config = ExplainerInitConfig(**self._config)
+    def _finalize(
+            self
+    ) -> bool:
         self.explainer_init_config = ConfigPattern(
             **self._config,
             _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
             _config_class="ExplainerInitConfig")
         return True
 
-    def _submit(self):
+    def _submit(
+            self
+    ) -> None:
         # Build an explainer
         self._object = FrameworkExplainersManager(
             dataset=self.gen_dataset, gnn_manager=self.gmm,
@@ -137,61 +177,31 @@ class ExplainerInitBlock(Block):
 
 
 class ExplainerRunBlock(Block):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self,
+            *args,
+            **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.explainer_run_config = None
         self.explainer_manager = None
 
-    def _init(self, explainer_manager: FrameworkExplainersManager):
+    def _init(
+            self,
+            explainer_manager: FrameworkExplainersManager
+    ) -> list:
         self.explainer_manager = explainer_manager
         return [self.explainer_manager.gen_dataset.dataset.num_node_features,
                 self.explainer_manager.gen_dataset.is_multi(),
                 self.explainer_manager.explainer.name]
 
-    def _finalize(self):
-        # if 1:  # TODO better check
-        #     return False
-        raise NotImplementedError
-
-        # self.explainer_run_config = ExplainerRunConfig(**self._config)  # FIXME add class_name
-        import copy
-        config = copy.deepcopy(self._config)
-        config['_config_kwargs']['kwargs']["_import_path"] = EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
-        config['_config_kwargs']['kwargs']["_config_class"] = "Config"
-        self.explainer_run_config = ConfigPattern(
-            **config,
-            _config_class="ExplainerRunConfig"
-        )
-        return True
-
-    def _submit(self):
-        raise NotImplementedError
-        # # NOTE: multiprocess = multiprocessing + dill instead of pickle, so it can serialize our objects and
-        # # send them via a Queue
-        # # NOTE 2: should be imported separately from torch.multiprocessing
-        # from multiprocess import Process as mpProcess, Queue as mpQueue
-
-        # queue = mpQueue()
-        # self.explainer_subprocess = mpProcess(
-        #     target=run_function, args=(
-        #         self.explainer_manager, 'conduct_experiment',
-        #         self.explainer_run_config, queue))
-        # self.explainer_subprocess.start()
-        # self.socket.send("explainer", {"status": "STARTED", "mode": self.explainer_run_config["mode"]})
-        # self.explainer_subprocess.join()
-        #
-        # # Get result if present - otherwise nothing changed
-        # if not queue.empty():
-        #     self.explainer_manager = queue.get_nowait()
-
-        self.socket.send(block="er", msg=
-        {"status": "STARTED", "mode": self.explainer_run_config.mode})
-        self.explainer_manager.conduct_experiment(self.explainer_run_config, socket=self.socket)
-
-    def do(self, do, params):
+    def do(
+            self,
+            do: str,
+            params: dict
+    ) -> str:
         if do == "run":
-            import copy
             config = json_loads(params.get('explainerRunConfig'))
             config['_config_kwargs']['kwargs']["_import_path"] =\
                 EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH \
@@ -207,48 +217,17 @@ class ExplainerRunBlock(Block):
             self._run_explainer()
             return ''
 
-        elif do == "stop":
-            # BACK_FRONT.model_manager.stop_signal = True  # TODO misha remove stop_signal
-            self._stop_explainer()
-            return ''
+        # elif do == "save":
+        #     return self._save_explainer()
 
-        elif do == "save":
-            return self._save_explainer()
-
-    def _run_explainer(self):
-        # self.explainer_run_config = explainer_run_config
-
-        # # NOTE: multiprocess = multiprocessing + dill instead of pickle, so it can serialize our objects and
-        # # send them via a Queue
-        # # NOTE 2: should be imported separately from torch.multiprocessing
-        # from multiprocess import Process as mpProcess, Queue as mpQueue
-        #
-        # # queue = mpQueue()
-        # # self.explainer_subprocess = mpProcess(
-        # #     target=run_function, args=(
-        # #         self.explainer_manager, 'conduct_experiment',
-        # #         self.explainer_run_config, queue))
-        # # self.explainer_subprocess.start()
-        # # self.socket.send("explainer", {"status": "STARTED", "mode": self.explainer_run_config["mode"]})
-        # # self.explainer_subprocess.join()
-        # #
-        # # # Get result if present - otherwise nothing changed
-        # # if not queue.empty():
-        # #     self.explainer_manager = queue.get_nowait()
-
+    def _run_explainer(
+            self
+    ) -> None:
         self.socket.send("explainer", {
             "status": "STARTED", "mode": self.explainer_run_config.mode})
+        # Saves explanation by default, save_explanation_flag=True
         self.explainer_manager.conduct_experiment(self.explainer_run_config, socket=self.socket)
 
-    def _stop_explainer(self):
-        raise NotImplementedError
-        # FIXME not implemented
-        print('stop explainer')
-        if self.explainer_subprocess and self.explainer_subprocess.is_alive():
-            self.explainer_subprocess.terminate()
-            self.socket.send("er", {"status": "INTERRUPTED", "mode": mode})
-            self.explanation_data = None
-
-    def _save_explainer(self):
-        # self.explainer.save_explanation() TODO is it necessary?
-        return str(self.explainer_manager.explainer_result_file_path)
+    # def _save_explainer(self):
+    #     # self.explainer_manager.save_explanation()
+    #     return str(self.explainer_manager.explainer_result_file_path)

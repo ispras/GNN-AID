@@ -1,18 +1,31 @@
+from pathlib import Path
 from time import sleep
 from abc import ABC, abstractmethod
+from typing import Union, Callable, Any, Type
+
+from flask_socketio import SocketIO
 from tqdm import tqdm
 
 from base.datasets_processing import GeneralDataset
 
 
 class ProgressBar(tqdm):
-    def __init__(self, socket, dst, *args, **kwargs):
+    def __init__(
+            self,
+            socket: SocketIO,
+            dst,
+            *args,
+            **kwargs
+    ):
         super(ProgressBar, self).__init__(*args, **kwargs)
         self.dst = dst
         self.socket = socket
         self._kwargs = {}
 
-    def _report(self, obligate=False):
+    def _report(
+            self,
+            obligate: bool = False
+    ) -> None:
         if self.socket is not None:
             msg = {}
             msg.update(self._kwargs)
@@ -23,20 +36,32 @@ class ProgressBar(tqdm):
                 }})
             self.socket.send(block=self.dst, msg=msg, tag=self.dst + '_progress', obligate=obligate)
 
-    def reset(self, total=None, **kwargs):
+    def reset(
+            self,
+            total: Union[float, None] = None,
+            **kwargs
+    ):
         res = super().reset(total=total)
         self._kwargs = kwargs
         self._report(obligate=True)
         return res
 
-    def update(self, n=1):
+    def update(
+            self,
+            n: int = 1
+    ):
         res = super().update(n=n)
         self._report(obligate=True)
         return res
 
 
-def finalize_decorator(func):
-    def wrapper(*args, **kwargs):
+def finalize_decorator(
+        func: Callable
+) -> Callable:
+    def wrapper(
+            *args,
+            **kwargs
+    ) -> Any:
         # Before call
         self: Explainer = args[0]
         self._run_mode = args[1]
@@ -50,22 +75,31 @@ def finalize_decorator(func):
     return wrapper
 
 
-class Explainer(ABC):
+class Explainer(
+    ABC
+):
     """
     Superclass for supported explainers.
     """
     name = 'Explainer'
 
     @staticmethod
-    def check_availability(gen_dataset, model_manager):
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: Type
+    ) -> bool:
         """ Availability check for the given dataset and model manager. """
         return False
 
-    def __init__(self, gen_dataset: GeneralDataset, model):
+    def __init__(
+            self,
+            gen_dataset: GeneralDataset,
+            model: Type,
+            **kwargs
+    ):
         """
         :param gen_dataset: dataset
         :param model: GNN model
-        :param kwargs: init args
         """
         self.gen_dataset = gen_dataset
         self.model = model
@@ -79,7 +113,12 @@ class Explainer(ABC):
 
     @finalize_decorator
     @abstractmethod
-    def run(self, mode, kwargs, finalize=True):
+    def run(
+            self,
+            mode: str,
+            kwargs: dict,
+            finalize: bool = True
+    ):
         """
         Run explanation on a given element (node or graph).
         finalize_decorator handles finalize() call when run() is finished.
@@ -92,7 +131,9 @@ class Explainer(ABC):
         pass
 
     @abstractmethod
-    def _finalize(self):
+    def _finalize(
+            self
+    ):
         """
         Convert current explanation into inner framework json-able format.
 
@@ -100,7 +141,10 @@ class Explainer(ABC):
         """
         pass
 
-    def save(self, path):
+    def save(
+            self,
+            path: Union[str, Path]
+    ) -> None:
         """
         Dump explanation in json format at a given path.
 
@@ -110,24 +154,40 @@ class Explainer(ABC):
         self.explanation.save(path)
 
 
-class DummyExplainer(Explainer):
+class DummyExplainer(
+    Explainer
+):
     """ Dummy explainer for debugging
     """
     name = '_Dummy'
 
     @staticmethod
-    def check_availability(gen_dataset, model_manager):
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: Type
+    ) -> bool:
         """ Fits for all """
         return True
 
-    def __init__(self, gen_dataset, model, init_arg=None, **kwargs):
+    def __init__(
+            self,
+            gen_dataset: GeneralDataset,
+            model: Type,
+            init_arg=None,
+            **kwargs
+    ):
         Explainer.__init__(self, gen_dataset, model)
         self.init_arg = init_arg
         self._local_explanation = None
         self._global_explanation = None
 
     @finalize_decorator
-    def run(self, mode, kwargs, finalize=True):
+    def run(
+            self,
+            mode: str,
+            kwargs: dict,
+            finalize: bool = True
+    ) -> None:
         self.pbar.reset(total=10, mode=mode)
         if mode == "local":
             assert self._global_explanation is not None
@@ -156,7 +216,9 @@ class DummyExplainer(Explainer):
         # Remove unpickable attributes
         self.pbar = None
 
-    def _finalize(self):
+    def _finalize(
+            self
+    ) -> None:
         mode = self._run_mode
         if mode == "local":
             assert self._global_explanation is not None

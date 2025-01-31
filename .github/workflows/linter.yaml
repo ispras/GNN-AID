@@ -1,0 +1,41 @@
+name: Pylint
+
+on:
+  push:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          python -m pip install --upgrade --no-cache-dir pip setuptools
+          python -m pip install --exists-action=w --no-cache-dir -r requirements1.txt
+          python -m pip install --exists-action=w --no-cache-dir -r requirements2.txt
+          python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+          python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir .
+      - name: Set PYTHONPATH
+        run: |
+          echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+
+      - name: Run Pylint Models
+        run: pylint models_builder
+      - name: Run Pylint defense
+        run: pylint defense
+      - name: Run Pylint attacks
+        run: pylint attacks
+      - name: Run Pylint aux
+        run: pylint aux
+      - name: Run Pylint explainers
+        run: pylint explainers
+

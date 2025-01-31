@@ -1,7 +1,7 @@
 ## These are reqs needed for documentation
 
 numpy==1.26.3
-multiprocess
+multiprocess==0.70.16
 pydantic
 tqdm
 pyparsing
@@ -21,5 +21,6 @@ patsy
 packaging
 opt-einsum
 pandas==2.2.0
+pylint
 
 torch_geometric==2.3.1

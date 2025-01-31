@@ -4,16 +4,15 @@ import torch
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from aux.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
 
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+    OPTIMIZERS_PARAMETERS_PATH
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
         print('setup')
-        from attacks.poison_attacks_collection.metattack import meta_gradient_attack
 
         # Init datasets
         # Single-Graph - Example
@@ -54,7 +53,11 @@ class AttacksTest(unittest.TestCase):
             }
         )
 
+        #Single-Graph - Cora
+
+
     def test_metattack_full(self):
+        from attacks.metattack import meta_gradient_attack
         poison_attack_config = ConfigPattern(
             _class_name="MetaAttackFull",
             _import_path=POISON_ATTACK_PARAMETERS_PATH,
@@ -100,13 +103,22 @@ class AttacksTest(unittest.TestCase):
             manager_config=self.manager_config,
         )
 
-        # gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
+        gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
 
         gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
                                                                  metrics=[Metric("F1", mask='test', average='macro'),
                                                                           Metric("Accuracy", mask='test')])
         print(metric_loc)
+
+    def test_qattack_Cora(self):
+        evasion_attack_config = ConfigPattern(
+            _class_name="QAttack",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+            }
+        )
 
 
 if __name__ == '__main__':

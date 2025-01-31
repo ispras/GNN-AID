@@ -11,18 +11,11 @@ class ParamsBuilder {
         if (type in ParamsBuilder.cachedParams)
             return ParamsBuilder.cachedParams[type]
 
-        let params = null
-        await $.ajax({
-            type: 'POST',
-            url: '/ask',
-            data: {
+        let params = await Controller.ajaxRequest('/ask', {
                 ask: "parameters",
                 type: type,
-            },
-            success: (parameters) => {
-                params = ParamsBuilder.cachedParams[type] = JSON_parse(parameters)
-            }
-        })
+            })
+        ParamsBuilder.cachedParams[type] = params
         return params
     }
 
@@ -159,6 +152,7 @@ class ParamsBuilder {
                     $input.css("min-width", "60px")
                     delete possible.special
                 }
+
                 if (type === "int") {
                     $input.attr("step", 1)
                     $input.attr("pattern", "\d+")
@@ -173,6 +167,9 @@ class ParamsBuilder {
                 }
                 for (const [key, value] of Object.entries(possible))
                     $input.attr(key, value)
+
+                // Check input value when user unfocus it or change it
+                addValueChecker($input, type, def, possible["min"], possible["max"], "change")
             }
 
             else if (type === "string") {

@@ -101,9 +101,9 @@ class PanelModelArchView extends PanelView {
         // Init all SVG primitives
         this.primitives = {}
 
-        // Function drawing an parameters data object
         let marginText = 5
         let marginBlocks = 140 // TODO make it = rightmost bound of all texts
+        // Function drawing an parameters data object
         let draw = (kv, primitives, offsets, keysList=[], depth=0) => {
             for (let [key, value] of Object.entries(kv)) {
                 let text
@@ -172,6 +172,15 @@ class PanelModelArchView extends PanelView {
                     this.svgPanel.$svg.append(text)
                     primitives[key] = text
                     offsets[1] += 25
+                }
+                else if (typeof(value) === 'string') { // String, indicates tensor size is over limit
+                    this.svgPanel.$svg.append(Svg.text(
+                        `[Tensor ${value}]`,
+                        marginBlocks + 12*depth, offsets[1],
+                        'middle', '20px',
+                        'normal', "#000000"
+                    ))
+                    offsets[1] += this.size + 20
                 }
                 else if (value.constructor === Array) {
                     let arrayPrimitives = []
@@ -248,7 +257,7 @@ class PanelModelArchView extends PanelView {
                         }
                     }
                 }
-                else console.error("Unknown type")
+                else console.error("Model data contains unknown data type.")
             }
         }
 

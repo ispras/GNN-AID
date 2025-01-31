@@ -237,7 +237,9 @@ class LayerBlock {
 
             id = "menu-model-constructor-dropout-probability-"
             this.$dropoutProbInput = $("<input>").attr("id", id).attr("type", "number")
-                .attr("min", 0).attr("max", 1).attr("step", 0.01).val(0.5)
+                .attr("min", 0).attr("max", 0.999).attr("step", 0.01).val(0.5)
+            addValueChecker(this.$dropoutProbInput, "float", 0.5, 0, 0.999, "change")
+
             $dropoutParamsDiv.append($("<label></label>").text("probability").attr("for", id))
             $dropoutParamsDiv.append(this.$dropoutProbInput)
 
@@ -338,6 +340,7 @@ class LayerBlock {
                 .css("background-color", LayerBlock.linearColor)
             this.$linearOutputSizeInput = $("<input>").attr("id", id).attr("type", "number")
                 .attr("min", 1).attr("step", 1).val(LINEAR_LAYER_OUTPUT_SIZE)
+            addValueChecker(this.$linearOutputSizeInput, "int", 1, 1)
             $cb.append(this.$linearOutputSizeInput)
         }
         else if (type === "gin") {
@@ -364,6 +367,7 @@ class LayerBlock {
                 .css("background-color", LayerBlock.linearColor)
             this.$linearOutputSizeInput = $("<input>").attr("id", id).attr("type", "number")
                 .attr("min", 1).attr("step", 1).val(LINEAR_LAYER_OUTPUT_SIZE)
+            addValueChecker(this.$linearOutputSizeInput, "int", LINEAR_LAYER_OUTPUT_SIZE, 1)
             $cb.append(this.$linearOutputSizeInput)
             // Not showing - because prot layer is the last and outSize = num_classes
             $cb.hide()

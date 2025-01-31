@@ -1,6 +1,7 @@
 import json
 from json.encoder import JSONEncoder
 from pathlib import Path
+from typing import Union
 
 
 class PrefixStorage:
@@ -10,26 +11,38 @@ class PrefixStorage:
     * adding, removing, filtering, iterating elements;
     * gathering contents from file structure.
     """
-    def __init__(self, keys: (tuple, list)):
+    def __init__(
+            self,
+            keys: Union[tuple, list]
+    ):
         assert isinstance(keys, (tuple, list))
         assert len(keys) >= 1
         self._keys = keys
         self.content = {} if len(keys) > 1 else set()
 
     @property
-    def depth(self):
+    def depth(
+            self
+    ) -> int:
         return len(self._keys)
 
     @property
-    def keys(self):
+    def keys(
+            self
+    ) -> tuple:
         return tuple(self._keys)
 
-    def size(self):
+    def size(
+            self
+    ) -> int:
         def count(obj):
             return sum(count(_) for _ in obj.values()) if isinstance(obj, dict) else len(obj)
         return count(self.content)
 
-    def add(self, values: (dict, tuple, list)):
+    def add(
+            self,
+            values: Union[dict, tuple, list]
+    ) -> None:
         """
         Add one list of values.
         """
@@ -56,7 +69,11 @@ class PrefixStorage:
         else:
             raise TypeError("dict, tuple, or list were expected")
 
-    def merge(self, ps, ignore_conflicts=False):
+    def merge(
+            self,
+            ps,
+            ignore_conflicts: bool = False
+    ) -> None:
         """
         Extend this with another PrefixStorage with same keys.
         if ignore_conflicts=True, do not raise Exception when values sets intersect.
@@ -80,7 +97,10 @@ class PrefixStorage:
 
         merge(self.content, ps.content)
 
-    def remove(self, values: (dict, tuple, list)):
+    def remove(
+            self,
+            values: Union[dict, tuple, list]
+    ) -> None:
         """
         Remove one tuple of values if it is present.
         """
@@ -97,7 +117,10 @@ class PrefixStorage:
 
             rm(self.content, 0)
 
-    def filter(self, key_values: dict):
+    def filter(
+            self,
+            key_values: dict
+    ):
         """
         Find all items satisfying specified key values. Returns a new PrefixStorage.
         """
@@ -132,7 +155,10 @@ class PrefixStorage:
         ps.content = filter(self.content, 0)
         return ps
 
-    def check(self, values: (dict, tuple, list)):
+    def check(
+            self,
+            values: Union[dict, tuple, list]
+    ) -> bool:
         """
         Check if a tuple of values is present.
         """
@@ -151,7 +177,9 @@ class PrefixStorage:
                 else:
                     return False
 
-    def __iter__(self):
+    def __iter__(
+            self
+    ):
         def enum(obj, elems):
             if isinstance(obj, (set, list)):
                 for e in obj:
@@ -165,7 +193,9 @@ class PrefixStorage:
             yield _
 
     @staticmethod
-    def from_json(string):
+    def from_json(
+            string: str
+    ):
         """
         Construct PrefixStorage object from a json string.
         """
@@ -174,7 +204,10 @@ class PrefixStorage:
         ps.content = data["content"]
         return ps
 
-    def to_json(self, **dump_args):
+    def to_json(
+            self,
+            **dump_args
+    ) -> str:
         """ Return json string. """
         class Encoder(JSONEncoder):
             def default(self, obj):
@@ -183,7 +216,11 @@ class PrefixStorage:
                 return json.JSONEncoder.default(self, obj)
         return json.dumps({"keys": self.keys, "content": self.content}, cls=Encoder, **dump_args)
 
-    def fill_from_folder(self, path: Path, file_pattern=r".*"):
+    def fill_from_folder(
+            self,
+            path: Path,
+            file_pattern: str = r".*"
+    ) -> None:
         """
         Recursively walk over the given folder and repeat its structure.
         The content will be replaced.
@@ -208,7 +245,11 @@ class PrefixStorage:
                 self.add(e)
         print(f"Added {self.size()} items of {len(res)} files found.")
 
-    def remap(self, mapping, only_values=False):
+    def remap(
+            self,
+            mapping,
+            only_values: bool = False
+    ):
         """
         Change keys order and combination.
         """

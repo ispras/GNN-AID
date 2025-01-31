@@ -4,6 +4,8 @@ import re
 from json import JSONEncoder
 import copy
 import inspect
+from pathlib import Path
+from typing import Union, Any, Type, Tuple, List
 
 from aux.utils import setting_class_default_parameters, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, \
@@ -21,7 +23,10 @@ DATA_CHANGE_FLAG = "__data_change_flag"
 
 
 # Patch of json.dumps() - classes which implement to_json() can be jsonified
-def _default(self, obj):
+def _default(
+        self,
+        obj: Any
+):
     return getattr(obj.__class__, "to_json", _default.default)(obj)
 
 
@@ -49,7 +54,10 @@ class GeneralConfig:
                        "_config_kwargs"}
     _CONFIG_KEYS = "_config_keys"
 
-    def __init__(self, **kwargs):
+    def __init__(
+            self,
+            **kwargs
+    ):
         self._config_keys = set()
 
         for key, value in kwargs.items():
@@ -63,7 +71,11 @@ class GeneralConfig:
                 self._config_keys.add(key)
             setattr(self, key, value)
 
-    def __setattr__(self, key, value):
+    def __setattr__(
+            self,
+            key: str,
+            value: Any
+    ) -> None:
         frame = inspect.currentframe()
         try:
             locals_info = frame.f_back.f_locals
@@ -93,16 +105,24 @@ class GeneralConfig:
         finally:
             del frame
 
-    def json_for_config(self):
+    def json_for_config(
+            self
+    ) -> str:
         config_kwargs = self.to_saveable_dict().copy()
         config_kwargs = dict(sorted(config_kwargs.items()))
         json_object = json.dumps(config_kwargs, indent=2)
         return json_object
 
-    def hash_for_config(self):
+    def hash_for_config(
+            self
+    ) -> str:
         return hash_data_sha256(self.json_for_config().encode('utf-8'))
 
-    def to_saveable_dict(self, compact=False, **kwargs):
+    def to_saveable_dict(
+            self,
+            compact: bool = False,
+            **kwargs
+    ) -> dict:
         def sorted_dict(d):
             res = {}
             for key in sorted(d):
@@ -137,7 +157,9 @@ class GeneralConfig:
                     dct[key] = str(value)
         return dct
 
-    def to_dict(self):
+    def to_dict(
+            self
+    ) -> dict:
         """ Represent config as a dictionary, as well as all included configs.
         Dict is a copy of all values.
         """
@@ -152,7 +174,10 @@ class GeneralConfig:
         return res
 
     @staticmethod
-    def set_defaults_config_pattern_info(key, value):
+    def set_defaults_config_pattern_info(
+            key: str,
+            value: dict
+    ) -> dict:
         if "_config_kwargs" not in value:
             raise Exception("_config_kwargs can't set automatically")
         if key in _key_path:
@@ -172,14 +197,23 @@ class GeneralConfig:
         #                     f"{key} is not currently supported")
         return value
 
-    def to_json(self):
+    def to_json(
+            self
+    ) -> dict:
         """ Special method which allows to use json.dumps() on Config object """
         return self.to_dict()
 
 
-class ConfigPattern(GeneralConfig):
-    def __init__(self, _config_class: str, _config_kwargs,
-                 _class_name: str = None, _import_path: str = None, _class_import_info=None):
+class ConfigPattern(
+    GeneralConfig
+):
+    def __init__(
+            self,
+            _config_class: str,
+            _config_kwargs: Union[dict, None],
+            _class_name: Union[str, None] = None,
+            _import_path: Union[str, Path, None] = None,
+            _class_import_info: str = None):
         if _import_path is not None:
             _import_path = str(_import_path)
         super().__init__(_class_name=_class_name, _import_path=_import_path,
@@ -196,7 +230,10 @@ class ConfigPattern(GeneralConfig):
             self._config_kwargs, save_kwargs = self._set_defaults()
         setattr(self, CONFIG_OBJ, self.make_config_by_pattern(save_kwargs))
 
-    def __getattribute__(self, item):
+    def __getattribute__(
+            self,
+            item: Union[str, Type]
+    ) -> Any:
         if item == "__dict__" or item == "__class__":
             return object.__getattribute__(self, item)
 
@@ -212,14 +249,20 @@ class ConfigPattern(GeneralConfig):
                 attr = getattr(self, CONFIG_OBJ).__getattribute__(item)
             return attr
 
-    def __setattr__(self, key, value):
+    def __setattr__(
+            self,
+            key: str,
+            value: Any
+    ) -> None:
         if (hasattr(self, CONFIG_OBJ) and hasattr(getattr(self, CONFIG_OBJ), self._CONFIG_KEYS) and
                 key in getattr(getattr(self, CONFIG_OBJ), self._CONFIG_KEYS)):
             getattr(self, CONFIG_OBJ).__setattr__(key, value)
         else:
             super().__setattr__(key, value)
 
-    def _set_defaults(self):
+    def _set_defaults(
+            self
+    ) -> [dict, dict]:
         default_parameters_file_path = self._import_path
         kwargs = self._config_kwargs
 
@@ -232,7 +275,10 @@ class ConfigPattern(GeneralConfig):
         )
         return init_kwargs, save_kwargs
 
-    def make_config_by_pattern(self, save_kwargs):
+    def make_config_by_pattern(
+            self,
+            save_kwargs: dict
+    ) -> Type:
         config_class = import_by_name(self._config_class, ["aux.configs"])
         config_obj = config_class(save_kwargs=save_kwargs, **self._config_kwargs)
         return config_obj
@@ -253,7 +299,10 @@ class ConfigPattern(GeneralConfig):
             print(e)
         return obj
 
-    def merge(self, config):
+    def merge(
+            self,
+            config: Type
+    ):
         self_config_obj = getattr(self, CONFIG_OBJ)
         if config.__class__.__name__ == "ConfigPattern":
             config_obj = getattr(config, CONFIG_OBJ)
@@ -262,7 +311,12 @@ class ConfigPattern(GeneralConfig):
             setattr(self, CONFIG_OBJ, self_config_obj.merge(config))
         return self
 
-    def to_saveable_dict(self, compact=False, need_full=True, **kwargs):
+    def to_saveable_dict(
+            self,
+            compact: bool = False,
+            need_full: bool = True,
+            **kwargs
+    ) -> dict:
         """
         Create dict which values are strings without spaces and are guaranteed to be sorted by key
         including inner dicts and configs.
@@ -284,7 +338,9 @@ class ConfigPattern(GeneralConfig):
         return dct
 
 
-class Config(GeneralConfig):
+class Config(
+    GeneralConfig
+):
     """ Contains a set of named parameters.
     Immutable - values can be set in constructor only.
     Parameters can be dicts or Configs themselves.
@@ -296,31 +352,50 @@ class Config(GeneralConfig):
     # _mutable = False
     # _CONFIG_KEYS = "_config_keys"
 
-    def __init__(self, save_kwargs=None, **kwargs):
+    def __init__(
+            self,
+            save_kwargs: Union[dict, None] = None,
+            **kwargs
+    ):
         self.__dict__[CONFIG_SAVE_KWARGS_KEY] = save_kwargs
         super().__init__(**kwargs)
 
-    def __str__(self):
+    def __str__(
+            self
+    ) -> str:
         return str(dict(filter(lambda x: x[0] in self._config_keys, self.__dict__.items())))
 
-    def __iter__(self):
+    def __iter__(
+            self
+    ):
         for key, value in self.__dict__.items():
             if key in self._config_keys:
                 yield key, value
 
-    def __getitem__(self, item):
+    def __getitem__(
+            self,
+            item: str
+    ) -> Any:
         if item in self._config_keys:
             return self.__dict__[item]
 
-    def __contains__(self, item):
+    def __contains__(
+            self,
+            item: str
+    ) -> bool:
         return item in self._config_keys
 
-    def __eq__(self, other):
+    def __eq__(
+            self,
+            other: Type
+    ) -> bool:
         if type(other) != type(self):
             return False
         return all(getattr(self, a) == getattr(other, a) for a in self._config_keys)
 
-    def copy(self):
+    def copy(
+            self
+    ) -> object:
         res = type(self)()
         # res.__dict__ = self.__dict__.copy()
         for k, v in self.__dict__.items():
@@ -329,7 +404,10 @@ class Config(GeneralConfig):
                 res.__dict__[k] = copy.copy(v)
         return res
 
-    def merge(self, config):
+    def merge(
+            self,
+            config: Union[dict, object]
+    ):
         """ Create a new config with params obtained by updating self params with a given ones.
         Given config is a dict or a Config.
         """
@@ -344,7 +422,11 @@ class Config(GeneralConfig):
         kwargs.update(config.copy())
         return type(self)(**kwargs)
 
-    def to_saveable_dict(self, compact=False, **kwargs):
+    def to_saveable_dict(
+            self,
+            compact: bool = False,
+            **kwargs
+    ) -> dict:
         """
         Create dict which values are strings without spaces and are guaranteed to be sorted by key
         including inner dicts and configs.
@@ -361,23 +443,34 @@ class Config(GeneralConfig):
         return dct
 
 
-class DatasetConfig(Config):
+class DatasetConfig(
+    Config
+):
     """
     Contains a set of distinguishing characteristics to identify the dataset or family of datasets.
     Determines the path to the file with raw data in the inner storage.
     """
 
-    def __init__(self, domain: str = None, group: str = None, graph: str = None):
+    def __init__(
+            self,
+            domain: str = None,
+            group: str = None,
+            graph: str = None
+    ):
         """
         """
         super().__init__(domain=domain, group=group, graph=graph)
 
-    def full_name(self):
+    def full_name(
+            self
+    ) -> tuple:
         """ Return all fields as a tuple. """
         return tuple([self.domain, self.group, self.graph])
 
     @staticmethod
-    def from_full_name(full_name: tuple):
+    def from_full_name(
+            full_name: tuple
+    ) -> object:
         """ Build DatasetConfig from a name tuple. """
         res = DatasetConfig(
             domain=full_name[0], group=full_name[1], graph=full_name[2])
@@ -390,17 +483,21 @@ class DatasetVarConfig(Config):
     Specifies the path to the file with tensors in the inner storage.
     """
 
-    def __init__(self,
-                 features: dict = None,
-                 labeling: str = None,
-                 dataset_ver_ind: int = None):
+    def __init__(
+            self,
+            features: dict = None,
+            labeling: str = None,
+            dataset_ver_ind: int = None
+    ):
         """ """
         super().__init__(
             features=features, labeling=labeling,
             dataset_ver_ind=dataset_ver_ind)
 
 
-class ModelStructureConfig(Config):
+class ModelStructureConfig(
+    Config
+):
     """
     Contains a full description of a model structure.
     Represents a list of layers.
@@ -578,73 +675,84 @@ class ModelStructureConfig(Config):
     >>> }
     """
 
-    def __init__(self, layers=None):
+    def __init__(
+            self,
+            layers=None
+    ):
         """ """
         super().__init__(layers=layers)
 
-    def __str__(self):
+    def __str__(
+            self
+    ) -> str:
         return json.dumps(self, indent=2)
 
-    def __iter__(self):
+    def __iter__(
+            self
+    ) -> None:
         for layer in self.layers:
             yield layer
 
-    def __getitem__(self, item):
+    def __getitem__(
+            self,
+            item: int
+    ) -> Any:
         assert isinstance(item, int)
         return self.layers[item]
 
-    def __len__(self):
+    def __len__(
+            self
+    ) -> int:
         return len(self.layers)
 
 
-class ModelConfig(Config):
+class ModelConfig(
+    Config
+):
     """ Config for GNN model. Can contain structure (for framework models) and/or additional
     parameters (for custom models).
     """
 
-    def __init__(self,
-                 structure: [dict, ModelStructureConfig] = None,
-                 **kwargs):
+    def __init__(
+            self,
+            structure: Union[dict, ModelStructureConfig] = None,
+            **kwargs
+    ):
         if structure is not None and not isinstance(structure, Config):
             assert isinstance(structure, dict)
             structure = ModelStructureConfig(**structure)
         super().__init__(structure=structure, **kwargs)
 
 
-class ModelManagerConfig(Config):
+class ModelManagerConfig(
+    Config
+):
     """
     Full description of model manager parameters.
     """
 
-    # key_path = {
-    #     "optimizer": OPTIMIZERS_PARAMETERS_PATH,
-    #     "loss_function": FUNCTIONS_PARAMETERS_PATH,
-    # }
-
-    def __init__(self, **kwargs):
-        """ """
-        # FIXME misha how to find all such params?
-        # if CONFIG_CLASS_NAME in kwargs:
-
-        # for key, value in kwargs.items():
-        #     if key in self.key_path and not isinstance(value, Config):
-        #         if 'CONFIG_PARAMS_PATH_KEY' not in value:
-        #             value[CONFIG_PARAMS_PATH_KEY] = self.key_path[key]
-        #         kwargs[key] = Config(**value)
-
+    def __init__(
+            self,
+            **kwargs
+    ):
         super().__init__(**kwargs)
 
 
-class ModelModificationConfig(Config):
+class ModelModificationConfig(
+    Config
+):
     """
     Variability of a model given its structure and manager.
     Represents model attack type and the instance version.
     """
     _mutable = True
 
-    def __init__(self,
-                 model_ver_ind: [int, None] = None,
-                 epochs=None, **kwargs):
+    def __init__(
+            self,
+            model_ver_ind: [int, None] = None,
+            epochs=None,
+            **kwargs
+    ):
         """
         :param model_ver_ind: model index when saving. If None, then takes the nearest unoccupied
          index starting from 0 in ascending increments of 1
@@ -653,18 +761,26 @@ class ModelModificationConfig(Config):
                          epochs=epochs, **kwargs)
         self.__dict__[DATA_CHANGE_FLAG] = False
 
-    def __setattr__(self, key, value):
+    def __setattr__(
+            self,
+            key: str,
+            value: Any
+    ) -> None:
         # Any change of ModelModificationConfig should change flag
         self.__dict__[DATA_CHANGE_FLAG] = True
         super().__setattr__(key, value)
 
-    def data_change_flag(self):
+    def data_change_flag(
+            self
+    ) -> bool:
         loc = self.__dict__[DATA_CHANGE_FLAG]
         self.__dict__[DATA_CHANGE_FLAG] = False
         return loc
 
 
-class EvasionAttackConfig(Config):
+class EvasionAttackConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -676,7 +792,9 @@ class EvasionAttackConfig(Config):
         )
 
 
-class EvasionDefenseConfig(Config):
+class EvasionDefenseConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -688,7 +806,9 @@ class EvasionDefenseConfig(Config):
         )
 
 
-class PoisonAttackConfig(Config):
+class PoisonAttackConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -700,7 +820,9 @@ class PoisonAttackConfig(Config):
         )
 
 
-class PoisonDefenseConfig(Config):
+class PoisonDefenseConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -712,7 +834,9 @@ class PoisonDefenseConfig(Config):
         )
 
 
-class MIAttackConfig(Config):
+class MIAttackConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -724,7 +848,9 @@ class MIAttackConfig(Config):
         )
 
 
-class MIDefenseConfig(Config):
+class MIDefenseConfig(
+    Config
+):
     _mutable = True
 
     def __init__(
@@ -736,7 +862,9 @@ class MIDefenseConfig(Config):
         )
 
 
-class ExplainerInitConfig(Config):
+class ExplainerInitConfig(
+    Config
+):
     """
     """
 
@@ -750,45 +878,38 @@ class ExplainerInitConfig(Config):
         )
 
 
-class ExplainerRunConfig(Config):
+class ExplainerRunConfig(
+    Config
+):
     """
     """
 
-    def __init__(self,
-                 # mode: str,
-                 # class_name: str = None,
-                 **kwargs):
-        # assert mode in ["local", "global"]
-        # path = {
-        #     "local": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
-        #     "global": EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
-        # }[mode]
-        # if kwargs is None:
-        #     kwargs = {}
-        # if CONFIG_CLASS_NAME not in kwargs.keys():
-        #     if class_name is None:
-        #         raise Exception("ExplainerRunConfig need class_name")
-        #     kwargs[CONFIG_CLASS_NAME] = class_name
-        # kwargs[CONFIG_PARAMS_PATH_KEY] = path
+    def __init__(
+            self,
+            **kwargs
+    ):
         super().__init__(
             **kwargs
-            # kwargs=Config(**kwargs),
-            # mode=mode,
         )
 
 
-class ExplainerModificationConfig(Config):
+class ExplainerModificationConfig(
+    Config
+):
     """
     """
 
     # _mutable = True
 
-    def __init__(self,
-                 explainer_ver_ind: [int, None] = None,
-                 **kwargs):
+    def __init__(
+            self,
+            explainer_ver_ind: [int, None] = None,
+            **kwargs
+    ):
         super().__init__(
             explainer_ver_ind=explainer_ver_ind,
-            **kwargs)
+            **kwargs
+        )
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-import collections
 import collections.abc
 
 collections.Callable = collections.abc.Callable
@@ -10,14 +9,15 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-# Monkey path GRAPHS_DIR - before other imports
+# Monkey patch GRAPHS_DIR - before other imports
 from aux import utils
-
 if not str(utils.GRAPHS_DIR).endswith("__DatasetsTest_tmp"):
     tmp_dir = utils.GRAPHS_DIR.parent / (utils.GRAPHS_DIR.name + "__DatasetsTest_tmp")
     utils.GRAPHS_DIR = tmp_dir
 else:
     tmp_dir = utils.GRAPHS_DIR
+
+from base.dataset_converter import networkx_to_ptg
 
 
 def my_ctrlc_handler(signal, frame):
@@ -322,6 +322,100 @@ class DatasetsTest(unittest.TestCase):
         gen_dataset.build(dvc1)
         self.assertTrue(gen_dataset.num_classes, 2)
         self.assertTrue(gen_dataset.num_node_features, 3)
+
+    def test_custom_other_single(self):
+        """ """
+        from aux.configs import DatasetVarConfig
+        from aux.configs import DatasetConfig
+        from aux.declaration import Declare
+        from base.custom_datasets import CustomDataset
+        from base.dataset_converter import DatasetConverter
+        from base.datasets_processing import DatasetManager
+        import json
+        import networkx as nx
+
+        g = nx.Graph()
+        g.add_node(0, a=0.4, b=100)
+        g.add_node(1, a=0.4, b=100)
+        g.add_node(2, a=0.3, b=50)
+        g.add_node(3, a=0.3, b=200)
+        g.add_node(4, a=0.2, b=75)
+        g.add_node(5, a=0.4, b=25)
+        g.add_node(6, a=0.2, b=150)
+        g.add_node(7, a=0.5, b=80)
+        g.add_node(8, a=0.1, b=40)
+        g.add_edge(0, 1, weight=5, type='big')
+        g.add_edge(1, 2, weight=5, type='big')
+        g.add_edge(1, 3, weight=3, type='medium')
+        g.add_edge(1, 4, weight=4, type='small')
+        g.add_edge(2, 5, weight=2, type='big')
+        g.add_edge(2, 6, weight=6, type='big')
+        g.add_edge(3, 4, weight=3, type='medium')
+        g.add_edge(3, 7, weight=5, type='small')
+        g.add_edge(4, 8, weight=4, type='big')
+        g.add_edge(5, 6, weight=1, type='small')
+        g.add_edge(6, 7, weight=5, type='small')
+        g.add_edge(7, 8, weight=3, type='medium')
+
+        node_labels = {0: 0, 1: 0, 2: 0, 3: 1, 4: 0, 5: 1, 6: 1, 7: 0, 8: 0}
+
+        true_ptg_data = networkx_to_ptg(g)
+
+        # for format in ['.g6']:
+        for format in DatasetConverter.supported_formats:
+            print(f"Checking format {format}")
+
+            name = f'test_{format}'
+            dc = DatasetConfig('single-graph', 'custom', name)
+
+            # Write graph and attributes files
+            root, files_paths = Declare.dataset_root_dir(dc)
+            raw = root / 'raw'
+            raw.mkdir(parents=True)
+            DatasetConverter.networkx_to_format(g, format, raw, name=name,
+                                                default_node_attr_value={'a': -1, 'b': -1},
+                                                default_edge_attr_value={'weight': -1, 'type': -1})
+
+            # Write info and labels
+            with open(raw / '.info', 'w') as f:
+                json.dump({
+                    "name": name,
+                    "count": 1,
+                    "directed": False,
+                    "nodes": [g.number_of_nodes()],
+                    "remap": False,
+                    "node_attributes": {
+                        "names": ["a", "b"],
+                        "types": ["continuous", "continuous"],
+                        "values": [[0, 1], [0, 200]]
+                    },
+                    "edge_attributes": {
+                        "names": ["weight", "type"],
+                        "types": ["continuous", "categorical"],
+                        "values": [[1, 6], ['small', 'medium', 'big']]
+                    },
+                    "labelings": {"binary": 2}
+                }, f)
+
+            (raw / f'{name}.labels').mkdir()
+            with open(raw / f'{name}.labels' / 'binary', 'w') as f:
+                json.dump(node_labels, f)
+
+            # Convert from the format
+            gen_dataset = DatasetManager.register_custom(dc, format)
+
+            dataset_var_config = DatasetVarConfig(
+                features={'attr': {'a': 'as_is', 'b': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+            gen_dataset.build(dataset_var_config)
+            ptg_data = gen_dataset.data
+
+            # Check features and edges coincide
+            self.assertTrue(torch.equal(true_ptg_data.x.sort(dim=0)[0], ptg_data.x.sort(dim=0)[0]))
+            sorted_edges1 = torch.sort(true_ptg_data.edge_index, dim=1)[0]
+            sorted_edges2 = torch.sort(ptg_data.edge_index, dim=1)[0]
+            self.assertTrue(torch.equal(sorted_edges1, sorted_edges2))
+            # FIXME add it later when edge features are ready
+            # self.assertTrue(torch.equal(true_ptg_data.edge_attr, ptg_data.edge_attr))
 
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time

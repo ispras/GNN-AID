@@ -2,6 +2,8 @@ import collections
 import importlib.util
 import json
 import logging
+from typing import List, Tuple, Union
+
 # from pydantic.utils import deep_update
 # from pydantic.v1.utils import deep_update
 
@@ -24,7 +26,8 @@ class DataInfo:
     """
 
     @staticmethod
-    def refresh_all_data_info():
+    def refresh_all_data_info(
+    ) -> None:
         """
         Calling all files to update with information about saved objects
         """
@@ -35,7 +38,8 @@ class DataInfo:
         DataInfo.refresh_explanations_dir_structure()
 
     @staticmethod
-    def refresh_data_dir_structure():
+    def refresh_data_dir_structure(
+    ) -> None:
         """
         Calling a file update with information about saved raw datasets
         """
@@ -51,7 +55,8 @@ class DataInfo:
                     prev_path = path
 
     @staticmethod
-    def refresh_models_dir_structure():
+    def refresh_models_dir_structure(
+    ) -> None:
         """
         Calling a file update with information about saved models
         """
@@ -62,7 +67,8 @@ class DataInfo:
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
-    def refresh_explanations_dir_structure():
+    def refresh_explanations_dir_structure(
+    ) -> None:
         """
         Calling a file update with information about saved explanations
         """
@@ -73,7 +79,8 @@ class DataInfo:
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
-    def refresh_data_var_dir_structure():
+    def refresh_data_var_dir_structure(
+    ) -> None:
         """
         Calling a file update with information about saved prepared datasets
         """
@@ -84,7 +91,9 @@ class DataInfo:
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
-    def take_keys_etc_by_prefix(prefix):
+    def take_keys_etc_by_prefix(
+            prefix: Tuple
+    ) -> [List, List, dict, int]:
         """
 
         :param prefix: what data and in what order were used to form the path when saving the object
@@ -114,7 +123,11 @@ class DataInfo:
         return keys_list, full_keys_list, dir_structure, empty_dir_shift
 
     @staticmethod
-    def values_list_by_path_and_keys(path, full_keys_list, dir_structure):
+    def values_list_by_path_and_keys(
+            path: Union[str, Path],
+            full_keys_list: List,
+            dir_structure: dict
+    ) -> List:
         """
 
         :param path: path of the saved object
@@ -133,7 +146,10 @@ class DataInfo:
         return parts_val
 
     @staticmethod
-    def values_list_and_technical_files_by_path_and_prefix(path, prefix):
+    def values_list_and_technical_files_by_path_and_prefix(
+            path: Union[str, Path],
+            prefix: Tuple
+    ) -> [List, dict]:
         """
 
         :param path: path of the saved object
@@ -169,12 +185,16 @@ class DataInfo:
                         else:
                             file_name = file_info_dict["file_name"]
                         file_name += file_info_dict["format"]
-                        description_info.update({key: {parts_val[-1]: os.path.join(os.path.join(*path[:parts_parse]), file_name)}})
+                        description_info.update(
+                            {key: {parts_val[-1]: os.path.join(os.path.join(*path[:parts_parse]), file_name)}})
                 parts_parse += 1
         return parts_val, description_info
 
     @staticmethod
-    def fill_prefix_storage(prefix, file_with_paths):
+    def fill_prefix_storage(
+            prefix: Tuple,
+            file_with_paths: Union[str, Path]
+    ) -> [PrefixStorage, dict]:
         """
         Fill prefix storage by file with paths
 
@@ -183,7 +203,7 @@ class DataInfo:
         :param file_with_paths: file with paths of saved objects
         :return: fill prefix storage and dict with description_info about objects use hash
         """
-        keys_list, full_keys_list, dir_structure, empty_dir_shift =\
+        keys_list, full_keys_list, dir_structure, empty_dir_shift = \
             DataInfo.take_keys_etc_by_prefix(prefix=prefix)
         ps = PrefixStorage(keys_list)
         with open(file_with_paths, 'r', encoding='utf-8') as f:
@@ -202,7 +222,10 @@ class DataInfo:
         return ps, description_info
 
     @staticmethod
-    def deep_update(d, u):
+    def deep_update(
+            d: dict,
+            u: dict
+    ) -> dict:
         for k, v in u.items():
             if isinstance(v, collections.abc.Mapping):
                 d[k] = DataInfo.deep_update(d.get(k, {}), v)
@@ -211,14 +234,19 @@ class DataInfo:
         return d
 
     @staticmethod
-    def description_info_with_paths_to_description_info_with_files_values(description_info, root_path):
+    def description_info_with_paths_to_description_info_with_files_values(
+            description_info: dict,
+            root_path: Union[str, Path]
+    ) -> dict:
         for description_info_key, description_info_val in description_info.items():
             for obj_name, obj_file_path in description_info_val.items():
                 with open(os.path.join(root_path, obj_file_path)) as f:
                     description_info[description_info_key][obj_name] = f.read()
         return description_info
+
     @staticmethod
-    def explainers_parse():
+    def explainers_parse(
+    ) -> [PrefixStorage, dict]:
         """
         Parses the path to explainers from a technical file with the paths of all saved explainers.
         """
@@ -232,7 +260,8 @@ class DataInfo:
         return ps, description_info
 
     @staticmethod
-    def models_parse():
+    def models_parse(
+    ) -> [PrefixStorage, dict]:
         """
         Parses the path to models from a technical file with the paths of all saved models.
         """
@@ -246,7 +275,8 @@ class DataInfo:
         return ps, description_info
 
     @staticmethod
-    def data_parse():
+    def data_parse(
+    ) -> [PrefixStorage, dict]:
         """
         Parses the path to raw datasets from a technical file with the paths of all saved raw datasets.
         """
@@ -257,7 +287,8 @@ class DataInfo:
         return ps
 
     @staticmethod
-    def data_var_parse():
+    def data_var_parse(
+    ) -> [PrefixStorage, dict]:
         """
         Parses the path to prepared datasets from a technical file with the paths of all saved prepared datasets.
         """
@@ -268,7 +299,9 @@ class DataInfo:
         return ps
 
     @staticmethod
-    def clean_prepared_data(dry_run=False):
+    def clean_prepared_data(
+            dry_run: bool = False
+    ) -> None:
         """
         Remove all prepared data for all datasets.
         """
@@ -279,7 +312,9 @@ class DataInfo:
                 shutil.rmtree(path)
 
     @staticmethod
-    def all_obj_ver_by_obj_path(obj_dir_path):
+    def all_obj_ver_by_obj_path(
+            obj_dir_path: Union[str, Path]
+    ) -> set:
         """
 
         :param obj_dir_path: path to the saved object
@@ -294,7 +329,9 @@ class DataInfo:
         return set(vers_ind)
 
     @staticmethod
-    def del_all_empty_folders(dir_path):
+    def del_all_empty_folders(
+            dir_path: Union[str, Path]
+    ) -> None:
         """
         Deletes all empty folders and files with meta information in the selected directory
 
@@ -316,7 +353,8 @@ class DataInfo:
 
 class UserCodeInfo:
     @staticmethod
-    def user_models_list_ref():
+    def user_models_list_ref(
+    ) -> dict:
         """
         :return: dict with information about user models objects in directory <project root>/user_model_list
          Contains information about objects class name, objects names and import paths
@@ -371,7 +409,10 @@ class UserCodeInfo:
         return user_models_obj_dict_info
 
     @staticmethod
-    def take_user_model_obj(user_file_path, obj_name: str):
+    def take_user_model_obj(
+            user_file_path: Union[str, Path],
+            obj_name: str
+    ) -> object:
         """
         :param user_file_path: path to the user file with user model
         :param obj_name: user object name

@@ -1,26 +1,43 @@
 import numpy as np
 
+from base.datasets_processing import GeneralDataset
 from defense.defense_base import Defender
 
 
-class PoisonDefender(Defender):
-    def __init__(self, **kwargs):
+class PoisonDefender(
+    Defender
+):
+    def __init__(
+            self,
+            **kwargs
+    ):
         super().__init__()
 
-    def defense(self, **kwargs):
+    def defense(
+            self,
+            **kwargs
+    ):
         pass
 
 
-class BadRandomPoisonDefender(PoisonDefender):
+class BadRandomPoisonDefender(
+    PoisonDefender
+):
     name = "BadRandomPoisonDefender"
 
-    def __init__(self, n_edges_percent=0.1):
+    def __init__(
+            self,
+            n_edges_percent: float = 0.1
+    ):
         self.defense_diff = None
 
         super().__init__()
         self.n_edges_percent = n_edges_percent
 
-    def defense(self, gen_dataset):
+    def defense(
+            self,
+            gen_dataset: GeneralDataset
+    ) -> GeneralDataset:
         edge_index = gen_dataset.data.edge_index
         random_indices = np.random.choice(
             edge_index.shape[1],
@@ -35,12 +52,19 @@ class BadRandomPoisonDefender(PoisonDefender):
         self.defense_diff = edge_index_diff
         return gen_dataset
 
-    def defense_diff(self):
+    def defense_diff(
+            self
+    ):
         return self.defense_diff
 
 
-class EmptyPoisonDefender(PoisonDefender):
+class EmptyPoisonDefender(
+    PoisonDefender
+):
     name = "EmptyPoisonDefender"
 
-    def defense(self, gen_dataset):
+    def defense(
+            self,
+            gen_dataset: GeneralDataset
+    ) -> GeneralDataset:
         return gen_dataset

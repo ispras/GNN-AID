@@ -1,8 +1,12 @@
+from base.datasets_processing import GeneralDataset
 from models_builder.gnn_constructor import FrameworkGNNConstructor
 from aux.configs import ModelConfig, ModelStructureConfig
 
 
-def model_configs_zoo(dataset, model_name):
+def model_configs_zoo(
+        dataset: GeneralDataset,
+        model_name: str
+):
     gat_gin_lin = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(
@@ -110,6 +114,53 @@ def model_configs_zoo(dataset, model_name):
         )
     )
 
+    sage_sage = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                                'heads': 3,
+                            },
+                        },
+                        'batchNorm': {
+                            'batchNorm_name': 'BatchNorm1d',
+                            'batchNorm_kwargs': {
+                                'num_features': 16,
+                                'eps': 1e-05,
+                            }
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': dataset.num_classes,
+                                'heads': 2,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'LogSoftmax',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
     gat_gat = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(
@@ -145,6 +196,105 @@ def model_configs_zoo(dataset, model_name):
                                 'in_channels': 48,
                                 'out_channels': dataset.num_classes,
                                 'heads': 2,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'LogSoftmax',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
+    gat_gcn_sage_gcn_gcn = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GATConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                                'heads': 3,
+                            },
+                        },
+                        'batchNorm': {
+                            'batchNorm_name': 'BatchNorm1d',
+                            'batchNorm_kwargs': {
+                                'num_features': 48,
+                                'eps': 1e-05,
+                            }
+                        },
+                        'activation': {
+                            'activation_name': 'LeakyReLU',
+                            'activation_kwargs': {
+                                "negative_slope": 0.01
+                            },
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 48,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'Tanh',
+                            'activation_kwargs': None,
+                        },
+                        'dropout': {
+                            'dropout_name': 'Dropout',
+                            'dropout_kwargs': {
+                                'p': 0.5,
+                            }
+                        }
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'Sigmoid',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': dataset.num_classes,
                             },
                         },
                         'activation': {

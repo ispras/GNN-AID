@@ -2,16 +2,16 @@ import math
 import torch
 import numpy as np
 import scipy.sparse as sp
-import attacks.poison_attacks_collection.metattack.utils as utils
+import attacks.metattack.utils as utils
 from torch.nn import functional as F
 from torch.nn.parameter import Parameter
 from torch import optim
 from tqdm import tqdm
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.models_zoo import model_configs_zoo
-from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from aux.configs import ModelModificationConfig, ConfigPattern
 from aux.utils import OPTIMIZERS_PARAMETERS_PATH
-from torch_geometric.utils import to_dense_adj, to_torch_csr_tensor, to_torch_coo_tensor, dense_to_sparse, to_edge_index
+from torch_geometric.utils import dense_to_sparse
 
 from attacks.poison_attacks import PoisonAttacker
 
@@ -380,7 +380,8 @@ class MetaAttackFull(BaseMeta):
             attack_loss = self.lambda_ * loss_labeled + (1 - self.lambda_) * loss_unlabeled
 
         print('GCN loss on unlabled data: {}'.format(loss_test_val.item()))
-        print('GCN acc on unlabled data: {}'.format(utils.accuracy(output[idx_unlabeled], labels[idx_unlabeled]).item()))
+        print('GCN acc on unlabled data: {}'.format(
+            utils.accuracy(output[idx_unlabeled], labels[idx_unlabeled]).item()))
         print('attack loss: {}'.format(attack_loss.item()))
 
         adj_grad, feature_grad = None, None
@@ -553,4 +554,5 @@ class MetaAttackApprox(BaseMeta):
 
         loss_test_val = F.nll_loss(output[idx_unlabeled], labels[idx_unlabeled])
         print('GCN loss on unlabled data: {}'.format(loss_test_val.item()))
-        print('GCN acc on unlabled data: {}'.format(utils.accuracy(output[idx_unlabeled], labels[idx_unlabeled]).item()))
+        print('GCN acc on unlabled data: {}'.format(
+            utils.accuracy(output[idx_unlabeled], labels[idx_unlabeled]).item()))

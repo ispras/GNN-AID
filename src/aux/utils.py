@@ -3,6 +3,8 @@ import json
 import warnings
 from pathlib import Path
 from pydoc import locate
+from typing import Union, Type, Any
+
 import numpy as np
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
@@ -40,11 +42,16 @@ IMPORT_INFO_KEY = "import_info"
 TECHNICAL_PARAMETER_KEY = "_technical_parameter"
 
 
-def hash_data_sha256(data):
+def hash_data_sha256(
+        data
+) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def import_by_name(name: str, packs: list = None):
+def import_by_name(
+        name: str,
+        packs: list = None
+) -> None:
     """
     Import name from packages, return class
     :param name: class name, full or relative
@@ -63,7 +70,9 @@ def import_by_name(name: str, packs: list = None):
     raise ImportError(f"Unknown {packs} model '{name}', couldn't import.")
 
 
-def model_managers_info_by_names_list(model_managers_names: set):
+def model_managers_info_by_names_list(
+        model_managers_names: set
+) -> dict:
     """
     :param model_managers_names: set with model managers class names (user and framework)
     :return: dict with info about model managers 
@@ -86,7 +95,11 @@ def model_managers_info_by_names_list(model_managers_names: set):
     return model_managers_info
 
 
-def setting_class_default_parameters(class_name: str, class_kwargs: dict, default_parameters_file_path):
+def setting_class_default_parameters(
+        class_name: str,
+        class_kwargs: dict,
+        default_parameters_file_path: Union[str, Path]
+) -> [dict, dict]:
     """
     :param class_name: class name, should be same in default_parameters_file
     :param class_kwargs: dict with parameters, which needs to be supplemented with default parameters
@@ -143,6 +156,39 @@ def setting_class_default_parameters(class_name: str, class_kwargs: dict, defaul
     return class_kwargs_for_save, class_kwargs_for_init
 
 
-def all_subclasses(cls):
+def all_subclasses(
+        cls: Type[Any]
+) -> set:
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+
+
+class tmp_dir():
+    """
+    Temporary create a directory near the given path. Remove it on exit.
+    """
+    def __init__(
+            self,
+            path: Path
+    ):
+        self.path = path
+        from time import time
+        self.tmp_dir = self.path.parent / (self.path.name + str(time()))
+
+    def __enter__(
+            self
+    ) -> Path:
+        self.tmp_dir.mkdir(parents=True)
+        return self.tmp_dir
+
+    def __exit__(
+            self,
+            exception_type,
+            exception_value,
+            exception_traceback
+    ) -> None:
+        import shutil
+        try:
+            shutil.rmtree(self.tmp_dir)
+        except FileNotFoundError:
+             pass

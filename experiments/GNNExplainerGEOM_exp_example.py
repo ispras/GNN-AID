@@ -23,13 +23,12 @@ def geom_GNNExplainer_test():
 
     gcn2 = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
-    gnn_model_manager_config = ModelManagerConfig(**{
-        "mask_features": [],
-        "optimizer": {
-            "_class_name": "Adam",
-            "_config_kwargs": {},
-        }
-    })
+    gnn_model_manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": []
+            }
+        )
 
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(

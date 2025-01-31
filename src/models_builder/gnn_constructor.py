@@ -2,7 +2,7 @@ import copy
 import json
 import warnings
 from collections import OrderedDict
-from typing import Dict, Callable
+from typing import Dict, Callable, Union, Iterator, Type
 import torch
 from torch.nn.parameter import UninitializedParameter
 from torch.utils import hooks
@@ -11,7 +11,7 @@ from torch_geometric.nn import MessagePassing
 
 from aux.utils import import_by_name, CUSTOM_LAYERS_INFO_PATH, MODULES_PARAMETERS_PATH, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY
-from aux.configs import ModelConfig, CONFIG_CLASS_NAME
+from aux.configs import ModelConfig, CONFIG_CLASS_NAME, ModelStructureConfig
 
 
 class GNNConstructor:
@@ -33,34 +33,46 @@ class GNNConstructor:
         self.obj_name = None
         self.model_config = model_config
 
-    def forward(self):
+    def forward(
+            self
+    ):
         raise NotImplementedError("forward can't be called, because it is not implemented")
 
-    def get_all_layer_embeddings(self):
+    def get_all_layer_embeddings(
+            self
+    ):
         """
         :return: vectors representing the input data from the outputs of each layer of the neural network
         """
         raise NotImplementedError("get_all_layer_embeddings can't be called, because it is not implemented")
 
-    def get_architecture(self):
+    def get_architecture(
+            self
+    ):
         """
         :return: the architecture of the model, for display on the front
         """
         raise NotImplementedError("get_architecture can't be called, because it is not implemented")
 
-    def get_num_hops(self):
+    def get_num_hops(
+            self
+    ):
         """
         :return: the number of graph convolution layers. Required for some model interpretation algorithms to work
         """
         raise NotImplementedError("get_num_hops can't be called, because it is not implemented")
 
-    def reset_parameters(self):
+    def reset_parameters(
+            self
+    ):
         """
         resets all model parameters. Required for the reset button on the front to work.
         """
         raise NotImplementedError("reset_parameters can't be called, because it is not implemented")
 
-    def get_predictions(self):
+    def get_predictions(
+            self
+    ):
         """
         :return: a vector of estimates for the distribution of input data by class.
         Required for some interpretation algorithms to work.
@@ -68,13 +80,17 @@ class GNNConstructor:
         """
         raise NotImplementedError("get_predictions can't be called, because it is not implemented")
 
-    def get_parameters(self):
+    def get_parameters(
+            self
+    ):
         """
         :return: matrix with model parameters
         """
         raise NotImplementedError("get_predictions can't be called, because it is not implemented")
 
-    def get_answer(self):
+    def get_answer(
+            self
+    ):
         """
         :return: an answer to which class the input belongs to.
         Required for some interpretation methods to work.
@@ -82,7 +98,11 @@ class GNNConstructor:
         """
         raise NotImplementedError("get_answer can't be called, because it is not implemented")
 
-    def get_name(self, obj_name_flag=False, **kwargs):
+    def get_name(
+            self,
+            obj_name_flag: bool = False,
+            **kwargs
+    ):
         gnn_name = self.model_config.to_saveable_dict().copy()
         gnn_name[CONFIG_CLASS_NAME] = self.__class__.__name__
         if obj_name_flag:
@@ -93,7 +113,9 @@ class GNNConstructor:
         json_str = json.dumps(gnn_name, indent=2)
         return json_str
 
-    def suitable_model_managers(self):
+    def suitable_model_managers(
+            self
+    ):
         """
         :return: a set of names of suitable model manager classes.
         Model manager classes must be inherited from the GNNModelManager class
@@ -102,13 +124,18 @@ class GNNConstructor:
 
     # === Permanent methods (not to be overwritten)
 
-    def get_hash(self):
+    def get_hash(
+            self
+    ) -> str:
         gnn_name = self.get_name()
         json_object = json.dumps(gnn_name)
         gnn_name_hash = hash_data_sha256(json_object.encode('utf-8'))
         return gnn_name_hash
 
-    def get_full_info(self):
+    def get_full_info(
+            self,
+            tensor_size_limit: int=None
+    ) -> dict:
         """ Get available info about model for frontend
         """
         # FIXMe architecture and weights can be not accessible
@@ -118,7 +145,7 @@ class GNNConstructor:
         except (AttributeError, NotImplementedError):
             pass
         try:
-            result["weights"] = self.get_weights()
+            result["weights"] = self.get_weights(tensor_size_limit=tensor_size_limit)
         except (AttributeError, NotImplementedError):
             pass
         try:
@@ -129,16 +156,23 @@ class GNNConstructor:
         return result
 
 
-class GNNConstructorTorch(GNNConstructor, torch.nn.Module):
+class GNNConstructorTorch(
+    GNNConstructor,
+    torch.nn.Module
+):
     """
     Base class for writing models using the torch library. Inherited from GNNConstructor and torch.nn.Module classes.
     """
 
-    def __init__(self):
+    def __init__(
+            self
+    ):
         super().__init__()
         torch.nn.Module.__init__(self)
 
-    def flow(self):
+    def flow(
+            self
+    ):
         """ Flow direction of message passing, usually 'source_to_target'
         """
         for module in self.modules():
@@ -146,7 +180,9 @@ class GNNConstructorTorch(GNNConstructor, torch.nn.Module):
                 return module.flow
         return 'source_to_target'
 
-    def get_neurons(self):
+    def get_neurons(
+            self
+    ):
         """ Return number of neurons of each convolution layer as list: [n_1, n_2, ..., n_k]
         """
         neurons = []
@@ -165,7 +201,10 @@ class GNNConstructorTorch(GNNConstructor, torch.nn.Module):
                 neurons.append(n_neurons)
         return neurons
 
-    def get_weights(self):
+    def get_weights(
+            self,
+            tensor_size_limit: str = None
+    ):
         """
         Get model weights calling torch.nn.Module.state_dict() to draw them on the frontend.
         """
@@ -185,18 +224,30 @@ class GNNConstructorTorch(GNNConstructor, torch.nn.Module):
 
             k = sub_keys[-1]
             if type(value) == UninitializedParameter:
-                continue
-            part[k] = value.numpy().tolist()
+                part[k] = '?'
+            else:
+                size = 1
+                for dim in value.shape:
+                    size *= dim
+                if tensor_size_limit and size > tensor_size_limit:  # Tensor is too big - return just its shape
+                    part[k] = 'x'.join(str(d) for d in value.shape)
+                else:
+                    part[k] = value.numpy().tolist()
         return model_data
 
 
-class FrameworkGNNConstructor(GNNConstructorTorch):
+class FrameworkGNNConstructor(
+    GNNConstructorTorch
+):
     """
     A class that uses metaprogramming to form a wide variety of models using the 'structure' variable in json format.
     Inherited from the GNNConstructorTorch class.
     """
 
-    def __init__(self, model_config: ModelConfig = None, ):
+    def __init__(
+            self,
+            model_config: ModelConfig = None,
+    ):
         """
         :param model_config: description of the gnn structure
         """
@@ -309,7 +360,10 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
         self.model_manager_restrictions = set()
         self._check_model_structure(self.structure)
 
-    def _check_model_structure(self, structure):
+    def _check_model_structure(
+            self,
+            structure: Union[dict, ModelStructureConfig],
+    ):
         with open(CUSTOM_LAYERS_INFO_PATH) as f:
             information_check_correctness_models = json.load(f)
         allowable_transitions = set(information_check_correctness_models["allowable_transitions"])
@@ -390,27 +444,37 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
                         model_strong_restrictions.update(layer_strong_restrictions)
         self.model_manager_restrictions = model_manager_restrictions
 
-    def get_all_layer_embeddings(self, *args, **kwargs):
+    def get_all_layer_embeddings(
+            self,
+            *args,
+            **kwargs
+    ) -> dict:
         self._save_emb_flag = True
         layer_emb_dict = self(*args, **kwargs)
         self._save_emb_flag = False
         return layer_emb_dict
 
-    def register_my_forward_hook(self, hook: Callable[..., None]) -> RemovableHandle:
+    def register_my_forward_hook(
+            self, hook: Callable[..., None]
+    ) -> RemovableHandle:
         r"""Registers a forward hook on the module.
         """
         handle = hooks.RemovableHandle(self._forward_hooks)
         self._my_forward_hooks[handle.id] = hook
         return handle
 
-    def forward(self, *args, **kwargs):
+    def forward(
+            self,
+            *args,
+            **kwargs
+    ) -> torch.Tensor:
         layer_ind = -1
         tensor_storage = {}
         dim_cat = 0
         layer_emb_dict = {}
         save_emb_flag = self._save_emb_flag
 
-        x, edge_index, batch = self.arguments_read(*args, **kwargs)
+        x, edge_index, batch, edge_weight = self.arguments_read(*args, **kwargs)
         feat = x
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
@@ -427,7 +491,7 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
                         tensor_storage[layer_ind] = torch.clone(x)
                 layer_ind = curr_layer_ind
                 x_copy = torch.clone(x)
-                connection_tensor = torch.Tensor()
+                connection_tensor = torch.empty(0, device=x_copy.device)
                 for key, value in self.conn_dict.items():
                     if key[1] == curr_layer_ind:
                         if key[1] - key[0] == 1:
@@ -483,15 +547,21 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
             return layer_emb_dict
         return x
 
-    def reset_parameters(self):
+    def reset_parameters(
+            self
+    ) -> None:
         for elem in list(self.__dict__['_modules'].items()):
             if {'reset_parameters'}.issubset(dir(getattr(self, elem[0]))):
                 getattr(self, elem[0]).reset_parameters()
 
-    def get_architecture(self):
+    def get_architecture(
+            self
+    ) -> Union[dict, ModelStructureConfig]:
         return self.structure
 
-    def get_num_hops(self):
+    def get_num_hops(
+            self
+    ) -> int:
         if self.num_hops is None:
             num_hops = 0
             for module in self.modules():
@@ -505,21 +575,35 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
         else:
             return self.num_hops
 
-    def get_predictions(self, *args, **kwargs):
+    def get_predictions(
+            self,
+            *args,
+            **kwargs
+    ) -> torch.Tensor:
         return self(*args, **kwargs).softmax(dim=-1)
         # return self.forward(*args, **kwargs)
 
-    def get_parameters(self):
+    def get_parameters(
+            self
+    ) -> Iterator:
         return self.parameters()
 
-    def get_answer(self, *args, **kwargs):
+    def get_answer(
+            self,
+            *args,
+            **kwargs
+    ) -> torch.Tensor:
         return self.get_predictions(*args, **kwargs).argmax(dim=1)
 
-    def suitable_model_managers(self):
+    def suitable_model_managers(
+            self
+    ) -> set:
         return self.model_manager_restrictions
 
     @staticmethod
-    def arguments_read(*args, **kwargs):
+    def arguments_read(
+            *args, **kwargs
+    ) -> [torch.Tensor, torch.Tensor, Type, torch.Tensor]:
         """
         The method is launched when the forward is executed extracts from the variable data or kwargs
         the data necessary to pass the forward: x, edge_index, batch
@@ -539,16 +623,42 @@ class FrameworkGNNConstructor(GNNConstructorTorch):
                 assert 'edge_index' in kwargs
                 x, edge_index = kwargs['x'], kwargs['edge_index'],
                 batch = kwargs.get('batch')
+                edge_weight = kwargs.get('edge_weight', None)
                 if batch is None:
                     batch = torch.zeros(kwargs['x'].shape[0], dtype=torch.int64, device=x.device)
-            elif len(args) == 2:
-                x, edge_index = args[0], args[1]
-                batch = torch.zeros(args[0].shape[0], dtype=torch.int64, device=x.device)
-            elif len(args) == 3:
-                x, edge_index, batch = args[0], args[1], args[2]
             else:
-                raise ValueError(f"forward's args should take 2 or 3 arguments but got {len(args)}")
-        else:
-            x, edge_index, batch = data.x, data.edge_index, data.batch
+                if len(args) == 1:
+                    args = args[0]
+                    if 'x' in args and 'edge_index' in args:
+                        x, edge_index = args.x, args.edge_index
+                    else:
+                        raise ValueError(f"forward's args should contain x and 3"
+                                         f" edge_index Tensors but {args.keys} doesn't content this Tensors")
+                    if 'batch' in args:
+                        batch = args.batch
+                    else:
+                        batch = torch.zeros(args.x.shape[0], dtype=torch.int64, device=x.device)
+                    if 'edge_weight' in args:
+                        edge_weight = args.edge_weight
+                    else:
+                        edge_weight = None
+                else:
+                    if len(args) == 2:
+                        x, edge_index = args[0], args[1]
+                        batch = torch.zeros(args[0].shape[0], dtype=torch.int64, device=x.device)
+                        edge_weight = None
+                    elif len(args) == 3:
+                        x, edge_index, batch = args[0], args[1], args[2]
+                        edge_weight = None
+                    elif len(args) == 4:
+                        x, edge_index, batch, edge_weight = args[0], args[1], args[2], args[3]
+                    else:
+                        raise ValueError(f"forward's args should take 2 or 3 arguments but got {len(args)}")
 
-        return x, edge_index, batch
+        else:
+            if hasattr(data, "edge_weight"):
+                x, edge_index, batch, edge_weight = data.x, data.edge_index, data.batch, data.edge_weight
+            else:
+                x, edge_index, batch, edge_weight = data.x, data.edge_index, data.batch, None
+
+        return x, edge_index, batch, edge_weight

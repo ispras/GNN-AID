@@ -8,7 +8,11 @@ import shutil
 import signal
 from time import time
 
+# Monkey patch EXPLANATIONS_DIR - before other imports
 from aux import utils
+tmp_dir = utils.EXPLANATIONS_DIR / (utils.EXPLANATIONS_DIR.name + str(time()))
+utils.EXPLANATIONS_DIR = tmp_dir
+
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
 from base.datasets_processing import DatasetManager
@@ -27,10 +31,6 @@ from models_builder.models_zoo import model_configs_zoo
 # from src.aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
 #     ExplainerInitConfig, ConfigPattern
 # from src.models_builder.models_zoo import model_configs_zoo
-
-
-tmp_dir = utils.EXPLANATIONS_DIR / (utils.EXPLANATIONS_DIR.name + str(time()))
-utils.EXPLANATIONS_DIR = tmp_dir
 
 
 def my_ctrlc_handler(signal, frame):

@@ -1,18 +1,28 @@
-from web_interface.back_front.block import WrapperBlock
+from typing import Union
+
+from web_interface.back_front.block import WrapperBlock, Block
 
 
 class Diagram:
-    """Diagram of fontend states and transitions between them.
+    """Diagram of frontend states and transitions between them.
     """
 
-    def __init__(self):
-        self.blocks = {}
+    def __init__(
+            self
+    ):
+        self.blocks = {}  # {name -> Block}
 
-    def get(self, name):
+    def get(
+            self,
+            name: str
+    ) -> Block:
         """ Get block by its name """
         return self.blocks[name]
 
-    def add_block(self, block):
+    def add_block(
+            self,
+            block: Block
+    ) -> None:
         if block.name in self.blocks:
             return
 
@@ -23,7 +33,12 @@ class Diagram:
                 self.blocks[b.name] = b
                 b.diagram = self
 
-    def add_dependency(self, _from, to, condition=all):
+    def add_dependency(
+            self,
+            _from: Union[list, Block],
+            to: Union[list, Block],
+            condition=all
+    ) -> None:
         # assert condition in [all, any]
         if not isinstance(_from, list):
             _from = [_from]
@@ -36,7 +51,10 @@ class Diagram:
         self.add_block(to)
         to.condition = condition
 
-    def on_submit(self, block):
+    def on_submit(
+            self,
+            block: Block
+    ) -> None:
         """ Init all blocks possible after the block submission
         """
         print('Diagram.onSubmit(' + block.name + ')')
@@ -46,7 +64,10 @@ class Diagram:
                 # IMP add params names as blocks names
                 b_after.init(*[x.get_object() for x in b_after.requires if x.is_set()])
 
-    def on_drop(self, block):
+    def on_drop(
+            self,
+            block: Block
+    ) -> None:
         """ Recursively break all block that critically depend on the given one
         """
         print('Diagram.onBreak(' + block.name + ')')
@@ -54,7 +75,9 @@ class Diagram:
         for b in block.influences:
             b.breik()
 
-    def drop(self):
+    def drop(
+            self
+    ) -> None:
         """ Drop all blocks. """
         # FIXME many blocks will break many times
         for block in self.blocks.values():

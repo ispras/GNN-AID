@@ -1,12 +1,19 @@
 import collections
 import collections.abc
+
+# from experiments.SubgraphX_MultiGraph_Example import dataset
+
 collections.Callable = collections.abc.Callable
+import sys
+import os
+sys.path.append(f"{os.getcwd()}/src")
 
 import unittest
 import warnings
 import shutil
 import signal
 from time import time
+
 
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
@@ -128,6 +135,9 @@ class ExplainersTest(unittest.TestCase):
         # TODO Kirill, tmp comment work and tests with Prot
         gin3_lin2_prot_mg_small = model_configs_zoo(
             dataset=dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
+        gin3_lin2_prot_mg_mutag = model_configs_zoo(
+            dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
+        )
         gin3_lin1_mg_mutag = model_configs_zoo(
             dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin')
 
@@ -160,10 +170,15 @@ class ExplainersTest(unittest.TestCase):
             gnn=gin3_lin2_prot_mg_small, dataset_path=results_dataset_path_mg_small,
             # manager_config=gin3_lin2_mg_small_manager_config,
         )
+        self.prot_gnn_mm_mutag = ProtGNNModelManager(gnn=gin3_lin2_prot_mg_mutag, dataset_path=results_dataset_path_mg_mutag)
         # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
 
         best_acc = self.prot_gnn_mm_mg_small.train_model(
             gen_dataset=gen_dataset_mg_small, steps=100, metrics=[])
+
+        # uncomment for ProtGNN big test
+        # self.prot_gnn_mm_mutag.train_model(
+        #     gen_dataset=gen_dataset_mg_mutag, steps=40, metrics=[])
 
         gin3_lin2_mg_small = model_configs_zoo(
             dataset=gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
@@ -357,6 +372,40 @@ class ExplainersTest(unittest.TestCase):
         )
 
         explainer_Prot.conduct_experiment(explainer_run_config)
+
+    def test_ProtGNN_big(self):
+        # uncomment model train for this test - big one
+
+        warnings.warn("Start ProtGNN")
+        explainer_init_config = ConfigPattern(
+            _class_name="ProtGNN",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "global",
+                "kwargs": {
+                    "_class_name": "ProtGNN",
+                    "_import_path": EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_Prot = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_mutag, gnn_manager=self.prot_gnn_mm_mutag,
+            explainer_name='ProtGNN',
+        )
+
+        explainer_Prot.conduct_experiment(explainer_run_config)
+
 
     def test_GNNExpl_PYG_SG(self):
         warnings.warn("Start GNNExplainer_PYG")

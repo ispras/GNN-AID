@@ -84,20 +84,28 @@ class MenuModelManagerView extends MenuView {
         $cb.append($("<label></label>").text("Train/validation/test ratio"))
         let $div3 = $("<div></div>").css("display", "flex")
         $cb.append($div3)
-        this.$trainRatioInput = $("<input>").attr("type", "number").attr("min", "0")
-            .attr("max", "1").attr("step", "0.01").attr("value", "0.6")
+        this.$trainRatioInput = $("<input>").attr("type", "number")
+            .attr("min", "0").attr("max", "1")
+            .attr("step", "0.01").attr("value", "0.6")
+        addValueChecker(this.$trainRatioInput, "float", 0.6, 0, 0.9999, "change")
         $div3.append(this.$trainRatioInput)
 
-        this.$valRatioInput = $("<input>").attr("type", "number").attr("min", "0")
-            .attr("max", "0.99").attr("step", "0.01").attr("value", "0")
+        this.$valRatioInput = $("<input>").attr("type", "number")
+            .attr("min", "0").attr("max", "0.99")
+            .attr("step", "0.01").attr("value", "0")
+        addValueChecker(this.$valRatioInput, "float", 0, 0, 0.9999, "change")
         $div3.append(this.$valRatioInput)
 
-        this.$testRatioInput = $("<input>").attr("type", "number").attr("min", "0")
-            .attr("max", "1").attr("step", "0.01").attr("value", "0.4")
+        this.$testRatioInput = $("<input>").attr("type", "number")
+            .attr("min", "0").attr("max", "1")
+            .attr("step", "0.01").attr("value", "0.4")
+        addValueChecker(this.$testRatioInput, "float", 0.4, 0, 0.9999, "change")
         $div3.append(this.$testRatioInput)
 
         // Balance between 3 fields
         this.$trainRatioInput.change((e) => { // val, test
+            if (isNaN(e.target.valueAsNumber)) // incorrect value, wait for checker
+                return
             let val = 1 - e.target.valueAsNumber - this.$testRatioInput.val()
             if (val > 0)
                 this.$valRatioInput.val(Math.round(val*1e4)/1e4)
@@ -108,6 +116,8 @@ class MenuModelManagerView extends MenuView {
             }
         })
         this.$valRatioInput.change((e) => { // train, test
+            if (isNaN(e.target.valueAsNumber)) // incorrect value, wait for checker
+                return
             let val = 1 - e.target.valueAsNumber - this.$testRatioInput.val()
             if (val > 0)
                 this.$trainRatioInput.val(Math.round(val*1e4)/1e4)
@@ -118,6 +128,8 @@ class MenuModelManagerView extends MenuView {
             }
         })
         this.$testRatioInput.change((e) => { // val, train
+            if (isNaN(e.target.valueAsNumber)) // incorrect value, wait for checker
+                return
             let val = 1 - e.target.valueAsNumber - this.$trainRatioInput.val()
             if (val > 0)
                 this.$valRatioInput.val(Math.round(val*1e4)/1e4)

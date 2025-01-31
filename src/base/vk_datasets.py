@@ -1,15 +1,14 @@
 import ast
 import datetime
 import json
-import os
 from bisect import bisect_right
 from numbers import Number
 from operator import itemgetter
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 
-from aux.data_info import DATASET_KEYS
 from aux.utils import GRAPHS_DIR
 from base.custom_datasets import CustomDataset
 from aux.configs import DatasetConfig
@@ -23,7 +22,8 @@ class AttrInfo:
     _attribute_vals_cache = {}  # (full_name, attribute) -> attribute_vals
 
     @staticmethod
-    def vk_attr():
+    def vk_attr(
+    ) -> dict:
         vk_dict = {
             ('age',): list(range(0, len(AGE_GROUPS) + 1)),
             ('sex',): [1, 2],
@@ -39,7 +39,10 @@ class AttrInfo:
         return vk_dict
 
     @staticmethod
-    def attribute_vals(full_name, attribute: [str, tuple, list]) -> list:
+    def attribute_vals(
+            full_name: tuple,
+            attribute: [str, tuple, list]
+    ) -> list:
         """ Get a set of possible attribute values or None for textual or continuous attributes.
         """
         # Convert to tuple
@@ -90,10 +93,14 @@ class AttrInfo:
         return res
 
     @staticmethod
-    def one_hot(full_name, attribute: [str, tuple, list], value, add_none=False):
+    def one_hot(
+            full_name: tuple,
+            attribute: [str, tuple, list],
+            value: int,
+            add_none: bool = False
+    ) -> Union[np.ndarray, list]:
         """ 1-hot encoding feature. If no such value, return all zeros or with 1 it in last element.
         :param full_name:
-        :param graph: MyGraph
         :param attribute: attribute name, e.g. 'sex', ('personal', 'smoking').
         :param value: value of this attribute. If a list, a multiple-hot vector will be constructed.
         :param add_none: if True, last element of returned vector encodes undefined or
@@ -142,11 +149,21 @@ class AttrInfo:
             return res  # all zeros here
 
 
-class VKDataset(CustomDataset):
+class ConfigPatter:
+    pass
+
+
+class VKDataset(
+    CustomDataset
+):
     """
     Custom dataset of VK samples with specific attributes processing and features creation.
     """
-    def __init__(self, dataset_config: DatasetConfig, add_none=False):
+    def __init__(
+            self,
+            dataset_config: Union[ConfigPatter, DatasetConfig],
+            add_none: bool = False
+    ):
         """
         Args:
             dataset_config: DatasetConfig dict from frontend
@@ -156,7 +173,9 @@ class VKDataset(CustomDataset):
         super().__init__(dataset_config)
         self.add_none = add_none
 
-    def _compute_dataset_data(self):
+    def _compute_dataset_data(
+            self
+    ) -> None:
         """ Get DatasetData for VK graph
         """
         super()._compute_dataset_data()
@@ -174,7 +193,10 @@ class VKDataset(CustomDataset):
         #         labelings[filename] = max([-1 if x is None else x for x in d.values()]) + 1
         # self.dataset_data["info"]["labelings"] = labelings
 
-    def _feature_tensor(self, g_ix=None) -> list:
+    def _feature_tensor(
+            self,
+            g_ix=None
+    ) -> list:
         # FIXME Misha self.node_map[graph] ...
         x = [[] for _ in range(len(self.node_map))]
         features = self.dataset_var_config.features
@@ -204,7 +226,10 @@ class VKDataset(CustomDataset):
         return x
 
     @staticmethod
-    def bdate_to_age(attr_dir_path: str, node_map: list):
+    def bdate_to_age(
+            attr_dir_path: str,
+            node_map: list
+    ) -> None:
         with open(attr_dir_path / Path('bdate'), 'r') as f:
             age_dict = json.load(f)
             node_age = {}
@@ -223,7 +248,11 @@ class VKDataset(CustomDataset):
                 json.dump(node_age, f1)
 
 
-def make_vk_labeling(attr_path: str, labeling_path: str, attr_val: int = 1):
+def make_vk_labeling(
+        attr_path: str,
+        labeling_path: str,
+        attr_val: int = 1
+) -> None:
     """
     Creates a markup file where the attribute's target value is set to 1 and the rest to 0
     Args:
