@@ -164,6 +164,8 @@ class PGDAttacker(
             y = y[subset]
             x = x.clone()
             x = x[subset]
+
+            budget = int(self.epsilon * edge_index_subset.size(1))
             perturbed_edges = edge_index_subset.clone()
 
             space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
@@ -174,9 +176,39 @@ class PGDAttacker(
                 random_state=42
             )
 
+            orig_mask = torch.ones(edge_index_subset.size(1), dtype=torch.bool)
             for i in tqdm(range(self.num_iterations)):
                 mask = opt.ask()  # selecting the next point
                 mask = torch.tensor(mask, dtype=torch.bool)
+
+                # --- budget control ---
+                diff = mask != orig_mask
+                change_indices = torch.where(diff)[0]
+                num_changes = len(change_indices)
+
+                if num_changes > budget:
+                    perturbed_masks = []
+                    losses = []
+
+                    for idx in change_indices:
+                        temp_mask = mask.clone()
+                        temp_mask[idx] = orig_mask[idx]
+
+                        perturbed_edges = edge_index_subset[:, temp_mask]
+                        out = model(x, perturbed_edges)
+                        loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+
+                        perturbed_masks.append(temp_mask)
+                        losses.append(loss.item())
+
+                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
+                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
+                    selected_changes = change_indices.clone().detach()[sorted_indices]
+
+                    mask[:] = orig_mask
+                    mask[selected_changes] = ~orig_mask[selected_changes]
+                # ----------------------
+
                 perturbed_edges = edge_index_subset[:, mask]  # apply mask to edges
                 out = model(x, perturbed_edges)
                 loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
@@ -225,6 +257,7 @@ class PGDAttacker(
             gen_dataset.dataset[graph_idx].x.copy_(x.detach())
             self.attack_diff = gen_dataset
         else:  # structure attack
+            budget = int(self.epsilon * edge_index.size(1))
             perturbed_edges = edge_index.clone()
 
             space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
@@ -235,9 +268,39 @@ class PGDAttacker(
                 random_state=42
             )
 
+            orig_mask = torch.ones(edge_index.size(1), dtype=torch.bool)
             for i in tqdm(range(self.num_iterations)):
                 mask = opt.ask()  # selecting the next point
                 mask = torch.tensor(mask, dtype=torch.bool)
+
+                # --- budget control ---
+                diff = mask != orig_mask
+                change_indices = torch.where(diff)[0]
+                num_changes = len(change_indices)
+
+                if num_changes > budget:
+                    perturbed_masks = []
+                    losses = []
+
+                    for idx in change_indices:
+                        temp_mask = mask.clone()
+                        temp_mask[idx] = orig_mask[idx]
+
+                        perturbed_edges = edge_index[:, temp_mask]
+                        out = model(x, perturbed_edges)
+                        loss = -model_manager.loss_function(out, y)
+
+                        perturbed_masks.append(temp_mask)
+                        losses.append(loss.item())
+
+                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
+                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
+                    selected_changes = change_indices.clone().detach()[sorted_indices]
+
+                    mask[:] = orig_mask
+                    mask[selected_changes] = ~orig_mask[selected_changes]
+                # ----------------------
+
                 perturbed_edges = edge_index[:, mask]  # apply mask to edges
                 out = model(x, perturbed_edges)
                 loss = -model_manager.loss_function(out, y)

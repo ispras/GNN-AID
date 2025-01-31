@@ -1163,6 +1163,7 @@ def test_pgd_structure():
             "is_feature_attack": False,
             "element_idx": graph_idx,
             "num_iterations": 30,
+            "epsilon": 0.7,
         }
     )
 
