@@ -876,29 +876,29 @@ if __name__ == '__main__':
     # random.seed(777)
 
     explainers = [
-        'GNNExplainer(torch-geom)',
-        # 'SubgraphX',
+        # 'GNNExplainer(torch-geom)',
+        'SubgraphX',
         # "Zorro",
     ]
     models = [
         'gcn_gcn',
         'gcn_gcn_gcn',
-        'gat_gat',
         'sage_sage',
-        'gin_gin',
         'sage_sage_sage',
+        'gin_gin',
+        'gat_gat',
     ]
 
     datasets = [
         ("single-graph", "Planetoid", 'Cora'),
-        ("single-graph", "Amazon", 'Photo'),
-        ("single-graph", "Planetoid", 'CiteSeer'),
-        ("single-graph", "Planetoid", 'PubMed'),
-        ("single-graph", "Amazon", 'Computers'),
+        # ("single-graph", "Amazon", 'Photo'),
+        # ("single-graph", "Planetoid", 'CiteSeer'),
+        # ("single-graph", "Planetoid", 'PubMed'),
+        # ("single-graph", "Amazon", 'Computers'),
     ]
-    for i in range(1, 10):
-        for model_name in models:
-            for dataset_full_name in datasets:
+    for dataset_full_name in datasets:
+        for i in range(3, 5):
+            for model_name in models:
                 for explainer in explainers:
                     print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
                     run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
