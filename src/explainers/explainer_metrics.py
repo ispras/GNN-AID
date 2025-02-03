@@ -127,7 +127,9 @@ class NodesExplainerMetric:
             num += len(explanation_data["features"])
             den += self.x.shape[1]
         if den == 0:
-            raise Exception(f"Invalid explanation. No data. Explanation: {explanation}")
+            num = 1
+            den = 1
+            # raise Exception(f"Invalid explanation. No data. Explanation: {explanation}")
         sparsity = 1 - num / den
         print(f"Sparsity calculation for node id {node_ind} completed.")
         return sparsity

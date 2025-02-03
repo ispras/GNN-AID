@@ -219,7 +219,6 @@ def model_configs_zoo(
                             'layer_kwargs': {
                                 'in_channels': dataset.num_node_features,
                                 'out_channels': 16,
-                                'heads': 3,
                             },
                         },
                         'batchNorm': {
@@ -242,7 +241,6 @@ def model_configs_zoo(
                             'layer_kwargs': {
                                 'in_channels': 16,
                                 'out_channels': dataset.num_classes,
-                                'heads': 2,
                             },
                         },
                         'activation': {
@@ -356,7 +354,7 @@ def model_configs_zoo(
                             'layer_kwargs': {
                                 'in_channels': 48,
                                 'out_channels': dataset.num_classes,
-                                'heads': 2,
+                                'heads': 1,
                             },
                         },
                         'activation': {
