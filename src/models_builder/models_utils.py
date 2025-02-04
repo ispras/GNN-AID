@@ -23,7 +23,7 @@ def apply_message_gradient_capture(
             **kwargs
     ):
         x_j = x_j.requires_grad_()
-        if not layer.training:
+        if layer.training:
             return original_message(x_j=x_j, *args, **kwargs)
 
         def save_message_grad(

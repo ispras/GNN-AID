@@ -17,6 +17,11 @@ import torch.nn.functional as F
 from torch_geometric.utils import k_hop_subgraph
 from tqdm import tqdm
 
+# FGSM imports
+from models_builder.models_utils import apply_decorator_to_graph_layers
+from torch_geometric.utils import add_self_loops
+from torch_geometric.data import Data
+
 
 class EvasionAttacker(
     Attacker
@@ -55,6 +60,7 @@ class FGSMAttacker(
         self.is_feature_attack = is_feature_attack
         self.element_idx = element_idx
         self.epsilon = epsilon
+        self.grad_aggr_type = 'mean'
 
     def attack(
             self,
@@ -75,7 +81,46 @@ class FGSMAttacker(
             gen_dataset.data.x = perturbed_data_x.detach()
         else:
             if gen_dataset.is_multi():
-                pass
+                graph_idx = self.element_idx
+
+                edge_index = gen_dataset.dataset[graph_idx].edge_index
+                y = gen_dataset.dataset[graph_idx].y
+                x = gen_dataset.dataset[graph_idx].x
+
+                model = model_manager.gnn
+
+                first_layer_name, first_layer = next(model.named_children())
+                layer = getattr(model, first_layer_name)
+                apply_decorator_to_graph_layers(model)
+
+                budget = int(self.epsilon * edge_index.size(1))
+
+                # TODO Some convolutions use the add_self_loops parameter. It is not possible to work with loops,
+                #  because even if you remove a loop during the method, it will be used in the model architecture.
+                # if layer.add_self_loops is True:
+                #     pass
+
+                perturbed_edges = edge_index.clone()
+                self_loops_part_size = x.size(0)
+
+                for _ in tqdm(range(budget)):
+                    out = model(x, perturbed_edges)
+                    loss = -model_manager.loss_function(out, y)
+                    loss.backward()
+
+                    grad = layer.message_gradients[first_layer_name]
+                    if self.grad_aggr_type == 'mean':
+                        grad = torch.mean(grad, dim=1)
+                    else:
+                        raise ValueError(f"Unsupported grad_aggr_type: {self.grad_aggr_type}")
+
+                    if grad.size(0) != perturbed_edges.size(1):  # model use add_self_loops
+                        grad = grad[:-self_loops_part_size]
+
+                    max_index = torch.argmax(grad)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
+                                                dim=1)
+                self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
             else:
                 node_idx = self.element_idx
 
@@ -91,44 +136,48 @@ class FGSMAttacker(
                                                                            edge_index=edge_index,
                                                                            relabel_nodes=True,
                                                                            directed=False)
+                node_idx_remap = torch.where(subset == node_idx)[0].item()
+                y = y.clone()
+                y = y[subset]
+                x = x.clone()
+                x = x[subset]
 
-                edges_updated = False
+                first_layer_name, first_layer = next(model.named_children())
+                layer = getattr(model, first_layer_name)
+                apply_decorator_to_graph_layers(model)
 
-                while not edges_updated:
-                    max_abs_index = torch.argmax(torch.abs(g_hat[node_idx, :]))
+                budget = int(self.epsilon * edge_index_subset.size(1))
 
-                    edge = (int(node_idx), int(max_abs_index))  # edge (i, j): i = node_idx, j = max_abs_index
+                # TODO Some convolutions use the add_self_loops parameter. It is not possible to work with loops,
+                #  because even if you remove a loop during the method, it will be used in the model architecture.
+                # if layer.add_self_loops is True:
+                #     pass
 
-                    max_value = g_hat[edge]
+                perturbed_edges = edge_index_subset.clone()
+                self_loops_part_size = subset.size(0)
 
-                    # A positive value of g_hat[i, j] means to add an edge (i, j), and a negative value means to remove it.
-                    sign = int(torch.sign(max_value))
+                for _ in tqdm(range(budget)):
+                    out = model(x, perturbed_edges)
+                    loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                    loss.backward()
 
-                    edge_value = int(A[edge])
-                    if (sign > 0) and (edge_value == 1):
-                        # if an edge (i, j) has a maximum positive gradient and at the same time the adjacency matrix has 1
-                        # in position (i, j), then we should not add the edge (i, j).
-                        # print(f"It is impossible to add edge {edge} to matrix 'A', - edge {edge} already exists in matrix 'A'")
-                        pass
-                    elif (sign < 0) and (edge_value == 0):
-                        # if an edge (i, j) has a maximum negative gradient and at the same time the adjacency matrix has 0
-                        # in position (i, j), then we can't remove the edge (i, j).
-                        # print(f"It is impossible to remove edge {edge} from matrix 'A', - edge {edge} is already absent from matrix 'A'")
-                        pass
-                    elif sign == 0:
-                        pass
+                    grad = layer.message_gradients[first_layer_name]
+                    if self.grad_aggr_type == 'mean':
+                        grad = torch.mean(grad, dim=1)
                     else:
-                        A[edge] = A[edge] + sign
-                        matrix_updated = True
-                        if sign > 0:
-                            print(f"Edge {edge} successfully added to matrix 'A'")
-                        if sign < 0:
-                            print(f"Edge {edge} successfully removed from matrix 'A'")
+                        raise ValueError(f"Unsupported grad_aggr_type: {self.grad_aggr_type}")
 
-                    if not matrix_updated:
-                        # if the matrix is not updated for one of the exceptions, then we zero out the maximum gradient and repeat
-                        # the process, i.e. we take the second largest gradient
-                        g_hat[edge] = 0
+                    if grad.size(0) != perturbed_edges.size(1):  # model use add_self_loops
+                        grad = grad[:-self_loops_part_size]
+
+                    max_index = torch.argmax(grad)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]), dim=1)
+
+                # Update dataset
+                edges_to_keep = edge_index[:, ~edge_mask]
+                updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
+                gen_dataset.data.edge_index = updated_edge_index
+                self.attack_diff = gen_dataset
         return gen_dataset
 
 

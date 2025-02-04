@@ -1066,16 +1066,13 @@ def test_fgsm():
 
     # Attack config
     evasion_attack_config = ConfigPattern(
-        _class_name="PGD",
+        _class_name="FGSM",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "is_feature_attack": True,
+            "is_feature_attack": False,
             "element_idx": node_idx,
-            "epsilon": 0.1,
-            "learning_rate": 0.001,
-            "num_iterations": 500,
-            "num_rand_trials": 100
+            "epsilon": 0.5,
         }
     )
 
@@ -1159,16 +1156,13 @@ def test_fgsm():
 
     # Attack config
     evasion_attack_config = ConfigPattern(
-        _class_name="PGD",
+        _class_name="FGSM",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "is_feature_attack": True,
+            "is_feature_attack": False,
             "element_idx": graph_idx,
-            "epsilon": 0.1,
-            "learning_rate": 0.001,
-            "num_iterations": 500,
-            "num_rand_trials": 100
+            "epsilon": 0.5,
         }
     )
 
@@ -1181,8 +1175,8 @@ def test_fgsm():
     # Model prediction on a graph after PGD attack on it
     with torch.no_grad():
         probabilities = torch.exp(
-            gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.dataset[graph_idx].x,
-                                  gnn_model_manager.evasion_attacker.attack_diff.dataset[graph_idx].edge_index))
+            gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.x,
+                                  gnn_model_manager.evasion_attacker.attack_diff.edge_index))
 
     predicted_class = probabilities.argmax().item()
     predicted_probability = probabilities[0][predicted_class].item()
@@ -1194,19 +1188,19 @@ def test_fgsm():
                                       "real_class": real_class}
 
     # ____________________________________________________________
-    print(f"Before PGD attack on node (Cora dataset): {info_before_pgd_attack_on_node}")
-    print(f"After PGD attack on node (Cora dataset): {info_after_pgd_attack_on_node}")
-    print(f"Before PGD attack on graph (MUTAG dataset): {info_before_pgd_attack_on_graph}")
-    print(f"After PGD attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
-
+    print(f"Before FGSM attack on node (Cora dataset): {info_before_pgd_attack_on_node}")
+    print(f"After FGSM attack on node (Cora dataset): {info_after_pgd_attack_on_node}")
+    print(f"Before FGSM attack on graph (MUTAG dataset): {info_before_pgd_attack_on_graph}")
+    print(f"After FGSM attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
 if __name__ == '__main__':
     import random
 
     random.seed(10)
-    test_attack_defense()
+    # test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
+    test_fgsm()
