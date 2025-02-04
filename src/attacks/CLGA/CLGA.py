@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.utils import dropout_adj, dense_to_sparse
 from attacks.poison_attacks import PoisonAttacker
+from models_builder.models_zoo import model_configs_zoo
 from attacks.CLGA.differentiable_models.gcn import GCN
 from attacks.CLGA.differentiable_models.model import GRACE
 
@@ -9,13 +10,25 @@ from torch_geometric.utils import to_dense_adj
 from torch_geometric.nn import MessagePassing
 from models_builder.models_utils import apply_decorator_to_graph_layers
 
+
 class CLGAAttack(PoisonAttacker):
     name = "CLGAAttack"
 
     def __init__(
-        self, num_nodes, feature_shape, learning_rate=0.01, num_hidden=256, num_proj_hidden=32, activation="prelu",
-            drop_edge_rate_1=0.3, drop_edge_rate_2=0.4, tau=0.4, num_epochs=3000, weight_decay=1e-5,
-            drop_scheme="degree", device="cpu"
+            self,
+            num_nodes: int,
+            feature_shape: int,
+            learning_rate: float = 0.01,
+            num_hidden: int = 256,
+            num_proj_hidden: int = 32,
+            activation: str = "prelu",
+            drop_edge_rate_1: float = 0.3,
+            drop_edge_rate_2: float = 0.4,
+            tau: float = 0.4,
+            num_epochs: int = 3000,
+            weight_decay: float = 1e-5,
+            drop_scheme: str = "degree",
+            device: str = "cpu"
     ):
         super().__init__()
         self.num_nodes = num_nodes
@@ -36,13 +49,20 @@ class CLGAAttack(PoisonAttacker):
         self.model = None
         self.optimizer = None
 
-    def drop_edge(self, edge_index, p):
+    @staticmethod
+    def drop_edge(
+            edge_index: torch.Tensor,
+            drop_prob: float
+    ):
         """
         Perform edge dropout based on the chosen scheme.
         """
-        return dropout_adj(edge_index, p=p)[0]
+        return dropout_adj(edge_index, p=drop_prob)[0]
 
-    def train_gcn(self, data):
+    def train_gcn(
+            self,
+            data
+    ):
         """
         Train the GCN model with augmented graphs.
         """
@@ -61,7 +81,10 @@ class CLGAAttack(PoisonAttacker):
         self.optimizer.step()
         return loss.item()
 
-    def compute_gradient(self, data):
+    def compute_gradient(
+            self,
+            data
+    ):
         """
         Compute gradients of the contrastive loss w.r.t. adjacency matrix.
         """
@@ -107,7 +130,10 @@ class CLGAAttack(PoisonAttacker):
         return grad, max_size, max_edge
         #return edge_index_1.grad, edge_index_2.grad
 
-    def attack(self, gen_dataset):
+    def attack(
+            self,
+            gen_dataset
+    ):
         """
         Execute the CLGA attack.
         """
@@ -136,7 +162,8 @@ class CLGAAttack(PoisonAttacker):
 
         adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze()
 
-        edge_index_set = set([(int(x), int(y)) for x, y in zip(gen_dataset.dataset.data.edge_index[0], gen_dataset.dataset.data.edge_index[0])])
+        edge_index_set = set((int(x), int(y)) for x, y in
+                              zip(gen_dataset.dataset.data.edge_index[0], gen_dataset.dataset.data.edge_index[1]))
 
         for epoch in tqdm(range(self.num_epochs)):
             self.train_gcn(gen_dataset.dataset.data)
