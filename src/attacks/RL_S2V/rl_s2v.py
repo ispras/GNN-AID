@@ -1,7 +1,8 @@
 from attacks.evasion_attacks import EvasionAttacker
 
+
 class RLS2VAttack(EvasionAttacker):
-    name = "RLS2V"
+    name = "RLS2VAttacker"
 
     def __init__(self):
         super().__init__()
@@ -10,14 +11,12 @@ class RLS2VAttack(EvasionAttacker):
         pass
 
 
-
 class NodeAttackEnv(object):
     """Node attack environment. It executes an action and then change the
     environment status (modify the graph).
     """
 
     def __init__(self, gen_dataset, all_targets, list_action_space, classifier, num_mod=1, reward_type='binary'):
-
         self.dataset = gen_dataset
         self.classifier = classifier
         self.list_action_space = list_action_space
@@ -40,7 +39,7 @@ class NodeAttackEnv(object):
     def step(self, actions):
         """run actions and get rewards
         """
-        if self.first_nodes is None: # pick the first node of edge
+        if self.first_nodes is None:  # pick the first node of edge
             assert self.n_steps % 2 == 0
             self.first_nodes = actions[:]
         else:
@@ -86,10 +85,9 @@ class NodeAttackEnv(object):
         cands = []
 
         for i in range(len(self.list_acc_of_all)):
-            succ = np.where( self.list_acc_of_all[i] < 0.9 )[0]
+            succ = np.where(self.list_acc_of_all[i] < 0.9)[0]
 
             for j in range(len(succ)):
-
                 cands.append((i, self.all_targets[succ[j]]))
 
         if num_samples > len(cands):
@@ -101,17 +99,15 @@ class NodeAttackEnv(object):
         # TODO: here only support deleting edges
         # seems they sample first node from 2-hop neighbours
         act_list = []
-        offset = 0
-        for i in range(len(self.target_nodes)):
-            cur_node = self.target_nodes[i]
-            region = self.list_action_space[cur_node]
+        for i, n in enumerate(self.target_nodes):
+            region = self.list_action_space[n]
 
             if self.first_nodes is not None and self.first_nodes[i] is not None:
                 region = self.list_action_space[self.first_nodes[i]]
 
             if region is None:  # singleton node
                 cur_action = np.random.randint(len(self.list_action_space))
-            else: # select from neighbours or 2-hop neighbours
+            else:  # select from neighbours or 2-hop neighbours
                 cur_action = region[np.random.randint(len(region))]
 
             act_list.append(cur_action)
