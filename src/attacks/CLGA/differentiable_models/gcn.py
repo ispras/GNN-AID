@@ -1,16 +1,28 @@
 import torch.nn as nn
+import torch
 
 from torch_geometric.nn import GCNConv
 
 class GCN(nn.Module):
-    def __init__(self, in_ft, out_ft, act='prelu', dropout=0.0, bias=True):
+    def __init__(
+            self,
+            in_ft: int,
+            out_ft: int,
+            act: str = 'prelu',
+            dropout: float = 0.0,
+            bias: bool = True
+    ):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(in_ft, 2 * out_ft, bias=bias)
         self.conv2 = GCNConv(2 * out_ft, out_ft, bias=bias)
         self.dropout = nn.Dropout(p=dropout)
         self.act = nn.PReLU() if act == 'prelu' else nn.ReLU() if act == 'relu' else nn.Identity()
 
-    def forward(self, x, edge_index):
+    def forward(
+            self,
+            x: torch.Tensor,
+            edge_index: torch.Tensor
+    ) -> torch.Tensor:
         """
         Forward pass of the GCN.
 

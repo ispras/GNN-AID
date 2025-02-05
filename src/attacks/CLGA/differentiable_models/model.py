@@ -6,7 +6,13 @@ import torch.nn.functional as F
 
 # differentiable version
 class GRACE(torch.nn.Module):
-    def __init__(self, encoder, num_hidden: int, num_proj_hidden: int, tau: float = 0.5):
+    def __init__(
+            self,
+            encoder: torch.nn.Module,
+            num_hidden: int,
+            num_proj_hidden: int,
+            tau: float = 0.5
+    ) -> None:
         super(GRACE, self).__init__()
         self.encoder = encoder
         self.tau: float = tau
@@ -16,26 +22,46 @@ class GRACE(torch.nn.Module):
 
         self.num_hidden = num_hidden
 
-    def forward(self, x, adj):
+    def forward(
+            self,
+            x: torch.Tensor,
+            adj: torch.Tensor
+    ) -> torch.Tensor:
         return self.encoder(x, adj)
 
-    def projection(self, z: torch.Tensor) -> torch.Tensor:
+    def projection(
+            self,
+            z: torch.Tensor
+    ) -> torch.Tensor:
         z = F.elu(self.fc1(z))
         return self.fc2(z)
 
-    def sim(self, z1: torch.Tensor, z2: torch.Tensor):
+    def sim(
+            self,
+            z1: torch.Tensor,
+            z2: torch.Tensor
+    ) -> torch.Tensor:
         z1 = F.normalize(z1)
         z2 = F.normalize(z2)
         return torch.mm(z1, z2.t())
 
-    def semi_loss(self, z1: torch.Tensor, z2: torch.Tensor):
+    def semi_loss(
+            self,
+            z1: torch.Tensor,
+            z2: torch.Tensor
+    ) -> torch.Tensor:
         f = lambda x: torch.exp(x / self.tau)
         refl_sim = f(self.sim(z1, z1))
         between_sim = f(self.sim(z1, z2))
 
         return -torch.log(between_sim.diag() / (refl_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
 
-    def batched_semi_loss(self, z1: torch.Tensor, z2: torch.Tensor, batch_size: int):
+    def batched_semi_loss(
+            self,
+            z1: torch.Tensor,
+            z2: torch.Tensor,
+            batch_size: int
+    ) -> torch.Tensor:
         # Space complexity: O(BN) (semi_loss: O(N^2))
         device = z1.device
         num_nodes = z1.size(0)
@@ -55,7 +81,12 @@ class GRACE(torch.nn.Module):
 
         return torch.cat(losses)
 
-    def loss(self, z1: torch.Tensor, z2: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None):
+    def loss(self,
+             z1: torch.Tensor,
+             z2: torch.Tensor,
+             mean: bool = True,
+             batch_size: Optional[int] = None
+    ) -> torch.Tensor:
         h1 = self.projection(z1)
         h2 = self.projection(z2)
 

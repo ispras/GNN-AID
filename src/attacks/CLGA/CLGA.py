@@ -1,7 +1,6 @@
 import torch
 from torch_geometric.utils import dropout_adj, dense_to_sparse
 from attacks.poison_attacks import PoisonAttacker
-from models_builder.models_zoo import model_configs_zoo
 from attacks.CLGA.differentiable_models.gcn import GCN
 from attacks.CLGA.differentiable_models.model import GRACE
 
@@ -9,6 +8,7 @@ from tqdm import tqdm
 from torch_geometric.utils import to_dense_adj
 from torch_geometric.nn import MessagePassing
 from models_builder.models_utils import apply_decorator_to_graph_layers
+from typing import Tuple
 
 
 class CLGAAttack(PoisonAttacker):
@@ -29,7 +29,7 @@ class CLGAAttack(PoisonAttacker):
             weight_decay: float = 1e-5,
             drop_scheme: str = "degree",
             device: str = "cpu"
-    ):
+    ) -> None:
         super().__init__()
         self.num_nodes = num_nodes
         self.feature_shape = feature_shape
@@ -53,7 +53,7 @@ class CLGAAttack(PoisonAttacker):
     def drop_edge(
             edge_index: torch.Tensor,
             drop_prob: float
-    ):
+    ) -> torch.Tensor:
         """
         Perform edge dropout based on the chosen scheme.
         """
@@ -62,7 +62,7 @@ class CLGAAttack(PoisonAttacker):
     def train_gcn(
             self,
             data
-    ):
+    ) -> None:
         """
         Train the GCN model with augmented graphs.
         """
@@ -79,12 +79,11 @@ class CLGAAttack(PoisonAttacker):
         loss = self.model.loss(z1, z2)
         loss.backward()
         self.optimizer.step()
-        return loss.item()
 
     def compute_gradient(
             self,
             data
-    ):
+    ) -> Tuple[torch.Tensor, int, torch.Tensor]:
         """
         Compute gradients of the contrastive loss w.r.t. adjacency matrix.
         """
@@ -128,12 +127,11 @@ class CLGAAttack(PoisonAttacker):
         max_size = max(size_1, size_2)
         max_edge = edge_index_1 if size_1 > size_2 else edge_index_2
         return grad, max_size, max_edge
-        #return edge_index_1.grad, edge_index_2.grad
 
     def attack(
             self,
             gen_dataset
-    ):
+    ) -> None:
         """
         Execute the CLGA attack.
         """
@@ -199,4 +197,3 @@ class CLGAAttack(PoisonAttacker):
             #gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
 
         gen_dataset.dataset.data.edge_index = torch.tensor(perturbed_edges)
-        return
