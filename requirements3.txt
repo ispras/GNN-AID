@@ -12,6 +12,9 @@ dive-into-graphs==1.1.0
 # PGMExplainer
 pgmpy==0.1.24
 
+# PGD
+scikit-optimize==0.10.2
+
 # For synthetic datasets
 matplotlib
 

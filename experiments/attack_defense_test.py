@@ -1394,4 +1394,5 @@ if __name__ == '__main__':
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
-    test_fgsm()
+    # test_fgsm()
+    test_pgd_structure()

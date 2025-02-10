@@ -240,6 +240,7 @@ class PGDAttacker(
         x = gen_dataset.data.x
 
         model = model_manager.gnn
+        model.eval()
         num_hops = model.n_layers
 
         subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
@@ -350,6 +351,7 @@ class PGDAttacker(
         x = gen_dataset.dataset[graph_idx].x
 
         model = model_manager.gnn
+        model.eval()
 
         if self.is_feature_attack:  # feature attack
             x = x.clone()
