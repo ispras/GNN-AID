@@ -1,4 +1,5 @@
 {
+ "name": "example",
  "count": 1,
  "directed": false,
  "nodes": [8],

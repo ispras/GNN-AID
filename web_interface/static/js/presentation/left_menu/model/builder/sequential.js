@@ -42,6 +42,7 @@ class SequentialLayer {
             .css("background-color", LayerBlock.linearColor)
         let $linearOutputSizeInput = $("<input>").attr("id", id).attr("type", "number")
             .attr("min", 1).attr("step", 1).val(LINEAR_LAYER_OUTPUT_SIZE)
+        addValueChecker($linearOutputSizeInput, "int", LINEAR_LAYER_OUTPUT_SIZE, 1)
         $cb.append($linearOutputSizeInput)
         this.linearInputs.push($linearOutputSizeInput)
 

@@ -114,6 +114,53 @@ def model_configs_zoo(
         )
     )
 
+    sage_sage = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                                'heads': 3,
+                            },
+                        },
+                        'batchNorm': {
+                            'batchNorm_name': 'BatchNorm1d',
+                            'batchNorm_kwargs': {
+                                'num_features': 16,
+                                'eps': 1e-05,
+                            }
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': dataset.num_classes,
+                                'heads': 2,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'LogSoftmax',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
     gat_gat = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(

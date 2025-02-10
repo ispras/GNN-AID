@@ -1,29 +1,30 @@
 import json
+import shutil
 import os
 from pathlib import Path
-from typing import Union, Type
+from typing import Union
 
 import torch
 import torch_geometric
 from torch import default_generator, randperm
-from torch_geometric.data import Dataset, InMemoryDataset
+from torch_geometric.data import Dataset, InMemoryDataset, Data
 
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
-from aux.utils import TORCH_GEOM_GRAPHS_PATH
+from aux.utils import TORCH_GEOM_GRAPHS_PATH, tmp_dir
 
 
 class DatasetInfo:
     """
-    Description for a dataset family.
+    Description for a dataset.
     Some fields are obligate, others are not.
     """
 
     def __init__(
             self
     ):
-        self.name: str = ""
+        self.name: str = None
         self.count: int = None
         self.directed: bool = None
         self.nodes: list = None
@@ -36,6 +37,7 @@ class DatasetInfo:
         }
         self.labelings: dict = None
         self.node_attr_slices: dict = None
+        self.edge_attr_slices: dict = None
         self.node_info: dict = {}
         self.edge_info: dict = {}
         self.graph_info: dict = {}
@@ -76,7 +78,7 @@ class DatasetInfo:
     def check_sufficiency(
             self
     ) -> None:
-        """ Check all obligates fields are defined. """
+        """ Check all obligate fields are defined. """
         for attr in self.__dict__.keys():
             if attr is None:
                 raise ValueError(f"Attribute '{attr}' of metainfo should be defined.")
@@ -85,7 +87,7 @@ class DatasetInfo:
             self,
             dataset: Dataset
     ) -> None:
-        """ Check if metainfo fields are consistent with dataset. """
+        """ Check if metainfo fields are consistent with PTG dataset. """
         assert self.count == len(dataset)
         from base.ptg_datasets import is_graph_directed
         assert self.directed == is_graph_directed(dataset.get(0))
@@ -121,8 +123,9 @@ class DatasetInfo:
     @staticmethod
     def induce(
             dataset: Dataset
-    ):
-        """ Induce metainfo from a given PTG dataset. """
+    ) -> object:
+        """ Induce metainfo from a given PTG dataset.
+        """
         res = DatasetInfo()
         res.count = len(dataset)
         from base.ptg_datasets import is_graph_directed
@@ -134,41 +137,59 @@ class DatasetInfo:
             "values": [len(dataset.get(0).x[0])]
         }
         res.labelings = {"origin": dataset.num_classes}
-        res.node_attr_slices = res.node_attributes_to_node_attr_slices(res.node_attributes)
+        res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
         res.check()
         return res
 
     @staticmethod
     def read(
             path: Union[str, Path]
-    ):
+    ) -> object:
         """ Read info from a file. """
         with path.open('r') as f:
             a_dict = json.load(f)
         res = DatasetInfo()
         for k, v in a_dict.items():
             setattr(res, k, v)
-        res.node_attr_slices = res.node_attributes_to_node_attr_slices(res.node_attributes)
+        res.node_attr_slices, res.edge_attr_slices = res.get_attributes_slices_form_attributes(
+            res.node_attributes, res.edge_attributes)
         res.check()
         return res
 
     @staticmethod
-    def node_attributes_to_node_attr_slices(
-            node_attributes: dict
-    ) -> dict:
+    def get_attributes_slices_form_attributes(
+            node_attributes: dict,
+            edge_attributes: dict,
+    ) -> (dict, dict):
         node_attr_slices = {}
-        start_attr_index = 0
-        for i in range(len(node_attributes['names'])):
-            if node_attributes['types'][i] == 'other':
-                attr_len = node_attributes['values'][i]
-            elif node_attributes['types'][i] == 'categorical':
-                attr_len = len(node_attributes['values'][i])
-            else:
-                attr_len = 1
-            node_attr_slices[node_attributes['names'][i]] = (
-                start_attr_index, start_attr_index + attr_len)
-            start_attr_index = start_attr_index + attr_len
-        return node_attr_slices
+        if node_attributes:
+            start_attr_index = 0
+            for i in range(len(node_attributes['names'])):
+                if node_attributes['types'][i] == 'other':
+                    attr_len = node_attributes['values'][i]
+                elif node_attributes['types'][i] == 'categorical':
+                    attr_len = len(node_attributes['values'][i])
+                else:
+                    attr_len = 1
+                node_attr_slices[node_attributes['names'][i]] = (
+                    start_attr_index, start_attr_index + attr_len)
+                start_attr_index = start_attr_index + attr_len
+
+        edge_attr_slices = {}
+        if edge_attributes:
+            start_attr_index = 0
+            for i in range(len(edge_attributes['names'])):
+                if edge_attributes['types'][i] == 'other':
+                    attr_len = edge_attributes['values'][i]
+                elif edge_attributes['types'][i] == 'categorical':
+                    attr_len = len(edge_attributes['values'][i])
+                else:
+                    attr_len = 1
+                edge_attr_slices[edge_attributes['names'][i]] = (
+                    start_attr_index, start_attr_index + attr_len)
+                start_attr_index = start_attr_index + attr_len
+
+        return node_attr_slices, edge_attr_slices
 
 
 class VisiblePart:
@@ -305,8 +326,8 @@ class GeneralDataset:
         self.dataset_var_data = None  # features data prepared for frontend
 
         self.name = self.dataset_config.graph  # Last folder name
-        self.stats_dir.mkdir(exist_ok=True, parents=True)
-        self.stats = {}  # dict of {stat -> value}
+        from base.dataset_stats import DatasetStats
+        self.stats = DatasetStats(self)  # dict of {stat -> value}
         self.info: DatasetInfo = None
 
         self.dataset: Dataset = None  # PTG dataset
@@ -325,7 +346,7 @@ class GeneralDataset:
     @property
     def root_dir(
             self
-    ):
+    ) -> Path:
         """ Dataset root directory with folders 'raw' and 'prepared'. """
         # FIXME Misha, dataset_prepared_dir return path and files_paths not only path
         return Declare.dataset_root_dir(self.dataset_config)[0]
@@ -333,7 +354,7 @@ class GeneralDataset:
     @property
     def results_dir(
             self
-    ):
+    ) -> Path:
         """ Path to 'prepared/../' folder where tensor data is stored. """
         # FIXME Misha, dataset_prepared_dir return path and files_paths not only path
         return Path(Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)[0])
@@ -341,53 +362,46 @@ class GeneralDataset:
     @property
     def raw_dir(
             self
-    ):
+    ) -> Path:
         """ Path to 'raw/' folder where raw data is stored. """
         return self.root_dir / 'raw'
 
     @property
     def api_path(
             self
-    ):
+    ) -> Path:
         """ Path to '.api' file. Could be not present. """
         return self.root_dir / '.api'
 
     @property
     def info_path(
             self
-    ):
+    ) -> Path:
         """ Path to '.info' file. """
         return self.root_dir / 'raw' / '.info'
 
     @property
-    def stats_dir(
-            self
-    ):
-        """ Path to '.stats' directory. """
-        return self.root_dir / '.stats'
-
-    @property
     def data(
             self
-    ):
+    ) -> Data:
         return self.dataset._data
 
     @property
     def num_classes(
             self
-    ):
+    ) -> int:
         return self.dataset.num_classes
 
     @property
     def num_node_features(
             self
-    ):
+    ) -> int:
         return self.dataset.num_node_features
 
     @property
     def labels(
             self
-    ):
+    ) -> torch.Tensor:
         if self._labels is None:
             # NOTE: this is a copy from torch_geometric.data.dataset v=2.3.1
             from torch_geometric.data.dataset import _get_flattened_data_list
@@ -414,7 +428,7 @@ class GeneralDataset:
     def build(
             self,
             dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
-    ):
+    ) -> None:
         """ Create node feature tensors from attributes based on dataset_var_config.
         """
         raise NotImplementedError()
@@ -459,28 +473,30 @@ class GeneralDataset:
         num = len(self.dataset)
         data_list = [self.dataset.get(ix) for ix in range(num)]
         is_directed = self.info.directed
-        #     # FIXME node_attributes must be attributes, features only for ptg dataset!
-        name_type = self.dataset_var_config.features['attr']
-
-        if self.is_multi():
-            edges_list = []
-            self.nodes = []
-            for data in data_list:
-                edges_list.append(data.edge_index.T.tolist())
-                self.nodes.append(len(data.x))
-
-            node_attributes = {
-                list(name_type.keys())[0]: [data.x.tolist() for data in data_list]
-            }
-
-        else:
-            assert len(data_list) == 1
-            data = data_list[0]
-
-            self.nodes = [len(data.x)]
-            node_attributes = {
-                list(name_type.keys())[0]: [data.x.tolist()]
-            }
+        # node_attributes exist for custom datasets.
+        # We can treat them as PTG features but it's not good.
+        node_attributes = {}
+        # name_type = self.dataset_var_config.features['attr']
+        #
+        # if self.is_multi():
+        #     edges_list = []
+        #     self.nodes = []
+        #     for data in data_list:
+        #         edges_list.append(data.edge_index.T.tolist())
+        #         self.nodes.append(len(data.x))
+        #
+        #     node_attributes = {
+        #         list(name_type.keys())[0]: [data.x.tolist() for data in data_list]
+        #     }
+        #
+        # else:
+        #     assert len(data_list) == 1
+        #     data = data_list[0]
+        #
+        #     self.nodes = [len(data.x)]
+        #     node_attributes = {
+        #         list(name_type.keys())[0]: [data.x.tolist()]
+        #     }
 
         edges_list = []
         for data in data_list:
@@ -532,6 +548,7 @@ class GeneralDataset:
         visible_part = self.visible_part if part is None else VisiblePart(self, **part)
 
         for ix in visible_part.ixes():
+            # FIXME replace with getting data from tensors instead of keeping the whole data
             features[ix] = self.dataset_var_data['features'][ix]
             labels[ix] = self.dataset_var_data['labels'][ix]
 
@@ -571,132 +588,20 @@ class GeneralDataset:
 
     def get_stat(
             self,
-            stat
-    ):
+            stat: str
+    ) -> Union[int, float, dict, str]:
         """ Get statistics.
         """
-        if stat in self.stats:
-            return self.stats[stat]
-
-        # Try to read from file
-        path = self.stats_dir / stat
-        if path.exists():
-            with path.open('r') as f:
-                value = json.load(f)
-            self.stats[stat] = value
-            return value
-
-        # Compute
-        value = self._compute_stat(stat)
-        if value is None:
-            value = f"Statistics '{stat}' is not implemented."
-
-        # Save
-        self.stats[stat] = value
-        path = self.stats_dir / stat
-        with path.open('w') as f:
-            json.dump(value, f, ensure_ascii=False)
-        return value
+        return self.stats.get(stat)
 
     def _compute_stat(
             self,
-            stat
-    ):
-        """ Compute statistics. """
-        if self.is_multi():
-            # try:
-            if stat == 'num_nodes_distr':
-                value = {}
-                for i in self.info.nodes:
-                    if i in value.keys():
-                        value[i] += 1
-                    else:
-                        value[i] = 1
-                return value
-
-            elif stat == 'avg_degree_distr':
-                # TODO check for (un)directed
-                m = self.dataset_data['edges']
-                # FIXME misha can't use dataset_data when partial data is sent to front
-                coeff = 1 if self.info.directed else 2
-                avg = [coeff * len(m[i]) / self.info.nodes[i] for i in range(self.info.count)]
-                value = {}
-                for i in avg:
-                    if i in value.keys():
-                        value[i] += 1
-                    else:
-                        value[i] = 1
-                return value
-
-            elif stat == "num_edges":
-                import numpy as np
-                m = self.dataset_data['edges']
-                # FIXME misha can't use dataset_data when partial data is sent to front
-                coeff = 1 if self.info.directed else 2
-                es = [coeff * len(m[i]) for i in range(self.info.count)]
-                value = f"{np.min(es)} — {np.max(es)}"
-                # value = f"{np.mean(es)} ± {np.var(es)**0.5}"
-                # value = np.mean(es)
-
-            elif stat == "avg_deg":
-                import numpy as np
-                m = self.dataset_data['edges']
-                # FIXME misha can't use dataset_data when partial data is sent to front
-                coeff = 1 if self.info.directed else 2
-                value = np.mean([coeff * len(m[i]) for i in range(self.info.count)])
-
-            else:
-                value = 'Unknown stats'
-            # except (NetworkXError, NetworkXNotImplemented) as e:
-            #     value = str(e)
-
-        else:
-            assert self.info.count == 1
-            import networkx as nx
-            from networkx import NetworkXError, NetworkXNotImplemented
-            # Converting to networkx
-            g = nx.DiGraph() if self.info.directed else nx.Graph()
-            for i, j in self.dataset_data["edges"][0]:
-                g.add_edge(i, j)
-            try:
-                # TODO misha simplify - some stats can be computed easier
-                if stat == "num_edges":
-                    value = g.number_of_edges()
-
-                elif stat == "avg_deg":
-                    value = g.number_of_edges() / g.number_of_nodes()
-                    if not self.info.directed:
-                        value = 2 * value
-
-                elif stat == "CC":
-                    # NOTE this is average local clustering, not global
-                    value = nx.average_clustering(g)
-
-                elif stat == "triangles":
-                    value = int(sum(nx.triangles(g).values()) / 3)
-
-                elif stat == "diameter":
-                    value = nx.diameter(g)
-
-                elif stat == "degree_assortativity":
-                    value = nx.degree_assortativity_coefficient(g)
-
-                elif stat == "cc":
-                    cc = nx.connected_components(g)
-                    value = len(list(cc))
-
-                elif stat == "lcc":
-                    cc = nx.connected_components(g)
-                    value = max(len(c) for c in cc)
-
-                elif stat == "DD":
-                    value = {i: d for i, d in enumerate(nx.degree_histogram(g))}
-
-                else:
-                    value = None
-            except (NetworkXError, NetworkXNotImplemented) as e:
-                value = str(e)
-        return value
+            stat: str
+    ) -> None:
+        """ Compute a non-standard statistics.
+        """
+        # Should be defined in a subclass
+        raise NotImplementedError()
 
     def is_one_hot_able(
             self
@@ -905,13 +810,69 @@ class DatasetManager:
         return gen_dataset
 
     @staticmethod
-    def register_custom_ij(
-            path: Path
+    def register_custom(
+            dataset_config: DatasetConfig,
+            format: str = 'ij',
+            default_node_attr_value: dict = None,
+            default_edge_attr_value: dict = None,
     ) -> GeneralDataset:
         """
-        :return: GeneralDataset
+        Create GeneralDataset from user created files in one of the supported formats.
+        Attribute files created by user have priority over attributes extracted from the graph file.
+
+        :param dataset_config: config for a new dataset. Files will be searched for in the folder
+         defined by this config.
+        :param format: one of the supported formats.
+        :param default_node_attr_value: dict with default node attributes values to apply where
+         missing.
+        :param default_edge_attr_value: dict with default edge attributes values to apply where
+         missing.
+        :return: CustomDataset
         """
-        # TODO misha
+        # Create empty CustomDataset
+        from base.custom_datasets import CustomDataset
+        gen_dataset = CustomDataset(dataset_config)
+
+        # Look for obligate files: .info, graph(s), a dir with labels
+        # info_file = None
+        label_dir = None
+        graph_files = []
+        path = gen_dataset.raw_dir
+        for p in path.iterdir():
+            # if p.is_file() and p.name == '.info':
+            #     info_file = p
+            if p.is_file() and p.name.endswith(f'.{format}'):
+                graph_files.append(p)
+            if p.is_dir() and p.name.endswith('.labels'):
+                label_dir = p
+        # if info_file is None:
+        #     raise RuntimeError(f"No .info file was found at {path}")
+        if len(graph_files) == 0:
+            raise RuntimeError(f"No files with extension '.{format}' found at {path}")
+        if label_dir is None:
+            raise RuntimeError(f"No file with extension '.label' found at {path}")
+
+        # Order of files is important, should be consistent with .info, we suppose they are sorted
+        graph_files = sorted(graph_files)
+
+        # Create a temporary dir to store converted data
+        with tmp_dir(path) as tmp:
+            # Convert the data if necessary, write it to an empty directory
+            if format != 'ij':
+                from base.dataset_converter import DatasetConverter
+                DatasetConverter.format_to_ij(gen_dataset.info, graph_files, format, tmp,
+                                              default_node_attr_value, default_edge_attr_value)
+
+            # Move or copy original contents to a temporary dir
+            merge_directories(path, tmp, True)
+
+            # Rename the newly created dir to the original one
+            tmp.rename(path)
+
+        # Check that data is valid
+        gen_dataset.check_validity()
+
+        return gen_dataset
 
     @staticmethod
     def _register_torch_geometric(
@@ -931,7 +892,7 @@ class DatasetManager:
          will be overwritten.
         :param copy_data: if True processed data will be copied, otherwise a symbolic link is
          created.
-        :return: dataset_config
+        :return: GeneralDataset
         """
         info = DatasetInfo.induce(dataset)
         if name is None:
@@ -948,7 +909,6 @@ class DatasetManager:
         )
 
         # Check if exists
-        import shutil
         root_dir, files_paths = Declare.dataset_root_dir(dataset_config)
         if root_dir.exists():
             if exists_ok:
@@ -963,16 +923,6 @@ class DatasetManager:
 
         # Link or copy original contents to our path
         results_dir = gen_dataset.results_dir
-        # if results_dir.exists():
-        #     if not exists_ok:
-        #         raise FileExistsError(f"Graph with config {dataset_config} already exists!")
-        #     else:
-        #         # Clear directory to avoid copying files to a directory linking to those files
-        #         if results_dir.is_symlink():
-        #             os.unlink(results_dir)
-        #         else:
-        #             shutil.rmtree(results_dir)
-
         results_dir.parent.mkdir(parents=True, exist_ok=True)
         if copy_data:
             shutil.copytree(os.path.abspath(dataset.processed_dir), results_dir,
@@ -986,6 +936,36 @@ class DatasetManager:
         gen_dataset.info = info
         print(f"Registered graph '{info.name}' as {dataset_config.full_name()}")
         return gen_dataset
+
+
+def merge_directories(
+        source_dir: Union[Path, str],
+        destination_dir: Union[Path, str],
+        remove_source: bool = False
+) -> None:
+    """
+    Merge source directory into destination directory, replacing existing files.
+
+    :param source_dir: Path to the source directory to be merged
+    :param destination_dir: Path to the destination directory
+    :param remove_source: if True, remove source directory (empty folders)
+    """
+    for root, _, files in os.walk(source_dir):
+        # Calculate relative path
+        relative_path = os.path.relpath(root, source_dir)
+
+        # Create destination path
+        dest_path = os.path.join(destination_dir, relative_path)
+        os.makedirs(dest_path, exist_ok=True)
+
+        # Move files
+        for file in files:
+            src_file = os.path.join(root, file)
+            dest_file = os.path.join(dest_path, file)
+            shutil.move(src_file, dest_file)
+
+    if remove_source:
+        shutil.rmtree(source_dir)
 
 
 def is_in_torch_geometric_datasets(

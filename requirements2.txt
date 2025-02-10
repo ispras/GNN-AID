@@ -1,7 +1,7 @@
 ## These are reqs needed for documentation
 
 numpy==1.26.3
-multiprocess
+multiprocess==0.70.16
 pydantic
 tqdm
 pyparsing

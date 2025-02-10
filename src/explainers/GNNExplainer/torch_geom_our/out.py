@@ -102,17 +102,6 @@ class GNNExplainer(Explainer):
             self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.node_idx)
         self.pbar.close()
 
-    @finalize_decorator
-    def evaluate_tensor_graph(self, x, edge_index, node_idx, **kwargs):
-        self._run_mode = "local"
-        self.node_idx = node_idx
-        self.x = x
-        self.edge_index = edge_index
-        self.pbar.reset(total=self.epochs, mode=self._run_mode)
-        self.explainer.algorithm.pbar = self.pbar
-        self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.node_idx, **kwargs)
-        self.pbar.close()
-
     def _finalize(self):
         mode = self._run_mode
         assert mode == "local"

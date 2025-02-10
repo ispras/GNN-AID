@@ -1,10 +1,11 @@
+import copy
 import warnings
 
 import torch
 from torch import device
 
 from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
-from models_builder.attack_defense_metric import AttackMetric
+from models_builder.attack_defense_metric import AttackMetric, DefenseMetric
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
@@ -55,8 +56,8 @@ def attack_defense_metrics():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    save_model_flag = False
-    # save_model_flag = True
+    # save_model_flag = False
+    save_model_flag = True
 
     gnn_model_manager.gnn.to(my_device)
 
@@ -140,7 +141,7 @@ def attack_defense_metrics():
     # print(metric_loc)
 
     adm = FrameworkAttackDefenseManager(
-        gen_dataset=dataset,
+        gen_dataset=copy.deepcopy(dataset),
         gnn_manager=gnn_model_manager,
     )
     # adm.evasion_attack_pipeline(
@@ -149,10 +150,17 @@ def attack_defense_metrics():
     #     metrics_attack=[AttackMetric("ASR")],
     #     mask='test'
     # )
-    adm.poison_attack_pipeline(
+    # adm.poison_attack_pipeline(
+    #     steps=steps_epochs,
+    #     save_model_flag=save_model_flag,
+    #     metrics_attack=[AttackMetric("ASR")],
+    #     mask='test'
+    # )
+    adm.evasion_defense_pipeline(
         steps=steps_epochs,
         save_model_flag=save_model_flag,
-        metrics_attack=[AttackMetric("ASR")],
+        metrics_attack=[AttackMetric("ASR"), AttackMetric("AuccAttackDiff"),],
+        metrics_defense=[DefenseMetric("AuccDefenseCleanDiff"), DefenseMetric("AuccDefenseAttackDiff"), ],
         mask='test'
     )
 

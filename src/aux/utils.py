@@ -161,3 +161,34 @@ def all_subclasses(
 ) -> set:
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+
+
+class tmp_dir():
+    """
+    Temporary create a directory near the given path. Remove it on exit.
+    """
+    def __init__(
+            self,
+            path: Path
+    ):
+        self.path = path
+        from time import time
+        self.tmp_dir = self.path.parent / (self.path.name + str(time()))
+
+    def __enter__(
+            self
+    ) -> Path:
+        self.tmp_dir.mkdir(parents=True)
+        return self.tmp_dir
+
+    def __exit__(
+            self,
+            exception_type,
+            exception_value,
+            exception_traceback
+    ) -> None:
+        import shutil
+        try:
+            shutil.rmtree(self.tmp_dir)
+        except FileNotFoundError:
+             pass

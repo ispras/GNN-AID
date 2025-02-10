@@ -1,7 +1,6 @@
 import ast
 import datetime
 import json
-import os
 from bisect import bisect_right
 from numbers import Number
 from operator import itemgetter
@@ -10,7 +9,6 @@ from typing import Union
 
 import numpy as np
 
-from aux.data_info import DATASET_KEYS
 from aux.utils import GRAPHS_DIR
 from base.custom_datasets import CustomDataset
 from aux.configs import DatasetConfig
@@ -25,7 +23,7 @@ class AttrInfo:
 
     @staticmethod
     def vk_attr(
-    ):
+    ) -> dict:
         vk_dict = {
             ('age',): list(range(0, len(AGE_GROUPS) + 1)),
             ('sex',): [1, 2],
@@ -177,7 +175,7 @@ class VKDataset(
 
     def _compute_dataset_data(
             self
-    ):
+    ) -> None:
         """ Get DatasetData for VK graph
         """
         super()._compute_dataset_data()

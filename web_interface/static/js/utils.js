@@ -487,3 +487,29 @@ async function addOptionsWithParams(id, label, options, paramsType, paramsColor)
     return [$cb, $optionSelect, $paramsDiv, paramsBuilder]
 }
 
+/// Add checker to the value user entered in an input form
+function addValueChecker($elem, type, defaultValue, min=null, max=null, on="change") {
+    $elem[0].addEventListener(on, function (e) {
+        let typeCheck = false
+        if (this.value === "")
+            typeCheck = false
+        else if (type === "int")
+            typeCheck = /^-?\d+$/.test(this.value)
+        else if (type === "natural")
+            typeCheck = /^\d+$/.test(this.value)
+        else if (type === "float")
+            typeCheck = !isNaN(this.value)
+        else
+            console.error('Unknown type to be checked:', type)
+
+        if (!typeCheck) {
+            this.value = defaultValue
+            return
+        }
+
+        if (min !== null && this.value < min)
+            this.value = min
+        if (max !== null && this.value > max)
+            this.value = max
+    }, true) // true enables capture phase to ensure this event handler runs before others
+}

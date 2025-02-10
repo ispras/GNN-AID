@@ -187,7 +187,8 @@ class FrameworkExplainersManager:
             # TODO what if save_explanation_flag=False?
             if self.save_explanation_flag:
                 self.save_explanation(run_config)
-                self.model_manager.save_model_executor()
+                path = self.model_manager.save_model_executor()
+                self.gen_dataset.save_train_test_mask(path)
         except Exception as e:
             if socket:
                 socket.send("er", {"status": "FAILED"})
@@ -195,20 +196,42 @@ class FrameworkExplainersManager:
 
         return result
 
+    def conduct_experiment_by_dataset(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            dataset: GeneralDataset,
+            socket: SocketIO = None,
+            save_explanation_flag=False
+    ) -> dict:
+        init_kwargs = getattr(self.init_config, CONFIG_OBJ).to_dict()
+        if self.explainer_name not in FrameworkExplainersManager.supported_explainers:
+            raise ValueError(
+                f"Explainer {self.explainer_name} is not supported. Choose one of "
+                f"{FrameworkExplainersManager.supported_explainers}")
+        print("Creating explainer")
+        name_klass = {e.name: e for e in Explainer.__subclasses__()}
+        klass = name_klass[self.explainer_name]
+        self.explainer = klass(
+            dataset, model=self.gnn,
+            device=self.device,
+            # device=device("cpu"),
+            **init_kwargs
+        )
+        old_save_explanation_flag = self.save_explanation_flag
+        self.save_explanation_flag = save_explanation_flag
+        result = self.conduct_experiment(run_config, socket)
+        self.save_explanation_flag = old_save_explanation_flag
+        return result
+
     def evaluate_metrics(
             self,
-            target_nodes_indices: list,
-            run_config: Union[ConfigPattern, ExplainerRunConfig, None] = None,
+            node_id_to_explainer_run_config: dict[int, ConfigPattern],
+            explaining_metrics_params: Union[dict, None] = None,
             socket: SocketIO = None
     ) -> dict:
         """
         Evaluates explanation metrics between given node indices
         """
-        # TODO: Refactor this method for framework design
-        if run_config:
-            params = getattr(getattr(run_config, CONFIG_OBJ).kwargs, CONFIG_OBJ).to_dict()
-        else:
-            params = {}
         self.explainer.pbar = ProgressBar(
             socket, "er", desc=f'{self.explainer.name} explaining metrics calculation'
         )  # progress bar
@@ -217,13 +240,12 @@ class FrameworkExplainersManager:
             if self.gen_dataset.is_multi():
                 raise NotImplementedError("Explanation metrics for graph classification")
             else:
+
                 explanation_metrics_calculator = NodesExplainerMetric(
-                    model=self.gnn,
-                    graph=self.gen_dataset.data,
-                    explainer=self.explainer,
-                    kwargs_dict=params
+                    self,
+                    explaining_metrics_params
                 )
-                result = explanation_metrics_calculator.evaluate(target_nodes_indices)
+                result = explanation_metrics_calculator.evaluate(node_id_to_explainer_run_config)
             print("Explanation metrics are ready")
 
             if socket:

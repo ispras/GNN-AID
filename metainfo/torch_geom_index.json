@@ -9,9 +9,7 @@
       "pytorch-geometric-other": [
         "Actor",
         "BAShapes",
-        "Flickr",
-        "KarateClub",
-        "Reddit2"
+        "KarateClub"
       ],
       "Planetoid": [
         "CiteSeer",
@@ -32,7 +30,6 @@
         "AIDS",
         "BZR",
         "BZR_MD",
-        "COIL-DEL",
         "COX2",
         "COX2_MD",
         "Cuneiform",
@@ -128,13 +125,6 @@
         "salicylic_acid",
         "toluene",
         "uracil"
-      ],
-      "MoleculeNet": [
-        "MUV",
-        "PCBA",
-        "SIDER",
-        "Tox21",
-        "ToxCast"
       ]
     }
   }

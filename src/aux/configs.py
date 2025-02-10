@@ -199,7 +199,7 @@ class GeneralConfig:
 
     def to_json(
             self
-    ):
+    ) -> dict:
         """ Special method which allows to use json.dumps() on Config object """
         return self.to_dict()
 

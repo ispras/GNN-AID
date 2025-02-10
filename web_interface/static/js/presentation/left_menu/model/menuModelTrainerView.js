@@ -142,8 +142,11 @@ class MenuModelTrainerView extends MenuView {
         $cb = $("<div></div>").attr("class", "control-block")
         this.$mainDiv.append($cb)
         $cb.append($("<label></label>").text("Epochs to train")) // TODO assoc to select ?
-        this.$epochsInput = $("<input>").attr("type", "number").attr("min", "1")
-            .attr("max", "3000").attr("step", "1").attr("value", "10")
+        this.$epochsInput = $("<input>").attr("type", "number")
+            // .attr("min", "1").attr("max", "3000")
+            .attr("step", "1").attr("value", "10")
+        addValueChecker(this.$epochsInput, "natural", 10, 1, 3000, "change")
+
         $cb.append(this.$epochsInput)
 
         // for (const metric of ["Accuracy", "BalancedAccuracy", "Precision", "Recall", "F1", "Jaccard"]) {

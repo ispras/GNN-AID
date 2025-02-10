@@ -6,15 +6,15 @@ import shutil
 import signal
 from time import time
 
+# Monkey patch MODELS_DIR - before other imports
 from aux import utils
+tmp_dir = utils.MODELS_DIR / (utils.MODELS_DIR.name + str(time()))
+utils.MODELS_DIR = tmp_dir
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
-
-tmp_dir = utils.MODELS_DIR / (utils.MODELS_DIR.name + str(time()))
-utils.MODELS_DIR = tmp_dir
 
 
 def my_ctrlc_handler(signal, frame):

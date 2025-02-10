@@ -122,9 +122,31 @@ def simgnn():
     print("len =", len(gen_dataset))
 
 
+def nx_to_ptg_converter():
+    from aux.utils import GRAPHS_DIR
+    from base.dataset_converter import networkx_to_ptg
+    from base.datasets_processing import DatasetManager
+    import networkx as nx
+
+    nx_path = GRAPHS_DIR / 'networkx-graphs' / 'input' / 'reply_graph.edgelist'
+    nx_graph = nx.read_edgelist(nx_path)
+    nx_graph = nx.to_undirected(nx_graph)
+    ptg_graph = networkx_to_ptg(nx_graph)
+    if ptg_graph.x is None:
+        ptg_graph.x = torch.zeros((ptg_graph.num_nodes, 1))
+    if ptg_graph.y is None:
+        ptg_graph.y = torch.zeros(ptg_graph.num_nodes)
+        ptg_graph.y[0] = 1
+    ptg_dataset = UserLocalDataset('test_dataset_single', [ptg_graph])
+    gen_dataset = DatasetManager.register_torch_geometric_local(ptg_dataset)
+    print(len(gen_dataset))
+
+
 if __name__ == '__main__':
 
     # local()
-    converted_local()
+    # converted_local()
     # api()
     # simgnn()
+
+    nx_to_ptg_converter()

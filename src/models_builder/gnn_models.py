@@ -120,8 +120,8 @@ class GNNModelManager:
             modification: ModelModificationConfig = None
     ):
         """
-        :param manager_config: socket to use for sending data to frontend
-        :param modification: socket to use for sending data to frontend
+        :param manager_config: ?
+        :param modification: ?
         """
         if manager_config is None:
             # raise RuntimeError("model manager config must be specified")
@@ -184,9 +184,7 @@ class GNNModelManager:
         self.mi_defense_flag = False
 
         self.gnn = None
-        # We do not want store socket because it is not picklable for a subprocess
-        self.socket = None
-        self.stop_signal = False
+        self.socket = None  # Websocket for sending info to frontend, we avoid to store it since it is not pickleable
         self.stats_data = None  # Stores some stats to be sent to frontend
 
         self.set_poison_defender()
@@ -851,7 +849,6 @@ class FrameworkGNNModelManager(GNNModelManager):
         # Add fields from additional config
         self.manager_config = self.manager_config.merge(self.additional_config)
 
-        self.stop_signal = False  # TODO misha do we need it?
         self.gnn = gnn
 
         if self.modification.epochs is None:
@@ -1082,7 +1079,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             steps=None,
             metrics: List[Metric] = None,
             socket: SocketIO = None
-    ) -> None:
+    ) -> Union[str, Path]:
         """
         Convenient train method.
 
@@ -1483,15 +1480,16 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             batch,
             task_type: str = None
     ) -> torch.Tensor:
-        if task_type == "single-graph":
+        if task_type == "multiple-graphs":
             self.optimizer.zero_grad()
-            logits = self.gnn(batch.x, batch.edge_index)
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             min_distances = self.gnn.min_distances
 
             # cluster loss
             self.prot_layer.prototype_class_identity = self.prot_layer.prototype_class_identity
             prototypes_of_correct_class = torch.t(
                 self.prot_layer.prototype_class_identity[:, batch.y].bool())
+
             cluster_cost = torch.mean(
                 torch.min(min_distances[prototypes_of_correct_class]
                           .reshape(-1, self.prot_layer.num_prototypes_per_class), dim=1)[0])
@@ -1523,7 +1521,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-        elif task_type == "multiple-graphs":
+        elif task_type == "signle-graph":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             loss = self.loss_function(logits, batch.y)
@@ -1558,7 +1556,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ):
-        cur_step = self.modification.epochs
+        cur_step = self.modification.epochs + 1
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
         # Prototype projection
         if cur_step > self.proj_epochs and cur_step % self.proj_epochs == 0:

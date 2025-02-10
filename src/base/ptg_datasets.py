@@ -214,12 +214,12 @@ class LocalDataset(
     @property
     def processed_file_names(
             self
-    ):
+    ) -> str:
         return 'data.pt'
 
     def process(
             self
-    ):
+    ) -> None:
         raise RuntimeError("Dataset is supposed to be processed and saved earlier.")
         # torch.save(self.collate(self.data_list), self.processed_paths[0])
 
