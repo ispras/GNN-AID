@@ -70,10 +70,12 @@ class FGSMAttacker(
     ):
         if self.is_feature_attack:
             gen_dataset.data.x.requires_grad = True
-            output = model_manager.gnn(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
+            model = model_manager.gnn
+            model.eval()
+            output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
             loss = model_manager.loss_function(output[mask_tensor],
                                                gen_dataset.data.y[mask_tensor])
-            model_manager.gnn.zero_grad()
+            model.zero_grad()
             loss.backward()
             sign_data_grad = gen_dataset.data.x.grad.sign()
             perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
@@ -88,6 +90,7 @@ class FGSMAttacker(
                 x = gen_dataset.dataset[graph_idx].x
 
                 model = model_manager.gnn
+                model.eval()
 
                 first_layer_name, first_layer = next(model.named_children())
                 layer = getattr(model, first_layer_name)
@@ -129,6 +132,7 @@ class FGSMAttacker(
                 x = gen_dataset.data.x
 
                 model = model_manager.gnn
+                model.eval()
                 num_hops = model.n_layers
 
                 subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
