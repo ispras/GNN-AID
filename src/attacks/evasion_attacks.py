@@ -17,6 +17,11 @@ import torch.nn.functional as F
 from torch_geometric.utils import k_hop_subgraph
 from tqdm import tqdm
 
+# FGSM imports
+from models_builder.models_utils import apply_decorator_to_graph_layers
+from torch_geometric.utils import add_self_loops
+from torch_geometric.data import Data
+
 
 class EvasionAttacker(
     Attacker
@@ -47,10 +52,15 @@ class FGSMAttacker(
 
     def __init__(
             self,
-            epsilon: float = 0.1
+            is_feature_attack: bool = False,
+            element_idx: int = 0,
+            epsilon: float = 0.5,
     ):
         super().__init__()
+        self.is_feature_attack = is_feature_attack
+        self.element_idx = element_idx
         self.epsilon = epsilon
+        self.grad_aggr_type = 'mean'
 
     def attack(
             self,
@@ -58,16 +68,120 @@ class FGSMAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        gen_dataset.data.x.requires_grad = True
-        output = model_manager.gnn(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
-        loss = model_manager.loss_function(output[mask_tensor],
-                                           gen_dataset.data.y[mask_tensor])
-        model_manager.gnn.zero_grad()
-        loss.backward()
-        sign_data_grad = gen_dataset.data.x.grad.sign()
-        perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
-        perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-        gen_dataset.data.x = perturbed_data_x.detach()
+        if self.is_feature_attack:
+            gen_dataset.data.x.requires_grad = True
+            model = model_manager.gnn
+            model.eval()
+            output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
+            loss = model_manager.loss_function(output[mask_tensor],
+                                               gen_dataset.data.y[mask_tensor])
+            model.zero_grad()
+            loss.backward()
+            sign_data_grad = gen_dataset.data.x.grad.sign()
+            perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
+            perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
+            gen_dataset.data.x = perturbed_data_x.detach()
+        else:
+            if gen_dataset.is_multi():
+                graph_idx = self.element_idx
+
+                edge_index = gen_dataset.dataset[graph_idx].edge_index
+                y = gen_dataset.dataset[graph_idx].y
+                x = gen_dataset.dataset[graph_idx].x
+
+                model = model_manager.gnn
+                model.eval()
+
+                first_layer_name, first_layer = next(model.named_children())
+                layer = getattr(model, first_layer_name)
+                apply_decorator_to_graph_layers(model)
+
+                budget = int(self.epsilon * edge_index.size(1))
+
+                # TODO Some convolutions use the add_self_loops parameter. It is not possible to work with loops,
+                #  because even if you remove a loop during the method, it will be used in the model architecture.
+                # if layer.add_self_loops is True:
+                #     pass
+
+                perturbed_edges = edge_index.clone()
+                self_loops_part_size = x.size(0)
+
+                for _ in tqdm(range(budget)):
+                    out = model(x, perturbed_edges)
+                    loss = -model_manager.loss_function(out, y)
+                    loss.backward()
+
+                    grad = layer.message_gradients[first_layer_name]
+                    if self.grad_aggr_type == 'mean':
+                        grad = torch.mean(grad, dim=1)
+                    else:
+                        raise ValueError(f"Unsupported grad_aggr_type: {self.grad_aggr_type}")
+
+                    if grad.size(0) != perturbed_edges.size(1):  # model use add_self_loops
+                        grad = grad[:-self_loops_part_size]
+
+                    max_index = torch.argmax(grad)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
+                                                dim=1)
+                self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
+            else:
+                node_idx = self.element_idx
+
+                edge_index = gen_dataset.data.edge_index
+                y = gen_dataset.data.y
+                x = gen_dataset.data.x
+
+                model = model_manager.gnn
+                model.eval()
+                num_hops = model.n_layers
+
+                subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
+                                                                           num_hops=num_hops,
+                                                                           edge_index=edge_index,
+                                                                           relabel_nodes=True,
+                                                                           directed=False)
+                node_idx_remap = torch.where(subset == node_idx)[0].item()
+                y = y.clone()
+                y = y[subset]
+                x = x.clone()
+                x = x[subset]
+
+                first_layer_name, first_layer = next(model.named_children())
+                layer = getattr(model, first_layer_name)
+                apply_decorator_to_graph_layers(model)
+
+                budget = int(self.epsilon * edge_index_subset.size(1))
+
+                # TODO Some convolutions use the add_self_loops parameter. It is not possible to work with loops,
+                #  because even if you remove a loop during the method, it will be used in the model architecture.
+                # if layer.add_self_loops is True:
+                #     pass
+
+                perturbed_edges = edge_index_subset.clone()
+                self_loops_part_size = subset.size(0)
+
+                for _ in tqdm(range(budget)):
+                    out = model(x, perturbed_edges)
+                    loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                    loss.backward()
+
+                    grad = layer.message_gradients[first_layer_name]
+                    if self.grad_aggr_type == 'mean':
+                        grad = torch.mean(grad, dim=1)
+                    else:
+                        raise ValueError(f"Unsupported grad_aggr_type: {self.grad_aggr_type}")
+
+                    if grad.size(0) != perturbed_edges.size(1):  # model use add_self_loops
+                        grad = grad[:-self_loops_part_size]
+
+                    max_index = torch.argmax(grad)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]), dim=1)
+
+                # Update dataset
+                edges_to_keep = edge_index[:, ~edge_mask]
+                updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
+                gen_dataset.data.edge_index = updated_edge_index
+                self.attack_diff = gen_dataset
         return gen_dataset
 
 
