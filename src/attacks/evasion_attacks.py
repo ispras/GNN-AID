@@ -76,8 +76,10 @@ class FGSMAttacker(
             model = model_manager.gnn
             model.eval()
             output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
-            loss = model_manager.loss_function(output[mask_tensor],
-                                               gen_dataset.data.y[mask_tensor])
+            if gen_dataset.is_multi():
+                loss = model_manager.loss_function(output, gen_dataset.dataset[self.element_idx].y)
+            else:
+                loss = model_manager.loss_function(output[self.element_idx], gen_dataset.data.y[self.element_idx])
             model.zero_grad()
             loss.backward()
             sign_data_grad = gen_dataset.data.x.grad.sign()
