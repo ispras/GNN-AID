@@ -22,5 +22,6 @@ packaging
 opt-einsum
 pandas==2.2.0
 pylint
+scikit-optimize==0.10.2
 
 torch_geometric==2.3.1

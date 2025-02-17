@@ -15,7 +15,10 @@ from src.attacks.nettack.utils import preprocess_graph, largest_connected_compon
 from attacks.evasion_attacks_collection.pgd.utils import Projection, RandomSampling
 import torch.nn.functional as F
 from torch_geometric.utils import k_hop_subgraph
+from torch_geometric.data import Data
+from models_builder.models_utils import apply_decorator_to_graph_layers
 from tqdm import tqdm
+from skopt import Optimizer
 
 # FGSM imports
 from models_builder.models_utils import apply_decorator_to_graph_layers
@@ -199,7 +202,8 @@ class PGDAttacker(
             epsilon: float = 0.5,
             learning_rate: float = 0.001,
             num_iterations: int = 100,
-            num_rand_trials: int = 100
+            num_rand_trials: int = 100,
+            grad_aggr_type: str = 'mean'
     ):
 
         super().__init__()
@@ -210,6 +214,10 @@ class PGDAttacker(
         self.learning_rate = learning_rate
         self.num_iterations = num_iterations
         self.num_rand_trials = num_rand_trials
+        self.grad_aggr_type = grad_aggr_type
+
+        # TODO check grad_aggr_type correctness
+        # raise ValueError(f"Invalid grad_aggr_type: {self.grad_aggr_type}.")
 
     def attack(
             self,
@@ -234,6 +242,7 @@ class PGDAttacker(
         x = gen_dataset.data.x
 
         model = model_manager.gnn
+        model.eval()
         num_hops = model.n_layers
 
         subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
@@ -267,7 +276,70 @@ class PGDAttacker(
             gen_dataset.data.x[subset] = x.detach()
             self.attack_diff = gen_dataset
         else:  # structure attack
-            pass
+            node_idx_remap = torch.where(subset == node_idx)[0].item()
+            y = y.clone()
+            y = y[subset]
+            x = x.clone()
+            x = x[subset]
+
+            budget = int(self.epsilon * edge_index_subset.size(1))
+            perturbed_edges = edge_index_subset.clone()
+
+            space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
+
+            opt = Optimizer(
+                dimensions=space,
+                acq_func="EI",
+                random_state=42
+            )
+
+            orig_mask = torch.ones(edge_index_subset.size(1), dtype=torch.bool)
+            for i in tqdm(range(self.num_iterations)):
+                mask = opt.ask()  # selecting the next point
+                mask = torch.tensor(mask, dtype=torch.bool)
+
+                # --- budget control ---
+                diff = mask != orig_mask
+                change_indices = torch.where(diff)[0]
+                num_changes = len(change_indices)
+
+                if num_changes > budget:
+                    perturbed_masks = []
+                    losses = []
+
+                    for idx in change_indices:
+                        temp_mask = mask.clone()
+                        temp_mask[idx] = orig_mask[idx]
+
+                        perturbed_edges = edge_index_subset[:, temp_mask]
+                        out = model(x, perturbed_edges)
+                        loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+
+                        perturbed_masks.append(temp_mask)
+                        losses.append(loss.item())
+
+                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
+                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
+                    selected_changes = change_indices.clone().detach()[sorted_indices]
+
+                    mask[:] = orig_mask
+                    mask[selected_changes] = ~orig_mask[selected_changes]
+                # ----------------------
+
+                perturbed_edges = edge_index_subset[:, mask]  # apply mask to edges
+                out = model(x, perturbed_edges)
+                loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
+            best_mask = opt.Xi[np.argmin(opt.yi)]
+            best_mask = torch.tensor(best_mask, dtype=torch.bool)
+
+            # Update dataset
+            edges_to_keep = edge_index[:, ~edge_mask]
+            perturbed_edges = edge_index_subset[:, best_mask]
+            updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
+
+            gen_dataset.data.edge_index = updated_edge_index
+            self.attack_diff = gen_dataset
 
     def _attack_on_graph(
             self,
@@ -281,6 +353,7 @@ class PGDAttacker(
         x = gen_dataset.dataset[graph_idx].x
 
         model = model_manager.gnn
+        model.eval()
 
         if self.is_feature_attack:  # feature attack
             x = x.clone()
@@ -302,7 +375,59 @@ class PGDAttacker(
             gen_dataset.dataset[graph_idx].x.copy_(x.detach())
             self.attack_diff = gen_dataset
         else:  # structure attack
-            pass
+            budget = int(self.epsilon * edge_index.size(1))
+            perturbed_edges = edge_index.clone()
+
+            space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
+
+            opt = Optimizer(
+                dimensions=space,
+                acq_func="EI",
+                random_state=42
+            )
+
+            orig_mask = torch.ones(edge_index.size(1), dtype=torch.bool)
+            for i in tqdm(range(self.num_iterations)):
+                mask = opt.ask()  # selecting the next point
+                mask = torch.tensor(mask, dtype=torch.bool)
+
+                # --- budget control ---
+                diff = mask != orig_mask
+                change_indices = torch.where(diff)[0]
+                num_changes = len(change_indices)
+
+                if num_changes > budget:
+                    perturbed_masks = []
+                    losses = []
+
+                    for idx in change_indices:
+                        temp_mask = mask.clone()
+                        temp_mask[idx] = orig_mask[idx]
+
+                        perturbed_edges = edge_index[:, temp_mask]
+                        out = model(x, perturbed_edges)
+                        loss = -model_manager.loss_function(out, y)
+
+                        perturbed_masks.append(temp_mask)
+                        losses.append(loss.item())
+
+                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
+                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
+                    selected_changes = change_indices.clone().detach()[sorted_indices]
+
+                    mask[:] = orig_mask
+                    mask[selected_changes] = ~orig_mask[selected_changes]
+                # ----------------------
+
+                perturbed_edges = edge_index[:, mask]  # apply mask to edges
+                out = model(x, perturbed_edges)
+                loss = -model_manager.loss_function(out, y)
+                opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
+            best_mask = opt.Xi[np.argmin(opt.yi)]
+            best_mask = torch.tensor(best_mask, dtype=torch.bool)
+            perturbed_edges = edge_index[:, best_mask]
+
+            self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
 
     def attack_diff(
             self
