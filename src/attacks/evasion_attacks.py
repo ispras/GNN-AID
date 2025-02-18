@@ -1,7 +1,5 @@
 from typing import Type, Union
-
 import torch
-import torch.nn.functional as F
 import numpy as np
 
 from attacks.attack_base import Attacker
@@ -12,17 +10,12 @@ from src.attacks.nettack.nettack import Nettack
 from src.attacks.nettack.utils import preprocess_graph, largest_connected_components, data_to_csr_matrix, train_w1_w2
 
 # PGD imports
-from attacks.evasion_attacks_collection.pgd.utils import Projection, RandomSampling
-import torch.nn.functional as F
 from torch_geometric.utils import k_hop_subgraph
-from torch_geometric.data import Data
-from models_builder.models_utils import apply_decorator_to_graph_layers
 from tqdm import tqdm
 from skopt import Optimizer
 
 # FGSM imports
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from torch_geometric.utils import add_self_loops
 from torch_geometric.data import Data
 
 
