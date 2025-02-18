@@ -6,6 +6,9 @@ torch_sparse==0.6.17
 torch-cluster==1.6.1
 torch-spline-conv==1.2.2
 
+# For attacks
+scikit-optimize==0.10.2
+
 # For explainers
 dive-into-graphs==1.1.0
 
