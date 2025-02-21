@@ -1,20 +1,20 @@
 import unittest
 
-import torch
-
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
-
 from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH
+    EVASION_DEFENSE_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, import_all_from_package
+
+import defense
+import_all_from_package(defense)  # to import all subclasses properly
+
 
 class DefenseTest(unittest.TestCase):
     def setUp(self):
         print('setup')
         
-        from defense.poison_defense.GNNGuard_defense import GNNGuard_defense
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(

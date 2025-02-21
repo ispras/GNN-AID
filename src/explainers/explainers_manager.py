@@ -9,9 +9,7 @@ from base.datasets_processing import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
 from explainers.explainer_metrics import NodesExplainerMetric
 
-# TODO misha can we do it not manually?
-# Need to import all modules with subclasses of Explainer, otherwise python can't see them
-
+# We import some (not all) modules with subclasses of Explainer
 for pack in [
     'explainers.GNNExplainer.torch_geom_our',
     'explainers.GNNExplainer.dig_our',

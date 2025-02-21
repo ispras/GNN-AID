@@ -14,16 +14,17 @@ import shutil
 import signal
 from time import time
 
-
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
 from base.datasets_processing import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
     ExplainerInitConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
+import explainers
+import_all_from_package(explainers)  # to import all subclasses properly
 
 # from src.aux import utils
 # from src.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \

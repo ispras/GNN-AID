@@ -163,6 +163,19 @@ def all_subclasses(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
+def import_all_from_package(package) -> None:
+    """ Import all modules recursively from a given python package.
+    All subpackages must contain '__init__.py' to be imported properly.
+    """
+    import pkgutil
+    from importlib import import_module
+    for importer, modname, ispkg in pkgutil.walk_packages(
+            path=package.__path__, onerror=lambda x: None):
+        module = import_module(package.__name__ + '.' + modname, package.__name__)
+        if ispkg:
+            import_all_from_package(module)
+
+
 class tmp_dir():
     """
     Temporary create a directory near the given path. Remove it on exit.
