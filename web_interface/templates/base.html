@@ -72,12 +72,18 @@
           <div id="menu-model-manager-view">
             <!-- generated stuff -->
           </div>
+
+          {% block menu_before_train_content %}{% endblock %}
+
           <div id="menu-model-trainer-view">
             <!-- generated stuff -->
           </div>
+
+          {% block menu_after_train_content %}{% endblock %}
+
         </details>
 
-        {% block menu_content %}{% endblock %}
+        {% block menu_explainers_content %}{% endblock %}
 
 <!----------        VISUALS        --------------->
         <details class="controls-section" id="menu-visuals" open>
@@ -110,7 +116,9 @@
             <!-- generated stuff -->
           </div>
 
-          {% block panel_content %}{% endblock %}
+          {% block panel_explainer_content %}{% endblock %}
+
+          {% block panel_attack_defense_content %}{% endblock %}
 
         </div>
     </div>

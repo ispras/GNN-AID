@@ -4,6 +4,7 @@ from typing import Union
 from aux.utils import FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH, \
     EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH
+from web_interface.back_front.attack_defense_blocks import BeforeTrainBlock
 from web_interface.back_front.explainer_blocks import ExplainerRunBlock, ExplainerInitBlock, \
     ExplainerWBlock, ExplainerLoadBlock
 from web_interface.back_front.model_blocks import ModelWBlock, ModelManagerBlock, ModelLoadBlock, \
@@ -76,10 +77,16 @@ class FrontendClient:
             [self.dvcBlock, self.mconstrBlock, self.mcustomBlock], self.mmcBlock,
             lambda args: args[0] and (args[1] or args[2]))
 
+        self.btBlock = BeforeTrainBlock("bt", socket=self.socket)
+        self.diagram.add_dependency(self.mmcBlock, self.btBlock)
+
         self.mtBlock = ModelTrainerBlock("mt", socket=self.socket)
         self.diagram.add_dependency(
-            [self.dvcBlock, self.mmcBlock, self.mloadBlock], self.mtBlock,
+            [self.dvcBlock, self.mmcBlock, self.mloadBlock, self.btBlock], self.mtBlock,
             lambda args: args[0] and (args[1] or args[2]))
+
+        self.atBlock = BeforeTrainBlock("at", socket=self.socket)
+        self.diagram.add_dependency(self.mtBlock, self.atBlock)
 
         self.elBlock = ExplainerLoadBlock("el", socket=self.socket)
 
