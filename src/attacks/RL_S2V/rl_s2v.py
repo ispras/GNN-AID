@@ -56,18 +56,14 @@ class RLS2VAttack(EvasionAttacker):
             mask_tensor: torch.Tensor
     ):
         gnn = model_manager.gnn
-        # TODO check new_env param
         self.setup(gen_dataset, gnn, mask_tensor)
-
-        # TODO check if agent is trained
-        if not self.agent.trained:
-            self.agent.train(num_steps=self.num_steps, lr=self.lr)
+        self.agent.train(num_steps=self.num_steps, lr=self.lr)
 
         # TODO perform change of graph structure
 
         pass
 
-    def setup(self, gen_dataset, gnn, mask, new_env=False):
+    def setup(self, gen_dataset, gnn, mask):
         dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.dataset.data.edge_index)
         idx_test = torch.nonzero(mask, as_tuple=True)[0]
         pred_labels = gnn.get_answer(gen_dataset.x, gen_dataset.edge_index)
@@ -84,21 +80,19 @@ class RLS2VAttack(EvasionAttacker):
         total = attack_list
         idx_valid = idx_test
 
-        meta_list = []
-        num_wrong = 0
-        for i in range(len(idx_valid)):
-            if acc_test[i] > 0:
-                if len(dict_of_lists[idx_valid[i]]):
-                    meta_list.append(idx_valid[i])
-            else:
-                num_wrong += 1
+        # meta_list = []
+        # num_wrong = 0
+        # for i in range(len(idx_valid)):
+        #     if acc_test[i] > 0:
+        #         if len(dict_of_lists[idx_valid[i]]):
+        #             meta_list.append(idx_valid[i])
+        #     else:
+        #         num_wrong += 1
 
-        # TODO num_wrond -> self.num_wrong ?
-        if self.env is None or new_env:
-            self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
-                                     classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type)
-            self.agent = RLS2VAgent(self.env, gen_dataset, idx_meta=meta_list, idx_test=attack_list, num_wrong=num_wrong,
-                                    list_action_space=dict_of_lists, num_mod=self.num_mod, reward_type=self.reward_type,
-                                    batch_size=self.batch_size,
-                                    bilin_q=self.bilin_q, embed_dim=self.embed_dim, mlp_hidden=self.mlp_hidden,
-                                    max_lv=self.max_lv, gm=self.gm, device=gnn.device)
+        self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
+                                 classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type)
+        self.agent = RLS2VAgent(self.env, gen_dataset, idx_meta=node_idx, idx_test=attack_list, num_wrong=1,
+                                list_action_space=dict_of_lists, num_mod=self.num_mod, reward_type=self.reward_type,
+                                batch_size=self.batch_size,
+                                bilin_q=self.bilin_q, embed_dim=self.embed_dim, mlp_hidden=self.mlp_hidden,
+                                max_lv=self.max_lv, gm=self.gm, device=gnn.device)

@@ -170,8 +170,9 @@ class NodeAttackEnv(object):
 
     def step(
             self,
-            actions: List
-    ) -> None:
+            actions: List,
+            get_modified: bool = False
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """run actions and get rewards
         """
         data = self.gen_dataset.dataset.data
@@ -201,7 +202,7 @@ class NodeAttackEnv(object):
                 modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight)
                 #adj = self.classifier.norm_tool.norm_extra(extra_adj)
 
-                output = self.classifier(data.x, data.edge_index, data.edge_weight)
+                output = self.classifier(data.x, modified_edge_index, modified_edge_weight)
 
                 loss, acc = loss_acc(output, self.gen_dataset.dataset.data.y, self.all_targets, avg_loss=False)
                 # _, loss, acc = self.classifier(self.features, Variable(adj), self.all_targets, self.labels, avg_loss=False)
@@ -212,6 +213,8 @@ class NodeAttackEnv(object):
                 self.list_acc_of_all.append(acc)
                 acc_list.append(acc[cur_idx])
                 loss_list.append(loss[cur_idx])
+                if get_modified:
+                    return modified_edge_index, modified_edge_weight
 
             self.binary_rewards = (np.array(acc_list) * -2.0 + 1.0).astype(np.float32)
             if self.reward_type == 'binary':
