@@ -6,8 +6,6 @@ import torch
 import networkx as nx
 import random
 
-from torch_geometric.data.remote_backend_utils import num_nodes
-
 import utils
 from torch.nn.parameter import Parameter
 import torch.nn as nn
@@ -166,7 +164,7 @@ class NodeAttackEnv(object):
         self.binary_rewards = None
         self.modified_list = []
         for i in range(len(self.target_nodes)):
-            self.modified_list.append(ModifiedGraph())
+            self.modified_list.append(ModifiedGraph(self.num_nodes))
 
         self.list_acc_of_all = []
 
@@ -183,7 +181,7 @@ class NodeAttackEnv(object):
         else:
             for i in range(len(self.target_nodes)):
                 # assert self.first_nodes[i] != actions[i]
-                # deleta an edge from the graph
+                # delete an edge from the graph
                 self.modified_list[i].add_edge(self.first_nodes[i], actions[i], -1.0)
             self.first_nodes = None
             self.banned_list = None
@@ -195,7 +193,7 @@ class NodeAttackEnv(object):
             loss_list = []
             # for i in tqdm(range(len(self.target_nodes))):
             for i in (range(len(self.target_nodes))):
-                device = self.labels.device
+                device = self.gen_dataset.dataset.data.y.device
                 extra_edge_index, extra_edge_weight = self.modified_list[i].get_extra_adj(device=device)
                 modified_edge_index, modified_edge_weight = sum_coo_tensors(data.edge_index, data.edge_weight,
                                                                             extra_edge_index, extra_edge_weight,
@@ -205,7 +203,7 @@ class NodeAttackEnv(object):
 
                 output = self.classifier(data.x, data.edge_index, data.edge_weight)
 
-                loss, acc = loss_acc(output, self.labels, self.all_targets, avg_loss=False)
+                loss, acc = loss_acc(output, self.gen_dataset.dataset.data.y, self.all_targets, avg_loss=False)
                 # _, loss, acc = self.classifier(self.features, Variable(adj), self.all_targets, self.labels, avg_loss=False)
 
                 cur_idx = self.all_targets.index(self.target_nodes[i])
@@ -300,8 +298,6 @@ class RLS2VAgent(object):
         type of reward (e.g., 'binary')
     batch_size :
         batch size for training DQN
-    save_dir :
-        saving directory for model checkpoints
     device: str
         'cpu' or 'cuda'
     """
@@ -322,7 +318,6 @@ class RLS2VAgent(object):
             gm='mean_field',
             mlp_hidden=64,
             max_lv=1,
-            save_dir='checkpoint_dqn',
             device=None
     ):
 
@@ -335,10 +330,7 @@ class RLS2VAgent(object):
         self.num_mod = num_mod
         self.reward_type = reward_type
         self.batch_size = batch_size
-        self.save_dir = save_dir
         self.num_node_features = gen_dataset.dataset.data.x.shape[1]
-        if not osp.exists(save_dir):
-            os.system('mkdir -p {}'.format(save_dir))
 
         self.gm = gm
         self.device = device
@@ -469,18 +461,18 @@ class RLS2VAgent(object):
         acc = np.sum(acc) / (len(self.idx_meta) + self.num_wrong)
         print('\033[93m average test: acc %.5f\033[0m' % (acc))
 
-        if training == True and self.best_eval is None or acc < self.best_eval:
-            print('----saving to best attacker since this is the best attack rate so far.----')
-            torch.save(self.net.state_dict(), osp.join(self.save_dir, 'epoch-best.model'))
-            with open(osp.join(self.save_dir, 'epoch-best.txt'), 'w') as f:
-                f.write('%.4f\n' % acc)
-            with open(osp.join(self.save_dir, 'attack_solution.txt'), 'w') as f:
-                for i in range(len(self.idx_meta)):
-                    f.write('%d: [' % self.idx_meta[i])
-                    for e in self.env.modified_list[i].directed_edges:
-                        f.write('(%d %d)' % e)
-                    f.write('] succ: %d\n' % (self.env.binary_rewards[i]))
-            self.best_eval = acc
+        # if training == True and self.best_eval is None or acc < self.best_eval:
+        #     print('----saving to best attacker since this is the best attack rate so far.----')
+        #     torch.save(self.net.state_dict(), osp.join(self.save_dir, 'epoch-best.model'))
+        #     with open(osp.join(self.save_dir, 'epoch-best.txt'), 'w') as f:
+        #         f.write('%.4f\n' % acc)
+        #     with open(osp.join(self.save_dir, 'attack_solution.txt'), 'w') as f:
+        #         for i in range(len(self.idx_meta)):
+        #             f.write('%d: [' % self.idx_meta[i])
+        #             for e in self.env.modified_list[i].directed_edges:
+        #                 f.write('(%d %d)' % e)
+        #             f.write('] succ: %d\n' % (self.env.binary_rewards[i]))
+        #     self.best_eval = acc
 
     def train(self, num_steps=100000, lr=0.001):
         """Train RL agent.
