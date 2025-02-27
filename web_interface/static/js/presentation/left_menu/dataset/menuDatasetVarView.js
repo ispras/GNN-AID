@@ -76,7 +76,7 @@ class MenuDatasetVarView extends MenuView {
                     case "categorical":
                         size = values[i].length
                         break
-                    case "other":
+                    case "vector":
                         size = values[i]
                 }
                 $cb.append($("<input>").attr("type", "checkbox").attr("id", id))

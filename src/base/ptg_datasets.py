@@ -21,7 +21,7 @@ class PTGDataset(
     """
     attr_name = 'unknown'
     dataset_var_config = DatasetVarConfig(
-        features={'attr': {attr_name: 'other'}},
+        features={'attr': {attr_name: 'vector'}},
         labeling="origin",
         dataset_ver_ind=0
     )

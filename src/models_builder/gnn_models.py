@@ -26,16 +26,10 @@ from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
 from explainers.explainer import ProgressBar
 from explainers.ProtGNN.MCTS import mcts_args
-from attacks.evasion_attacks import EvasionAttacker
-from attacks.mi_attacks import MIAttacker
-from attacks.poison_attacks import PoisonAttacker
 from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
     PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from defense.evasion_defense import EvasionDefender
-from defense.mi_defense import MIDefender
-from defense.poison_defense import PoisonDefender
 
 
 class Metric:
@@ -372,6 +366,7 @@ class GNNModelManager:
             poison_attack_config: PoisonAttackConfig = None,
             poison_attack_name: str = None
     ) -> None:
+        from attacks.poison_attacks import PoisonAttacker
         if poison_attack_config is None:
             poison_attack_config = ConfigPattern(
                 _class_name=poison_attack_name or "EmptyPoisonAttacker",
@@ -414,6 +409,7 @@ class GNNModelManager:
             evasion_attack_config: EvasionAttackConfig = None,
             evasion_attack_name: str = None
     ) -> None:
+        from attacks.evasion_attacks import EvasionAttacker
         if evasion_attack_config is None:
             evasion_attack_config = ConfigPattern(
                 _class_name=evasion_attack_name or "EmptyEvasionAttacker",
@@ -454,6 +450,7 @@ class GNNModelManager:
             mi_attack_config: MIAttackConfig = None,
             mi_attack_name: str = None
     ) -> None:
+        from attacks.mi_attacks import MIAttacker
         if mi_attack_config is None:
             mi_attack_config = ConfigPattern(
                 _class_name=mi_attack_name or "EmptyMIAttacker",
@@ -494,6 +491,7 @@ class GNNModelManager:
             poison_defense_config: PoisonDefenseConfig = None,
             poison_defense_name: str = None
     ) -> None:
+        from defense.poison_defense import PoisonDefender
         if poison_defense_config is None:
             poison_defense_config = ConfigPattern(
                 _class_name=poison_defense_name or "EmptyPoisonDefender",
@@ -534,6 +532,7 @@ class GNNModelManager:
             evasion_defense_config: EvasionDefenseConfig = None,
             evasion_defense_name: str = None
     ) -> None:
+        from defense.evasion_defense import EvasionDefender
         if evasion_defense_config is None:
             evasion_defense_config = ConfigPattern(
                 _class_name=evasion_defense_name or "EmptyEvasionDefender",
@@ -577,6 +576,7 @@ class GNNModelManager:
         """
 
         """
+        from defense.mi_defense import MIDefender
         if mi_defense_config is None:
             mi_defense_config = ConfigPattern(
                 _class_name=mi_defense_name or "EmptyMIDefender",

@@ -1,6 +1,7 @@
 import json
 import shutil
 import os
+from collections import OrderedDict
 from pathlib import Path
 from typing import Union
 
@@ -27,14 +28,15 @@ class DatasetInfo:
         self.name: str = None
         self.count: int = None
         self.directed: bool = None
+        self.hetero: bool = False
         self.nodes: list = None
         self.remap: bool = False
-        self.node_attributes: dict = None
-        self.edge_attributes: dict = {
-            "names": [],
+        self.node_attributes: OrderedDict = None
+        self.edge_attributes: OrderedDict = OrderedDict({
+            "names": [],  # list for homogeneous graph or dict for hetero
             "types": [],
             "values": []
-        }
+        })
         self.labelings: dict = None
         self.node_attr_slices: dict = None
         self.edge_attr_slices: dict = None
@@ -49,21 +51,38 @@ class DatasetInfo:
         assert self.count > 0
         assert len(self.node_attributes) > 0
         assert all(key in self.node_attributes for key in ["names", "types", "values"])
-        for attributes in [self.node_attributes, self.edge_attributes]:
-            for n, t, v in zip(attributes["names"], attributes["types"], attributes["values"]):
-                assert isinstance(n, str)
-                assert t in {"continuous", "categorical", "other"}
-                if t == "continuous":
-                    assert isinstance(v, list) and len(v) == 2 and v[0] < v[1]
-                elif t == "continuous":
-                    assert isinstance(v, list)
-                elif t == "other":
-                    assert isinstance(v, int) and v > 0
+
+        ntv_triples = []
+        if self.hetero:
+            for attributes in [self.node_attributes, self.edge_attributes]:
+                ntv_triples.extend(list(zip(sum(attributes["names"].values(), []),
+                                            sum(attributes["types"].values(), []),
+                                            sum(attributes["values"].values(), []))))
+        else:
+            for attributes in [self.node_attributes, self.edge_attributes]:
+                ntv_triples.extend(list(zip(attributes["names"], attributes["types"], attributes["values"])))
+
+        for name, type, value in ntv_triples:
+            assert isinstance(name, str)
+            assert type in {"continuous", "categorical", "vector", "other"}
+            if type == "continuous":
+                assert isinstance(value, list) and len(value) == 2 and value[0] < value[1]
+            elif type == "continuous":
+                assert isinstance(value, list)
+            elif type == "vector":
+                assert isinstance(value, int) and value > 0
+            elif type == "other":
+                assert value in ["str", None]
         assert len(self.labelings) > 0
-        for k, v in self.labelings.items():
-            # TODO Misha - what about regression?
+        if self.hetero:
+            labelings = []
+            for kv in self.labelings.values():
+                labelings.extend(list(kv.items()))
+        else:
+            labelings = list(self.labelings.items())
+        for k, v in labelings:
             assert isinstance(k, str)
-            assert isinstance(v, int) and v > 1
+            assert isinstance(v, int) and v >= 1  # 1 stands for regression
 
     def check_consistency(
             self
@@ -74,6 +93,24 @@ class DatasetInfo:
             self.node_attributes["values"])
         assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
             self.edge_attributes["values"])
+
+        if self.hetero:
+            node_types = list(self.nodes[0].keys())
+            edge_types = list(self.edge_attributes["names"].keys())
+            assert list(self.node_attributes["names"].keys()) == node_types
+            assert list(self.node_attributes["types"].keys()) == node_types
+            assert list(self.node_attributes["values"].keys()) == node_types
+            for nt in node_types:
+                assert len(self.node_attributes["names"][nt]) == len(self.node_attributes["types"][nt]) == len(self.node_attributes["values"][nt])
+            for et in edge_types:
+                assert len(self.edge_attributes["names"][et]) == len(self.edge_attributes["types"][et]) == len(self.edge_attributes["values"][et])
+
+            node_types = set(node_types)
+            for et in edge_types:
+                s, _, d = et.split(',')
+                s = s[1:-1]
+                d = d[1:-1]
+                assert s in node_types and d in node_types
 
     def check_sufficiency(
             self
@@ -92,8 +129,13 @@ class DatasetInfo:
         from base.ptg_datasets import is_graph_directed
         assert self.directed == is_graph_directed(dataset.get(0))
         assert self.remap is False
-        assert len(self.node_attributes["names"]) == 1
-        assert self.node_attributes["types"][0] == "other"
+        if self.hetero:
+            from torch_geometric.data import HeteroData
+            assert isinstance(dataset.get(0), HeteroData)
+            # TODO misha hetero
+        else:
+            assert len(self.node_attributes["names"]) == 1
+            assert self.node_attributes["types"][0] == "vector"
         # TODO check features values range
 
     def check(
@@ -126,6 +168,7 @@ class DatasetInfo:
     ) -> object:
         """ Induce metainfo from a given PTG dataset.
         """
+        # TODO misha hetero
         res = DatasetInfo()
         res.count = len(dataset)
         from base.ptg_datasets import is_graph_directed
@@ -133,7 +176,7 @@ class DatasetInfo:
         res.nodes = [len(dataset.get(ix).x) for ix in range(len(dataset))]
         res.node_attributes = {
             "names": ["unknown"],
-            "types": ["other"],
+            "types": ["vector"],
             "values": [len(dataset.get(0).x[0])]
         }
         res.labelings = {"origin": dataset.num_classes}
@@ -147,7 +190,7 @@ class DatasetInfo:
     ) -> object:
         """ Read info from a file. """
         with path.open('r') as f:
-            a_dict = json.load(f)
+            a_dict = json.load(f, object_pairs_hook=OrderedDict)
         res = DatasetInfo()
         for k, v in a_dict.items():
             setattr(res, k, v)
@@ -161,16 +204,22 @@ class DatasetInfo:
             node_attributes: dict,
             edge_attributes: dict,
     ) -> (dict, dict):
+        if isinstance(node_attributes['names'], dict):
+            # TODO misha hetero
+            return None, None
+
         node_attr_slices = {}
         if node_attributes:
             start_attr_index = 0
             for i in range(len(node_attributes['names'])):
-                if node_attributes['types'][i] == 'other':
+                if node_attributes['types'][i] == 'vector':
                     attr_len = node_attributes['values'][i]
                 elif node_attributes['types'][i] == 'categorical':
                     attr_len = len(node_attributes['values'][i])
-                else:
+                elif node_attributes['types'][i] == 'continuous':
                     attr_len = 1
+                else:
+                    attr_len = 0
                 node_attr_slices[node_attributes['names'][i]] = (
                     start_attr_index, start_attr_index + attr_len)
                 start_attr_index = start_attr_index + attr_len
@@ -179,10 +228,12 @@ class DatasetInfo:
         if edge_attributes:
             start_attr_index = 0
             for i in range(len(edge_attributes['names'])):
-                if edge_attributes['types'][i] == 'other':
+                if edge_attributes['types'][i] == 'vector':
                     attr_len = edge_attributes['values'][i]
                 elif edge_attributes['types'][i] == 'categorical':
                     attr_len = len(edge_attributes['values'][i])
+                elif edge_attributes['types'][i] == 'continuous':
+                    attr_len = 1
                 else:
                     attr_len = 1
                 edge_attr_slices[edge_attributes['names'][i]] = (
@@ -627,7 +678,7 @@ class GeneralDataset:
                     attr = list(features['attr'].keys())[0]
                     if features['attr'][attr] == 'categorical':
                         res = True
-                    elif features['attr'][attr] == 'other':
+                    elif features['attr'][attr] == 'vector':
                         # Check honestly each feature vector
                         feats = self.dataset_var_data['features']
                         res = all(all(all(x == 1 or x == 0 for x in f) for f in feat) for feat in feats) and \
@@ -735,6 +786,11 @@ class DatasetManager:
             from base.custom_datasets import CustomDataset
             gen_dataset = CustomDataset(dataset_config)
 
+        elif dataset_group in ["hetero"]:
+            # TODO misha - it is a kind of custom?
+            from base.heterographs import CustomHeteroDataset
+            gen_dataset = CustomHeteroDataset(dataset_config)
+
         elif dataset_group in ["vk_samples"]:
             # TODO misha - it is a kind of custom?
             from base.vk_datasets import VKDataset
@@ -818,7 +874,8 @@ class DatasetManager:
     ) -> GeneralDataset:
         """
         Create GeneralDataset from user created files in one of the supported formats.
-        Attribute files created by user have priority over attributes extracted from the graph file.
+        Attribute files created by user (in <name>.node_attributes and <name>.edge_attributes) have
+        priority over attributes extracted from the raw graph file (<name>.<format>).
 
         :param dataset_config: config for a new dataset. Files will be searched for in the folder
          defined by this config.
@@ -848,7 +905,8 @@ class DatasetManager:
         # if info_file is None:
         #     raise RuntimeError(f"No .info file was found at {path}")
         if len(graph_files) == 0:
-            raise RuntimeError(f"No files with extension '.{format}' found at {path}")
+            raise RuntimeError(f"No files with extension '.{format}' found at {path}. "
+                               f"If your graph is heterograph, use 'register_custom_hetero()'")
         if label_dir is None:
             raise RuntimeError(f"No file with extension '.label' found at {path}")
 
@@ -868,6 +926,27 @@ class DatasetManager:
 
             # Rename the newly created dir to the original one
             tmp.rename(path)
+
+        # Check that data is valid
+        gen_dataset.check_validity()
+
+        return gen_dataset
+
+    @staticmethod
+    def register_custom_hetero(
+            dataset_config: DatasetConfig,
+    ) -> GeneralDataset:
+        """
+        Create heterogeneous GeneralDataset from user created files in 'ij' formats.
+        Only basic 'ij' format is supported. No conversion.
+
+        :param dataset_config: config for a new dataset. Files will be searched for in the folder
+         defined by this config.
+        :return: CustomHeteroDataset
+        """
+        # Create empty CustomDataset
+        from base.heterographs import CustomHeteroDataset
+        gen_dataset = CustomHeteroDataset(dataset_config)
 
         # Check that data is valid
         gen_dataset.check_validity()

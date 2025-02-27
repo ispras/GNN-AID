@@ -11,7 +11,7 @@ import numpy as np
 
 from aux.utils import GRAPHS_DIR
 from base.custom_datasets import CustomDataset
-from aux.configs import DatasetConfig
+from aux.configs import DatasetConfig, ConfigPattern
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
 
@@ -149,10 +149,6 @@ class AttrInfo:
             return res  # all zeros here
 
 
-class ConfigPatter:
-    pass
-
-
 class VKDataset(
     CustomDataset
 ):
@@ -161,7 +157,7 @@ class VKDataset(
     """
     def __init__(
             self,
-            dataset_config: Union[ConfigPatter, DatasetConfig],
+            dataset_config: Union[ConfigPattern, DatasetConfig],
             add_none: bool = False
     ):
         """

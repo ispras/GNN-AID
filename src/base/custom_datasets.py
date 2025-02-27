@@ -65,7 +65,7 @@ class CustomDataset(
     def edge_index_path(
             self
     ) -> Path:
-        """ Path to dir with labels. """
+        """ Path to file with edge indices, for multiple graphs. """
         return self.root_dir / 'raw' / (self.name + '.edge_index')
 
     def check_validity(
