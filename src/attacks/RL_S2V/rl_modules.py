@@ -6,7 +6,6 @@ import torch
 import networkx as nx
 import random
 
-import utils
 from torch.nn.parameter import Parameter
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +16,7 @@ from copy import deepcopy
 
 from attacks.RL_S2V.utils import sum_coo_tensors, norm_adj
 from base.datasets_processing import GeneralDataset
-from q_learning import NstepReplayMem, NStepQNetNode, node_greedy_actions
+from attacks.RL_S2V.q_learning import NstepReplayMem, NStepQNetNode, node_greedy_actions
 
 
 # class StaticGraph(object):
@@ -139,7 +138,7 @@ class NodeAttackEnv(object):
             self,
             gen_dataset: GeneralDataset,
             all_targets: List,
-            list_action_space: Dict[List],
+            list_action_space,
             classifier: torch.nn.Module,
             num_mod: int = 1,
             reward_type: str = 'binary'
@@ -213,8 +212,6 @@ class NodeAttackEnv(object):
                 self.list_acc_of_all.append(acc)
                 acc_list.append(acc[cur_idx])
                 loss_list.append(loss[cur_idx])
-                if get_modified:
-                    return modified_edge_index, modified_edge_weight
 
             self.binary_rewards = (np.array(acc_list) * -2.0 + 1.0).astype(np.float32)
             if self.reward_type == 'binary':
@@ -222,6 +219,9 @@ class NodeAttackEnv(object):
             else:
                 assert self.reward_type == 'nll'
                 self.rewards = np.array(loss_list).astype(np.float32)
+
+            if get_modified:
+                return modified_edge_index, modified_edge_weight
 
     def sample_pos_rewards(self, num_samples):
         assert self.list_acc_of_all is not None
@@ -309,7 +309,7 @@ class RLS2VAgent(object):
             self,
             env: NodeAttackEnv,
             gen_dataset: GeneralDataset,
-            idx_meta,
+            node_idx,
             idx_test,
             list_action_space,
             num_mod,
@@ -326,7 +326,7 @@ class RLS2VAgent(object):
 
         assert device is not None, "'device' cannot be None, please specify it"
 
-        self.idx_meta = idx_meta
+        self.node_idx = node_idx
         self.idx_test = idx_test
         self.num_wrong = num_wrong
         self.list_action_space = list_action_space
@@ -452,16 +452,16 @@ class RLS2VAgent(object):
         """Evaluate RL agent.
         """
 
-        self.env.setup(self.idx_meta)
+        self.env.setup(self.node_idx)
         t = 0
 
         while not self.env.isTerminal():
             list_at = self.make_actions(t, greedy=True)
-            self.env.step(list_at)
+            edge_index, edge_weight = self.env.step(list_at, get_modified=True)
             t += 1
 
         acc = 1 - (self.env.binary_rewards + 1.0) / 2.0
-        acc = np.sum(acc) / (len(self.idx_meta) + self.num_wrong)
+        acc = np.sum(acc) / (len(self.node_idx) + self.num_wrong)
         print('\033[93m average test: acc %.5f\033[0m' % (acc))
 
         # if training == True and self.best_eval is None or acc < self.best_eval:
@@ -476,6 +476,7 @@ class RLS2VAgent(object):
         #                 f.write('(%d %d)' % e)
         #             f.write('] succ: %d\n' % (self.env.binary_rewards[i]))
         #     self.best_eval = acc
+        return edge_index, edge_weight
 
     def train(self, num_steps=100000, lr=0.001):
         """Train RL agent.

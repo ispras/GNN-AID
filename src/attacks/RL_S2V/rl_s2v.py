@@ -1,10 +1,9 @@
 from attacks.RL_S2V.utils import edge_index_to_dict_of_lists
 from attacks.evasion_attacks import EvasionAttacker
-from rl_modules import *
-import utils
+from attacks.RL_S2V.rl_modules import *
 
-class RLS2VAttack(EvasionAttacker):
-    name = "RLS2VAttacker"
+class RLS2VAttacker(EvasionAttacker):
+    name = "RLS2VAttack"
 
     def __init__(
             self,
@@ -17,7 +16,8 @@ class RLS2VAttack(EvasionAttacker):
             embed_dim: int = 64,
             mlp_hidden: int = 64,
             max_lv: bool = True,
-            gm: str = 'mean_field'
+            gm: str = 'mean_field',
+            node_idx: int = 0
     ):
         """
         :param num_steps: rl training steps
@@ -30,6 +30,7 @@ class RLS2VAttack(EvasionAttacker):
         :param mlp_hidden: mlp hidden layer size
         :param max_lv: max rounds of message passing
         :param gm: mean_field/loopy_bp/gcn
+        :param node_idx: index of node to be attacked
 
         """
         super().__init__()
@@ -43,6 +44,7 @@ class RLS2VAttack(EvasionAttacker):
         self.mlp_hidden = mlp_hidden
         self.max_lv = max_lv
         self.gm = gm
+        self.node_idx = node_idx
 
         self.env = None
         self.agent = None
@@ -55,20 +57,20 @@ class RLS2VAttack(EvasionAttacker):
             gen_dataset,
             mask_tensor: torch.Tensor
     ):
+        mask_tensor = torch.tensor(mask_tensor)  # TODO why list?
         gnn = model_manager.gnn
         self.setup(gen_dataset, gnn, mask_tensor)
         self.agent.train(num_steps=self.num_steps, lr=self.lr)
-
-        # TODO perform change of graph structure
-
-        pass
+        edge_index, edge_weight = self.agent.eval()
+        gen_dataset.dataset.data.edge_index = edge_index
+        # QUE edge_weight implemented in out framework?
 
     def setup(self, gen_dataset, gnn, mask):
         dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.dataset.data.edge_index)
         idx_test = torch.nonzero(mask, as_tuple=True)[0]
-        pred_labels = gnn.get_answer(gen_dataset.x, gen_dataset.edge_index)
+        pred_labels = gnn.get_answer(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
         # TODO check correctness here via debug
-        acc = pred_labels.eq(gen_dataset.y).double()
+        acc = pred_labels.eq(gen_dataset.dataset.data.y).double()
         acc_test = acc[mask]
 
         attack_list = []
@@ -91,7 +93,7 @@ class RLS2VAttack(EvasionAttacker):
 
         self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
                                  classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type)
-        self.agent = RLS2VAgent(self.env, gen_dataset, idx_meta=node_idx, idx_test=attack_list, num_wrong=1,
+        self.agent = RLS2VAgent(self.env, gen_dataset, node_idx=self.node_idx, idx_test=attack_list, num_wrong=1,
                                 list_action_space=dict_of_lists, num_mod=self.num_mod, reward_type=self.reward_type,
                                 batch_size=self.batch_size,
                                 bilin_q=self.bilin_q, embed_dim=self.embed_dim, mlp_hidden=self.mlp_hidden,
