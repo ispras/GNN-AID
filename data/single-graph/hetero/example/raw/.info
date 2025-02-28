@@ -6,15 +6,39 @@
  "nodes": [{"author": 3, "paper": 4, "institution": 2}],
  "remap": true,
  "node_attributes": {
-  "names": {"author": ["name"], "paper": ["title", "year"], "institution": ["name", "rating"]},
-  "types": {"author": ["other"], "paper": ["other", "continuous"], "institution": ["other", "continuous"]},
-  "values": {"author": ["str"], "paper": ["str", [0, 2100]], "institution": ["str", [0, 15]]}
- },
+  "author": {
+    "names": ["name"],
+    "types": ["other"],
+    "values": ["str"]
+  },
+  "paper": {
+    "names": ["title", "year"],
+    "types": ["other", "continuous"],
+    "values": ["str", [0, 2100]]
+  },
+  "institution": {
+    "names": ["name", "rating"],
+    "types": ["other", "continuous"],
+    "values": ["str", [0, 15]]
+  }
+},
  "edge_attributes": {
-  "names": {"'author','affiliated_with','institution'": ["since_year"], "'author','writes','paper'": ["order"], "'paper','cites','paper'": ["context"]},
-  "types": {"'author','affiliated_with','institution'": ["continuous"], "'author','writes','paper'": ["continuous"], "'paper','cites','paper'": ["other"]},
-  "values": {"'author','affiliated_with','institution'": [[0, 2100]], "'author','writes','paper'": [[0, 100]], "'paper','cites','paper'": [null]}
- },
+  "'author','affiliated_with','institution'": {
+    "names": ["since_year"],
+    "types": ["continuous"],
+    "values": [[0, 2100]]
+  },
+  "'author','writes','paper'": {
+    "names": ["order"],
+    "types": ["continuous"],
+    "values": [[0, 100]]
+  },
+  "'paper','cites','paper'": {
+    "names": ["context"],
+    "types": ["other"],
+    "values": [null]
+  }
+},
  "labelings": {
   "author": {"binary": 2},
   "paper": {"score": 1, "topic": 2}

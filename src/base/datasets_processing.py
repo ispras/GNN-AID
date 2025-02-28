@@ -32,11 +32,7 @@ class DatasetInfo:
         self.nodes: list = None
         self.remap: bool = False
         self.node_attributes: OrderedDict = None
-        self.edge_attributes: OrderedDict = OrderedDict({
-            "names": [],  # list for homogeneous graph or dict for hetero
-            "types": [],
-            "values": []
-        })
+        self.edge_attributes: OrderedDict = None
         self.labelings: dict = None
         self.node_attr_slices: dict = None
         self.edge_attr_slices: dict = None
@@ -50,15 +46,19 @@ class DatasetInfo:
         """ Check existing fields have allowed values. """
         assert self.count > 0
         assert len(self.node_attributes) > 0
-        assert all(key in self.node_attributes for key in ["names", "types", "values"])
 
         ntv_triples = []
         if self.hetero:
             for attributes in [self.node_attributes, self.edge_attributes]:
-                ntv_triples.extend(list(zip(sum(attributes["names"].values(), []),
-                                            sum(attributes["types"].values(), []),
-                                            sum(attributes["values"].values(), []))))
+                for entity_attrs in attributes.values():
+                    ntv_triples.extend(list(zip(entity_attrs["names"],
+                                                entity_attrs["types"],
+                                                entity_attrs["values"])))
+                # ntv_triples.extend(list(zip(sum(attributes["names"].values(), []),
+                #                             sum(attributes["types"].values(), []),
+                #                             sum(attributes["values"].values(), []))))
         else:
+            assert set(self.node_attributes.keys()) == {"names", "types", "values"}
             for attributes in [self.node_attributes, self.edge_attributes]:
                 ntv_triples.extend(list(zip(attributes["names"], attributes["types"], attributes["values"])))
 
@@ -89,21 +89,18 @@ class DatasetInfo:
     ) -> None:
         """ Check existing fields are consistent. """
         assert self.count == len(self.nodes)
-        assert len(self.node_attributes["names"]) == len(self.node_attributes["types"]) == len(
-            self.node_attributes["values"])
-        assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
-            self.edge_attributes["values"])
 
         if self.hetero:
             node_types = list(self.nodes[0].keys())
-            edge_types = list(self.edge_attributes["names"].keys())
-            assert list(self.node_attributes["names"].keys()) == node_types
-            assert list(self.node_attributes["types"].keys()) == node_types
-            assert list(self.node_attributes["values"].keys()) == node_types
+            edge_types = list(self.edge_attributes.keys())
+            assert list(self.node_attributes.keys()) == node_types
+            assert list(self.edge_attributes.keys()) == edge_types
             for nt in node_types:
-                assert len(self.node_attributes["names"][nt]) == len(self.node_attributes["types"][nt]) == len(self.node_attributes["values"][nt])
+                node_attributes = self.node_attributes[nt]
+                assert len(node_attributes["names"]) == len(node_attributes["types"]) == len(node_attributes["values"])
             for et in edge_types:
-                assert len(self.edge_attributes["names"][et]) == len(self.edge_attributes["types"][et]) == len(self.edge_attributes["values"][et])
+                edge_attributes = self.edge_attributes[et]
+                assert len(edge_attributes["names"]) == len(edge_attributes["types"]) == len(edge_attributes["values"])
 
             node_types = set(node_types)
             for et in edge_types:
@@ -111,6 +108,11 @@ class DatasetInfo:
                 s = s[1:-1]
                 d = d[1:-1]
                 assert s in node_types and d in node_types
+        else:
+            assert len(self.node_attributes["names"]) == len(self.node_attributes["types"]) == len(
+                self.node_attributes["values"])
+            assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
+                self.edge_attributes["values"])
 
     def check_sufficiency(
             self
@@ -204,7 +206,7 @@ class DatasetInfo:
             node_attributes: dict,
             edge_attributes: dict,
     ) -> (dict, dict):
-        if isinstance(node_attributes['names'], dict):
+        if isinstance(next(iter(node_attributes.values())), dict):
             # TODO misha hetero
             return None, None
 
@@ -266,7 +268,7 @@ class VisiblePart:
         self.nodes = None
         self.edges = None
 
-        self._ixes = None
+        self._ixes = None  # node or graph ids to include to the result
 
         if gen_dataset.is_multi():
             if center is not None:  # Get several graphs
@@ -288,6 +290,7 @@ class VisiblePart:
         else:  # single
             assert gen_dataset.info.count == 1
 
+            # TODO misha hetero
             if center is not None:  # Get neighborhood
                 if isinstance(center, list):
                     raise NotImplementedError
@@ -328,11 +331,21 @@ class VisiblePart:
             else:  # Get whole graph
                 self.edges = gen_dataset.dataset_data['edges']
                 self.nodes = gen_dataset.info.nodes[0]
-                self._ixes = list(range(self.nodes))
+                if gen_dataset.info.hetero:
+                    self._ixes = {nt: list(range(self.nodes[nt])) for nt in gen_dataset.node_types}
+                else:
+                    self._ixes = list(range(self.nodes))
 
     def ixes(
             self
     ) -> list:
+        # if isinstance(self._ixes, list):
+        #     for i in self._ixes:
+        #         yield i
+        # elif isinstance(self._ixes, dict):
+        #     for nt, ixes in self._ixes.items():
+        #         for i in ixes:
+        #             yield nt, i
         return self._ixes
 
     def as_dict(
@@ -521,6 +534,7 @@ class GeneralDataset:
     def _compute_dataset_data(
             self
     ) -> None:
+        raise RuntimeError("")  # This should be implemented in subclass
         num = len(self.dataset)
         data_list = [self.dataset.get(ix) for ix in range(num)]
         is_directed = self.info.directed
@@ -599,7 +613,7 @@ class GeneralDataset:
         visible_part = self.visible_part if part is None else VisiblePart(self, **part)
 
         for ix in visible_part.ixes():
-            # FIXME replace with getting data from tensors instead of keeping the whole data
+            # TODO IMP misha replace with getting data from tensors instead of keeping the whole data
             features[ix] = self.dataset_var_data['features'][ix]
             labels[ix] = self.dataset_var_data['labels'][ix]
 

@@ -486,7 +486,7 @@ class DatasetVarConfig(Config):
     def __init__(
             self,
             features: dict = None,
-            labeling: str = None,
+            labeling: Union[str, dict] = None,
             dataset_ver_ind: int = None
     ):
         """ """
