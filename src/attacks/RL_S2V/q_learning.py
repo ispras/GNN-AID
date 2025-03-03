@@ -5,6 +5,7 @@ from torch import nn
 from torch.nn.parameter import Parameter
 from torch_geometric.transforms import ToSparseTensor
 from torch_geometric.data import Data
+from attacks.RL_S2V.utils import norm_adj, sum_coo_tensors
 import torch.nn.functional as F
 
 
@@ -206,12 +207,12 @@ class QNetNode(nn.Module):
             sp = sp.cuda()
         return sp
 
-    def forward(self, time_t, states, actions, greedy_acts=False, is_inference=False):
+    def forward(self, node_features, orig_edge_index, orig_edge_weight, num_nodes, time_t, states, actions, greedy_acts=False, is_inference=False):
 
-        if self.node_features.data.is_sparse:
-            input_node_linear = torch.spmm(self.node_features, self.w_n2l)
+        if node_features.data.is_sparse:
+            input_node_linear = torch.spmm(node_features, self.w_n2l)
         else:
-            input_node_linear = torch.mm(self.node_features, self.w_n2l)
+            input_node_linear = torch.mm(node_features, self.w_n2l)
 
         input_node_linear += self.bias_n2l
 
@@ -236,8 +237,19 @@ class QNetNode(nn.Module):
                     node_embed += torch.spmm(target_sp, self.bias_target)
 
             with torch.set_grad_enabled(mode=not is_inference):
-                device = self.node_features.device
-                adj = self.norm_tool.norm_extra(batch_graph[i].get_extra_adj(device, return_sparse=True))
+                device = node_features.device
+                extra_edge_index, extra_edge_weight = batch_graph[i].get_extra_adj(device=device)
+                if extra_edge_index is None:
+                    normed_edge_ind, normed_edge_weight = norm_adj(orig_edge_index, orig_edge_weight, num_nodes)
+                    adj = torch.sparse.FloatTensor(normed_edge_ind, normed_edge_weight, num_nodes)
+                else:
+                    modified_edge_index, modified_edge_weight = sum_coo_tensors(orig_edge_index, orig_edge_weight,
+                                                                                extra_edge_index, extra_edge_weight,
+                                                                                num_nodes)
+                    modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight,
+                                                                         gm=self.gm)
+                    adj = torch.sparse.FloatTensor(modified_edge_index, modified_edge_weight, num_nodes)
+                # adj = self.norm_tool.norm_extra(batch_graph[i].get_extra_adj(device, return_sparse=True))
 
 
                 lv = 0
@@ -282,9 +294,10 @@ class QNetNode(nn.Module):
 
 class NStepQNetNode(nn.Module):
 
-    def __init__(self, num_steps, num_node_features, list_action_space, bilin_q=1, embed_dim=64, mlp_hidden=64, max_lv=1, gm='mean_field', device='cpu'):
+    def __init__(self, node_features, num_steps, num_node_features, list_action_space, bilin_q=1, embed_dim=64, mlp_hidden=64, max_lv=1, gm='mean_field', device='cpu'):
 
         super(NStepQNetNode, self).__init__()
+        self.node_features = node_features
         self.list_action_space = list_action_space
         self.total_nodes = len(list_action_space)
 
@@ -296,10 +309,10 @@ class NStepQNetNode(nn.Module):
         self.list_mod = nn.ModuleList(list_mod)
         self.num_steps = num_steps
 
-    def forward(self, time_t, states, actions, greedy_acts = False, is_inference=False):
+    def forward(self, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states, actions, greedy_acts = False, is_inference=False):
         assert time_t >= 0 and time_t < self.num_steps
 
-        return self.list_mod[time_t](time_t, states, actions, greedy_acts, is_inference)
+        return self.list_mod[time_t](self.node_features, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states, actions, greedy_acts, is_inference)
 
 def node_greedy_actions(target_nodes, picked_nodes, list_q, net):
     assert len(target_nodes) == len(list_q)

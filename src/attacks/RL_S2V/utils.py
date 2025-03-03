@@ -34,6 +34,9 @@ def degree_normalize_sparse_tensor(
         ):
     """degree_normalize_sparse_tensor.
     """
+    # TODO check if not bug
+    if edge_index is None:
+        return None
     edge_index, edge_weight = add_self_loops(edge_index, edge_weight, fill_value)
     if edge_weight is None:
         edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
@@ -59,19 +62,25 @@ from torch_scatter import scatter_add
 
 def sum_coo_tensors(edge_index1, edge_weight1, edge_index2, edge_weight2, num_nodes):
     """
-    Sum two COO sparse tensors given as (edge_index, edge_weight) pairs.
+    Sum two COO sparse tensors given as (edge_index, edge_weight) pairs,
+    handling cases where one of the edge weights is None.
 
     Args:
         edge_index1 (torch.Tensor): Shape (2, E1), indices of the first sparse tensor.
-        edge_weight1 (torch.Tensor): Shape (E1,), values of the first sparse tensor.
+        edge_weight1 (torch.Tensor or None): Shape (E1,), values of the first sparse tensor.
         edge_index2 (torch.Tensor): Shape (2, E2), indices of the second sparse tensor.
-        edge_weight2 (torch.Tensor): Shape (E2,), values of the second sparse tensor.
+        edge_weight2 (torch.Tensor or None): Shape (E2,), values of the second sparse tensor.
         num_nodes (int): Number of nodes in the graph.
 
     Returns:
         edge_index (torch.Tensor): Merged edge indices.
         edge_weight (torch.Tensor): Summed edge weights.
     """
+    # Assign zero-filled weights if None
+    if edge_weight1 is None:
+        edge_weight1 = torch.zeros(edge_index1.shape[1], device=edge_index1.device)
+    if edge_weight2 is None:
+        edge_weight2 = torch.zeros(edge_index2.shape[1], device=edge_index2.device)
 
     # Step 1: Concatenate edges and weights
     edge_index = torch.cat([edge_index1, edge_index2], dim=1)  # Shape (2, E1+E2)

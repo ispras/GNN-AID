@@ -141,7 +141,8 @@ class NodeAttackEnv(object):
             list_action_space,
             classifier: torch.nn.Module,
             num_mod: int = 1,
-            reward_type: str = 'binary'
+            reward_type: str = 'binary',
+            gm: str = 'gcn'
     ) -> None:
 
         self.classifier = classifier
@@ -151,6 +152,7 @@ class NodeAttackEnv(object):
         self.reward_type = reward_type
         self.gen_dataset = gen_dataset
         self.num_nodes = gen_dataset.dataset.data.x.shape[0]
+        self.gm = gm
 
     def setup(
             self,
@@ -198,7 +200,7 @@ class NodeAttackEnv(object):
                 modified_edge_index, modified_edge_weight = sum_coo_tensors(data.edge_index, data.edge_weight,
                                                                             extra_edge_index, extra_edge_weight,
                                                                             self.num_nodes)
-                modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight)
+                modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight, gm=self.gm)
                 #adj = self.classifier.norm_tool.norm_extra(extra_adj)
 
                 output = self.classifier(data.x, modified_edge_index, modified_edge_weight)
@@ -334,6 +336,9 @@ class RLS2VAgent(object):
         self.reward_type = reward_type
         self.batch_size = batch_size
         self.num_node_features = gen_dataset.dataset.data.x.shape[1]
+        self.orig_edge_index = gen_dataset.dataset.data.edge_index
+        self.orig_edge_weight = gen_dataset.dataset.data.edge_weight
+        self.num_nodes = gen_dataset.dataset.data.x.shape[0]
 
         self.gm = gm
         self.device = device
@@ -343,11 +348,11 @@ class RLS2VAgent(object):
 
         # self.net = QNetNode(features, labels, list_action_space)
         # self.old_net = QNetNode(features, labels, list_action_space)
-        self.net = NStepQNetNode(2 * num_mod, self.num_node_features, list_action_space,
+        self.net = NStepQNetNode(gen_dataset.dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
                           bilin_q=bilin_q, embed_dim=embed_dim, mlp_hidden=mlp_hidden,
                           max_lv=max_lv, gm=gm, device=device)
 
-        self.old_net = NStepQNetNode(2 * num_mod, self.num_node_features, list_action_space,
+        self.old_net = NStepQNetNode(gen_dataset.dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
                           bilin_q=bilin_q, embed_dim=embed_dim, mlp_hidden=mlp_hidden,
                           max_lv=max_lv, gm=gm, device=device)
 
@@ -376,7 +381,7 @@ class RLS2VAgent(object):
             actions = self.env.uniformRandActions()
         else:
             cur_state = self.env.getStateRef()
-            actions, values = self.net(time_t, cur_state, None, greedy_acts=True, is_inference=True)
+            actions, values = self.net(self.orig_edge_index, self.orig_edge_weight, self.num_nodes, cur_state, None, greedy_acts=True, is_inference=True)
             actions = list(actions.cpu().numpy())
 
         return actions
@@ -452,7 +457,7 @@ class RLS2VAgent(object):
         """Evaluate RL agent.
         """
 
-        self.env.setup(self.node_idx)
+        self.env.setup([self.node_idx])
         t = 0
 
         while not self.env.isTerminal():
@@ -505,13 +510,13 @@ class RLS2VAgent(object):
 
             if not list_term[0]:
                 target_nodes, _, picked_nodes = zip(*list_s_primes)
-                _, q_t_plus_1 = self.old_net(cur_time + 1, list_s_primes, None)
+                _, q_t_plus_1 = self.old_net(self.orig_edge_index, self.orig_edge_weight, self.num_nodes, cur_time + 1, list_s_primes, None)
                 _, q_rhs = node_greedy_actions(target_nodes, picked_nodes, q_t_plus_1, self.old_net)
                 list_target += q_rhs
 
             # list_target = Variable(list_target.view(-1, 1))
             list_target = list_target.view(-1, 1)
-            _, q_sa = self.net(cur_time, list_st, list_at)
+            _, q_sa = self.net(self.orig_edge_index, self.orig_edge_weight, self.num_nodes, cur_time, list_st, list_at)
             q_sa = torch.cat(q_sa, dim=0)
             loss = F.mse_loss(q_sa, list_target)
             optimizer.zero_grad()

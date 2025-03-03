@@ -67,7 +67,7 @@ class RLS2VAttacker(EvasionAttacker):
 
     def setup(self, gen_dataset, gnn, mask):
         dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.dataset.data.edge_index)
-        idx_test = torch.nonzero(mask, as_tuple=True)[0]
+        idx_test = torch.nonzero(mask, as_tuple=True)[0].tolist()
         pred_labels = gnn.get_answer(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
         # TODO check correctness here via debug
         acc = pred_labels.eq(gen_dataset.dataset.data.y).double()
@@ -91,10 +91,12 @@ class RLS2VAttacker(EvasionAttacker):
         #     else:
         #         num_wrong += 1
 
+        device = gen_dataset.dataset.data.x.device
+
         self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
-                                 classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type)
+                                 classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type, gm=self.gm)
         self.agent = RLS2VAgent(self.env, gen_dataset, node_idx=self.node_idx, idx_test=attack_list, num_wrong=1,
                                 list_action_space=dict_of_lists, num_mod=self.num_mod, reward_type=self.reward_type,
                                 batch_size=self.batch_size,
                                 bilin_q=self.bilin_q, embed_dim=self.embed_dim, mlp_hidden=self.mlp_hidden,
-                                max_lv=self.max_lv, gm=self.gm, device=gnn.device)
+                                max_lv=self.max_lv, gm=self.gm, device=device)
