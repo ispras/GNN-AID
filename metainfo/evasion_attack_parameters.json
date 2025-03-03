@@ -32,6 +32,9 @@
   "learning_rate": ["Learning rate", "float", 0.01, {}, "Learning rate for adjacency matrix optimization"],
   "num_iterations": ["Number of iterations", "int", 100, {"min":  1, "step": 1}, "Number of iterations of gradient descent"],
   "num_rand_trials": ["Number of random trials", "int", 100, {"min":  1, "step": 1}, "number of random trials in Random Sampling Algorithm"]
+ },
+ "ReWatt": {
+
  }
 }
 
