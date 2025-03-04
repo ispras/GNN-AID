@@ -8,7 +8,7 @@ from torch_geometric.data import Data
 from attacks.RL_S2V.utils import norm_adj, sum_coo_tensors
 import torch.nn.functional as F
 
-
+# TODO add docs
 class NstepReplaySubMemCell(object):
     def __init__(self, memory_size):
         self.memory_size = memory_size
@@ -102,7 +102,6 @@ class NstepReplayMemCell(object):
         else:
             assert r_t > 0
             if use_hash:
-                # TODO add hash?
                 key = hash_state_action(s_t, a_t)
                 if key in self.state_set:
                     return
@@ -241,14 +240,14 @@ class QNetNode(nn.Module):
                 extra_edge_index, extra_edge_weight = batch_graph[i].get_extra_adj(device=device)
                 if extra_edge_index is None:
                     normed_edge_ind, normed_edge_weight = norm_adj(orig_edge_index, orig_edge_weight, num_nodes)
-                    adj = torch.sparse.FloatTensor(normed_edge_ind, normed_edge_weight, num_nodes)
+                    adj = torch.sparse.FloatTensor(normed_edge_ind, normed_edge_weight, torch.Size([num_nodes, num_nodes]))
                 else:
                     modified_edge_index, modified_edge_weight = sum_coo_tensors(orig_edge_index, orig_edge_weight,
                                                                                 extra_edge_index, extra_edge_weight,
                                                                                 num_nodes)
                     modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight,
                                                                          gm=self.gm)
-                    adj = torch.sparse.FloatTensor(modified_edge_index, modified_edge_weight, num_nodes)
+                    adj = torch.sparse.FloatTensor(modified_edge_index, modified_edge_weight, torch.Size([num_nodes, num_nodes]))
                 # adj = self.norm_tool.norm_extra(batch_graph[i].get_extra_adj(device, return_sparse=True))
 
 

@@ -1,13 +1,14 @@
 import torch
 from torch_geometric.utils import add_self_loops, scatter
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from typing import Optional
+from typing import Optional, Dict, List
+
 
 def normalize_sparse_tensor(
         edge_index: torch.Tensor,
         edge_weight: Optional[torch.Tensor] = None,
         fill_value: int = 1
-        ):
+        ) -> tuple[torch.Tensor, torch.Tensor]:
     """Normalize sparse tensor. Need to import torch_scatter
     """
     edge_index, edge_weight = add_self_loops(edge_index, edge_weight, fill_value)
@@ -31,12 +32,9 @@ def degree_normalize_sparse_tensor(
         edge_index: torch.Tensor,
         edge_weight: Optional[torch.Tensor] = None,
         fill_value: int = 1
-        ):
+        ) -> tuple[torch.Tensor, torch.Tensor]:
     """degree_normalize_sparse_tensor.
     """
-    # TODO check if not bug
-    if edge_index is None:
-        return None
     edge_index, edge_weight = add_self_loops(edge_index, edge_weight, fill_value)
     if edge_weight is None:
         edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
@@ -60,7 +58,13 @@ import torch
 from torch_scatter import scatter_add
 
 
-def sum_coo_tensors(edge_index1, edge_weight1, edge_index2, edge_weight2, num_nodes):
+def sum_coo_tensors(
+        edge_index1: torch.Tensor ,
+        edge_weight1: Optional[torch.Tensor],
+        edge_index2: torch.Tensor,
+        edge_weight2: Optional[torch.Tensor],
+        num_nodes: int
+        ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sum two COO sparse tensors given as (edge_index, edge_weight) pairs,
     handling cases where one of the edge weights is None.
@@ -104,11 +108,11 @@ def sum_coo_tensors(edge_index1, edge_weight1, edge_index2, edge_weight2, num_no
     return edge_index, edge_weight
 
 def norm_adj(
-        edge_index,
+        edge_index: torch.Tensor,
         edge_weight: Optional[torch.Tensor] = None,
         gm: str = 'gcn',
         device: torch.device = torch.device('cpu')
-):
+        ) -> tuple[torch.Tensor, torch.Tensor]:
     if gm == 'gcn':
         normed_edge_index, normed_edge_weight = normalize_sparse_tensor(edge_index, edge_weight)
     else:
@@ -124,7 +128,14 @@ def norm_adj(
 # ):
 #     pass
 
-def edge_index_to_dict_of_lists(edge_index):
+def edge_index_to_dict_of_lists(
+        edge_index
+        ) -> Dict[int, List[int]]:
+    """
+
+    :param edge_index: graph edges - torch-geometric COO format
+    :return: adjacency list with dict format
+    """
     edge_dict = {}
     for src, tgt in edge_index.t().tolist():
         if src not in edge_dict:

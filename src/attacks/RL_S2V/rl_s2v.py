@@ -56,8 +56,8 @@ class RLS2VAttacker(EvasionAttacker):
             model_manager,
             gen_dataset,
             mask_tensor: torch.Tensor
-    ):
-        mask_tensor = torch.tensor(mask_tensor)  # TODO why list?
+    ) -> None:
+        mask_tensor = torch.tensor(mask_tensor)
         gnn = model_manager.gnn
         self.setup(gen_dataset, gnn, mask_tensor)
         self.agent.train(num_steps=self.num_steps, lr=self.lr)
@@ -65,19 +65,24 @@ class RLS2VAttacker(EvasionAttacker):
         gen_dataset.dataset.data.edge_index = edge_index
         # QUE edge_weight implemented in out framework?
 
-    def setup(self, gen_dataset, gnn, mask):
+    def setup(
+            self,
+            gen_dataset: GeneralDataset,
+            gnn,
+            mask
+            ) -> None:
         dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.dataset.data.edge_index)
         idx_test = torch.nonzero(mask, as_tuple=True)[0].tolist()
         pred_labels = gnn.get_answer(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
-        # TODO check correctness here via debug
         acc = pred_labels.eq(gen_dataset.dataset.data.y).double()
         acc_test = acc[mask]
 
-        attack_list = []
-        for i in range(len(idx_test)):
-            # only attack those misclassifed and degree>0 nodes
-            if acc_test[i] > 0 and len(dict_of_lists[idx_test[i]]):
-                attack_list.append(idx_test[i])
+        # attack_list = []
+        # for i in range(len(idx_test)):
+        #     # only attack those misclassifed and degree>0 nodes
+        #     if acc_test[i] > 0 and len(dict_of_lists[idx_test[i]]):
+        #         attack_list.append(idx_test[i])
+        attack_list = [x for x in range(gen_dataset.dataset.data.x.shape[0])]
 
         total = attack_list
         idx_valid = idx_test

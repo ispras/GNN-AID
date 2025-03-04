@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
-from typing import List, Dict
+from typing import List, Dict, Optional
 from copy import deepcopy
 
 from attacks.RL_S2V.utils import sum_coo_tensors, norm_adj
@@ -19,61 +19,14 @@ from base.datasets_processing import GeneralDataset
 from attacks.RL_S2V.q_learning import NstepReplayMem, NStepQNetNode, node_greedy_actions
 
 
-# class StaticGraph(object):
-#     graph = None
-#
-#     @staticmethod
-#     def get_gsize():
-#         return torch.Size( (len(StaticGraph.graph), len(StaticGraph.graph)) )
-#
-
-# class GraphNormTool(object):
-#
-#     def __init__(self, gm, device):
-#         self.gm = gm
-#         edges = np.array(g.edges(), dtype=np.int64)
-#         rev_edges = np.array([edges[:, 1], edges[:, 0]], dtype=np.int64)
-#
-#         # self_edges = np.array([range(len(g)), range(len(g))], dtype=np.int64)
-#         # edges = np.hstack((edges.T, rev_edges, self_edges))
-#         edges = np.hstack((edges.T, rev_edges))
-#         idxes = torch.LongTensor(edges)
-#         values = torch.ones(idxes.size()[1])
-#
-#         self.raw_adj = torch.sparse.FloatTensor(idxes, values, StaticGraph.get_gsize())
-#         self.raw_adj = self.raw_adj.to(device)
-#
-#         self.normed_adj = self.raw_adj.clone()
-#         if self.gm == 'gcn':
-#             self.normed_adj = utils.normalize_sparse_tensor(self.normed_adj, sparse=True)
-#             # GraphLaplacianNorm(self.normed_adj)
-#         else:
-#
-#             self.normed_adj = utils.degree_normalize_sparse_tensor(self.normed_adj, sparse=True)
-#             # GraphDegreeNorm(self.normed_adj)
-#
-#     def norm_extra(self, added_adj = None):
-#         if added_adj is None:
-#             return self.normed_adj
-#
-#         new_adj = self.raw_adj + added_adj
-#         if self.adj_norm:
-#             if self.gm == 'gcn':
-#                 new_adj = utils.normalize_adj_tensor(new_adj, sparse=True)
-#             else:
-#                 new_adj = utils.degree_normalize_adj_tensor(new_adj, sparse=True)
-#
-#         return new_adj
-
-
 class ModifiedGraph(object):
 
     def __init__(
             self,
-            num_nodes,
+            num_nodes: int,
             directed_edges = None,
             weights = None
-    ):
+    ) -> None:
         self.edge_set = set()  #(first, second)
         self.num_nodes = num_nodes
         self.node_set = np.arange(self.num_nodes)
@@ -84,7 +37,20 @@ class ModifiedGraph(object):
             self.directed_edges = []
             self.weights = []
 
-    def add_edge(self, x, y, z):
+    def add_edge(
+            self,
+            x: int,
+            y: int,
+            z: float
+    ) -> None:
+        """
+        add edge from x to y with z weight
+
+        :param x:
+        :param y:
+        :param z:
+        :return:
+        """
         assert x is not None and y is not None
         if x == y:
             return
@@ -99,7 +65,18 @@ class ModifiedGraph(object):
         # assert z < 0
         self.weights.append(z)
 
-    def get_extra_adj(self, device, return_sparse=False):
+    def get_extra_adj(
+            self,
+            device,
+            return_sparse=False
+            ) -> tuple[torch.Tensor, torch.Tensor] | tuple[None, None] | torch.sparse.FloatTensor:
+        """
+        apply modifications in order to get modified adjacency
+
+        :param device:
+        :param return_sparse:
+        :return:
+        """
         if len(self.directed_edges):
             edges = np.array(self.directed_edges, dtype=np.int64)
             rev_edges = np.array([edges[:, 1], edges[:, 0]], dtype=np.int64)
@@ -108,7 +85,7 @@ class ModifiedGraph(object):
             idxes = torch.LongTensor(edges)
             values = torch.Tensor(self.weights + self.weights)
             if return_sparse:
-                added_adj = torch.sparse.FloatTensor(idxes, values, self.num_nodes)
+                added_adj = torch.sparse.FloatTensor(idxes, values, torch.Size([self.num_nodes, self.num_nodes]))
                 added_adj = added_adj.to(device)
                 return added_adj
             else:
@@ -116,9 +93,18 @@ class ModifiedGraph(object):
                 values.to(device)
                 return idxes, values
         else:
-            return None
+            return None, None
 
-    def get_possible_nodes(self, target_node):
+    def get_possible_nodes(
+            self,
+            target_node: int
+    ) -> np.ndarray:
+        """
+        get possible nodes for connection with target
+
+        :param target_node:
+        :return:
+        """
         # connected = set()
         connected = [target_node]
         for n1, n2 in self.edge_set:
@@ -173,7 +159,7 @@ class NodeAttackEnv(object):
             self,
             actions: List,
             get_modified: bool = False
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor] | tuple[None, None]:
         """run actions and get rewards
         """
         data = self.gen_dataset.dataset.data
@@ -224,6 +210,7 @@ class NodeAttackEnv(object):
 
             if get_modified:
                 return modified_edge_index, modified_edge_weight
+        return None, None
 
     def sample_pos_rewards(self, num_samples):
         assert self.list_acc_of_all is not None
@@ -242,7 +229,7 @@ class NodeAttackEnv(object):
         return cands[0:num_samples]
 
     def uniformRandActions(self) -> List:
-        # TODO: here only support deleting edges
+        # here only support deleting edges
         # seems they sample first node from 2-hop neighbours
         act_list = []
         for i in range(len(self.target_nodes)):
@@ -381,7 +368,7 @@ class RLS2VAgent(object):
             actions = self.env.uniformRandActions()
         else:
             cur_state = self.env.getStateRef()
-            actions, values = self.net(self.orig_edge_index, self.orig_edge_weight, self.num_nodes, cur_state, None, greedy_acts=True, is_inference=True)
+            actions, values = self.net(self.orig_edge_index, self.orig_edge_weight, self.num_nodes, time_t, cur_state, None, greedy_acts=True, is_inference=True)
             actions = list(actions.cpu().numpy())
 
         return actions
@@ -406,7 +393,6 @@ class RLS2VAgent(object):
 
             self.env.step(list_at)
 
-            # TODO Wei added line #87
             env = self.env
             assert (env.rewards is not None) == env.isTerminal()
             if env.isTerminal():
@@ -465,22 +451,6 @@ class RLS2VAgent(object):
             edge_index, edge_weight = self.env.step(list_at, get_modified=True)
             t += 1
 
-        acc = 1 - (self.env.binary_rewards + 1.0) / 2.0
-        acc = np.sum(acc) / (len(self.node_idx) + self.num_wrong)
-        print('\033[93m average test: acc %.5f\033[0m' % (acc))
-
-        # if training == True and self.best_eval is None or acc < self.best_eval:
-        #     print('----saving to best attacker since this is the best attack rate so far.----')
-        #     torch.save(self.net.state_dict(), osp.join(self.save_dir, 'epoch-best.model'))
-        #     with open(osp.join(self.save_dir, 'epoch-best.txt'), 'w') as f:
-        #         f.write('%.4f\n' % acc)
-        #     with open(osp.join(self.save_dir, 'attack_solution.txt'), 'w') as f:
-        #         for i in range(len(self.idx_meta)):
-        #             f.write('%d: [' % self.idx_meta[i])
-        #             for e in self.env.modified_list[i].directed_edges:
-        #                 f.write('(%d %d)' % e)
-        #             f.write('] succ: %d\n' % (self.env.binary_rewards[i]))
-        #     self.best_eval = acc
         return edge_index, edge_weight
 
     def train(self, num_steps=100000, lr=0.001):
