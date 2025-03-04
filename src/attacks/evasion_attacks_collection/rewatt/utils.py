@@ -1,13 +1,9 @@
-from inspect import Parameter
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import networkx as nx
-import numpy as np
-import random
 from torch.distributions import Categorical
 from torch_geometric.utils import k_hop_subgraph
+from tqdm import tqdm
 
 
 class MLP(nn.Module):
@@ -67,19 +63,16 @@ def vc_representation(vc_emb, v_et1):
 
 
 class GraphState:
-    def __init__(self, x, edge_index, y):
+    def __init__(self, x, edge_index, y, y_prob):
         self.x = x
         self.edge_index = edge_index
         self.y = y
+        self.y_prob = y_prob
 
 
 class GraphEnvironment:
     def __init__(self, gnn_model, initial_state: GraphState, eps, node_idx=None):
-        """
-        Класс окружения, которое принимает действия агента и обновляет состояние.
-
-        :param initial_state: Начальное состояние графа (объект GraphState).
-        """
+        """ An environment class that receives agent actions and updates the state. """
         self.gnn_model = gnn_model
         self.K = int(eps * initial_state.edge_index.size(1))
         self.initial_state = initial_state
@@ -92,10 +85,10 @@ class GraphEnvironment:
 
     def step(self, action):
         """
-        Выполняет действие, изменяет состояние и возвращает новое состояние и награду.
+        Performs an action, changes the state, and returns the new state and reward.
 
-        :param action: Кортеж (vfir, vsec, vthi) - операция переподключения рёбер.
-        :return: (новое состояние, награда)
+        :param action: tuple (v_fir, v_sec, v_thi).
+        :return: (new state, reward).
         """
         new_state = self.apply_rewiring(self.current_state, action)  # Изменение графа
         reward = self.calculate_reward(new_state)  # Вычисление награды
@@ -104,44 +97,41 @@ class GraphEnvironment:
 
     def apply_rewiring(self, state, action):
         """
-        Применяет операцию переподключения рёбер к текущему состоянию.
+        Applies an edge rewiring operation to the current state.
 
-        :param state: Текущее состояние графа.
-        :param action: (vfir, vsec, vthi) - узлы, участвующие в переподключении.
-        :return: Новое состояние графа (GraphState).
+        :param state: current state of the graph.
+        :param action: (v_fir, v_sec, v_thi) - nodes involved in rewiring.
+        :return: new state of the graph (GraphState).
         """
         v_fir, v_sec, v_thi = action
 
-        # Копируем рёбра, чтобы не менять исходные данные
+        # copy the edges so as not to change the original data
         edge_index_new = state.edge_index.clone()
 
-        # Ищем ребро, которое нужно удалить
-        mask = (edge_index_new[0] == v_fir) & (edge_index_new[1] == v_sec)
+        # looking for the edge that needs to be removed
+        mask = (edge_index_new[0] == v_sec) & (edge_index_new[1] == v_fir)
 
-        # Удаляем ребро (v_fir, v_sec) и добавляем (v_thi, v_fir) !!!
+        # remove edge (v_sec, v_fir) and add (v_thi, v_fir) !!!
         edge_index_new = torch.cat([
-            edge_index_new[:, ~mask],  # Оставляем только те рёбра, которые НЕ удаляются
-            torch.tensor([[v_thi], [v_fir]], dtype=torch.long)  # Добавляем новое ребро
+            edge_index_new[:, ~mask],  # leave only those edges that are not deleted
+            torch.tensor([[v_thi], [v_fir]], dtype=torch.long)  # add a new edge
         ], dim=1)
 
         if self.graph_classification_task:
-            y = self.gnn_model(state.x, edge_index_new).argmax()
+            probs = torch.softmax(self.gnn_model(state.x, edge_index_new), dim=1).squeeze()
         else:
-            y = self.gnn_model(state.x, edge_index_new)[self.node_idx].argmax()
+            probs = torch.softmax(self.gnn_model(state.x, edge_index_new)[self.node_idx], dim=0)
+        y = probs.argmax()
+        y_prob = probs.max().item()
 
-        return GraphState(state.x, edge_index_new, y)
+        return GraphState(state.x, edge_index_new, y, y_prob)
 
     def calculate_reward(self, new_state):
-        """
-        Оценивает награду на основе того, изменилось ли состояние.
-
-        :param new_state: Новое состояние графа.
-        :return: Награда (число).
-        """
         if not torch.equal(new_state.y, self.initial_state.y):
             return 1
         n_r = -1 / self.K
         return n_r
+        # return self.initial_state.y_prob - new_state.y_prob
 
 
 class ReWattPolicyNet(nn.Module):
@@ -154,7 +144,12 @@ class ReWattPolicyNet(nn.Module):
             self.graph_classification_task = False
         else:
             self.graph_classification_task = True
+
         self.gnn_model = gnn_model
+        # Disable updating of model parameters
+        for param in self.gnn_model.parameters():
+            param.requires_grad = False
+
         self.penultimate_layer_embeddings_dim = penultimate_layer_embeddings_dim
 
         self.edge_representer = EdgeRepresenter(h_method)
@@ -174,26 +169,23 @@ class ReWattPolicyNet(nn.Module):
         embeddings = self.gnn_model.get_all_layer_embeddings(state.x, state.edge_index)[self.gnn_model.n_layers - 2]
         graph_representation = self.graph_representer(embeddings)
 
-        E_s_t = []
         if self.graph_classification_task:
-            for i in range(state.edge_index.size(1)):
-                v1, v2 = state.edge_index[:, i]
-                edge_representation = self.edge_representer(embeddings[v1], embeddings[v2], graph_representation)
-                E_s_t.append(edge_representation)
-            E_s_t = torch.stack(E_s_t)
+            v_fir_candidate_edges = state.edge_index
         else:
-            # edge_index_N_1 - edges that transmit information to node_idx
-            _, edge_index_N_1, _, _ = k_hop_subgraph(node_idx=self.node_idx,
-                                         num_hops=1,
-                                         edge_index=state.edge_index,
-                                         relabel_nodes=False,
-                                         flow="source_to_target",
-                                         directed=True)
-            for i in range(edge_index_N_1.size(1)):
-                v1, v2 = state.edge_index[:, i]
-                edge_representation = self.edge_representer(embeddings[v1], embeddings[v2], graph_representation)
-                E_s_t.append(edge_representation)
-            E_s_t = torch.stack(E_s_t)
+            # "source_to_target" - edges that transmit information to node_idx: (v_i, node_idx) v_i -> node_idx
+            _, v_fir_candidate_edges, _, _ = k_hop_subgraph(node_idx=self.node_idx,
+                                                            num_hops=1,
+                                                             edge_index=state.edge_index,
+                                                             relabel_nodes=False,
+                                                             flow="source_to_target",
+                                                             directed=True)
+
+        E_s_t = []
+        for i in range(v_fir_candidate_edges.size(1)):
+            v1, v2 = v_fir_candidate_edges[:, i]
+            edge_representation = self.edge_representer(embeddings[v1], embeddings[v2], graph_representation)
+            E_s_t.append(edge_representation)
+        E_s_t = torch.stack(E_s_t)
 
         edge_scores = self.edge_fc(E_s_t)
         edge_probs = torch.softmax(edge_scores.squeeze(), dim=0)
@@ -201,16 +193,13 @@ class ReWattPolicyNet(nn.Module):
         e_idx = edge_dist.sample()
         log_prob_edge = edge_dist.log_prob(e_idx)
 
-        # This is an important place. I choose v_fir as state.edge_index[1][idx].item() and
-        # v_sec as state.edge_index[0][idx].item() because edge (a,b) means that vertex a passes
+        # This is an important place. I choose v_fir as v_fir_candidate_edges[1][idx].item() and
+        # v_sec as v_fir_candidate_edges[0][idx].item() because edge (a,b) means that vertex a passes
         # information to vertex b during convolution. And we need the attacked vertex to be the one
         # that collects information. So deleting edge (a,b) changes the embedding value of vertex b.
-        if self.graph_classification_task:
-            v_fir = state.edge_index[1][e_idx].item()
-            v_sec = state.edge_index[0][e_idx].item()
-        else:
-            v_fir = edge_index_N_1[1][e_idx].item()
-            v_sec = edge_index_N_1[0][e_idx].item()
+        # So in .apply_rewiring() method we delete (v_sec, v_fir) edge
+        v_fir = v_fir_candidate_edges[1][e_idx].item()
+        v_sec = v_fir_candidate_edges[0][e_idx].item()
 
         # Here you can choose from which set of vertices the third v_thi will be selected.
         # The article suggests choosing from the second neighborhood. But I think that this is because they are
@@ -257,19 +246,18 @@ class ReWattAgent:
         self.rewards = []
 
     def select_action(self, state):
-        """
-        Выбирает действие и log_prob.
-        """
         action, log_prob = self.policy_net(state)
         return action, log_prob
 
-    def train(self, epochs):
-        stop_train = False
-        for epoch in range(epochs):
+    def train(self, epochs) -> GraphState:
+        best_y_prob = self.env.initial_state.y_prob
+        best_state = GraphState
+        for epoch in tqdm(range(epochs)):
             self.env.current_state = self.env.initial_state
             state = self.env.initial_state
             total_reward = 0
 
+            new_state = GraphState
             for _ in range(self.env.K):
                 action, log_prob = self.select_action(state)
                 new_state, reward = self.env.step(action)
@@ -280,14 +268,18 @@ class ReWattAgent:
                 state = new_state
 
                 if reward == 1:
-                    stop_train = True
-                    break
+                     self.update_policy()
+                     print("Class has been changed, policy net has been trained!")
+                     return new_state
 
             self.update_policy()
-            print(f"epoch {epoch}, Total Reward: {total_reward}")
-            if stop_train:
-                print("Class has been changed, policy net has been trained!")
-                return
+
+            # look at y_prob after K rewirings and save state of the graph that most strongly reduces
+            # the probability of a correct prediction
+            if new_state.y_prob < best_y_prob:
+                best_y_prob = new_state.y_prob
+                best_state = new_state
+        return best_state
 
     def update_policy(self):
         R = 0
@@ -307,27 +299,3 @@ class ReWattAgent:
 
         self.log_probs = []
         self.rewards = []
-
-
-# import torch
-# from torch_geometric.nn import GCNConv
-# from torch_geometric.data import Data
-#
-# # Признаки вершин (например, для 3 вершин)
-# x = torch.tensor([[1], [2], [3]], dtype=torch.float)  # размерность (3, 1)
-#
-# # edge_index описывает ребра: каждое ребро [a, b] означает, что a передает информацию b
-# edge_index = torch.tensor([[0, 1, 2],  # a, b, c (исходные вершины)
-#                            [1, 2, 0]], # b, c, a (целевые вершины)
-#                           dtype=torch.long)
-#
-# # Создание объекта Data
-# data = Data(x=x, edge_index=edge_index)
-#
-# # Инициализация слоя GCN с 1 выходным каналом
-# conv = GCNConv(1, 1, bias=False, add_self_loops=False)
-# conv.lin.weight.data.fill_(1)
-#
-# # Применение свертки
-# out = conv(data.x, data.edge_index)
-# print(out)
