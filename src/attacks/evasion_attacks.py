@@ -18,7 +18,6 @@ from torch_geometric.utils import k_hop_subgraph
 from torch_geometric.data import Data
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from tqdm import tqdm
-from skopt import Optimizer
 
 # FGSM imports
 from models_builder.models_utils import apply_decorator_to_graph_layers

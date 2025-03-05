@@ -1,16 +1,19 @@
-import copy
-
 import numpy as np
-import scipy as sp
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import torch.sparse
 from torch.optim.optimizer import required
-import torch_geometric.utils
-from torch_geometric.utils import to_torch_coo_tensor, to_edge_index, to_dense_adj, dense_to_sparse, is_sparse
+from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
+import torch.nn.functional as F
+
+from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+    EVASION_DEFENSE_PARAMETERS_PATH
+from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from src.aux.configs import ModelModificationConfig, ConfigPattern
+from src.base.datasets_processing import DatasetManager
+from src.models_builder.models_zoo import model_configs_zoo
 
 from defense.poison_defense import PoisonDefender
 
@@ -19,7 +22,7 @@ class ProGNNDefender(PoisonDefender):
 
     # TODO re-write with support of sparse matrix
 
-    def __init__(self, symmetric, lr_adj, alpha, beta, epochs, lambda_, phi, **kw):
+    def __init__(self, symmetric, lr_adj, alpha, beta, epochs, lambda_, phi, surr_epochs, surr_lr, weight_decay, data_steps, model_steps, **kw):
         super().__init__()
         self.symmetric = symmetric
         self.lr_adj = lr_adj
@@ -28,6 +31,11 @@ class ProGNNDefender(PoisonDefender):
         self.epochs = epochs
         self.lambda_ = lambda_
         self.phi = phi
+        self.surr_epochs = surr_epochs
+        self.surr_lr = surr_lr
+        self.weight_decay = weight_decay
+        self.data_steps = data_steps
+        self.model_steps = model_steps
 
     def defense(self, gen_dataset, **kw):
 
@@ -36,6 +44,10 @@ class ProGNNDefender(PoisonDefender):
         adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze(0)
 
         self.device = gen_dataset.dataset.data.x.device
+
+        self.model = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
+        self.optimizer = optim.Adam(self.model.parameters(),
+                               lr=self.surr_lr, weight_decay=self.weight_decay)
 
         estimator = EstimateAdj(adj, symmetric=self.symmetric, device=self.device).to(self.device)
         self.estimator = estimator
@@ -53,11 +65,50 @@ class ProGNNDefender(PoisonDefender):
 
         # Train model
         for epoch in tqdm(range(self.epochs)):
-            self.train_adj(epoch, features, adj)
+            for i in range(self.data_steps):
+                self.train_adj(epoch, features, adj)
+            for i in range(self.model_steps):
+                self.train_gcn(epoch, features, adj)
 
 
         gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
         return gen_dataset
+
+    def train_gcn(self, epoch, features, adj, labels, idx_train, idx_val):
+        estimator = self.estimator
+        adj = estimator.normalize()
+
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        output = self.model(features, adj)
+        loss_train = F.nll_loss(output[idx_train], labels[idx_train])
+        acc_train = accuracy(output[idx_train], labels[idx_train])
+        loss_train.backward()
+        self.optimizer.step()
+
+        # Evaluate validation set performance separately,
+        # deactivates dropout during validation run.
+        self.model.eval()
+        output = self.model(features, adj)
+
+        loss_val = F.nll_loss(output[idx_val], labels[idx_val])
+        acc_val = accuracy(output[idx_val], labels[idx_val])
+
+        if acc_val > self.best_val_acc:
+            self.best_val_acc = acc_val
+            self.best_graph = adj.detach()
+            self.weights = deepcopy(self.model.state_dict())
+            if args.debug:
+                print('\t=== saving current graph/gcn, best_val_acc: %s' % self.best_val_acc.item())
+
+        if loss_val < self.best_val_loss:
+            self.best_val_loss = loss_val
+            self.best_graph = adj.detach()
+            self.weights = deepcopy(self.model.state_dict())
+            if args.debug:
+                print(f'\t=== saving current graph/gcn, best_val_loss: %s' % self.best_val_loss.item())
+
 
     def train_adj(self, epoch, features, adj):
         estimator = self.estimator
