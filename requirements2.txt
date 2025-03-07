@@ -12,6 +12,7 @@ redis
 six
 scipy==1.12.0
 scikit-learn==1.4.0
+scikit-optimize
 joblib
 threadpoolctl
 pytz
