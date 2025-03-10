@@ -8,7 +8,12 @@ from tqdm import tqdm
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+    def __init__(
+            self,
+            input_dim: int,
+            hidden_dim: int,
+            output_dim: int
+    ):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
@@ -20,7 +25,10 @@ class MLP(nn.Module):
 
 
 class EdgeRepresenter:
-    def __init__(self, method: str = 'sum'):
+    def __init__(
+            self,
+            method: str = 'sum'
+    ):
         super(EdgeRepresenter, self).__init__()
         self.h = self._get_h_function(method)   # h() function from article
 
@@ -40,7 +48,10 @@ class EdgeRepresenter:
 
 
 class GraphRepresenter:
-    def __init__(self, method: str = 'mean'):
+    def __init__(
+            self,
+            method: str = 'mean'
+    ):
         super(GraphRepresenter, self).__init__()
         self.method = method
 
@@ -64,7 +75,12 @@ def vc_representation(vc_emb: torch.Tensor, v_et1: torch.Tensor):
 
 
 class GraphState:
-    def __init__(self, x: torch.Tensor, edge_index: torch.Tensor, y: torch.Tensor, y_prob: float):
+    def __init__(
+            self, x: torch.Tensor,
+            edge_index: torch.Tensor,
+            y: torch.Tensor,
+            y_prob: float
+    ):
         self.x = x
         self.edge_index = edge_index
         self.y = y
@@ -72,7 +88,13 @@ class GraphState:
 
 
 class GraphEnvironment:
-    def __init__(self, gnn_model: FrameworkGNNConstructor, initial_state: GraphState, eps: float, node_idx: int = None):
+    def __init__(
+            self,
+            gnn_model: FrameworkGNNConstructor,
+            initial_state: GraphState,
+            eps: float,
+            node_idx: int = None
+    ):
         """ An environment class that receives agent actions and updates the state. """
         self.gnn_model = gnn_model
         self.K = int(eps * initial_state.edge_index.size(1))
@@ -136,8 +158,16 @@ class GraphEnvironment:
 
 
 class ReWattPolicyNet(nn.Module):
-    def __init__(self, gnn_model: FrameworkGNNConstructor, penultimate_layer_embeddings_dim: int, mlp_hidden: int = 16,
-                 node_idx: int = None, h_method: str = 'sum', pooling_method: str = 'mean', device: str = 'cpu'):
+    def __init__(
+            self,
+            gnn_model: FrameworkGNNConstructor,
+            penultimate_layer_embeddings_dim: int,
+            mlp_hidden: int = 16,
+            node_idx: int = None,
+            h_method: str = 'sum',
+            pooling_method: str = 'mean',
+            device: str = 'cpu'
+    ):
         super(ReWattPolicyNet, self).__init__()
         self.device = device
 
@@ -239,7 +269,13 @@ class ReWattPolicyNet(nn.Module):
 
 
 class ReWattAgent:
-    def __init__(self, policy_net, environment, lr: float = 1e-3, gamma: float = 0.99):
+    def __init__(
+            self,
+            policy_net: ReWattPolicyNet,
+            environment: GraphEnvironment,
+            lr: float = 1e-3,
+            gamma: float = 0.99
+    ):
         self.policy_net = policy_net
         self.env = environment
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
