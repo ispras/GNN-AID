@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple, Any
 from copy import deepcopy
 
 from attacks.RL_S2V.utils import sum_coo_tensors, norm_adj
@@ -252,14 +252,14 @@ class NodeAttackEnv(object):
             return True
         return False
 
-    def getStateRef(self):
+    def getStateRef(self) -> Tuple[Any, ModifiedGraph, Any]:
         cp_first = [None] * len(self.target_nodes)
         if self.first_nodes is not None:
             cp_first = self.first_nodes
 
         return zip(self.target_nodes, self.modified_list, cp_first)
 
-    def cloneState(self):
+    def cloneState(self) -> List[Tuple[Any, ModifiedGraph, Any]]:
         cp_first = [None] * len(self.target_nodes)
         if self.first_nodes is not None:
             cp_first = self.first_nodes[:]
@@ -298,19 +298,19 @@ class RLS2VAgent(object):
             self,
             env: NodeAttackEnv,
             gen_dataset: GeneralDataset,
-            node_idx,
-            idx_test,
-            list_action_space,
-            num_mod,
-            reward_type,
+            node_idx: int,
+            idx_test: List,
+            list_action_space: Dict[int, List[int]],
+            num_mod: int,
+            reward_type: str,
             batch_size=10,
             num_wrong=0,
-            bilin_q=1,
-            embed_dim=64,
-            gm='mean_field',
-            mlp_hidden=64,
-            max_lv=1,
-            device=None
+            bilin_q: bool = True,
+            embed_dim: int = 64,
+            gm: str = 'mean_field',
+            mlp_hidden: int = 64,
+            max_lv: int = 1,
+            device: Optional[str] = None
     ):
 
         assert device is not None, "'device' cannot be None, please specify it"

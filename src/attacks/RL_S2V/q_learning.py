@@ -5,12 +5,18 @@ from torch import nn
 from torch.nn.parameter import Parameter
 from torch_geometric.transforms import ToSparseTensor
 from torch_geometric.data import Data
+
+from attacks.RL_S2V.rl_modules import ModifiedGraph
 from attacks.RL_S2V.utils import norm_adj, sum_coo_tensors
+from typing import List, Tuple, Any, Optional, Dict
 import torch.nn.functional as F
 
-# TODO add docs
+
 class NstepReplaySubMemCell(object):
-    def __init__(self, memory_size):
+    def __init__(
+            self,
+            memory_size: int
+    ) -> None:
         self.memory_size = memory_size
 
         self.actions = [None] * self.memory_size
@@ -22,7 +28,14 @@ class NstepReplaySubMemCell(object):
         self.count = 0
         self.current = 0
 
-    def add(self, s_t, a_t, r_t, s_prime, terminal):
+    def add(
+            self,
+            s_t: Tuple[Any, ModifiedGraph, Any],
+            a_t: int,
+            r_t: np.ndarray,
+            s_prime: Tuple[Any, ModifiedGraph, Any],
+            terminal: bool
+    ) -> None:
         self.actions[self.current] = a_t
         self.rewards[self.current] = r_t
         self.states[self.current] = s_t
@@ -32,7 +45,14 @@ class NstepReplaySubMemCell(object):
         self.count = max(self.count, self.current + 1)
         self.current = (self.current + 1) % self.memory_size
 
-    def add_list(self, list_st, list_at, list_rt, list_sp, list_term):
+    def add_list(
+            self,
+            list_st: List[Tuple[Any, ModifiedGraph, Any]],
+            list_at: List[int],
+            list_rt: List[np.ndarray],
+            list_sp: List[Tuple[Any, ModifiedGraph, Any]],
+            list_term: List[bool],
+    ) -> None:
         for i in range(len(list_st)):
             if list_sp is None:
                 sp = (None, None, None)
@@ -40,7 +60,10 @@ class NstepReplaySubMemCell(object):
                 sp = list_sp[i]
             self.add(list_st[i], list_at[i], list_rt[i], sp, list_term[i])
 
-    def sample(self, batch_size):
+    def sample(
+            self,
+            batch_size: int
+    ) -> tuple[List, List, List, List, List]:
 
         assert self.count >= batch_size
         list_st = []
@@ -59,7 +82,11 @@ class NstepReplaySubMemCell(object):
 
         return list_st, list_at, list_rt, list_s_primes, list_term
 
-def hash_state_action(s_t, a_t):
+
+def hash_state_action(
+        s_t: Tuple[Any, ModifiedGraph, Any],
+        a_t: int
+) -> int:
     key = s_t[0]
     base = 179424673
     for e in s_t[1].directed_edges:
@@ -73,7 +100,11 @@ def hash_state_action(s_t, a_t):
     key = (key * base + a_t) % base
     return key
 
-def nipa_hash_state_action(s_t, a_t):
+
+def nipa_hash_state_action(
+        s_t: Tuple[Any, ModifiedGraph, Any],
+        a_t: int
+) -> int:
     key = s_t[0]
     base = 179424673
     for e in s_t[1].directed_edges:
@@ -86,9 +117,14 @@ def nipa_hash_state_action(s_t, a_t):
 
     key = (key * base + a_t) % base
     return key
+
 
 class NstepReplayMemCell(object):
-    def __init__(self, memory_size, balance_sample = False):
+    def __init__(
+            self,
+            memory_size: int,
+            balance_sample: bool = False
+    ) -> None:
         self.sub_list = []
         self.balance_sample = balance_sample
         self.sub_list.append(NstepReplaySubMemCell(memory_size))
@@ -96,7 +132,14 @@ class NstepReplayMemCell(object):
             self.sub_list.append(NstepReplaySubMemCell(memory_size))
             self.state_set = set()
 
-    def add(self, s_t, a_t, r_t, s_prime, terminal, use_hash=True):
+    def add(self,
+            s_t: Tuple[Any, ModifiedGraph, Any],
+            a_t: int,
+            r_t: np.ndarray,
+            s_prime: Tuple[Any, ModifiedGraph, Any],
+            terminal: bool,
+            use_hash: bool = True
+            ) -> None:
         if not self.balance_sample or r_t < 0:
             self.sub_list[0].add(s_t, a_t, r_t, s_prime, terminal)
         else:
@@ -108,7 +151,10 @@ class NstepReplayMemCell(object):
                 self.state_set.add(key)
             self.sub_list[1].add(s_t, a_t, r_t, s_prime, terminal)
 
-    def sample(self, batch_size):
+    def sample(
+            self,
+            batch_size: int
+    ) -> tuple[List, List, List, List, List]:
         if not self.balance_sample or self.sub_list[1].count < batch_size:
             return self.sub_list[0].sample(batch_size)
 
@@ -117,8 +163,15 @@ class NstepReplayMemCell(object):
 
         return list_st + list_st2, list_at + list_at2, list_rt + list_rt2, list_s_primes + list_s_primes2, list_term + list_term2
 
+
 class NstepReplayMem(object):
-    def __init__(self, memory_size, n_steps, balance_sample=False, model='rl_s2v'):
+    def __init__(
+            self,
+            memory_size: int,
+            n_steps: int,
+            balance_sample: bool = False,
+            model: str = 'rl_s2v'
+    ) -> None:
         self.mem_cells = []
         for i in range(n_steps - 1):
             self.mem_cells.append(NstepReplayMemCell(memory_size, False))
@@ -128,7 +181,15 @@ class NstepReplayMem(object):
         self.memory_size = memory_size
         self.model = model
 
-    def add(self, s_t, a_t, r_t, s_prime, terminal, t):
+    def add(
+            self,
+            s_t: Tuple[Any, ModifiedGraph, Any],
+            a_t: int,
+            r_t: np.ndarray,
+            s_prime: Tuple[Any, ModifiedGraph, Any],
+            terminal: List[bool],
+            t: int
+    ) -> None:
         assert t >= 0 and t < self.n_steps
         if self.model == 'nipa':
             self.mem_cells[t].add(s_t, a_t, r_t, s_prime, terminal, use_hash=False)
@@ -139,7 +200,15 @@ class NstepReplayMem(object):
                 assert not terminal
             self.mem_cells[t].add(s_t, a_t, r_t, s_prime, terminal, use_hash=True)
 
-    def add_list(self, list_st, list_at, list_rt, list_sp, list_term, t):
+    def add_list(
+            self,
+            list_st: List[Tuple[Any, ModifiedGraph, Any]],
+            list_at: List[int],
+            list_rt: List[np.ndarray],
+            list_sp: List[Tuple[Any, ModifiedGraph, Any]],
+            list_term: List[bool],
+            t: int
+    ) -> None:
         for i in range(len(list_st)):
             if list_sp is None:
                 sp = (None, None, None)
@@ -147,7 +216,11 @@ class NstepReplayMem(object):
                 sp = list_sp[i]
             self.add(list_st[i], list_at[i], list_rt[i], sp, list_term[i], t)
 
-    def sample(self, batch_size, t = None):
+    def sample(
+            self,
+            batch_size: int,
+            t: Optional[int] = None
+    ) -> tuple[int, List, List, List, List, List]:
         if t is None:
             t = np.random.randint(self.n_steps)
             list_st, list_at, list_rt, list_s_primes, list_term = self.mem_cells[t].sample(batch_size)
@@ -161,7 +234,17 @@ class NstepReplayMem(object):
 
 class QNetNode(nn.Module):
 
-    def __init__(self, num_node_features, list_action_space, bilin_q=1, embed_dim=64, mlp_hidden=64, max_lv=1, gm='mean_field', device='cpu'):
+    def __init__(
+            self,
+            num_node_features: int,
+            list_action_space,
+            bilin_q=1,
+            embed_dim=64,
+            mlp_hidden=64,
+            max_lv=1,
+            gm='mean_field',
+            device='cpu'
+    ) -> None:
         '''
         bilin_q: bilinear q or not
         mlp_hidden: mlp hidden layer size
@@ -206,7 +289,18 @@ class QNetNode(nn.Module):
             sp = sp.cuda()
         return sp
 
-    def forward(self, node_features, orig_edge_index, orig_edge_weight, num_nodes, time_t, states, actions, greedy_acts=False, is_inference=False):
+    def forward(
+            self,
+            node_features: torch.Tensor,
+            orig_edge_index: torch.Tensor,
+            orig_edge_weight: torch.Tensor,
+            num_nodes: int,
+            time_t: int,
+            states,
+            actions,
+            greedy_acts: bool = False,
+            is_inference: bool = False
+    ):
 
         if node_features.data.is_sparse:
             input_node_linear = torch.spmm(node_features, self.w_n2l)
@@ -225,13 +319,13 @@ class QNetNode(nn.Module):
             node_embed = input_node_linear.clone()
             if picked_nodes is not None and picked_nodes[i] is not None:
                 with torch.set_grad_enabled(mode=not is_inference):
-                    picked_sp =  self.make_spmat(self.total_nodes, 1, picked_nodes[i], 0)
+                    picked_sp = self.make_spmat(self.total_nodes, 1, picked_nodes[i], 0)
                     node_embed += torch.spmm(picked_sp, self.bias_picked)
                     region = self.list_action_space[picked_nodes[i]]
 
             if not self.bilin_q:
                 with torch.set_grad_enabled(mode=not is_inference):
-                # with torch.no_grad():
+                    # with torch.no_grad():
                     target_sp = self.make_spmat(self.total_nodes, 1, target_nodes[i], 0)
                     node_embed += torch.spmm(target_sp, self.bias_target)
 
@@ -240,16 +334,17 @@ class QNetNode(nn.Module):
                 extra_edge_index, extra_edge_weight = batch_graph[i].get_extra_adj(device=device)
                 if extra_edge_index is None:
                     normed_edge_ind, normed_edge_weight = norm_adj(orig_edge_index, orig_edge_weight, num_nodes)
-                    adj = torch.sparse.FloatTensor(normed_edge_ind, normed_edge_weight, torch.Size([num_nodes, num_nodes]))
+                    adj = torch.sparse.FloatTensor(normed_edge_ind, normed_edge_weight,
+                                                   torch.Size([num_nodes, num_nodes]))
                 else:
                     modified_edge_index, modified_edge_weight = sum_coo_tensors(orig_edge_index, orig_edge_weight,
                                                                                 extra_edge_index, extra_edge_weight,
                                                                                 num_nodes)
                     modified_edge_index, modified_edge_weight = norm_adj(modified_edge_index, modified_edge_weight,
                                                                          gm=self.gm)
-                    adj = torch.sparse.FloatTensor(modified_edge_index, modified_edge_weight, torch.Size([num_nodes, num_nodes]))
+                    adj = torch.sparse.FloatTensor(modified_edge_index, modified_edge_weight,
+                                                   torch.Size([num_nodes, num_nodes]))
                 # adj = self.norm_tool.norm_extra(batch_graph[i].get_extra_adj(device, return_sparse=True))
-
 
                 lv = 0
                 input_message = node_embed
@@ -257,7 +352,7 @@ class QNetNode(nn.Module):
                 node_embed = F.relu(input_message)
                 while lv < self.max_lv:
                     n2npool = torch.spmm(adj, node_embed)
-                    node_linear = self.conv_params( n2npool )
+                    node_linear = self.conv_params(n2npool)
                     merged_linear = node_linear + input_message
                     node_embed = F.relu(merged_linear)
                     lv += 1
@@ -279,7 +374,7 @@ class QNetNode(nn.Module):
 
                 embed_s_a = torch.cat((node_embed, graph_embed), dim=1)
                 if self.mlp_hidden:
-                    embed_s_a = F.relu( self.linear_1(embed_s_a) )
+                    embed_s_a = F.relu(self.linear_1(embed_s_a))
                 raw_pred = self.linear_out(embed_s_a)
 
                 if self.bilin_q:
@@ -291,10 +386,22 @@ class QNetNode(nn.Module):
 
         return actions, list_pred
 
+
 class NStepQNetNode(nn.Module):
 
-    def __init__(self, node_features, num_steps, num_node_features, list_action_space, bilin_q=1, embed_dim=64, mlp_hidden=64, max_lv=1, gm='mean_field', device='cpu'):
-
+    def __init__(
+            self,
+            node_features: torch.Tensor,
+            num_steps: int,
+            num_node_features: int,
+            list_action_space: Dict[int, List[int]],
+            bilin_q: bool = True,
+            embed_dim: int = 64,
+            mlp_hidden: int = 64,
+            max_lv: int = 1,
+            gm: str = 'mean_field',
+            device: str = 'cpu'
+    ) -> None:
         super(NStepQNetNode, self).__init__()
         self.node_features = node_features
         self.list_action_space = list_action_space
@@ -303,17 +410,27 @@ class NStepQNetNode(nn.Module):
         list_mod = []
         for i in range(0, num_steps):
             # list_mod.append(QNetNode(node_features, node_labels, list_action_space))
-            list_mod.append(QNetNode(num_node_features, list_action_space, bilin_q, embed_dim, mlp_hidden, max_lv, gm=gm, device=device))
+            list_mod.append(
+                QNetNode(num_node_features, list_action_space, bilin_q, embed_dim, mlp_hidden, max_lv, gm=gm,
+                         device=device))
 
         self.list_mod = nn.ModuleList(list_mod)
         self.num_steps = num_steps
 
-    def forward(self, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states, actions, greedy_acts = False, is_inference=False):
+    def forward(self, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states, actions, greedy_acts=False,
+                is_inference=False):
         assert time_t >= 0 and time_t < self.num_steps
 
-        return self.list_mod[time_t](self.node_features, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states, actions, greedy_acts, is_inference)
+        return self.list_mod[time_t](self.node_features, orig_edge_index, orig_edge_weigt, num_nodes, time_t, states,
+                                     actions, greedy_acts, is_inference)
 
-def node_greedy_actions(target_nodes, picked_nodes, list_q, net):
+
+def node_greedy_actions(
+        target_nodes,
+        picked_nodes,
+        list_q,
+        net: nn.Module
+):
     assert len(target_nodes) == len(list_q)
 
     actions = []
@@ -339,7 +456,10 @@ def node_greedy_actions(target_nodes, picked_nodes, list_q, net):
 
     return torch.cat(actions, dim=0).data, torch.cat(values, dim=0).data
 
-def weights_init(m):
+
+def weights_init(
+        m: nn.Module
+):
     for p in m.modules():
         if isinstance(p, nn.ParameterList):
             for pp in p:
@@ -348,17 +468,23 @@ def weights_init(m):
             _param_init(p)
 
     for name, p in m.named_parameters():
-        if not '.' in name: # top-level parameters
+        if not '.' in name:  # top-level parameters
             _param_init(p)
 
-def _param_init(m):
+
+def _param_init(
+        m: nn.Module
+):
     if isinstance(m, Parameter):
         glorot_uniform(m.data)
     elif isinstance(m, nn.Linear):
         m.bias.data.zero_()
         glorot_uniform(m.weight.data)
 
-def glorot_uniform(t):
+
+def glorot_uniform(
+        t: torch.Tensor
+):
     if len(t.size()) == 2:
         fan_in, fan_out = t.size()
     elif len(t.size()) == 3:
