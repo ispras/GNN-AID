@@ -624,21 +624,22 @@ class ReWattAttacker(
             y = gen_dataset.dataset[graph_idx].y.squeeze()
             x = gen_dataset.dataset[graph_idx].x
             y_prob = torch.softmax(model(x, edge_index), dim=1).squeeze().max().item()
+            penultimate_layer_embeddings_dim = (
+                model.get_all_layer_embeddings(x, edge_index)[model.embedding_levels_by_layers.index('g') - 1].size(1))
         else:
             node_idx = self.element_idx
             y = gen_dataset.data.y[node_idx]
             x = gen_dataset.data.x
             edge_index = gen_dataset.data.edge_index
             y_prob = torch.softmax(model(x, edge_index)[node_idx], dim=0).max().item()
+            penultimate_layer_embeddings_dim = (
+                model.get_all_layer_embeddings(x, edge_index)[len(model.embedding_levels_by_layers) - 2].size(1))
 
         # the attack makes sense when the model's prediction is correct !!!
         # we use y_prob in the attack because in case the attack fails to change the class, we have saved
         # the state of the graph that most reduces the probability of a correct prediction.
         initial_graph_state = GraphState(x, edge_index, y, y_prob)
         env = GraphEnvironment(model, initial_graph_state, eps=self.eps, node_idx=node_idx)
-
-        # TODO check that embeddings will get before pooling if graph_glassification task
-        penultimate_layer_embeddings_dim = model.get_all_layer_embeddings(x, edge_index)[model.n_layers - 2].size(1)
 
         policy = ReWattPolicyNet(gnn_model=model,
                                  penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,

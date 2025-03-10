@@ -3,27 +3,28 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
 from torch_geometric.utils import k_hop_subgraph
+from models_builder.gnn_constructor import FrameworkGNNConstructor
 from tqdm import tqdm
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         x = torch.sigmoid(self.fc1(x))
         x = self.fc2(x)
         return x
 
 
 class EdgeRepresenter:
-    def __init__(self, method='sum'):
+    def __init__(self, method: str = 'sum'):
         super(EdgeRepresenter, self).__init__()
         self.h = self._get_h_function(method)   # h() function from article
 
-    def __call__(self, v1_emb, v2_emb, graph_emb):
+    def __call__(self, v1_emb: torch.Tensor, v2_emb: torch.Tensor, graph_emb: torch.Tensor):
         return torch.cat((graph_emb, self.h(v1_emb, v2_emb)), dim=-1)
 
     @staticmethod
@@ -39,11 +40,11 @@ class EdgeRepresenter:
 
 
 class GraphRepresenter:
-    def __init__(self, method='mean'):
+    def __init__(self, method: str = 'mean'):
         super(GraphRepresenter, self).__init__()
         self.method = method
 
-    def __call__(self, node_embeddings):
+    def __call__(self, node_embeddings: torch.Tensor):
         if self.method == 'mean':
             return torch.mean(node_embeddings, dim=0)
         elif self.method == 'max':
@@ -52,7 +53,7 @@ class GraphRepresenter:
             raise ValueError("Unsupported pooling method")
 
 
-def vc_representation(vc_emb, v_et1):
+def vc_representation(vc_emb: torch.Tensor, v_et1: torch.Tensor):
     """
     Parameters:
     - v1_emb: The embedding of v_fir node.
@@ -63,7 +64,7 @@ def vc_representation(vc_emb, v_et1):
 
 
 class GraphState:
-    def __init__(self, x, edge_index, y, y_prob):
+    def __init__(self, x: torch.Tensor, edge_index: torch.Tensor, y: torch.Tensor, y_prob: float):
         self.x = x
         self.edge_index = edge_index
         self.y = y
@@ -71,7 +72,7 @@ class GraphState:
 
 
 class GraphEnvironment:
-    def __init__(self, gnn_model, initial_state: GraphState, eps, node_idx=None):
+    def __init__(self, gnn_model: FrameworkGNNConstructor, initial_state: GraphState, eps: float, node_idx: int = None):
         """ An environment class that receives agent actions and updates the state. """
         self.gnn_model = gnn_model
         self.K = int(eps * initial_state.edge_index.size(1))
@@ -90,9 +91,9 @@ class GraphEnvironment:
         :param action: tuple (v_fir, v_sec, v_thi).
         :return: (new state, reward).
         """
-        new_state = self.apply_rewiring(self.current_state, action)  # Изменение графа
-        reward = self.calculate_reward(new_state)  # Вычисление награды
-        self.current_state = new_state  # Обновляем текущее состояние
+        new_state = self.apply_rewiring(self.current_state, action)
+        reward = self.calculate_reward(new_state)
+        self.current_state = new_state
         return new_state, reward
 
     def apply_rewiring(self, state, action):
@@ -135,7 +136,8 @@ class GraphEnvironment:
 
 
 class ReWattPolicyNet(nn.Module):
-    def __init__(self, gnn_model, penultimate_layer_embeddings_dim, mlp_hidden=16, node_idx=None, h_method='sum', pooling_method='mean', device='cpu'):
+    def __init__(self, gnn_model: FrameworkGNNConstructor, penultimate_layer_embeddings_dim: int, mlp_hidden: int = 16,
+                 node_idx: int = None, h_method: str = 'sum', pooling_method: str = 'mean', device: str = 'cpu'):
         super(ReWattPolicyNet, self).__init__()
         self.device = device
 
@@ -237,7 +239,7 @@ class ReWattPolicyNet(nn.Module):
 
 
 class ReWattAgent:
-    def __init__(self, policy_net, environment, lr=1e-3, gamma=0.99):
+    def __init__(self, policy_net, environment, lr: float = 1e-3, gamma: float = 0.99):
         self.policy_net = policy_net
         self.env = environment
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
