@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 from torch_geometric.utils import k_hop_subgraph
 from models_builder.gnn_constructor import FrameworkGNNConstructor
 from tqdm import tqdm
+from typing import Callable, Tuple
 
 
 class MLP(nn.Module):
@@ -18,7 +19,10 @@ class MLP(nn.Module):
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, x: torch.Tensor):
+    def forward(
+            self,
+            x: torch.Tensor
+    ) -> torch.Tensor:
         x = torch.sigmoid(self.fc1(x))
         x = self.fc2(x)
         return x
@@ -32,11 +36,18 @@ class EdgeRepresenter:
         super(EdgeRepresenter, self).__init__()
         self.h = self._get_h_function(method)   # h() function from article
 
-    def __call__(self, v1_emb: torch.Tensor, v2_emb: torch.Tensor, graph_emb: torch.Tensor):
+    def __call__(
+            self,
+            v1_emb: torch.Tensor,
+            v2_emb: torch.Tensor,
+            graph_emb: torch.Tensor
+    ) -> torch.Tensor:
         return torch.cat((graph_emb, self.h(v1_emb, v2_emb)), dim=-1)
 
     @staticmethod
-    def _get_h_function(method):
+    def _get_h_function(
+            method: str,
+    ) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
         if method == "sum":
             return lambda a, b: a + b
         elif method == "mul":
@@ -55,7 +66,10 @@ class GraphRepresenter:
         super(GraphRepresenter, self).__init__()
         self.method = method
 
-    def __call__(self, node_embeddings: torch.Tensor):
+    def __call__(
+            self,
+            node_embeddings: torch.Tensor
+    ) -> torch.Tensor:
         if self.method == 'mean':
             return torch.mean(node_embeddings, dim=0)
         elif self.method == 'max':
@@ -64,7 +78,10 @@ class GraphRepresenter:
             raise ValueError("Unsupported pooling method")
 
 
-def vc_representation(vc_emb: torch.Tensor, v_et1: torch.Tensor):
+def vc_representation(
+        vc_emb: torch.Tensor,
+        v_et1: torch.Tensor
+) -> torch.Tensor:
     """
     Parameters:
     - v1_emb: The embedding of v_fir node.
@@ -76,7 +93,8 @@ def vc_representation(vc_emb: torch.Tensor, v_et1: torch.Tensor):
 
 class GraphState:
     def __init__(
-            self, x: torch.Tensor,
+            self,
+            x: torch.Tensor,
             edge_index: torch.Tensor,
             y: torch.Tensor,
             y_prob: float
@@ -85,6 +103,18 @@ class GraphState:
         self.edge_index = edge_index
         self.y = y
         self.y_prob = y_prob
+
+
+class Action:
+    def __init__(
+            self,
+            v_fir: int,
+            v_sec: int,
+            v_thi: int
+    ):
+        self.v_fir = v_fir
+        self.v_sec = v_sec
+        self.v_thi = v_thi
 
 
 class GraphEnvironment:
@@ -106,11 +136,14 @@ class GraphEnvironment:
         else:
             self.graph_classification_task = True
 
-    def step(self, action):
+    def step(
+            self,
+            action: Action
+    ) -> Tuple[GraphState, float]:
         """
         Performs an action, changes the state, and returns the new state and reward.
 
-        :param action: tuple (v_fir, v_sec, v_thi).
+        :param action: Action.
         :return: (new state, reward).
         """
         new_state = self.apply_rewiring(self.current_state, action)
@@ -118,15 +151,19 @@ class GraphEnvironment:
         self.current_state = new_state
         return new_state, reward
 
-    def apply_rewiring(self, state, action):
+    def apply_rewiring(
+            self,
+            state: GraphState,
+            action: Action
+    ) -> GraphState:
         """
         Applies an edge rewiring operation to the current state.
 
         :param state: current state of the graph.
-        :param action: (v_fir, v_sec, v_thi) - nodes involved in rewiring.
+        :param action: Action - nodes involved in rewiring.
         :return: new state of the graph (GraphState).
         """
-        v_fir, v_sec, v_thi = action
+        v_fir, v_sec, v_thi = action.v_fir, action.v_sec, action.v_thi
 
         # copy the edges so as not to change the original data
         edge_index_new = state.edge_index.clone()
@@ -149,7 +186,10 @@ class GraphEnvironment:
 
         return GraphState(state.x, edge_index_new, y, y_prob)
 
-    def calculate_reward(self, new_state):
+    def calculate_reward(
+            self,
+            new_state: GraphState
+    ) -> float:
         if not torch.equal(new_state.y, self.initial_state.y):
             return 1
         n_r = -1 / self.K
@@ -197,7 +237,10 @@ class ReWattPolicyNet(nn.Module):
 
         self.third_node_fc = MLP(4 * penultimate_layer_embeddings_dim, mlp_hidden, 1).to(device)
 
-    def forward(self, state):
+    def forward(
+            self,
+            state: GraphState
+    ) -> Tuple[Action, float]:
         embeddings = self.gnn_model.get_all_layer_embeddings(state.x, state.edge_index)[self.gnn_model.n_layers - 2]
         graph_representation = self.graph_representer(embeddings)
 
@@ -264,7 +307,7 @@ class ReWattPolicyNet(nn.Module):
         v_thi = S[v_thi_idx]
 
         log_prob = log_prob_edge + log_prob_third
-        action = (v_fir, v_sec, v_thi)
+        action = Action(v_fir, v_sec, v_thi)
         return action, log_prob
 
 
@@ -283,11 +326,17 @@ class ReWattAgent:
         self.log_probs = []
         self.rewards = []
 
-    def select_action(self, state):
+    def select_action(
+            self,
+            state: GraphState
+    ) -> Tuple[Action, float]:
         action, log_prob = self.policy_net(state)
         return action, log_prob
 
-    def train(self, epochs) -> GraphState:
+    def train(
+            self,
+            epochs: int
+    ) -> GraphState:
         best_y_prob = self.env.initial_state.y_prob
         best_state = GraphState
         for epoch in tqdm(range(epochs)):
@@ -319,7 +368,9 @@ class ReWattAgent:
                 best_state = new_state
         return best_state
 
-    def update_policy(self):
+    def update_policy(
+            self
+    ) -> None:
         R = 0
         returns = []
         for r in reversed(self.rewards):
