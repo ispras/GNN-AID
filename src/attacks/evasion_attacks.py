@@ -25,6 +25,9 @@ from models_builder.models_utils import apply_decorator_to_graph_layers
 from torch_geometric.utils import add_self_loops
 from torch_geometric.data import Data
 
+# ReWatt imports
+from attacks.evasion_attacks_collection.rewatt.utils import *
+
 
 class EvasionAttacker(
     Attacker
@@ -578,3 +581,79 @@ class NettackGroupEvasionAttacker(
             self.attacker.node_idx = node_idx
             gen_dataset = self.attacker.attack(model_manager, gen_dataset, mask_tensor)
         return gen_dataset
+
+
+class ReWattAttacker(
+    EvasionAttacker
+):
+    name = "ReWatt"
+
+    def __init__(
+            self,
+            element_idx: int = 0,
+            eps: int = 0.1,
+            epochs: int = 100,
+            mlp_hidden: int = 16,
+            h_method: str = 'sum',
+            pooling_method: str = 'mean',
+    ):
+        super().__init__()
+        self.element_idx = element_idx
+        self.eps = eps
+        self.epochs = epochs
+        self.mlp_hidden = mlp_hidden
+        self.h_method = h_method
+        self.pooling_method = pooling_method
+
+        self.attack_diff = None
+        self.my_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def attack(
+            self,
+            model_manager: Type,
+            gen_dataset: GeneralDataset,
+            mask_tensor: torch.Tensor
+    ):
+        model = model_manager.gnn
+        model.eval()
+
+        if gen_dataset.is_multi():
+            graph_idx = self.element_idx
+            node_idx=None
+            edge_index = gen_dataset.dataset[graph_idx].edge_index
+            y = gen_dataset.dataset[graph_idx].y.squeeze()
+            x = gen_dataset.dataset[graph_idx].x
+            y_prob = torch.softmax(model(x, edge_index), dim=1).squeeze().max().item()
+            penultimate_layer_embeddings_dim = (
+                model.get_all_layer_embeddings(x, edge_index)[model.embedding_levels_by_layers.index('g') - 1].size(1))
+        else:
+            node_idx = self.element_idx
+            y = gen_dataset.data.y[node_idx]
+            x = gen_dataset.data.x
+            edge_index = gen_dataset.data.edge_index
+            y_prob = torch.softmax(model(x, edge_index)[node_idx], dim=0).max().item()
+            penultimate_layer_embeddings_dim = (
+                model.get_all_layer_embeddings(x, edge_index)[len(model.embedding_levels_by_layers) - 2].size(1))
+
+        # the attack makes sense when the model's prediction is correct !!!
+        # we use y_prob in the attack because in case the attack fails to change the class, we have saved
+        # the state of the graph that most reduces the probability of a correct prediction.
+        initial_graph_state = GraphState(x, edge_index, y, y_prob)
+        env = GraphEnvironment(model, initial_graph_state, eps=self.eps, node_idx=node_idx)
+
+        policy = ReWattPolicyNet(gnn_model=model,
+                                 penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
+                                 node_idx=node_idx,
+                                 mlp_hidden=self.mlp_hidden,
+                                 h_method=self.h_method,
+                                 pooling_method=self.pooling_method,
+                                 device=self.my_device)
+
+        agent = ReWattAgent(policy, env, lr=1e-3, gamma=0.99)
+        attacked_graph = agent.train(epochs=self.epochs)
+
+        if gen_dataset.is_multi():
+            self.attack_diff = Data(x=x, edge_index=attacked_graph.edge_index, y=y)
+        else:
+            gen_dataset.data.edge_index = attacked_graph.edge_index
+            self.attack_diff = gen_dataset

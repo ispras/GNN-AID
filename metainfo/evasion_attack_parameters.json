@@ -32,6 +32,14 @@
   "learning_rate": ["Learning rate", "float", 0.01, {}, "Learning rate for adjacency matrix optimization"],
   "num_iterations": ["Number of iterations", "int", 100, {"min":  1, "step": 1}, "Number of iterations of gradient descent"],
   "num_rand_trials": ["Number of random trials", "int", 100, {"min":  1, "step": 1}, "number of random trials in Random Sampling Algorithm"]
+ },
+ "ReWatt": {
+  "element_idx": ["element_idx", "int", 0, {"min":  0, "step": 1}, "Index of the element to attack"],
+  "eps": ["Epsilon", "float", 0.1, {"min": 0, "max": 1, "step": 0.00001}, "Parameter responsible for the proportion of edges that can be rewired"],
+  "epochs": ["Epochs", "int", 100, {"min":  0, "step": 1}, "Number of epochs of edge rewiring policy training"],
+  "mlp_hidden": ["mlp_hidden", "int", 16, {"min":  0, "step": 1}, "Dimensionality of the hidden layer of the perceptron used in policy learning"],
+  "h_method":  ["h_method","string","sum",["sum","mul","max"],"h() function type for edge representation from article"],
+  "pooling_method":  ["pooling_method","string","mean",["mean","max"],"A method for handling vertex embeddings for graph representation"]
  }
 }
 
