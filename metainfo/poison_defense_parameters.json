@@ -14,13 +14,18 @@
     "train_iters": ["train_iters", "int", 50, {}, "?"]
  },
   "ProGNNDefender": {
-    "symmetric": ["symmetric", "bool", true, {}, "?"],
-    "lr_adj": ["lr_adj", "float", 0.01, {"min": 0.0001, "step": 0.005}, "?"],
-    "alpha": ["alpha", "float", 5e-4, {"min": 0.0, "step": 0.0001}, "?"],
-    "beta": ["beta", "float", 1.5, {"min": 0.0, "step": 0.01}, "?"],
-    "epochs": ["epochs", "int", 400, {"min": 1, "step":  1}, "?"],
-    "lambda_": ["lambda_", "float", 0, {"min": 0.0, "step": 0.001}, "?"],
-    "phi": ["phi", "float", 0, {"min": 0.0, "step": 0.01}, "?"]
+    "symmetric": ["symmetric", "bool", false, {}, "whether use symmetric matrix or not"],
+    "lr_adj": ["lr_adj", "float", 0.01, {"min": 0.0001, "step": 0.005}, "learning rate for graph adj modification"],
+    "alpha": ["alpha", "float", 5e-4, {"min": 0.0, "step": 0.0001}, "weight of l1 norm"],
+    "beta": ["beta", "float", 1.5, {"min": 0.0, "step": 0.01}, "weight of nuclear norm"],
+    "epochs": ["epochs", "int", 400, {"min": 1, "step": 1}, "number of epochs to train"],
+    "lambda_": ["lambda_", "float", 0, {"min": 0.0, "step": 0.001}, "weight of feature smoothing"],
+    "phi": ["phi", "float", 0, {"min": 0.0, "step": 0.01}, "weight of symmetric loss"],
+    "surr_epochs": ["surr_epochs", "int", 100, {"min": 1, "step": 1}, "number of epochs to train surrogate model"],
+    "surr_lr": ["surr_lr", "float", 0.01, {"min": 0.0001, "step": 0.001}, "learning rate for surrogate model"],
+    "weight_decay": ["weight_decay", "float", 5e-4, {"min": 0.0, "step": 0.0001}, "?"],
+    "data_steps": ["data_steps", "int", 1, {"min": 1, "step": 1}, "number of iterations for data modification in 1 epoch"],
+    "model_steps": ["model_steps", "int", 1, {"min": 1, "step": 1}, "number of model train iterations in 1 epoch"]
   }
 }
 
