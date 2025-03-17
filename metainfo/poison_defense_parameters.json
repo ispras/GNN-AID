@@ -19,7 +19,7 @@
     "alpha": ["alpha", "float", 5e-4, {"min": 0.0, "step": 0.0001}, "weight of l1 norm"],
     "beta": ["beta", "float", 1.5, {"min": 0.0, "step": 0.01}, "weight of nuclear norm"],
     "epochs": ["epochs", "int", 400, {"min": 1, "step": 1}, "number of epochs to train"],
-    "lambda_": ["lambda_", "float", 0, {"min": 0.0, "step": 0.001}, "weight of feature smoothing"],
+    "lambda_coef": ["lambda_", "float", 0, {"min": 0.0, "step": 0.001}, "weight of feature smoothing"],
     "phi": ["phi", "float", 0, {"min": 0.0, "step": 0.01}, "weight of symmetric loss"],
     "surr_epochs": ["surr_epochs", "int", 100, {"min": 1, "step": 1}, "number of epochs to train surrogate model"],
     "surr_lr": ["surr_lr", "float", 0.01, {"min": 0.0001, "step": 0.001}, "learning rate for surrogate model"],

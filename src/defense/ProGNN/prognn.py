@@ -14,13 +14,16 @@ from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETE
     EVASION_DEFENSE_PARAMETERS_PATH
 from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from src.aux.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager
+from src.base.datasets_processing import DatasetManager, GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
 
 from defense.poison_defense import PoisonDefender
 
 
-def feature_smoothing(adj, X):
+def feature_smoothing(
+        adj: torch.Tensor,
+        X: torch.Tensor
+) -> torch.Tensor:
     adj = (adj.T + adj) / 2
     rowsum = adj.sum(1)
     r_inv = rowsum.flatten()
@@ -31,7 +34,6 @@ def feature_smoothing(adj, X):
     r_inv = r_inv.pow(-1 / 2).flatten()
     r_inv[torch.isinf(r_inv)] = 0.
     r_mat_inv = torch.diag(r_inv)
-    # L = r_mat_inv @ L
     L = r_mat_inv @ L @ r_mat_inv
 
     XLXT = torch.matmul(torch.matmul(X.t(), L), X)
@@ -50,7 +52,7 @@ class ProGNNDefender(PoisonDefender):
                  alpha: float,
                  beta: float,
                  epochs: int,
-                 lambda_: float,
+                 lambda_coef: float,
                  phi: float,
                  surr_epochs: int,
                  surr_lr: float,
@@ -58,14 +60,14 @@ class ProGNNDefender(PoisonDefender):
                  data_steps: int,
                  model_steps: int,
                  **kw
-                 ):
+                 ) -> None:
         super().__init__()
         self.symmetric = symmetric
         self.lr_adj = lr_adj
         self.alpha = alpha
         self.beta = beta
         self.epochs = epochs
-        self.lambda_ = lambda_
+        self.lambda_coef = lambda_coef
         self.phi = phi
         self.surr_epochs = surr_epochs
         self.surr_lr = surr_lr
@@ -75,9 +77,9 @@ class ProGNNDefender(PoisonDefender):
 
     def defense(
             self,
-            gen_dataset,
+            gen_dataset: GeneralDataset,
             **kw
-    ):
+    ) -> GeneralDataset:
 
         features = gen_dataset.dataset.data.x
         labels = gen_dataset.dataset.data.y
@@ -91,38 +93,36 @@ class ProGNNDefender(PoisonDefender):
         self.optimizer = optim.Adam(self.model.parameters(),
                                     lr=self.surr_lr, weight_decay=self.weight_decay)
 
-        estimator = EstimateAdj(adj, symmetric=self.symmetric, device=self.device).to(self.device)
-        self.estimator = estimator
+        self.estimator = EstimateAdj(adj, symmetric=self.symmetric).to(self.device)
 
-        self.optimizer_adj = optim.SGD(estimator.parameters(),
+        self.optimizer_adj = optim.SGD(self.estimator.parameters(),
                                        momentum=0.9, lr=self.lr_adj)
 
-        self.optimizer_l1 = PGD(estimator.parameters(),
-                                proxs=[prox_l1],
-                                lr=self.lr_adj, alphas=[self.alpha])
+        self.optimizer_l1 = PGDOptimizer(self.estimator.parameters(),
+                                         proxs=[prox_l1],
+                                         lr=self.lr_adj, alphas=[self.alpha])
 
-        self.optimizer_nuclear = PGD(estimator.parameters(),
-                                     proxs=[prox_nuclear],
-                                     lr=self.lr_adj, alphas=[self.beta])
+        self.optimizer_nuclear = PGDOptimizer(self.estimator.parameters(),
+                                              proxs=[prox_nuclear],
+                                              lr=self.lr_adj, alphas=[self.beta])
 
         # Train model
         for epoch in tqdm(range(self.epochs)):
             for i in range(self.data_steps):
-                self.train_adj(epoch, features, adj)
+                self.train_adj_one_epoch(epoch, features, adj)
             for i in range(self.model_steps):
-                self.train_gcn(features, labels, idx_train)
+                self.train_gcn_one_epoch(features, labels, idx_train)
 
         gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
         return gen_dataset
 
-    def train_gcn(
+    def train_gcn_one_epoch(
             self,
             features: torch.Tensor,
             labels: torch.Tensor,
             idx_train: torch.Tensor
-    ):
-        estimator = self.estimator
-        adj = estimator.normalize()
+    ) -> None:
+        adj = self.estimator.normalize()
 
         self.model.train()
         self.optimizer.zero_grad()
@@ -132,33 +132,25 @@ class ProGNNDefender(PoisonDefender):
         loss_train.backward()
         self.optimizer.step()
 
-        # Evaluate validation set performance separately,
-        # deactivates dropout during validation run.
-        # self.model.eval()
-        # output = self.model(features, adj)
-
-        # loss_val = F.nll_loss(output[idx_val], labels[idx_val])
-
-    def train_adj(
+    def train_adj_one_epoch(
             self,
             epoch: int,
             features: torch.Tensor,
             adj: torch.Tensor
-    ):
-        estimator = self.estimator
-        estimator.train()
+    ) -> None:
+        self.estimator.train()
         self.optimizer_adj.zero_grad()
 
-        loss_fro = torch.norm(estimator.estimated_adj - adj, p='fro')
+        loss_fro = torch.norm(self.estimator.estimated_adj - adj, p='fro')
 
-        if self.lambda_:
-            loss_smooth_feat = feature_smoothing(estimator.estimated_adj, features)
+        if self.lambda_coef:
+            loss_smooth_feat = feature_smoothing(self.estimator.estimated_adj, features)
         else:
             loss_smooth_feat = 0
 
-        loss_symmetric = torch.norm(estimator.estimated_adj - estimator.estimated_adj.t(), p="fro")
+        loss_symmetric = torch.norm(self.estimator.estimated_adj - self.estimator.estimated_adj.t(), p="fro")
 
-        loss_diffirential = loss_fro + self.lambda_ * loss_smooth_feat + self.phi * loss_symmetric
+        loss_diffirential = loss_fro + self.lambda_coef * loss_smooth_feat + self.phi * loss_symmetric
 
         loss_diffirential.backward()
 
@@ -171,14 +163,14 @@ class ProGNNDefender(PoisonDefender):
         self.optimizer_l1.step()
 
         # feature smoothing
-        estimator.estimated_adj.data.copy_(torch.clamp(
-            estimator.estimated_adj.data, min=0, max=1))
+        self.estimator.estimated_adj.data.copy_(torch.clamp(
+            self.estimator.estimated_adj.data, min=0, max=1))
 
 
 def prox_l1(
         data: torch.Tensor,
         alpha: float
-):
+) -> torch.Tensor:
     """Proximal operator for l1 norm with sparse tensor support.
     """
     # if not data.is_sparse:
@@ -197,11 +189,10 @@ def prox_l1(
 def prox_nuclear(
         data: torch.Tensor,
         alpha: float,
-):
+) -> torch.Tensor:
     """Proximal operator for nuclear norm (trace norm).
     """
     device = data.device
-    # U, S, V = torch.svd_lowrank(data, q=k+5)
     U, S, V = np.linalg.svd(data.cpu())
     U, S, V = torch.FloatTensor(U).to(device), torch.FloatTensor(S).to(device), torch.FloatTensor(V).to(device)
 
@@ -209,7 +200,7 @@ def prox_nuclear(
     return torch.matmul(torch.matmul(U, diag_S), V)
 
 
-class PGD(torch.optim.Optimizer):
+class PGDOptimizer(torch.optim.Optimizer):
     """Proximal gradient descent.
 
     Parameters
@@ -242,7 +233,7 @@ class PGD(torch.optim.Optimizer):
         defaults = dict(lr=lr, momentum=0, dampening=0,
                         weight_decay=0, nesterov=False)
 
-        super(PGD, self).__init__(params, defaults)
+        super(PGDOptimizer, self).__init__(params, defaults)
 
         for group in self.param_groups:
             group.setdefault('proxs', proxs)
@@ -251,8 +242,8 @@ class PGD(torch.optim.Optimizer):
     def __setstate__(
             self,
             state: dict[str, Any]
-    ):
-        super(PGD, self).__setstate__(state)
+    ) -> None:
+        super(PGDOptimizer, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
@@ -260,7 +251,7 @@ class PGD(torch.optim.Optimizer):
             self,
             delta: float = 0,
             closure: Optional[float] = None
-    ):
+    ) -> None:
         for group in self.param_groups:
             lr = group['lr']
             proxs = group['proxs']
@@ -281,27 +272,26 @@ class EstimateAdj(nn.Module):
             self,
             adj: torch.Tensor,
             symmetric: bool = False,
-            device: str = 'cpu'
-    ):
+    ) -> None:
         super(EstimateAdj, self).__init__()
         n = len(adj)
         self.estimated_adj = nn.Parameter(torch.FloatTensor(n, n))
         self._init_estimation(adj)
         self.symmetric = symmetric
-        self.device = device
+        self.device = adj.device
 
     def _init_estimation(
             self,
             adj: torch.Tensor
-    ):
+    ) -> None:
         with torch.no_grad():
             n = len(adj)
             self.estimated_adj.data.copy_(adj)
 
-    def forward(self):
+    def forward(self) -> torch.Tensor:
         return self.estimated_adj
 
-    def normalize(self):
+    def normalize(self) -> torch.Tensor:
 
         if self.symmetric:
             adj = (self.estimated_adj + self.estimated_adj.t()) / 2
@@ -314,7 +304,7 @@ class EstimateAdj(nn.Module):
     def _normalize(
             self,
             mx: torch.Tensor
-    ):
+    ) -> torch.Tensor:
         rowsum = mx.sum(1)
         r_inv = rowsum.pow(-1 / 2).flatten()
         r_inv[torch.isinf(r_inv)] = 0.
