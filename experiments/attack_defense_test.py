@@ -12,10 +12,11 @@ from src.aux.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 from attacks.QAttack import qattack
-from attacks.RL_S2V.rl_s2v import RLS2VAttacker
+# from attacks.RL_S2V.rl_s2v import RLS2VAttacker
 from defense.JaccardDefense import jaccard_def
 from attacks.metattack import meta_gradient_attack
 from defense.GNNGuard import gnnguard
+from defense.ProGNN.prognn import ProGNNDefender
 
 
 def test_attack_defense():
@@ -273,10 +274,17 @@ def test_attack_defense():
             "num_steps": 10
         }
     )
+    prognn_poison_defense_config = ConfigPattern(
+        _class_name="ProGNNDefender",
+        _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+        _config_class="PoisonDefenseConfig",
+        _config_kwargs={
+        }
+    )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
-    # gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=rls2v_evasion_attack_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=rls2v_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
 
     warnings.warn("Start training")
@@ -1587,11 +1595,11 @@ if __name__ == '__main__':
     import random
 
     random.seed(10)
-    # test_attack_defense()
+    test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
-    test_rewatt()
+    # test_rewatt()
