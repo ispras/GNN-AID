@@ -59,7 +59,7 @@ class ProGNNDefender(PoisonDefender):
                  weight_decay: float,
                  data_steps: int,
                  model_steps: int,
-                 **kw
+                 **kwargs
                  ) -> None:
         super().__init__()
         self.symmetric = symmetric
