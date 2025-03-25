@@ -12,9 +12,11 @@ from src.aux.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 from attacks.QAttack import qattack
+# from attacks.RL_S2V.rl_s2v import RLS2VAttacker
 from defense.JaccardDefense import jaccard_def
 from attacks.metattack import meta_gradient_attack
 from defense.GNNGuard import gnnguard
+from defense.ProGNN.prognn import ProGNNDefender
 
 
 def test_attack_defense():
@@ -264,10 +266,25 @@ def test_attack_defense():
             "attack_config": fgsm_evasion_attack_config0
         }
     )
+    rls2v_evasion_attack_config = ConfigPattern(
+        _class_name="RLS2VAttack",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "num_steps": 10
+        }
+    )
+    prognn_poison_defense_config = ConfigPattern(
+        _class_name="ProGNNDefender",
+        _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+        _config_class="PoisonDefenseConfig",
+        _config_kwargs={
+        }
+    )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
-    # gnn_model_manager.set_poison_defender(poison_defense_config=gnnguard_poison_defense_config)
-    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=rls2v_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
 
     warnings.warn("Start training")
@@ -1385,14 +1402,204 @@ def test_fgsm():
     print(f"After FGSM attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
+def test_rewatt():
+    # ______________________ Attack on node ______________________
+    my_device = device('cpu')
+
+    # Load dataset
+    full_name = ("single-graph", "Planetoid", 'Cora')
+    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+        full_name=full_name,
+        dataset_ver_ind=0
+    )
+
+    gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+
+    manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_class_name": "Adam",
+                "_config_kwargs": {},
+            }
+        }
+    )
+
+    gnn_model_manager = FrameworkGNNModelManager(
+        gnn=gcn_gcn,
+        dataset_path=results_dataset_path,
+        manager_config=manager_config,
+        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+    )
+
+    gnn_model_manager.gnn.to(my_device)
+
+    num_steps = 200
+    gnn_model_manager.train_model(gen_dataset=dataset,
+                                  steps=num_steps,
+                                  save_model_flag=False)
+
+    acc_test = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    print(f"Accuracy on test: {acc_test}")
+
+    # Node for attack
+    node_idx = 44
+
+    # Model prediction on a node before ReWatt attack on it
+    gnn_model_manager.gnn.eval()
+    with torch.no_grad():
+        probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
+
+    predicted_class = probabilities[node_idx].argmax().item()
+    predicted_probability = probabilities[node_idx][predicted_class].item()
+    real_class = dataset.data.y[node_idx].item()
+
+    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+                                      "predicted_class": predicted_class,
+                                      "predicted_probability": predicted_probability,
+                                      "real_class": real_class}
+
+    # Attack config
+    evasion_attack_config = ConfigPattern(
+        _class_name="ReWatt",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "element_idx": node_idx,
+            "eps": 0.001,
+            "epochs": 10,
+        }
+    )
+
+    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+    # Attack
+    _ = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+
+    # Model prediction on a node after ReWatt attack on it
+    with torch.no_grad():
+        probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
+                                                        gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
+
+    predicted_class = probabilities[node_idx].argmax().item()
+    predicted_probability = probabilities[node_idx][predicted_class].item()
+    real_class = dataset.data.y[node_idx].item()
+
+    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+                                     "predicted_class": predicted_class,
+                                     "predicted_probability": predicted_probability,
+                                     "real_class": real_class}
+    # ____________________________________________________________
+
+    # ______________________ Attack on graph _____________________
+    # Load dataset
+    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+        full_name=full_name,
+        dataset_ver_ind=0
+    )
+
+    model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin')
+
+    manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_class_name": "Adam",
+                "_config_kwargs": {},
+            }
+        }
+    )
+
+    gnn_model_manager = FrameworkGNNModelManager(
+        gnn=model,
+        dataset_path=results_dataset_path,
+        manager_config=manager_config,
+        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+    )
+
+    gnn_model_manager.gnn.to(my_device)
+
+    num_steps = 200
+    gnn_model_manager.train_model(gen_dataset=dataset,
+                                  steps=num_steps,
+                                  save_model_flag=False)
+
+    acc_test = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    print(f"Accuracy on test: {acc_test}")
+
+    # Graph for attack
+    graph_idx = 0
+
+    # Model prediction on a graph before ReWatt attack on it
+    gnn_model_manager.gnn.eval()
+    with torch.no_grad():
+        probabilities = torch.exp(gnn_model_manager.gnn(dataset.dataset[graph_idx].x,
+                                                        dataset.dataset[graph_idx].edge_index))
+
+    predicted_class = probabilities.argmax().item()
+    predicted_probability = probabilities[0][predicted_class].item()
+    real_class = dataset.dataset[graph_idx].y.item()
+
+    info_before_pgd_attack_on_graph = {"graph_idx": graph_idx,
+                                       "predicted_class": predicted_class,
+                                       "predicted_probability": predicted_probability,
+                                       "real_class": real_class}
+
+    # Attack config
+    evasion_attack_config = ConfigPattern(
+        _class_name="ReWatt",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "element_idx": graph_idx,
+            "eps": 0.2,
+            "epochs": 100
+        }
+    )
+
+    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+    # Attack
+    _ = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+
+    # Model prediction on a graph after ReWatt attack on it
+    with torch.no_grad():
+        probabilities = torch.exp(
+            gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.x,
+                                  gnn_model_manager.evasion_attacker.attack_diff.edge_index))
+
+    predicted_class = probabilities.argmax().item()
+    predicted_probability = probabilities[0][predicted_class].item()
+    real_class = dataset.dataset[graph_idx].y.item()
+
+    info_after_pgd_attack_on_graph = {"graph_idx": graph_idx,
+                                      "predicted_class": predicted_class,
+                                      "predicted_probability": predicted_probability,
+                                      "real_class": real_class}
+
+    # ____________________________________________________________
+    print(f"Before ReWatt attack on node (Cora dataset): {info_before_pgd_attack_on_node}")
+    print(f"After ReWatt attack on node (Cora dataset): {info_after_pgd_attack_on_node}")
+    print(f"Before ReWatt attack on graph (MUTAG dataset): {info_before_pgd_attack_on_graph}")
+    print(f"After ReWatt attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
+
+
 if __name__ == '__main__':
     import random
 
     random.seed(10)
-    # test_attack_defense()
+    test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
     # test_fgsm()
-    test_pgd_structure()
+    # test_pgd_structure()
+    # test_rewatt()

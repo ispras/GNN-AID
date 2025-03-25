@@ -986,7 +986,8 @@ class FrameworkGNNModelManager(GNNModelManager):
         if task_type == "single-graph":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, weight)
-            loss = self.loss_function(logits, batch.y)
+            # Take only predictions and labels of seed nodes
+            loss = self.loss_function(logits[:batch.batch_size], batch.y[:batch.batch_size])
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
@@ -1008,6 +1009,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             pos_out = self.gnn(batch.x, pos_edge_index, weight)
             neg_out = self.gnn(batch.x, neg_edge_index, weight)
 
+            # TODO check if we need to take out[:batch.batch_size]
             pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
             neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
 
@@ -1524,7 +1526,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         elif task_type == "signle-graph":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
-            loss = self.loss_function(logits, batch.y)
+            loss = self.loss_function(logits[:batch.batch_size], batch.y[:batch.batch_size])
         # TODO Kirill, remove False when release edge recommendation task
         elif task_type == "edge" and False:
             self.optimizer.zero_grad()
@@ -1535,6 +1537,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             pos_out = self.gnn(batch.x, pos_edge_index)
             neg_out = self.gnn(batch.x, neg_edge_index)
 
+            # TODO check if we need to take out[:batch.batch_size]
             pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
             neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
 
