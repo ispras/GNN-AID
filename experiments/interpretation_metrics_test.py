@@ -83,6 +83,7 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
         'GNNExplainer(torch-geom)': {},
         'SubgraphX': {"max_nodes": 5},
         'Zorro': {},
+        'PGExplainer(dig)': {}
     }
     dataset_key_name = "_".join(dataset_full_name)
     metrics_path = root_dir / "experiments" / "explainers_metrics"
@@ -877,8 +878,9 @@ if __name__ == '__main__':
 
     explainers = [
         # 'GNNExplainer(torch-geom)',
-        'SubgraphX',
+        # 'SubgraphX',
         # "Zorro",
+        "PGExplainer(dig)"
     ]
     models = [
         'gcn_gcn',
@@ -891,16 +893,19 @@ if __name__ == '__main__':
 
     datasets = [
         ("single-graph", "Planetoid", 'Cora'),
-        # ("single-graph", "Amazon", 'Photo'),
-        # ("single-graph", "Planetoid", 'CiteSeer'),
-        # ("single-graph", "Planetoid", 'PubMed'),
-        # ("single-graph", "Amazon", 'Computers'),
+        ("single-graph", "Amazon", 'Photo'),
+        ("single-graph", "Planetoid", 'CiteSeer'),
+        ("single-graph", "Planetoid", 'PubMed'),
+        ("single-graph", "Amazon", 'Computers'),
     ]
     for dataset_full_name in datasets:
-        for i in range(3, 5):
+        for i in range(3, 13):
             for model_name in models:
                 for explainer in explainers:
-                    print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
-                    run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    try:
+                        print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
+                        run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    except:
+                        continue
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)
