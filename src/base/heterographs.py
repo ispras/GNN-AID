@@ -12,7 +12,6 @@ from aux.declaration import Declare
 from base.custom_datasets import CustomDataset
 from base.datasets_processing import GeneralDataset, DatasetInfo, DatasetManager, VisiblePart
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from base.ptg_datasets import LocalDataset
 
 
 class CustomHeteroDataset(
@@ -32,8 +31,10 @@ class CustomHeteroDataset(
         super().__init__(dataset_config)
 
         self.node_types = set(self.info.nodes[0].keys())
-        self.edge_types = set(tuple(x[1:-1] for x in f.name.split(','))
-                           for f in self.edges_path().iterdir() if f.is_dir())
+        # self.edge_types = set(tuple(x[1:-1] for x in et.split(','))
+        #                       for et in self.info.edge_attributes.keys())
+        self.edge_types = set(edge_type_from_str(f.name)
+                              for f in self.edges_path().iterdir() if f.is_dir())
 
     def edges_path(
             self,
@@ -45,7 +46,7 @@ class CustomHeteroDataset(
         edges_dir = self.root_dir / 'raw' / (self.name + '.edges')
         if any(_ is None for _ in [src, type, dst]):
             return edges_dir
-        return edges_dir / edge_to_str(src, type, dst) / 'ij'
+        return edges_dir / edge_type_to_str(src, type, dst) / 'ij'
 
     @property
     def edge_index_path(
@@ -98,7 +99,7 @@ class CustomHeteroDataset(
 
         # Check edge attributes
         for et in self.edge_types:
-            et = edge_to_str(*et)
+            et = edge_type_to_str(*et)
             for ix, attr in enumerate(self.info.edge_attributes[et]["names"]):
                 with open(self.edge_attributes_dir / et / attr, 'r') as f:
                     attributes = json.load(f)
@@ -139,26 +140,25 @@ class CustomHeteroDataset(
 
         # Read edges and attributes
         node_map = {nt: {} for nt in self.node_types}
-        edges = {edge_to_str(*et): [] for et in self.edge_types}
+        edges = {edge_type_to_str(*et): [] for et in self.edge_types}
         ptg_edge_index = {et: [[], []] for et in self.edge_types}
         for et in self.edge_types:
             src, _, dst = et
-            src_node_index = 0
-            dst_node_index = 0
+            node_index = {src: 0, dst: 0}  # Note, it can be src == dst
             with open(self.edges_path(*et), 'r') as f:
                 for line in f.readlines():
                     i, j = map(int, line.split())
                     if i not in node_map[src]:
-                        node_map[src][i] = src_node_index
-                        src_node_index += 1
+                        node_map[src][i] = node_index[src]
+                        node_index[src] += 1
                     if j not in node_map[dst]:
-                        node_map[dst][j] = dst_node_index
-                        dst_node_index += 1
+                        node_map[dst][j] = node_index[dst]
+                        node_index[dst] += 1
                     if self.info.remap:
                         i = node_map[src][i]
                         j = node_map[dst][j]
                     # TODO misha can we reuse one of them?
-                    edges[edge_to_str(*et)].append([i, j])
+                    edges[edge_type_to_str(*et)].append([i, j])
                     ptg_edge_index[et][0].append(i)
                     ptg_edge_index[et][1].append(j)
                     if not self.info.directed:
@@ -166,7 +166,7 @@ class CustomHeteroDataset(
                         ptg_edge_index[et][1].append(i)
 
         self.dataset_data['edges'].append(edges)
-        # FIXME misha do we create ptg data here?
+        # FIXME misha do we create ptg data here? It duplicates dataset_data['edges']
         self.edge_index = {k: [torch.tensor(np.asarray(v))] for k, v in ptg_edge_index.items()}
 
         # Add remaining nodes from labeling file to complete remapping
@@ -397,33 +397,66 @@ class CustomHeteroDataset(
         }
 
 
-def edge_to_str(
+def edge_type_to_str(
         src: str,
         type: str,
         dst: str
 ) -> str:
     """ Hetero graph edge represent as string.
+    Example: 's', 't', 'd' -> "'s','t','d'"
     """
     return f"'{src}','{type}','{dst}'"
+
+
+def edge_type_from_str(
+        edge_type: str
+) -> tuple:
+    """
+    Hetero graph edge triple from string representation.
+    Example: '"s","t","d"' -> ('s', 't', 'd')
+    """
+    return tuple(x[1:-1] for x in edge_type.split(','))
 
 
 if __name__ == '__main__':
     # from torch_geometric.datasets import OGB_MAG
     # dataset_config = DatasetConfig("single-graph", "custom", "example")
     dataset_config = DatasetConfig("single-graph", "hetero", "example")
-    gen_dataset = DatasetManager.register_custom_hetero(dataset_config)
-    # print(gen_dataset.info.to_dict())
+    # gen_dataset = DatasetManager.register_custom_hetero(dataset_config)
+    # dataset_config = DatasetConfig("single-graph", "local", "СКЗИ")
+    gen_dataset = DatasetManager.get_by_config(dataset_config)
+    # # print(gen_dataset.info.to_dict())
     gen_dataset._compute_dataset_data()
-    dataset_var_config = DatasetVarConfig(
-        features={
-            'author': {'str_f': {'constant': [1] * 10}},
-            'paper': {'attr': {'year': 'as_is'}},
-            'institution': {'attr': {'rating': 'as_is'}}
-        },
-        labeling={'paper': 'topic'},
-        dataset_ver_ind=0)
-    gen_dataset.build(dataset_var_config)
-    # print(gen_dataset.dataset.data)
-    gen_dataset.set_visible_part({})
-    gen_dataset.get_dataset_var_data()
-    print(json.dumps(gen_dataset.dataset_var_data, indent=1))
+    print(json.dumps(gen_dataset.dataset_data, indent=1))
+
+    # dataset_var_config = DatasetVarConfig(
+    #     features={
+    #         'author': {'str_f': {'constant': [1] * 10}},
+    #         'paper': {'attr': {'year': 'as_is'}},
+    #         'institution': {'attr': {'rating': 'as_is'}}
+    #     },
+    #     labeling={'paper': 'topic'},
+    #     dataset_ver_ind=0)
+    # gen_dataset.build(dataset_var_config)
+    # # print(gen_dataset.dataset.data)
+    # gen_dataset.set_visible_part({})
+    # gen_dataset.get_dataset_var_data()
+    # print(json.dumps(gen_dataset.dataset_var_data, indent=1))
+
+    # # Example of local user PTG dataset
+    # class UserLocalDataset(InMemoryDataset):
+    #     def __init__(self, root, transform=None):
+    #         super().__init__(root, transform)
+    #         # NOTE: it is important to define self.slices here, since it is used to calculate len()
+    #         self.data, self.slices = torch.load(self.processed_paths[0])
+    #
+    #     @property
+    #     def processed_file_names(self):
+    #         return 'data.pt'
+    #
+    #     # def process(self):
+    #     #     torch.save(self.collate(self.data_list), self.processed_paths[0])
+    #
+    # dataset = UserLocalDataset(GRAPHS_DIR / 'single-graph' / 'hetero' / 'СКЗИ' / '02b68ee2755fb9d25d64afdf8e6e018198193d8bc8b1bbc2aa805c5b97372cc5')
+    # DatasetManager.register_torch_geometric_local(dataset, 'СКЗИ')
+

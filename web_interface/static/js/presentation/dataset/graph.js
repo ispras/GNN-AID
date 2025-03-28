@@ -9,18 +9,14 @@ class Graph extends VisibleGraph {
 
         // Constants
         this.edgeColor = '#ffffff'
+        this.backgroundColor = "#404040"
     }
 
     async _build() {
-        // Set graph data from dataset
-        this.datasetData = await Controller.ajaxRequest('/dataset', {get: "data"})
-
-        // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes
         this.edges = this.datasetData.edges[0]
 
         await super._build()
-        $(this.svgElement).css("background-color", "#404040")
     }
 
     // Variable part of drop - to be overridden
@@ -82,6 +78,10 @@ class Graph extends VisibleGraph {
         for (let i = 0; i < this.numNodes; i++)
             nodes.add(i)
         return nodes
+    }
+
+    getNumNodes() {
+        return this.numNodes
     }
 
     getEdges() {
@@ -155,7 +155,7 @@ class Graph extends VisibleGraph {
         // Nodes
         for (let n=0; n<this.numNodes; n++)
             this.createNodePrimitive(this.svgElement, n,
-                this.nodeRadius, this.nodeStrokeWidth, this.nodeColor, true)
+                this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
 
         super.createPrimitives()
     }
@@ -167,8 +167,9 @@ class Graph extends VisibleGraph {
     }
 
     showEdges(show) {
-        for (const svg of this.edgePrimitivesBatches[0])
-            svg.visible(show)
+        for (const batch of Object.values(this.edgePrimitivesBatches))
+            for (const svg of batch)
+                svg.visible(show)
     }
 
 }

@@ -196,7 +196,7 @@ class Neighborhood extends VisibleGraph {
         for (const [d, ns] of Object.entries(this.nodes)) {
             for (const n of ns) {
                 this.createNodePrimitive(
-                    this.svgElement, n, this.nodeRadiuses[d], this.nodeStrokeWidthes[d],
+                    this.svgElement, n, this.nodeRadiuses[d], "circle", this.nodeStrokeWidthes[d],
                     this.nodeColor, this.showDepth[d])
             }
         }

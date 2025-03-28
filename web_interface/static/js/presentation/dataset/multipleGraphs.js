@@ -441,8 +441,8 @@ class MultipleGraphs extends VisibleGraph {
             aGraph.nodePrimitives = {}
             graphIx = parseInt(graphIx)
             for (let n = 0; n < aGraph.numNodes; n++) {
-                aGraph.createNodePrimitive(this.svgElement, n, this.nodeRadius, this.nodeStrokeWidth, this.nodeColor, true)
-                _addEvent(aGraph.nodePrimitives[n].circle, n, graphIx)
+                aGraph.createNodePrimitive(this.svgElement, n, this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
+                _addEvent(aGraph.nodePrimitives[n].body, n, graphIx)
             }
             // Object.assign(this.nodePrimitives, aGraph.nodePrimitives)
             // this.nodePrimitives.push(...Object.values(aGraph.nodePrimitives))
@@ -470,7 +470,7 @@ class MultipleGraphs extends VisibleGraph {
         g = this.svgPanel.get("nodes")
         for (const aGraph of Object.values(this.graphs))
             for (const node of Object.values(aGraph.nodePrimitives)) {
-                g.append(node.circle)
+                g.append(node.body)
                 g.append(node.text)
             }
     }

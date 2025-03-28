@@ -172,7 +172,10 @@ class DatasetView extends View {
                     this.visibleGraph = new Neighborhood(this.datasetInfo, this.svgPanel)
                     break
                 case "whole-graph":
-                    this.visibleGraph = new Graph(this.datasetInfo, this.svgPanel)
+                    if (this.datasetInfo.hetero)
+                        this.visibleGraph = new HeteroGraph(this.datasetInfo, this.svgPanel)
+                    else
+                        this.visibleGraph = new Graph(this.datasetInfo, this.svgPanel)
             }
         }
         this.visibleGraph.beforeInit = this.beforeInit.bind(this)
@@ -248,12 +251,12 @@ class DatasetView extends View {
 
         // Ask for model satellites: masks, preds and embeds
         data = await Controller.ajaxRequest('/model', {get: "satellites"})
-            for (const satellite of VisibleGraph.SATELLITES) {
-                if (data !== '')
-                    if (satellite in data) {
-                        this.datasetVar[satellite] = data[satellite]
-                    }
-            }
+        for (const satellite of VisibleGraph.SATELLITES) {
+            if (data !== '')
+                if (satellite in data) {
+                    this.datasetVar[satellite] = data[satellite]
+                }
+        }
 
         if (this.explanation)
             this.visibleGraph.setExplanation(this.explanation)

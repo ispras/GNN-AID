@@ -80,12 +80,13 @@ class VisibleGraph {
         this.pad = 30 // additional space around elements to SVG border
         this.scale = 100 // scale to adjust element
         this.scaleMax = 1e4 // maximal scale
-        this.scaleMin = 1e0 // minimal scale
+        this.scaleMin = 1e-1 // minimal scale
         this.zoomFactor = 1.15 // scaling coefficient on zoom
         this.screenPos = new Vec(-300, -400) // left-top of part of SVG visible on screen
         this.svgPos = new Vec(0, 0) // SVG viewBox left-top
         this.nodeColor = '#fff'
         this.edgeColor = '#000'
+        this.backgroundColor = "#e7e7e7"
 
         // Variables
         this.datasetData = null // Nodes, edges, attributes, don't edit - it is changed from outside
@@ -210,7 +211,7 @@ class VisibleGraph {
         // Permanent part
         this.handleDragging()
         this.createListeners()
-        $(this.svgElement).css("background-color", "#e7e7e7")
+        // $(this.svgElement).css("background-color", "#e7e7e7")
 
         await this._build()
     }
@@ -248,6 +249,7 @@ class VisibleGraph {
             this.alive = true
             this.drawCycle()
         }
+        $(this.svgElement).css("background-color", this.backgroundColor)
     }
 
     // Variable part of drop - to be overridden
@@ -346,17 +348,22 @@ class VisibleGraph {
         this.layout.setFreeze(freeze)
     }
 
-    // Get degree of a node of a graph
+    // Get degree of a node of a graph - for layout
     getDegree(node, graph) {
         console.error('Not implemented generally')
     }
 
-    // Get a set of all nodes
+    // Get a set of all nodes - for layout
     getNodes() {
         console.error('Not implemented generally')
     }
 
-    // Get a list of all edges
+    // Get a total number of nodes - for layout
+    getNumNodes() {
+        console.error('Not implemented generally')
+    }
+
+    // Get a list of all edges - for layout
     getEdges() {
         console.error('Not implemented generally')
     }
@@ -408,7 +415,7 @@ class VisibleGraph {
         // Add node primitives
         let g = this.svgPanel.add("nodes")
         for (const node of Object.values(this.nodePrimitives)) {
-            g.appendChild(node.circle)
+            g.appendChild(node.body)
             g.appendChild(node.text)
         }
 
@@ -474,16 +481,16 @@ class VisibleGraph {
     }
 
     // Create a node SVG (will be added later together)
-    createNodePrimitive(element, i, radius, width, color, show) {
-        let node = new SvgNode(0, 0, radius, width, color, i.toString(), show, this.svgPanel.$tip)
+    createNodePrimitive(element, i, radius, form, width, color, show) {
+        let node = new SvgNode(0, 0, radius, form, width, color, i.toString(), show, this.svgPanel.$tip)
         this.nodePrimitives[i] = node
 
         // Add listeners
-        node.circle.onmousedown = (e) => this.nodeGrabbed = i
+        node.body.onmousedown = (e) => this.nodeGrabbed = i
         if (this.onNodeClick) {
-            node.circle.onclick = (e) => this.onNodeClick("left", i)
-            node.circle.oncontextmenu = (e) => this.onNodeClick("right", i)
-            node.circle.ondblclick = (e) => this.onNodeClick("double", i)
+            node.body.onclick = (e) => this.onNodeClick("left", i)
+            node.body.oncontextmenu = (e) => this.onNodeClick("right", i)
+            node.body.ondblclick = (e) => this.onNodeClick("double", i)
         }
     }
 

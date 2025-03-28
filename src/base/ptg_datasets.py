@@ -135,6 +135,10 @@ class PTGDataset(
                 # raise FileNotFoundError(
                 #     f"No data found for dataset '{self.dataset_config.full_name()}'")
 
+        if self.info.hetero:
+            self.node_types = list(self.info.nodes[0].keys())
+            self.edge_types = list(self.info.edge_attributes.keys())
+
     def move_processed(
             self,
             processed: Union[str, Path]
@@ -162,11 +166,74 @@ class PTGDataset(
             center=None,
             depth: Union[int, None] = None
     ) -> None:
-        # assert len(name_type) == 1  # FIXME
-        dataset_data = super()._compute_dataset_data()
-        # FIXME add features
+        # TODO misha hetero
+        name_type = self.dataset_var_config.features['attr']
+        # node_attributes == PTG features
+        assert len(name_type) == 1
+        num = len(self.dataset)
+        data_list = [self.dataset.get(ix) for ix in range(num)]
+        is_directed = self.info.directed
 
-        return dataset_data
+        # FIXME misha self.dataset_data['edges'] == ptg edge_index, make them one
+        edges_list = []
+        if self.is_multi():
+            for data in data_list:
+                edges_list.append(data.edge_index.T.tolist())
+
+            node_attributes = {
+                list(name_type.keys())[0]: [data.x.tolist() for data in data_list]
+            }
+
+        else:
+            assert len(data_list) == 1
+            data = data_list[0]
+
+            if self.info.hetero:
+                node_attributes = {
+                    nt: {
+                        list(name_type.keys())[0]: [data[nt].x.tolist()]
+                    } for nt in self.node_types
+                }
+            else:
+                node_attributes = {
+                    list(name_type.keys())[0]: [data.x.tolist()]
+                }
+
+        for data in data_list:
+            edges = []
+            if self.info.hetero:
+                from base.heterographs import edge_type_from_str
+
+                edges = {}
+                for et in self.edge_types:
+                    edges[et] = []
+                    et_3 = edge_type_from_str(et)
+                    dataset_edge_index = data[et_3].edge_index.tolist()
+                    for i in range(len(dataset_edge_index[0])):
+                        if not is_directed:
+                            if dataset_edge_index[0][i] <= dataset_edge_index[1][i]:
+                                edges[et].append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+                        else:
+                            edges[et].append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+
+            else:
+                dataset_edge_index = data.edge_index.tolist()
+                for i in range(len(dataset_edge_index[0])):
+                    if not is_directed:
+                        if dataset_edge_index[0][i] <= dataset_edge_index[1][i]:
+                            edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+                    else:
+                        edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+
+            edges_list.append(edges)
+
+        self.dataset_data = {
+            'edges': edges_list,
+            'node_attributes': node_attributes,
+            # 'info': self.info.to_dict()
+        }
+        # if self.info.name == "":
+        #     self.dataset_data['info']['name'] = '/'.join(self.dataset_config.full_name())
 
     def build(
             self,

@@ -8,7 +8,7 @@ from typing import Union
 import torch
 import torch_geometric
 from torch import default_generator, randperm
-from torch_geometric.data import Dataset, InMemoryDataset, Data
+from torch_geometric.data import Dataset, InMemoryDataset, Data, HeteroData
 
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
@@ -60,7 +60,8 @@ class DatasetInfo:
         else:
             assert set(self.node_attributes.keys()) == {"names", "types", "values"}
             for attributes in [self.node_attributes, self.edge_attributes]:
-                ntv_triples.extend(list(zip(attributes["names"], attributes["types"], attributes["values"])))
+                if attributes:
+                    ntv_triples.extend(list(zip(attributes["names"], attributes["types"], attributes["values"])))
 
         for name, type, value in ntv_triples:
             assert isinstance(name, str)
@@ -111,8 +112,9 @@ class DatasetInfo:
         else:
             assert len(self.node_attributes["names"]) == len(self.node_attributes["types"]) == len(
                 self.node_attributes["values"])
-            assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
-                self.edge_attributes["values"])
+            if self.edge_attributes:
+                assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
+                    self.edge_attributes["values"])
 
     def check_sufficiency(
             self
@@ -162,7 +164,7 @@ class DatasetInfo:
         not_nones = {k: v for k, v in self.__dict__.items() if v is not None}
         path.parent.mkdir(exist_ok=True, parents=True)
         with path.open('w') as f:
-            json.dump(not_nones, f, indent=1)
+            json.dump(not_nones, f, indent=1, ensure_ascii=False)
 
     @staticmethod
     def induce(
@@ -170,19 +172,47 @@ class DatasetInfo:
     ) -> object:
         """ Induce metainfo from a given PTG dataset.
         """
-        # TODO misha hetero
         res = DatasetInfo()
         res.count = len(dataset)
-        from base.ptg_datasets import is_graph_directed
-        res.directed = is_graph_directed(dataset.get(0))
-        res.nodes = [len(dataset.get(ix).x) for ix in range(len(dataset))]
-        res.node_attributes = {
-            "names": ["unknown"],
-            "types": ["vector"],
-            "values": [len(dataset.get(0).x[0])]
-        }
-        res.labelings = {"origin": dataset.num_classes}
-        res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
+        # from base.ptg_datasets import is_graph_directed
+        # res.directed = is_graph_directed(dataset.get(0))
+        data = dataset.get(0)
+        res.directed = data.is_directed()  # FIXME misha check correct
+        if isinstance(data, HeteroData):
+            res.hetero = True
+            node_types = data.node_types
+            res.nodes = [{nt: data[nt].num_nodes for nt in node_types}]
+            res.node_attributes = {
+                nt: {
+                    "names": ["unknown"],
+                    "types": ["vector"],
+                    "values": [len(data[nt].x[0])]
+                } for nt in node_types
+            }
+            edge_types = [','.join([f'"{x}"' for x in et]) for et in data.edge_types]
+            res.edge_attributes = {
+                et: {
+                    "names": [],
+                    "types": [],
+                    "values": []
+                } for et in edge_types
+            }
+            # TODO add edge attributes
+            res.labelings = {}
+            for nt in node_types:
+                if hasattr(data[nt], 'y'):
+                    res.labelings[nt] = {"origin": int(max(data[nt].y)) + 1}
+        else:
+            res.hetero = False
+            res.nodes = [len(dataset.get(ix).x) for ix in range(len(dataset))]
+            res.node_attributes = {
+                "names": ["unknown"],
+                "types": ["vector"],
+                "values": [len(dataset.get(0).x[0])]
+            }
+            res.labelings = {"origin": dataset.num_classes}
+            res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
+
         res.check()
         return res
 
@@ -249,7 +279,7 @@ class VisiblePart:
     def __init__(
             self,
             gen_dataset,
-            center: [int, list] = None,
+            center: [int, list, tuple] = None,
             depth: [int] = None
     ):
         """ Compute a part of dataset specified by a center node/graph and a depth
@@ -290,43 +320,78 @@ class VisiblePart:
         else:  # single
             assert gen_dataset.info.count == 1
 
-            # TODO misha hetero
             if center is not None:  # Get neighborhood
                 if isinstance(center, list):
                     raise NotImplementedError
                 if depth is None:
                     depth = 2
 
-                nodes = {0: {center}}
-                edges = {0: []}  # incoming edges
-                prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
+                if gen_dataset.info.hetero:
+                    # TODO misha hetero
+                    raise NotImplementedError
 
-                all_edges = gen_dataset.dataset_data['edges'][0]
-                for d in range(1, depth + 1):
-                    ns = nodes[d - 1]
-                    es_next = []
-                    ns_next = set()
-                    for i, j in all_edges:
-                        # Get all incoming edges * -> j
-                        if j in ns and i not in prev_nodes:
-                            es_next.append((i, j))
-                            if i not in ns:
-                                ns_next.add(i)
+                    nodes = {0: {center[0]: {center[1]}}}  # {depth: {type: set of ids}}
+                    edges = {0: {}}  # incoming edges, {depth: {type: list}}
+                    prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
 
-                        if not gen_dataset.info.directed:
-                            # Check also outcoming edge i -> *, excluding already added
-                            if i in ns and j not in prev_nodes:
-                                es_next.append((j, i))
-                                if j not in ns:
-                                    ns_next.add(j)
+                    all_edges = gen_dataset.dataset_data['edges'][0]
+                    for d in range(1, depth + 1):
+                        ns = nodes[d - 1]
+                        es_next = []
+                        ns_next = set()
+                        for i, j in all_edges:
+                            # Get all incoming edges * -> j
+                            if j in ns and i not in prev_nodes:
+                                es_next.append((i, j))
+                                if i not in ns:
+                                    ns_next.add(i)
 
-                    prev_nodes.update(ns)
-                    nodes[d] = ns_next
-                    edges[d] = es_next
+                            if not gen_dataset.info.directed:
+                                # Check also outcoming edge i -> *, excluding already added
+                                if i in ns and j not in prev_nodes:
+                                    es_next.append((j, i))
+                                    if j not in ns:
+                                        ns_next.add(j)
 
-                self.nodes = [list(ns) for ns in nodes.values()]
-                self.edges = [list(es) for es in edges.values()]
-                self._ixes = [n for ns in self.nodes for n in ns]
+                        prev_nodes.update(ns)
+                        nodes[d] = ns_next
+                        edges[d] = es_next
+
+                    self.nodes = [list(ns) for ns in nodes.values()]
+                    self.edges = [list(es) for es in edges.values()]
+                    self._ixes = [n for ns in self.nodes for n in ns]
+
+                else:  # homo
+                    nodes = {0: {center}}  # {depth: set of ids}
+                    edges = {0: []}  # incoming edges
+                    prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
+
+                    all_edges = gen_dataset.dataset_data['edges'][0]
+                    for d in range(1, depth + 1):
+                        ns = nodes[d - 1]
+                        es_next = []
+                        ns_next = set()
+                        for i, j in all_edges:
+                            # Get all incoming edges * -> j
+                            if j in ns and i not in prev_nodes:
+                                es_next.append((i, j))
+                                if i not in ns:
+                                    ns_next.add(i)
+
+                            if not gen_dataset.info.directed:
+                                # Check also outcoming edge i -> *, excluding already added
+                                if i in ns and j not in prev_nodes:
+                                    es_next.append((j, i))
+                                    if j not in ns:
+                                        ns_next.add(j)
+
+                        prev_nodes.update(ns)
+                        nodes[d] = ns_next
+                        edges[d] = es_next
+
+                    self.nodes = [list(ns) for ns in nodes.values()]
+                    self.edges = [list(es) for es in edges.values()]
+                    self._ixes = [n for ns in self.nodes for n in ns]
 
             else:  # Get whole graph
                 self.edges = gen_dataset.dataset_data['edges']
@@ -535,54 +600,6 @@ class GeneralDataset:
             self
     ) -> None:
         raise RuntimeError("")  # This should be implemented in subclass
-        num = len(self.dataset)
-        data_list = [self.dataset.get(ix) for ix in range(num)]
-        is_directed = self.info.directed
-        # node_attributes exist for custom datasets.
-        # We can treat them as PTG features but it's not good.
-        node_attributes = {}
-        # name_type = self.dataset_var_config.features['attr']
-        #
-        # if self.is_multi():
-        #     edges_list = []
-        #     self.nodes = []
-        #     for data in data_list:
-        #         edges_list.append(data.edge_index.T.tolist())
-        #         self.nodes.append(len(data.x))
-        #
-        #     node_attributes = {
-        #         list(name_type.keys())[0]: [data.x.tolist() for data in data_list]
-        #     }
-        #
-        # else:
-        #     assert len(data_list) == 1
-        #     data = data_list[0]
-        #
-        #     self.nodes = [len(data.x)]
-        #     node_attributes = {
-        #         list(name_type.keys())[0]: [data.x.tolist()]
-        #     }
-
-        edges_list = []
-        for data in data_list:
-            edges = []
-            dataset_edge_index = data.edge_index.tolist()
-            for i in range(len(dataset_edge_index[0])):
-                if not is_directed:
-                    if dataset_edge_index[0][i] <= dataset_edge_index[1][i]:
-                        edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
-                else:
-                    edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
-
-            edges_list.append(edges)
-
-        self.dataset_data = {
-            'edges': edges_list,
-            'node_attributes': node_attributes,
-            # 'info': self.info.to_dict()
-        }
-        # if self.info.name == "":
-        #     self.dataset_data['info']['name'] = '/'.join(self.dataset_config.full_name())
 
     def set_visible_part(
             self,
