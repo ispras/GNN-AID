@@ -8,10 +8,15 @@ from typing import Callable, List, Union, Type, Iterable, cast
 import sklearn.metrics
 import torch
 from torch import tensor
+from torch import nn
+import torch.nn.functional as F
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
+from torch_geometric.nn import InstanceNorm
+from torch_geometric.utils import is_undirected, sort_edge_index
+from torch_sparse import transpose
 
 from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
@@ -1745,3 +1750,196 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         last_projection = (step % self.proj_epochs == 0 and step + self.proj_epochs >= steps)
 
         return self.early_stop_count >= self.early_stopping_marker or last_projection
+
+
+class GSATModelManager(FrameworkGNNModelManager):
+    additional_config = ConfigPattern( # TODO check config
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_config_class": "Config",
+                "_class_name": "Adam",
+                "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.optim"],
+                "_config_kwargs": {},
+            },
+            # FUNCTIONS_PARAMETERS_PATH,
+            "loss_function": {
+                "_config_class": "Config",
+                "_class_name": "CrossEntropyLoss",
+                "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.nn"],
+                "_config_kwargs": {},
+            },
+        }
+    )
+
+    def __init__(
+            self,
+            gnn: Type = None,
+            dataset_path: Union[str, Path] = None,
+            learn_edge_features: bool = False,
+            hidden_size: int = 64,
+            decay_int: int = 10,
+            decay_r: float = 0.1,
+            init_r: float = 0.9,
+            final_r: float = 0.1,
+            fix_r: bool = False,
+            pred_loss_coef: float = 1,
+            info_loss_coef: float = 1,
+            extractor_dropout_p: float = 0.5,
+            **kwargs
+    ):
+        super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
+        self.learn_edge_features = learn_edge_features
+        self.hidden_size = hidden_size
+        self.decay_int = decay_int
+        self.decay_r = decay_r
+        self.init_r = init_r
+        self.final_r = final_r
+        self.pred_loss_coef = pred_loss_coef
+        self.info_loss_coef = info_loss_coef
+        self.fix_r = fix_r
+        self.extractor_dropout_p = extractor_dropout_p
+
+        self.extractor = ExtractorMLP(self.hidden_size, self.learn_edge_features, self.extractor_dropout_p)
+
+    def train_on_batch(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        if task_type == "multiple-graphs":
+
+            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[-1]
+            att_log_logits = self.extractor(emb, batch.edge_index, batch.batch)
+            att = self.sampling(att_log_logits, self.modification.epochs, training=True)
+
+            if self.learn_edge_features():
+                if is_undirected(batch.edge_index):
+                    trans_idx, trans_val = transpose(batch.edge_index, att, None, None, coalesced=False)
+                    trans_val_perm = GSATModelManager.reorder_like(trans_idx, batch.edge_index, trans_val)
+                    edge_att = (att + trans_val_perm) / 2
+                else:
+                    edge_att = att
+            else:
+                edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
+
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_attr=batch.edge_attr, edge_atten=edge_att)
+
+            loss = self.gsat_loss()
+        elif task_type == "signle-graph":
+            raise ValueError("Unsupported task type") # TODO check node classification possibility
+        elif task_type == "edge" and False: # TODO Kirill, remove False when release edge recommendation task
+            self.optimizer.zero_grad()
+            edge_index = batch.edge_index
+            pos_edge_index = edge_index[:, batch.y == 1]
+            neg_edge_index = edge_index[:, batch.y == 0]
+
+            pos_out = self.gnn(batch.x, pos_edge_index)
+            neg_out = self.gnn(batch.x, neg_edge_index)
+
+            # TODO check if we need to take out[:batch.batch_size]
+            pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
+            neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
+
+            loss = pos_loss + neg_loss
+        else:
+            raise ValueError("Unsupported task type")
+        return loss
+
+    def gsat_loss(self, att, logits, labels, epoch):
+        pred_loss = self.loss_function(logits, labels)
+
+        r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r, init_r=self.init_r)
+        info_loss = (att * torch.log(att/r + 1e-6) + (1-att) * torch.log((1-att)/(1-r+1e-6) + 1e-6)).mean()
+
+        pred_loss = pred_loss * self.pred_loss_coef
+        info_loss = info_loss * self.info_loss_coef
+        loss = pred_loss + info_loss
+        return loss
+
+    def get_r(self, decay_interval, decay_r, current_epoch, init_r=0.9, final_r=0.5):
+        r = init_r - current_epoch // decay_interval * decay_r
+        if r < final_r:
+            r = final_r
+        return r
+
+    def sampling(self, att_log_logits, epoch, training):
+        att = self.concrete_sample(att_log_logits, temp=1, training=training)
+        return att
+
+    @staticmethod
+    def concrete_sample(att_log_logit, temp, training):
+        if training:
+            random_noise = torch.empty_like(att_log_logit).uniform_(1e-10, 1 - 1e-10)
+            random_noise = torch.log(random_noise) - torch.log(1.0 - random_noise)
+            att_bern = ((att_log_logit + random_noise) / temp).sigmoid()
+        else:
+            att_bern = (att_log_logit).sigmoid()
+        return att_bern
+
+    @staticmethod
+    def reorder_like(from_edge_index, to_edge_index, values):
+        from_edge_index, values = sort_edge_index(from_edge_index, values)
+        ranking_score = to_edge_index[0] * (to_edge_index.max() + 1) + to_edge_index[1]
+        ranking = ranking_score.argsort().argsort()
+        if not (from_edge_index[:, ranking] == to_edge_index).all():
+            raise ValueError("Edges in from_edge_index and to_edge_index are different, impossible to match both.")
+        return values[ranking]
+
+    @staticmethod
+    def lift_node_att_to_edge_att(node_att, edge_index):
+        src_lifted_att = node_att[edge_index[0]]
+        dst_lifted_att = node_att[edge_index[1]]
+        edge_att = src_lifted_att * dst_lifted_att
+        return edge_att
+
+class ExtractorMLP(nn.Module):
+
+    def __init__(
+            self,
+            hidden_size,
+            learn_edge_features: bool = False,
+            extractor_dropout_p: float = 0.5,
+    ):
+        super().__init__()
+        self.learn_edge_att = learn_edge_features
+        dropout_p = extractor_dropout_p
+
+        if self.learn_edge_att:
+            self.feature_extractor = MLP([hidden_size * 2, hidden_size * 4, hidden_size, 1], dropout=dropout_p)
+        else:
+            self.feature_extractor = MLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
+
+    def forward(self, emb, edge_index, batch):
+        if self.learn_edge_att:
+            col, row = edge_index
+            f1, f2 = emb[col], emb[row]
+            f12 = torch.cat([f1, f2], dim=-1)
+            att_log_logits = self.feature_extractor(f12, batch[col])
+        else:
+            att_log_logits = self.feature_extractor(emb, batch)
+        return att_log_logits
+
+class MLP(nn.Sequential):
+    def __init__(self, channels, dropout, bias=True):
+        m = []
+        for i in range(1, len(channels)):
+            m.append(nn.Linear(channels[i - 1], channels[i], bias))
+
+            if i < len(channels) - 1:
+                m.append(InstanceNorm(channels[i]))
+                m.append(nn.ReLU())
+                m.append(nn.Dropout(dropout))
+
+        super(MLP, self).__init__(*m)
+
+    def forward(self, inputs, batch):
+        for module in self._modules.values():
+            if isinstance(module, (InstanceNorm)):
+                inputs = module(inputs, batch)
+            else:
+                inputs = module(inputs)
+        return inputs

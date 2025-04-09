@@ -408,6 +408,7 @@ class NeuralAnalysisExplainer(Explainer):
 
     def concept_layer(self, x, edge_index, level, batch=None, feature_maps=None):
         # TODO kostyl have to be reworked with get_all_layer_embeddings
+        # TODO check if reworked already
 
         con = self.model.conn_dict[(self.model.n_layers - level, 3)][0]
         con_pool = import_by_name(con['pool']['pool_type'],
