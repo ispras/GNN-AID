@@ -7,6 +7,7 @@ from flask_socketio import SocketIO
 from tqdm import tqdm
 
 from base.datasets_processing import GeneralDataset
+from models_builder.gnn_models import GNNModelManager
 
 
 class ProgressBar(tqdm):
@@ -86,7 +87,7 @@ class Explainer(
     @staticmethod
     def check_availability(
             gen_dataset: GeneralDataset,
-            model_manager: Type
+            model_manager: GNNModelManager
     ) -> bool:
         """ Availability check for the given dataset and model manager. """
         return False

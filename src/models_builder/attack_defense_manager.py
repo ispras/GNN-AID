@@ -3,21 +3,20 @@ import json
 import os
 import warnings
 from pathlib import Path
-from typing import Type, Union, List, Any
+from typing import Union, List
 
 import numpy as np
 import torch
 
+from attacks.evasion_attacks import EvasionAttacker
+from attacks.mi_attacks import MIAttacker
+from attacks.poison_attacks import PoisonAttacker
+from aux.utils import import_all_from_package, all_subclasses
 from base.datasets_processing import GeneralDataset
-
-for pack in [
-    'defense.GNNGuard.gnnguard',
-    'defense.JaccardDefense.jaccard_def',
-]:
-    try:
-        __import__(pack)
-    except ImportError:
-        print(f"Couldn't import Explainer from {pack}")
+from defense.evasion_defense import EvasionDefender
+from defense.mi_defense import MIDefender
+from defense.poison_defense import PoisonDefender
+from models_builder.gnn_models import GNNModelManager
 
 
 class FrameworkAttackDefenseManager:
@@ -493,3 +492,24 @@ class FrameworkAttackDefenseManager:
         with open(file_path, "w") as f:
             print(json.dumps(prepare_dict_for_json(file_dict), indent=2))
             json.dump(prepare_dict_for_json(file_dict), f, indent=2)
+
+    @staticmethod
+    def available_ad_methods(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ) -> dict:
+        """ Get a list of attack and defense methods applicable for current model and dataset.
+        """
+        import attacks
+        import_all_from_package(attacks)  # to import all subclasses properly
+        import defense
+        import_all_from_package(defense)  # to import all subclasses properly
+        res = {
+            "pa": [e.name for e in all_subclasses(PoisonAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "pd": [e.name for e in all_subclasses(PoisonDefender) if e.check_availability(gen_dataset, model_manager)],
+            "ea": [e.name for e in all_subclasses(EvasionAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "ed": [e.name for e in all_subclasses(EvasionDefender) if e.check_availability(gen_dataset, model_manager)],
+            "ma": [e.name for e in all_subclasses(MIAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "md": [e.name for e in all_subclasses(MIDefender) if e.check_availability(gen_dataset, model_manager)],
+        }
+        return res

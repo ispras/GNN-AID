@@ -80,7 +80,7 @@ class PrototypeExplanation extends Explanation {
         }
 
         // Set datasetData and datasetVar
-        let datasetData = await Controller.ajaxRequest('/dataset', {
+        let datasetData = await controller.ajaxRequest('/dataset', {
             get: "data", part: JSON_stringify({center: this.baseGraphs})})
         datasetData.graphs = Array.from(Array(this.baseGraphs.length).keys())
         this.prototypeGraphs.datasetData = datasetData
@@ -89,14 +89,14 @@ class PrototypeExplanation extends Explanation {
 
         // Ask for model satellites: masks, preds and embeds
         let datasetVar = {}
-        let data = await Controller.ajaxRequest('/model', {
+        let data = await controller.ajaxRequest('/model', {
             get: "satellites", part: JSON_stringify({center: this.baseGraphs})})
         if (data !== '')
             for (const satellite of VisibleGraph.SATELLITES)
                 if (satellite in data)
                     datasetVar[satellite] = data[satellite]
 
-        data = await Controller.ajaxRequest('/dataset', {
+        data = await controller.ajaxRequest('/dataset', {
             get: "var_data", part: JSON_stringify({center: this.baseGraphs})})
         if (data !== '')
             for (const satellite of VisibleGraph.SATELLITES)

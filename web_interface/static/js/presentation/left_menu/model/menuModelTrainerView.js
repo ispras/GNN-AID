@@ -48,7 +48,7 @@ class MenuModelTrainerView extends MenuView {
     async onrun(metrics) {
         this.$acceptDiv.find('button').prop("disabled", true)
         this.$run.prop("disabled", true)
-        await Controller.ajaxRequest('/model',
+        await controller.ajaxRequest('/model',
             {do: "run", metrics: JSON_stringify(metrics)})
         this.$run.prop("disabled", false)
         this.$acceptDiv.find('button').prop("disabled", false)
@@ -56,23 +56,23 @@ class MenuModelTrainerView extends MenuView {
 
     async onreset() {
         this.$acceptDiv.find('button').prop("disabled", true)
-        await Controller.ajaxRequest('/model', {do: "reset"})
+        await controller.ajaxRequest('/model', {do: "reset"})
         this.$acceptDiv.find('button').prop("disabled", false)
     }
 
     async ontrain(mode, steps, metrics) {
         this.$acceptDiv.find('button').prop("disabled", true)
-        await Controller.ajaxRequest('/model',
+        await controller.ajaxRequest('/model',
             {do: "train", mode: mode, steps: steps, metrics: JSON_stringify(metrics)})
         this.$acceptDiv.find('button').prop("disabled", false)
     }
 
     async onstop() {
-        await Controller.ajaxRequest('/model', {do: "stop"})
+        await controller.ajaxRequest('/model', {do: "stop"})
     }
 
     async onsave() {
-        let path = await Controller.ajaxRequest('/model', {do: "save"})
+        let path = await controller.ajaxRequest('/model', {do: "save"})
         console.log("model saved at", path)
         // TODO Re-index models storage
     }

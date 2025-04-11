@@ -152,7 +152,9 @@
   <script src="static/js/presentation/left_menu/model/menuModelConstructorView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelCustomView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelManagerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuBeforeTrainView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelTrainerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuAfterTrainView.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/layer.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/sequential.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/connections.js"></script>
@@ -280,7 +282,7 @@
     window.addEventListener('unload', function () {
         console.log('User has left the page')
         // if (Controller.isActive) {
-            navigator.sendBeacon("/drop", JSON.stringify({sessionId: Controller.sessionId}))
+            navigator.sendBeacon("/drop", JSON.stringify({sessionId: controller.sessionId}))
         // }
 
         // // You could also send an AJAX request to log this event on your server
@@ -290,8 +292,13 @@
         // xhr.send('User left the page');
     })
 
+    const sessionId = "{{ session_id }}"
+    const mode = "{{ mode }}"
+
+    console.log('html page created, sessionId=', sessionId, 'mode=', mode)
+
     // Create client controller
-    let controller = new Controller()
+    let controller = new Controller(sessionId, mode)
   </script>
 </body>
 </html>

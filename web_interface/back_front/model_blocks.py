@@ -339,6 +339,7 @@ class ModelTrainerBlock(Block):
 
         self.gen_dataset = None
         self.model_manager = None
+        self.metrics = None
 
     def _init(
             self,
@@ -360,7 +361,7 @@ class ModelTrainerBlock(Block):
     def _submit(
             self
     ) -> None:
-        self._object = self.model_manager
+        self._object = [self.model_manager, self.metrics]
 
     def do(
             self,
@@ -368,8 +369,9 @@ class ModelTrainerBlock(Block):
             params
     ) -> str:
         if do == "run":
-            metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
-            self._run_model(metrics)
+            self.metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
+            self._adjust_metrics()
+            self._run_model()
             return ''
 
         elif do == "reset":
@@ -379,8 +381,9 @@ class ModelTrainerBlock(Block):
         elif do == "train":
             mode = params.get('mode')
             steps = json.loads(params.get('steps'))
-            metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
-            self._train_model(mode=mode, steps=steps, metrics=metrics)
+            self.metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
+            self._adjust_metrics()
+            self._train_model(mode=mode, steps=steps)
             return ''
 
         elif do == "save":
@@ -406,19 +409,17 @@ class ModelTrainerBlock(Block):
         self.model_manager.modification.epochs = 0
         self.gen_dataset.train_test_split(*self.model_manager.manager_config.train_test_split)
         send_train_test_mask(self.gen_dataset, self.socket)
-        self._run_model([Metric("Accuracy", mask='train'), Metric("Accuracy", mask='test')])
+        self._run_model()
 
     def _run_model(
-            self,
-            metrics
+            self
     ) -> None:
         """ Runs model to compute predictions and logits """
         # TODO add set of nodes
         assert self.model_manager
         from models_builder.gnn_models import Metric
-        self._check_metrics(metrics)
         metrics_values = self.model_manager.evaluate_model(
-            self.gen_dataset, metrics=metrics)
+            self.gen_dataset, metrics=self.metrics)
         self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
 
         stats_data = {k: self.gen_dataset.visible_part.filter(v)
@@ -429,13 +430,11 @@ class ModelTrainerBlock(Block):
     def _train_model(
             self,
             mode: Union[str, None],
-            steps: Union[int, None],
-            metrics: list[Metric]
+            steps: Union[int, None]
     ) -> None:
-        self._check_metrics(metrics)
         self.model_manager.train_model(
             gen_dataset=self.gen_dataset, save_model_flag=False,
-            mode=mode, steps=steps, metrics=metrics, socket=self.socket)
+            mode=mode, steps=steps, metrics=self.metrics, socket=self.socket)
 
     def _save_model(
             self
@@ -446,16 +445,16 @@ class ModelTrainerBlock(Block):
         # TODO send dir_structure info to front
         return str(path)
 
-    def _check_metrics(
-            self,
-            metrics: list[Metric]
+    def _adjust_metrics(
+            self
     ) -> None:
         """ Adjust metrics parameters if dataset has many classes, e.g. binary -> macro averaging
         """
         classes = self.gen_dataset.num_classes
         if classes > 2:
-            for m in metrics:
+            for m in self.metrics:
                 if m.name in ['F1', 'Recall', 'Precision', 'Jaccard']:
                     avg = m.kwargs.get('average', 'binary')
                     if avg == 'binary':
                         m.kwargs['average'] = 'macro'
+

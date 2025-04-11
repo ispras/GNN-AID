@@ -29,7 +29,7 @@ class PanelModelView extends PanelView {
         let $statDiv = $("<div></div>")
         this.$body.append($statDiv)
         this.stat = new PanelModelStatView($statDiv,
-            "mmc", ["mconstr", "mload", "mcustom", "mmc", "mt"])
+            "mmc", ["mconstr", "mload", "mcustom", "mmc", "mt", "at"])
         this.stat.init()
     }
 

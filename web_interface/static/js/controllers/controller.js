@@ -1,30 +1,61 @@
 class Controller {
-    static sessionId // ID of session
-    static isActive = false // this controller was started
-
-    constructor() {
+    constructor(sessionId, mode) {
+        this.sessionId = sessionId // ID of session
+        this.isActive = false // this controller was started
+        this.mode = mode
         this.presenter = new Presenter()
 
         // Setup socket connection
-        this.socket = io()
+        this.socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+        })
         this.socket.on('connect', () => {
-            console.log('socket connected')
-            if (Controller.isActive) {
+            console.log('socket connected, sid=', this.socket.id)
+            if (this.isActive) {
+                // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
                 // Means re-connection to server. Need to reload the page
                 alert("This session is outdated. Press OK to reload the page.")
-                Controller.isActive = false
+                this.isActive = false
                 window.location.reload(true)
             }
+            else {
+                this.isActive = true
+                console.log('session_id', this.sessionId)
+                this.run()
+            }
         })
-        this.socket.on('session_id', (data) => {
-            Controller.sessionId = data["session_id"]
-            Controller.isActive = true
-            console.log('session_id', Controller.sessionId)
-            this.run()
+        // this.socket.on('session_id', (data) => {
+        //     this.sessionId = data["session_id"]
+        //     this.isActive = true
+        //     console.log('session_id', this.sessionId)
+        //     this.run()
+        // })
+        this.socket.on('reconnect', () => {
+            console.log('socket re-connected')
+            console.log('this.isActive=', this.isActive)
         })
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('socket reconnect_attempt')
+        })
+
+        this.socket.on('connect_error', (err) => {
+            console.log('socket connect_error', err.message, 'sid=', this.socket.id)
+        })
+        this.socket.on('reconnect_error', (err) => {
+            console.log('socket reconnect_error', err)
+        })
+        this.socket.on('reconnect_failed', () => {
+            console.log('socket reconnect_failed')
+        })
+        this.socket.on('error', (err) => {
+            console.log('socket error', err)
+        })
+
         this.socket.on('disconnect', () => {
-            // Controller.isActive = false
-            console.log('Disconnected from server');
+            // this.isActive = false
+            console.log('Disconnected from server, sid=', this.socket.id);
         });
 
         this.socket.on('message', async (data) => {
@@ -70,32 +101,32 @@ class Controller {
         this.presenter.menuDatasetView.init()
     }
 
-    static async blockRequest(blockName, funcName, requestParams) {
+    async blockRequest(blockName, funcName, requestParams) {
         let data = {
             block: blockName,
             func: funcName,
             params: JSON_stringify(requestParams),
         }
-        return await Controller.ajaxRequest('/block', data)
+        return await this.ajaxRequest('/block', data)
     }
 
-    // Setup storage contents
-    static async getStorageContents(type) {
-        let url = '/ask'
-        let data = {
-            ask: "storage",
-            type: type,
-        }
-        let [ps, info] = await Controller.ajaxRequest(url, data)
-        ps = PrefixStorage.fromJSON(ps)
-        info = JSON_parse(info)
-        return [ps, info]
-    }
+    // // Setup storage contents
+    // async getStorageContents(type) {
+    //     let url = '/ask'
+    //     let data = {
+    //         ask: "storage",
+    //         type: type,
+    //     }
+    //     let [ps, info] = await this.ajaxRequest(url, data)
+    //     ps = PrefixStorage.fromJSON(ps)
+    //     info = JSON_parse(info)
+    //     return [ps, info]
+    // }
 
-    static async ajaxRequest(url, data) {
+    async ajaxRequest(url, data) {
         let result = null
         console.assert(!('sessionId' in data))
-        data['sessionId'] = Controller.sessionId
+        data['sessionId'] = this.sessionId
         // console.log('ajaxRequest', data)
         await $.ajax({
             type: 'POST',

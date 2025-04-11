@@ -2,7 +2,8 @@
  * Create selectors for parameters according to their types, default values and constraints.
  */
 class ParamsBuilder {
-    static allowed_types = Array('F', 'FW', 'M', 'EI', 'ELR', 'EGR', 'O')
+    static allowed_types = Array('F', 'FW', 'M', 'EI', 'ELR', 'EGR', 'O',
+        'AD-pa', 'AD-pd', 'AD-ea', 'AD-ed', 'AD-ma', 'AD-md')
     static cachedParams = {} // type -> parameters
 
     // Get parameters information of the given type
@@ -11,7 +12,7 @@ class ParamsBuilder {
         if (type in ParamsBuilder.cachedParams)
             return ParamsBuilder.cachedParams[type]
 
-        let params = await Controller.ajaxRequest('/ask', {
+        let params = await controller.ajaxRequest('/ask', {
                 ask: "parameters",
                 type: type,
             })

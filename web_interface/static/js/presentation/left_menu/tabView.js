@@ -30,7 +30,7 @@ class TabView extends MenuView {
                 // console.log(this.constructor.name + "[" + this.requestBlock + "].unlock()")
                 if (view.state === MVState.LOCKED) {
                     // NOTE state will become ACTIVE at onUnlock()
-                    await Controller.blockRequest(
+                    await controller.blockRequest(
                         view.requestBlock, 'unlock', {toDefault: toDefault})
                     blockDiv(view.$mainDiv, false)
                 }

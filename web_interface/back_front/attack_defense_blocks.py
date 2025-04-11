@@ -1,27 +1,41 @@
 import json
-import os
-from pathlib import Path
-from typing import Union
 
-import torch
-from torch_geometric.data import Dataset
+from aux.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
+    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
+    EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
+    MI_DEFENSE_PARAMETERS_PATH
+from base.datasets_processing import GeneralDataset
+from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
+from models_builder.gnn_models import GNNModelManager
+from web_interface.back_front.block import Block
+from web_interface.back_front.utils import WebInterfaceError
 
-from aux.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
-from aux.data_info import UserCodeInfo, DataInfo
-from aux.declaration import Declare
-from aux.prefix_storage import PrefixStorage
-from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
-    TECHNICAL_PARAMETER_KEY, \
-    IMPORT_INFO_KEY
-from base.datasets_processing import GeneralDataset, VisiblePart
-from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
-from models_builder.gnn_models import ModelManagerConfig, GNNModelManager, Metric
-from web_interface.back_front.block import Block, WrapperBlock
-from web_interface.back_front.utils import WebInterfaceError, json_dumps, get_config_keys, \
-    SocketConnect
+NAME_TO_PATH = {
+    "pa": POISON_ATTACK_PARAMETERS_PATH,
+    "pd": POISON_DEFENSE_PARAMETERS_PATH,
+    "ea": EVASION_ATTACK_PARAMETERS_PATH,
+    "ed": EVASION_DEFENSE_PARAMETERS_PATH,
+    "ma": MI_ATTACK_PARAMETERS_PATH,
+    "md": MI_DEFENSE_PARAMETERS_PATH,
+}
+
+NAME_TO_CLASS = {
+    "pa": PoisonAttackConfig.__name__,
+    "pd": PoisonDefenseConfig.__name__,
+    "ea": EvasionAttackConfig.__name__,
+    "ed": EvasionDefenseConfig.__name__,
+    "ma": MIAttackConfig.__name__,
+    "md": MIDefenseConfig.__name__,
+}
 
 
 class BeforeTrainBlock(Block):
+    """
+    When model manager is defined, we can specify 1 attack and 3 defenses:
+    poison attack, poison defense, evasion defense, MI defense.
+    """
+
     def __init__(
             self,
             *args,
@@ -29,62 +43,128 @@ class BeforeTrainBlock(Block):
     ):
         super().__init__(*args, **kwargs)
 
-        self.model_path = None
-        self.gen_dataset = None
+        self.gen_dataset: GeneralDataset = None
+        self.model_manager: GNNModelManager = None
+
+        self.ad_configs = {
+            "pa": None,
+            "pd": None,
+            "ed": None,
+            "md": None,
+        }
 
     def _init(
             self,
-            gen_dataset: GeneralDataset
-    ) -> list[str]:
+            gen_dataset: GeneralDataset,
+            gmm: GNNModelManager
+    ) -> dict:
         self.gen_dataset = gen_dataset
-        return self.get_index()
+        self.model_manager = gmm
+
+        return FrameworkAttackDefenseManager.available_ad_methods(
+            self.gen_dataset, self.model_manager)
 
     def _finalize(
             self
     ) -> bool:
-        if set(get_config_keys("models")) != set(self._config.keys()):
-            return False
-
-        self.model_path = self._config
+        for name, config in self._config.items():
+            # FIXME check config
+            self.ad_configs[name] = ConfigPattern(
+                **config,
+                _import_path=NAME_TO_PATH[name],
+                _config_class=NAME_TO_CLASS[name])
         return True
 
     def _submit(
             self
     ) -> None:
-        from models_builder.gnn_models import GNNModelManager
-        self.model_manager, train_test_split_path = GNNModelManager.from_model_path(
-            model_path=self.model_path, dataset_path=self.gen_dataset.results_dir)
-        self._load_train_test_mask(train_test_split_path / 'train_test_split')
+        if self.ad_configs["pa"]:
+            self.model_manager.set_poison_attacker(self.ad_configs["pa"])
+        if self.ad_configs["pd"]:
+            self.model_manager.set_poison_defender(self.ad_configs["pd"])
+        if self.ad_configs["ed"]:
+            self.model_manager.set_evasion_defender(self.ad_configs["ed"])
+        if self.ad_configs["md"]:
+            self.model_manager.set_mi_defender(self.ad_configs["md"])
 
         self._object = self.model_manager
-        self._result = self._object.get_full_info()
-        self._result.update(self._object.gnn.get_full_info(tensor_size_limit=TENSOR_SIZE_LIMIT))
 
-    def get_index(
+    def _unlock(
             self
-    ) -> list[str]:
-        """ Get all available models with respect to current dataset
-        """
-        DataInfo.refresh_models_dir_structure()
-        index, info = DataInfo.models_parse()
-        path, files_paths = Declare.dataset_prepared_dir(self.gen_dataset.dataset_config,
-                                                         self.gen_dataset.dataset_var_config)
-        path = os.path.relpath(path, GRAPHS_DIR)
-        keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
-            prefix=("data_root", "data_prepared")
-        )
-        values_info = DataInfo.values_list_by_path_and_keys(
-            path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
-        ps = index.filter(dict(zip(keys_list, values_info)))
-        return [ps.to_json(), json_dumps(info)]
-
-    def _load_train_test_mask(
-            self,
-            path: Union[Path, str]
     ) -> None:
-        """ Load train/test mask associated to the model and send to frontend """
-        # FIXME self.manager_config.train_test_split
-        self.gen_dataset.train_mask, self.gen_dataset.val_mask, \
-        self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
-        send_train_test_mask(self.gen_dataset, self.socket)
+        # Retract training changes - reset model weights
+        self.model_manager.gnn.reset_parameters()
+        self.model_manager.modification.epochs = 0
+        self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
+
+        stats_data = {k: self.gen_dataset.visible_part.filter(v)
+                      for k, v in self.model_manager.stats_data.items()}
+        self.model_manager.send_epoch_results(
+            stats_data=stats_data, socket=self.socket)
+
+
+class AfterTrainBlock(Block):
+    """
+    When model training is over, we can specify 2 attacks:
+    evasion attack, MI attack.
+    """
+
+    def __init__(
+            self,
+            *args,
+            **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.gen_dataset = None
+        self.model_manager: GNNModelManager = None
+        self.metrics: list = None
+
+        self.ad_configs = {
+            "ea": None,
+            "ma": None,
+        }
+
+    def _init(
+            self,
+            gen_dataset: GeneralDataset,
+            gmm_and_metrics: list
+    ) -> dict:
+        self.gen_dataset = gen_dataset
+        self.model_manager, self.metrics = gmm_and_metrics
+
+        return FrameworkAttackDefenseManager.available_ad_methods(
+            self.gen_dataset, self.model_manager)
+
+    def do(
+            self,
+            do,
+            params
+    ) -> str:
+        if do == "run with attacks":
+            for name, config in json.loads(params.get('configs')).items():
+                # FIXME check config
+                self.ad_configs[name] = ConfigPattern(
+                    **config,
+                    _import_path=NAME_TO_PATH[name],
+                    _config_class=NAME_TO_CLASS[name])
+
+            if self.ad_configs["ea"]:
+                self.model_manager.set_evasion_attacker(self.ad_configs["ea"])
+            if self.ad_configs["ma"]:
+                self.model_manager.set_mi_attacker(self.ad_configs["ma"])
+
+            metrics_values = self.model_manager.evaluate_model(
+                self.gen_dataset, metrics=self.metrics)
+            self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
+
+            # print("metrics_values after attacks", metrics_values)
+            stats_data = {k: self.gen_dataset.visible_part.filter(v)
+                          for k, v in self.model_manager.stats_data.items()}
+            self.model_manager.send_epoch_results(
+                metrics_values=metrics_values, stats_data=stats_data, socket=self.socket)
+            return ''
+
+        else:
+            raise WebInterfaceError(f"Unknown 'do' command '{do}' for model")
 

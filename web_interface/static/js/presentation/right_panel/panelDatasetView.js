@@ -50,7 +50,7 @@ class PanelDatasetView extends PanelView {
         $div.append($button)
         $button.click(async () => {
             $button.prop("disabled", true)
-            let res = await Controller.ajaxRequest('/dataset', {get: "stat", stat: stat})
+            let res = await controller.ajaxRequest('/dataset', {get: "stat", stat: stat})
             // console.log(res)
             $div.empty()
             if (res.constructor === Object) { // dict
@@ -73,7 +73,7 @@ class PanelDatasetView extends PanelView {
         $ddDiv.append($button)
         $button.click(async () => {
             $button.prop("disabled", true)
-            let data = await Controller.ajaxRequest('/dataset', {get: "stat",stat: st})
+            let data = await controller.ajaxRequest('/dataset', {get: "stat",stat: st})
             // console.log(data)
             $ddDiv.empty()
             if (!dictFlag)
@@ -241,7 +241,7 @@ class PanelDatasetView extends PanelView {
             $acDiv.append($button1)
             $button1.click(async () => {
                 $button1.prop("disabled", true)
-                let data = Controller.ajaxRequest('/dataset', {get: "stat", stat: "attr_corr"})
+                let data = controller.ajaxRequest('/dataset', {get: "stat", stat: "attr_corr"})
 
                 let attrs = data['attributes']
                 let correlations = data['correlations']

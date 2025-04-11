@@ -1,6 +1,5 @@
-from typing import Type
-
 from base.datasets_processing import GeneralDataset
+from models_builder.gnn_models import GNNModelManager
 
 
 class Attacker:
@@ -25,8 +24,8 @@ class Attacker:
     @staticmethod
     def check_availability(
             gen_dataset: GeneralDataset,
-            model_manager: Type
+            model_manager: GNNModelManager
     ):
-        return False
+        return True  # TODO implement in subclasses
 
 

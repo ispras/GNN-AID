@@ -1,41 +1,32 @@
 import importlib.util
 import json
-import random
 from math import ceil
 from pathlib import Path
 from types import FunctionType
-from typing import Callable, List, Union, Any, Type, Protocol
+from typing import Callable, List, Union, Type, Protocol
 
-import numpy as np
-import torch
 import sklearn.metrics
+import torch
 from flask_socketio import SocketIO
-from torch.nn.utils import clip_grad_norm
 from torch import tensor
-import torch.nn.functional as F
 from torch.cuda import is_available
+from torch.nn.utils import clip_grad_norm
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
 
+from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, \
+    MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
 from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
 from aux.data_info import UserCodeInfo
-from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, model_managers_info_by_names_list, \
-    hash_data_sha256, \
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
-from base.datasets_processing import GeneralDataset
-from explainers.explainer import ProgressBar
-from explainers.ProtGNN.MCTS import mcts_args
-from attacks.evasion_attacks import EvasionAttacker
-from attacks.mi_attacks import MIAttacker
-from attacks.poison_attacks import PoisonAttacker
-from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
-    PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+    MI_ATTACK_PARAMETERS_PATH, \
     POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from defense.evasion_defense import EvasionDefender
-from defense.mi_defense import MIDefender
-from defense.poison_defense import PoisonDefender
+from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
+    model_managers_info_by_names_list, hash_data_sha256, \
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
+from base.datasets_processing import GeneralDataset
+from explainers.ProtGNN.MCTS import mcts_args
 
 
 class Metric:
@@ -398,7 +389,7 @@ class GNNModelManager:
         self.poison_attack_name = poison_attack_name
         poison_attack_kwargs = getattr(self.poison_attack_config, CONFIG_OBJ).to_dict()
 
-        # name_klass = {e.name: e for e in PoisonAttacker.__subclasses__()}
+        from attacks.poison_attacks import PoisonAttacker
         name_klass = {e.name: e for e in all_subclasses(PoisonAttacker)}
 
         klass = name_klass[self.poison_attack_name]
@@ -440,7 +431,8 @@ class GNNModelManager:
         self.evasion_attack_name = evasion_attack_name
         evasion_attack_kwargs = getattr(self.evasion_attack_config, CONFIG_OBJ).to_dict()
 
-        name_klass = {e.name: e for e in EvasionAttacker.__subclasses__()}
+        from attacks.evasion_attacks import EvasionAttacker
+        name_klass = {e.name: e for e in all_subclasses(EvasionAttacker)}
         klass = name_klass[self.evasion_attack_name]
         self.evasion_attacker = klass(
             # device=self.device,
@@ -480,7 +472,8 @@ class GNNModelManager:
         self.mi_attack_name = mi_attack_name
         mi_attack_kwargs = getattr(self.mi_attack_config, CONFIG_OBJ).to_dict()
 
-        name_klass = {e.name: e for e in MIAttacker.__subclasses__()}
+        from attacks.mi_attacks import MIAttacker
+        name_klass = {e.name: e for e in all_subclasses(MIAttacker)}
         klass = name_klass[self.mi_attack_name]
         self.mi_attacker = klass(
             # device=self.device,
@@ -520,6 +513,7 @@ class GNNModelManager:
         self.poison_defense_name = poison_defense_name
         poison_defense_kwargs = getattr(self.poison_defense_config, CONFIG_OBJ).to_dict()
 
+        from defense.poison_defense import PoisonDefender
         name_klass = {e.name: e for e in all_subclasses(PoisonDefender)}
         klass = name_klass[self.poison_defense_name]
         self.poison_defender = klass(
@@ -560,7 +554,8 @@ class GNNModelManager:
         self.evasion_defense_name = evasion_defense_name
         evasion_defense_kwargs = getattr(self.evasion_defense_config, CONFIG_OBJ).to_dict()
 
-        name_klass = {e.name: e for e in EvasionDefender.__subclasses__()}
+        from defense.evasion_defense import EvasionDefender
+        name_klass = {e.name: e for e in all_subclasses(EvasionDefender)}
         klass = name_klass[self.evasion_defense_name]
         self.evasion_defender = klass(
             # device=self.device,
@@ -603,7 +598,8 @@ class GNNModelManager:
         self.mi_defense_name = mi_defense_name
         mi_defense_kwargs = getattr(self.mi_defense_config, CONFIG_OBJ).to_dict()
 
-        name_klass = {e.name: e for e in MIDefender.__subclasses__()}
+        from defense.mi_defense import MIDefender
+        name_klass = {e.name: e for e in all_subclasses(MIDefender)}
         klass = name_klass[self.mi_defense_name]
         self.mi_defender = klass(
             # device=self.device,
@@ -1092,6 +1088,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
         """
+        from explainers.explainer import ProgressBar
         if self.poison_attacker and self.poison_attack_flag:
             loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
             if loc is not None:

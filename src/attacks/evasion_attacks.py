@@ -1,6 +1,7 @@
 from typing import Type, Union
 import torch
 import numpy as np
+from skopt import Optimizer
 
 from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset

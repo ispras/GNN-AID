@@ -63,7 +63,7 @@ class DatasetView extends View {
         }
         else if (block === "dvc") {
             [this.labeling, this.oneHotableFeature] = data
-            this.datasetVar = await Controller.ajaxRequest('/dataset', {get: "var_data"})
+            this.datasetVar = await controller.ajaxRequest('/dataset', {get: "var_data"})
             this.setDatasetVar()
         }
         else if (block === "el") {
@@ -228,16 +228,16 @@ class DatasetView extends View {
     }
 
     async beforeInit() {
-        await Controller.ajaxRequest('/dataset',
+        await controller.ajaxRequest('/dataset',
             {set: "visible_part", part: JSON_stringify(this.visibleGraph.visibleConfig)})
 
-        let data = await Controller.ajaxRequest('/dataset', {get: "data"})
+        let data = await controller.ajaxRequest('/dataset', {get: "data"})
         this.visibleGraph.datasetData = data
     }
 
     async afterInit() {
         // Ask for features and labels
-        let data = await Controller.ajaxRequest('/dataset', {get: "var_data"})
+        let data = await controller.ajaxRequest('/dataset', {get: "var_data"})
         if (data !== '') {
             for (const satellite of VisibleGraph.SATELLITES) {
                 if (satellite in data) {
@@ -247,7 +247,7 @@ class DatasetView extends View {
         }
 
         // Ask for model satellites: masks, preds and embeds
-        data = await Controller.ajaxRequest('/model', {get: "satellites"})
+        data = await controller.ajaxRequest('/model', {get: "satellites"})
             for (const satellite of VisibleGraph.SATELLITES) {
                 if (data !== '')
                     if (satellite in data) {
