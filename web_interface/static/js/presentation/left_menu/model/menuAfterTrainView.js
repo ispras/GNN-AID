@@ -1,5 +1,5 @@
 class MenuAfterTrainView extends MenuView {
-    static names = ["ea", "ma"]
+    static names = ["AD-ea", "AD-ma"]
     static leftMargin = 8
     static paramsAttackColor = "#ff8"
 
@@ -68,8 +68,8 @@ class MenuAfterTrainView extends MenuView {
                 .attr("type", "checkbox").prop('checked', false)
             $cb.append(this.$checkboxes[name])
             $cb.append($("<label></label>").html("add <b>" + {
-                "ea": "Evasion attack",
-                "ma": "MI attack",
+                "AD-ea": "Evasion attack",
+                "AD-ma": "MI attack",
             }[name] + "</b>").attr("for", checkId))
 
             let $methodDiv = $("<div></div>").hide()
@@ -99,12 +99,13 @@ class MenuAfterTrainView extends MenuView {
                 .css("background-color", name[1] === 'a' ? MenuAfterTrainView.paramsAttackColor : MenuBeforeTrainView.paramsDefenseColor)
             $methodDiv.append($methodParamsDiv)
             this.paramsBuilders[name] = new ParamsBuilder($methodParamsDiv,
-                'AD-' + name, this.idPrefix + "-AD-param-" + name + '-')
+                name, this.idPrefix + "-AD-param-" + name + '-')
 
             let self = this
             this.$methodSelects[name].change(async function () {
                 self.paramsBuilders[name].drop()
                 // await self.unlock(true) // Clear chosen values
+                self.$acceptDiv.hide()
                 await self.paramsBuilders[name].build(this.value)
                 self.$acceptDiv.show()
             })

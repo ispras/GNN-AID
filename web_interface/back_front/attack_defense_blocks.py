@@ -12,21 +12,21 @@ from web_interface.back_front.block import Block
 from web_interface.back_front.utils import WebInterfaceError
 
 NAME_TO_PATH = {
-    "pa": POISON_ATTACK_PARAMETERS_PATH,
-    "pd": POISON_DEFENSE_PARAMETERS_PATH,
-    "ea": EVASION_ATTACK_PARAMETERS_PATH,
-    "ed": EVASION_DEFENSE_PARAMETERS_PATH,
-    "ma": MI_ATTACK_PARAMETERS_PATH,
-    "md": MI_DEFENSE_PARAMETERS_PATH,
+    "AD-pa": POISON_ATTACK_PARAMETERS_PATH,
+    "AD-pd": POISON_DEFENSE_PARAMETERS_PATH,
+    "AD-ea": EVASION_ATTACK_PARAMETERS_PATH,
+    "AD-ed": EVASION_DEFENSE_PARAMETERS_PATH,
+    "AD-ma": MI_ATTACK_PARAMETERS_PATH,
+    "AD-md": MI_DEFENSE_PARAMETERS_PATH,
 }
 
 NAME_TO_CLASS = {
-    "pa": PoisonAttackConfig.__name__,
-    "pd": PoisonDefenseConfig.__name__,
-    "ea": EvasionAttackConfig.__name__,
-    "ed": EvasionDefenseConfig.__name__,
-    "ma": MIAttackConfig.__name__,
-    "md": MIDefenseConfig.__name__,
+    "AD-pa": PoisonAttackConfig.__name__,
+    "AD-pd": PoisonDefenseConfig.__name__,
+    "AD-ea": EvasionAttackConfig.__name__,
+    "AD-ed": EvasionDefenseConfig.__name__,
+    "AD-ma": MIAttackConfig.__name__,
+    "AD-md": MIDefenseConfig.__name__,
 }
 
 
@@ -47,10 +47,10 @@ class BeforeTrainBlock(Block):
         self.model_manager: GNNModelManager = None
 
         self.ad_configs = {
-            "pa": None,
-            "pd": None,
-            "ed": None,
-            "md": None,
+            "AD-pa": None,
+            "AD-pd": None,
+            "AD-ed": None,
+            "AD-md": None,
         }
 
     def _init(
@@ -67,8 +67,22 @@ class BeforeTrainBlock(Block):
     def _finalize(
             self
     ) -> bool:
+        print(self._config)
         for name, config in self._config.items():
             # FIXME check config
+
+            # Check for inner configs
+            for k, v in config["_config_kwargs"].items():
+                if isinstance(v, dict) and "_class_name" in v and "_config_kwargs" in v:
+                    type = v["params_type"]
+                    v = ConfigPattern(
+                        _class_name=v["_class_name"],
+                        _config_kwargs=v["_config_kwargs"],
+                        _import_path=NAME_TO_PATH[type],
+                        _config_class=NAME_TO_CLASS[type],
+                    )
+                    config["_config_kwargs"][k] = v
+
             self.ad_configs[name] = ConfigPattern(
                 **config,
                 _import_path=NAME_TO_PATH[name],
@@ -78,14 +92,14 @@ class BeforeTrainBlock(Block):
     def _submit(
             self
     ) -> None:
-        if self.ad_configs["pa"]:
-            self.model_manager.set_poison_attacker(self.ad_configs["pa"])
-        if self.ad_configs["pd"]:
-            self.model_manager.set_poison_defender(self.ad_configs["pd"])
-        if self.ad_configs["ed"]:
-            self.model_manager.set_evasion_defender(self.ad_configs["ed"])
-        if self.ad_configs["md"]:
-            self.model_manager.set_mi_defender(self.ad_configs["md"])
+        if self.ad_configs["AD-pa"]:
+            self.model_manager.set_poison_attacker(self.ad_configs["AD-pa"])
+        if self.ad_configs["AD-pd"]:
+            self.model_manager.set_poison_defender(self.ad_configs["AD-pd"])
+        if self.ad_configs["AD-ed"]:
+            self.model_manager.set_evasion_defender(self.ad_configs["AD-ed"])
+        if self.ad_configs["AD-md"]:
+            self.model_manager.set_mi_defender(self.ad_configs["AD-md"])
 
         self._object = self.model_manager
 
@@ -121,8 +135,8 @@ class AfterTrainBlock(Block):
         self.metrics: list = None
 
         self.ad_configs = {
-            "ea": None,
-            "ma": None,
+            "AD-ea": None,
+            "AD-ma": None,
         }
 
     def _init(
@@ -149,10 +163,10 @@ class AfterTrainBlock(Block):
                     _import_path=NAME_TO_PATH[name],
                     _config_class=NAME_TO_CLASS[name])
 
-            if self.ad_configs["ea"]:
-                self.model_manager.set_evasion_attacker(self.ad_configs["ea"])
-            if self.ad_configs["ma"]:
-                self.model_manager.set_mi_attacker(self.ad_configs["ma"])
+            if self.ad_configs["AD-ea"]:
+                self.model_manager.set_evasion_attacker(self.ad_configs["AD-ea"])
+            if self.ad_configs["AD-ma"]:
+                self.model_manager.set_mi_attacker(self.ad_configs["AD-ma"])
 
             metrics_values = self.model_manager.evaluate_model(
                 self.gen_dataset, metrics=self.metrics)

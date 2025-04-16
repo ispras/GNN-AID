@@ -505,11 +505,11 @@ class FrameworkAttackDefenseManager:
         import defense
         import_all_from_package(defense)  # to import all subclasses properly
         res = {
-            "pa": [e.name for e in all_subclasses(PoisonAttacker) if e.check_availability(gen_dataset, model_manager)],
-            "pd": [e.name for e in all_subclasses(PoisonDefender) if e.check_availability(gen_dataset, model_manager)],
-            "ea": [e.name for e in all_subclasses(EvasionAttacker) if e.check_availability(gen_dataset, model_manager)],
-            "ed": [e.name for e in all_subclasses(EvasionDefender) if e.check_availability(gen_dataset, model_manager)],
-            "ma": [e.name for e in all_subclasses(MIAttacker) if e.check_availability(gen_dataset, model_manager)],
-            "md": [e.name for e in all_subclasses(MIDefender) if e.check_availability(gen_dataset, model_manager)],
+            "AD-pa": [e.name for e in all_subclasses(PoisonAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "AD-pd": [e.name for e in all_subclasses(PoisonDefender) if e.check_availability(gen_dataset, model_manager)],
+            "AD-ea": [e.name for e in all_subclasses(EvasionAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "AD-ed": [e.name for e in all_subclasses(EvasionDefender) if e.check_availability(gen_dataset, model_manager)],
+            "AD-ma": [e.name for e in all_subclasses(MIAttacker) if e.check_availability(gen_dataset, model_manager)],
+            "AD-md": [e.name for e in all_subclasses(MIDefender) if e.check_availability(gen_dataset, model_manager)],
         }
         return res

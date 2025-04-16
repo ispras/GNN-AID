@@ -269,7 +269,7 @@
 
     // Throw alert when user tries to reload the page
     window.addEventListener('beforeunload', function (e) {
-        if (Controller.isActive) {
+        if (controller.isActive) {
             e.preventDefault()
             // Chrome requires returnValue to be set
             e.returnValue = ''
@@ -278,19 +278,19 @@
             return 'Are you sure you want to leave this page? Unsaved progress will be lost.'
         }
     })
-    // This will run when the user actually leaves the page
-    window.addEventListener('unload', function () {
-        console.log('User has left the page')
-        // if (Controller.isActive) {
-            navigator.sendBeacon("/drop", JSON.stringify({sessionId: controller.sessionId}))
-        // }
-
-        // // You could also send an AJAX request to log this event on your server
-        // // Note: This must be a synchronous request due to the nature of the unload event
-        // var xhr = new XMLHttpRequest();
-        // xhr.open('POST', '/log-exit', false);
-        // xhr.send('User left the page');
-    })
+    // // This will run when the user actually leaves the page
+    // window.addEventListener('unload', function () {
+    //     console.log('User has left the page')
+    //     // if (Controller.isActive) {
+    //         navigator.sendBeacon("/drop", JSON.stringify({sessionId: controller.sessionId}))
+    //     // }
+    //
+    //     // // You could also send an AJAX request to log this event on your server
+    //     // // Note: This must be a synchronous request due to the nature of the unload event
+    //     // var xhr = new XMLHttpRequest();
+    //     // xhr.open('POST', '/log-exit', false);
+    //     // xhr.send('User left the page');
+    // })
 
     const sessionId = "{{ session_id }}"
     const mode = "{{ mode }}"

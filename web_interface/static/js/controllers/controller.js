@@ -12,7 +12,7 @@ class Controller {
             reconnectionDelay: 1000,
         })
         this.socket.on('connect', () => {
-            console.log('socket connected, sid=', this.socket.id)
+            console.log('socket connected')
             if (this.isActive) {
                 // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
                 // Means re-connection to server. Need to reload the page
@@ -26,20 +26,13 @@ class Controller {
                 this.run()
             }
         })
-        // this.socket.on('session_id', (data) => {
-        //     this.sessionId = data["session_id"]
-        //     this.isActive = true
-        //     console.log('session_id', this.sessionId)
-        //     this.run()
-        // })
         this.socket.on('reconnect', () => {
             console.log('socket re-connected')
             console.log('this.isActive=', this.isActive)
         })
         this.socket.on('reconnect_attempt', (attemptNumber) => {
-            console.log('socket reconnect_attempt')
+            console.log('socket reconnect_attempt', attemptNumber)
         })
-
         this.socket.on('connect_error', (err) => {
             console.log('socket connect_error', err.message, 'sid=', this.socket.id)
         })
@@ -56,7 +49,13 @@ class Controller {
         this.socket.on('disconnect', () => {
             // this.isActive = false
             console.log('Disconnected from server, sid=', this.socket.id);
-        });
+            if (this.isActive) {
+                // Show a notification to the user
+                alert("This session is outdated. Press OK to reload the page.")
+                this.isActive = false
+                window.location.reload(true)
+            }
+        })
 
         this.socket.on('message', async (data) => {
             // Message to block listeners

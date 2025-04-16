@@ -2,7 +2,7 @@
  "EmptyPoisonDefender": {
  },
  "BadRandomPoisonDefender": {
-  "n_edges_percent": ["n_edges_percent", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
+  "n_edges_percent": ["n_edges_percent", "float", 0.1, {"min": 0.0001, "step": 0.01, "max": 100}, "?"]
  },
  "JaccardDefender": {
   "threshold": ["Edge Threshold", "float", 0.35, {"min": 0, "max": 1, "step":  0.01}, "Jaccard index threshold for dropping edges"]

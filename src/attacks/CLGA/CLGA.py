@@ -7,6 +7,8 @@ from attacks.CLGA.differentiable_models.model import GRACE
 from tqdm import tqdm
 from torch_geometric.utils import to_dense_adj
 from torch_geometric.nn import MessagePassing
+
+from base.datasets_processing import GeneralDataset
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from typing import Tuple
 
@@ -16,8 +18,8 @@ class CLGAAttack(PoisonAttacker):
 
     def __init__(
             self,
-            num_nodes: int,
-            feature_shape: int,
+            num_nodes: int = None,
+            feature_shape: int = None,
             learning_rate: float = 0.01,
             num_hidden: int = 256,
             num_proj_hidden: int = 32,
@@ -48,6 +50,12 @@ class CLGAAttack(PoisonAttacker):
         self.modified_adj = None
         self.model = None
         self.optimizer = None
+
+    def _init(self, gen_dataset: GeneralDataset):
+        """ Init extra parameters when dataset is known.
+        """
+        self.num_nodes = gen_dataset.data.x.shape[0]
+        self.feature_shape = gen_dataset.num_node_features
 
     @staticmethod
     def drop_edge(
@@ -135,6 +143,7 @@ class CLGAAttack(PoisonAttacker):
         """
         Execute the CLGA attack.
         """
+        self._init(gen_dataset)
         self.model = GRACE(
             encoder=GCN(self.feature_shape, self.num_hidden, 'prelu'),
             num_hidden=self.num_hidden,

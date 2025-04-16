@@ -7,6 +7,7 @@ from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset
 
 # Nettack imports
+from models_builder.gnn_models import GNNModelManager
 from src.attacks.nettack.nettack import Nettack
 from src.attacks.nettack.utils import preprocess_graph, largest_connected_components, data_to_csr_matrix, train_w1_w2
 
@@ -136,6 +137,7 @@ class FGSMAttacker(
                 model.eval()
                 num_hops = model.n_layers
 
+                print('node_idx', node_idx)
                 subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
                                                                            num_hops=num_hops,
                                                                            edge_index=edge_index,
@@ -551,10 +553,12 @@ class NettackGroupEvasionAttacker(
 
     def __init__(
             self,
-            node_idxs: list,
+            node_idxs: Union[list, int],
             **kwargs
     ):
         super().__init__()
+        if isinstance(node_idxs, int):
+            node_idxs = [node_idxs]
         self.node_idxs = node_idxs  # kwargs.get("node_idxs")
         assert isinstance(self.node_idxs, list)
         self.n_perturbations = kwargs.get("n_perturbations")
@@ -580,6 +584,15 @@ class ReWattAttacker(
     EvasionAttacker
 ):
     name = "ReWatt"
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        # FIXME add conditions.
+        #  - smth like len(model.embedding_levels_by_layers) - 2 > 0
+        return True
 
     def __init__(
             self,
