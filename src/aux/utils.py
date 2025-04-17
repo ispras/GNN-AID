@@ -164,16 +164,31 @@ def all_subclasses(
 
 
 def import_all_from_package(package) -> None:
-    """ Import all modules recursively from a given python package.
+    """ Import all modules recursively from a given python package, within the project.
     All subpackages must contain '__init__.py' to be imported properly.
     """
     import pkgutil
+    import os
     from importlib import import_module
     for importer, modname, ispkg in pkgutil.walk_packages(
             path=package.__path__, onerror=lambda x: None):
-        module = import_module(package.__name__ + '.' + modname, package.__name__)
-        if ispkg:
-            import_all_from_package(module)
+
+        # Get the full module name
+        full_modname = package.__name__ + '.' + modname
+
+        # Import the module
+        module = import_module(full_modname, package.__name__)
+
+        # Check if the module is part of your project
+        if hasattr(module, "__file__"):
+            module_path = os.path.abspath(module.__file__)
+            # Check if the module is in the project directory
+            if os.path.commonpath([root_dir, module_path]) == root_dir:
+                if ispkg:
+                    import_all_from_package(module)
+            else:
+                # Skip external library modules
+                continue
 
 
 class tmp_dir():
