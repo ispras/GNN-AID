@@ -64,14 +64,21 @@ class FGSMAttacker(
             self,
             model_manager: Type,
             gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor
+            mask_tensor: torch.Tensor,
+            task_type: str = None,
     ):
+        if task_type is None:
+            task_type = gen_dataset.is_multi()
+        elif task_type == "multiple-graphs":
+            task_type = True
+        else:
+            task_type = False
         if self.is_feature_attack:
             gen_dataset.data.x.requires_grad = True
             model = model_manager.gnn
             model.eval()
             output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
-            if gen_dataset.is_multi():
+            if task_type:
                 loss = model_manager.loss_function(output, gen_dataset.dataset[self.element_idx].y)
             else:
                 loss = model_manager.loss_function(output[self.element_idx], gen_dataset.data.y[self.element_idx])
@@ -82,7 +89,7 @@ class FGSMAttacker(
             perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
             gen_dataset.data.x = perturbed_data_x.detach()
         else:
-            if gen_dataset.is_multi():
+            if task_type:
                 graph_idx = self.element_idx
 
                 edge_index = gen_dataset.dataset[graph_idx].edge_index
@@ -218,9 +225,16 @@ class PGDAttacker(
             self,
             model_manager: Type,
             gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor
+            mask_tensor: torch.Tensor,
+            task_type: str = None,
     ) -> None:
-        if gen_dataset.is_multi():
+        if task_type is None:
+            task_type = gen_dataset.is_multi()
+        elif task_type == "multiple-graphs":
+            task_type = True
+        else:
+            task_type = False
+        if task_type:
             self._attack_on_graph(model_manager, gen_dataset)
         else:
             self._attack_on_node(model_manager, gen_dataset)
