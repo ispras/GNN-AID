@@ -7,6 +7,7 @@ from tqdm import tqdm
 from attacks.evasion_attacks import EvasionAttacker
 from attacks.QAttack.utils import get_adj_list, from_adj_list, adj_list_oriented_to_non_oriented
 
+
 class QAttacker(EvasionAttacker):
     name = "QAttack"
 
@@ -54,7 +55,8 @@ class QAttacker(EvasionAttacker):
             rewiring = self.population[i]
             adj_list = get_adj_list(dataset)
             for n in rewiring.keys():
-                adj_list[n] = list(set(adj_list[n]).union({int(rewiring[n]['add'])}).difference({int(rewiring[n]['del'])}))
+                adj_list[n] = list(
+                    set(adj_list[n]).union({int(rewiring[n]['add'])}).difference({int(rewiring[n]['del'])}))
             dataset.edge_index = from_adj_list(adj_list)
 
             # Get labels from black-box
@@ -106,7 +108,7 @@ class QAttacker(EvasionAttacker):
             com = labeled_nodes[node]
             deg[com] = deg.get(com, 0.) + len(non_oriented_adj_list[node])
             for neighbor in edges:
-                edge_weight = 1 # TODO weighted graph to be implemented
+                edge_weight = 1  # TODO weighted graph to be implemented
                 if labeled_nodes[neighbor] == com:
                     if neighbor == node:
                         inc[com] = inc.get(com, 0.) + float(edge_weight)
@@ -175,7 +177,7 @@ class QAttacker(EvasionAttacker):
             else:
                 child_2[n] = parent_1[n]
 
-        return child_1,child_2
+        return child_1, child_2
 
     def mutation(self, gen_dataset):
         for i in range(self.population_size):
@@ -189,7 +191,8 @@ class QAttacker(EvasionAttacker):
                     adj_list = get_adj_list(dataset)
                     for n in rewiring.keys():
                         adj_list[n] = list(
-                            set(adj_list[n]).union(set([int(rewiring[n]['add'])])).difference(set([int(rewiring[n]['del'])])))
+                            set(adj_list[n]).union(set([int(rewiring[n]['add'])])).difference(
+                                set([int(rewiring[n]['del'])])))
                     dataset.edge_index = from_adj_list(adj_list)
                     non_isolated_nodes = set(gen_dataset.dataset.edge_index[0].tolist()).union(
                         set(gen_dataset.dataset.edge_index[1].tolist()))
@@ -205,7 +208,7 @@ class QAttacker(EvasionAttacker):
                         self.population[i][n]['del'] = np.random.choice(list(adj_list[n]), 1)
                     else:
                         selected_nodes = set(self.population[i].keys())
-                        #non_selected_nodes = non_isolated_nodes.difference(selected_nodes)
+                        # non_selected_nodes = non_isolated_nodes.difference(selected_nodes)
                         non_drain_nodes = non_drain_nodes.difference(selected_nodes)
                         new_node = np.random.choice(list(non_drain_nodes), size=1, replace=False)[0]
                         self.population[i].pop(n)
@@ -223,8 +226,7 @@ class QAttacker(EvasionAttacker):
         self.population[:elitism_size] = self.population[-elitism_size:]
         return self.population[-1]
 
-
-    def attack(self, model_manager, gen_dataset, mask_tensor):
+    def attack(self, model_manager, gen_dataset, mask_tensor, **kwargs):
         self.init(gen_dataset)
 
         for i in tqdm(range(self.generations), desc='Attack iterations:', position=0, leave=True):

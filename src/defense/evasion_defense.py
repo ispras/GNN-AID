@@ -191,6 +191,15 @@ class AdvTraining(
             self.epsilon = self.attack_config._config_kwargs["epsilon"]
             # set attacker
             self.attacker = FGSMAttacker(self.epsilon)
+        elif self.attack_config._class_name == "PGD":
+            self.attack_type = "EVASION"
+            # get attack params
+            self.epsilon = self.attack_config._config_kwargs["epsilon"]
+            self.learning_rate = self.attack_config._config_kwargs["learning_rate"]
+            self.num_iterations = self.attack_config._config_kwargs["num_iterations"]
+            self.num_rand_trials = self.attack_config._config_kwargs["num_rand_trials"]
+            # set attacker
+            self.attacker = FGSMAttacker(self.epsilon)
         elif self.attack_config._class_name == "QAttack":
             self.attack_type = "EVASION"
             # get attack params
@@ -215,7 +224,9 @@ class AdvTraining(
     def pre_batch(
             self,
             model_manager: Type,
-            batch
+            batch,
+            task_type=None,
+            **kwargs,
     ):
         super().pre_batch(model_manager=model_manager, batch=batch)
         self.perturbed_gen_dataset = data.Data()
@@ -223,15 +234,19 @@ class AdvTraining(
         self.perturbed_gen_dataset.dataset = self.perturbed_gen_dataset.data
         self.perturbed_gen_dataset.dataset.data = self.perturbed_gen_dataset.data
         if self.attack_type == "EVASION":
-            self.perturbed_gen_dataset = self.attacker.attack(model_manager=model_manager,
-                                                              gen_dataset=self.perturbed_gen_dataset,
-                                                              mask_tensor=self.perturbed_gen_dataset.data.train_mask)
+            self.perturbed_gen_dataset = self.attacker.attack(
+                model_manager=model_manager,
+                gen_dataset=self.perturbed_gen_dataset,
+                mask_tensor=self.perturbed_gen_dataset.data.train_mask,
+                task_type=task_type,
+            )
 
     def post_batch(
             self,
             model_manager: Type,
             batch,
-            loss: torch.Tensor
+            loss: torch.Tensor,
+            **kwargs,
     ) -> dict:
         super().post_batch(model_manager=model_manager, batch=batch, loss=loss)
         # Output on perturbed data

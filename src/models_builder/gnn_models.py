@@ -951,7 +951,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.pre_batch()
         if self.evasion_defender and self.evasion_defense_flag:
-            self.evasion_defender.pre_batch(model_manager=self, batch=batch)
+            self.evasion_defender.pre_batch(model_manager=self, batch=batch, task_type=task_type)
         loss = self.train_on_batch(batch=batch, task_type=task_type)
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.post_batch()
@@ -1093,7 +1093,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param socket: socket to use for sending data to frontend
         """
         if self.poison_attacker and self.poison_attack_flag:
-            loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+            loc = self.poison_attacker.attack(dataset=gen_dataset)
             if loc is not None:
                 gen_dataset = loc
 
