@@ -1,0 +1,31 @@
+[MASTER]
+ignore=venv,migrations,tests
+jobs=1
+persistent=yes
+
+[MESSAGES CONTROL]
+# Disable C - Convention and R - Refactor, and list some W - warnings
+disable=
+    C,
+    R,
+    unspecified-encoding,
+    redefined-builtin,
+    fixme,
+    unnecessary-lambda,
+    cell-var-from-loop,
+    eval-used,
+    abstract-method,
+    unnecessary-pass,
+    unbalanced-tuple-unpacking
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[REPORTS]
+reports=no
+output-format=colorized
+score=yes
+
+[LOGGING]
+logging-modules=logging

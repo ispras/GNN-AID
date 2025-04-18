@@ -646,7 +646,7 @@ class GeneralDataset:
         percent_val_class = 1 - percent_train_class - percent_test_class  # - 1.1e-15
 
         if percent_val_class < -1.1e-15:
-            raise Exception("percent_train_class + percent_test_class > 1")
+            raise RuntimeError("percent_train_class + percent_test_class > 1")
         train_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
         val_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
         test_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
@@ -909,7 +909,7 @@ class DatasetManager:
         )
 
         # Check if exists
-        root_dir, files_paths = Declare.dataset_root_dir(dataset_config)
+        root_dir, _ = Declare.dataset_root_dir(dataset_config)
         if root_dir.exists():
             if exists_ok:
                 shutil.rmtree(root_dir)

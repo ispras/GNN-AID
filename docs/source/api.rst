@@ -26,7 +26,7 @@ Evasion Attacks
 
 Evasion Defense
 ==============================
-.. automodule:: defense.evasion_defense
+.. automodule:: defenses.evasion_defense
    :members:
 
 

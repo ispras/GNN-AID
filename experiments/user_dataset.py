@@ -84,10 +84,7 @@ class UserApiDataset(Dataset):
     def processed_file_names(self):
         return ''
 
-    def process(self):
-        pass
-
-    def len(self) -> int:
+    def process(self):\n\n    def len(self) -> int:
         return 3
 
     def get(self, idx):

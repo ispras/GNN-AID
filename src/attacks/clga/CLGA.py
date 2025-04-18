@@ -1,16 +1,15 @@
+from typing import Tuple
 import torch
-from torch_geometric.utils import dropout_adj, dense_to_sparse
-from attacks.poison_attacks import PoisonAttacker
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import dropout_adj
+from torch_geometric.utils import to_dense_adj
+from tqdm import tqdm
+
 from attacks.clga.differentiable_models.gcn import GCN
 from attacks.clga.differentiable_models.model import GRACE
-
-from tqdm import tqdm
-from torch_geometric.utils import to_dense_adj
-from torch_geometric.nn import MessagePassing
-
+from attacks.poison_attacks import PoisonAttacker
 from base.datasets_processing import GeneralDataset
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from typing import Tuple
 
 
 class CLGAAttack(PoisonAttacker):
