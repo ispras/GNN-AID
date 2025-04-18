@@ -225,7 +225,7 @@ class AdvTraining(
             self,
             model_manager: Type,
             batch,
-            task_type=None,
+            task_type: str = None,
             **kwargs,
     ):
         super().pre_batch(model_manager=model_manager, batch=batch)
