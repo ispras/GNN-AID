@@ -11,12 +11,12 @@ from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from src.aux.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
-from attacks.QAttack import qattack
+from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
-from defense.JaccardDefense import jaccard_def
+from defenses.jaccard_defense import jaccard_def
 from attacks.metattack import meta_gradient_attack
-from defense.GNNGuard import gnnguard
-from defense.ProGNN.prognn import ProGNNDefender
+from defenses.gnn_guard import gnnguard
+from defenses.pro_gnn.prognn import ProGNNDefender
 
 
 def test_attack_defense():
@@ -507,7 +507,7 @@ def test_nettack_evasion():
 
 
 def test_qattack():
-    from attacks.QAttack import qattack
+    from attacks.qattack import qattack
     my_device = device('cpu')
 
     # Load dataset
@@ -613,7 +613,7 @@ def test_qattack():
 
 
 def test_jaccard():
-    from defense.JaccardDefense import jaccard_def
+    from defenses.jaccard_defense import jaccard_def
     # my_device = device('cuda' if is_available() else 'cpu')
     my_device = device('cpu')
 
@@ -765,7 +765,7 @@ def test_jaccard():
 
 
 def test_adv_training():
-    from defense.evasion_defense import AdvTraining
+    from defenses.evasion_defense import AdvTraining
 
     my_device = device('cpu')
     # full_name = ("single-graph", "Planetoid", 'Cora')
@@ -808,7 +808,7 @@ def test_adv_training():
             # "num_nodes": dataset.dataset.x.shape[0]
         }
     )
-    from defense.evasion_defense import EvasionDefender
+    from defenses.evasion_defense import EvasionDefender
     from src.aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)

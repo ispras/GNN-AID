@@ -1,16 +1,13 @@
-from pathlib import Path
 import numpy as np
 
-from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset
+from defenses.defense_base import Defender
 
-POISON_ATTACKS_DIR = Path(__file__).parent.resolve() / 'poison_attacks_collection'
 
-
-class PoisonAttacker(
-    Attacker
+class PoisonDefender(
+    Defender
 ):
-    """ Base class for all poison attack methods.
+    """ Base class for all poison defense methods.
     """
     def __init__(
             self,
@@ -18,36 +15,28 @@ class PoisonAttacker(
     ):
         super().__init__()
 
-
-class EmptyPoisonAttacker(
-    PoisonAttacker
-):
-    """ Just a stub for poison attack.
-    """
-    name = "EmptyPoisonAttacker"
-
-    def attack(
+    def defense(
             self,
             **kwargs
     ):
         pass
 
 
-class RandomPoisonAttack(
-    PoisonAttacker
+class BadRandomPoisonDefender(
+    PoisonDefender
 ):
-    name = "RandomPoisonAttack"
+    name = "BadRandomPoisonDefender"
 
     def __init__(
             self,
             n_edges_percent: float = 0.1
     ):
-        self.attack_diff = None
+        self.defense_diff = None
 
         super().__init__()
         self.n_edges_percent = n_edges_percent
 
-    def attack(
+    def defense(
             self,
             gen_dataset: GeneralDataset
     ) -> GeneralDataset:
@@ -62,10 +51,24 @@ class RandomPoisonAttack(
         edge_index_diff = edge_index[:, indices_to_remove]
         edge_index = edge_index[:, random_indices]
         gen_dataset.data.edge_index = edge_index
-        self.attack_diff = edge_index_diff
+        self.defense_diff = edge_index_diff
         return gen_dataset
 
-    def attack_diff(
+    def defense_diff(
             self
     ):
-        return self.attack_diff
+        return self.defense_diff
+
+
+class EmptyPoisonDefender(
+    PoisonDefender
+):
+    """ Just a stub for poison defense.
+    """
+    name = "EmptyPoisonDefender"
+
+    def defense(
+            self,
+            gen_dataset: GeneralDataset
+    ) -> GeneralDataset:
+        return gen_dataset

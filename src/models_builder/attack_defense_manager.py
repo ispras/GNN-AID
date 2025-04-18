@@ -13,9 +13,9 @@ from attacks.mi_attacks import MIAttacker
 from attacks.poison_attacks import PoisonAttacker
 from aux.utils import import_all_from_package, all_subclasses
 from base.datasets_processing import GeneralDataset
-from defense.evasion_defense import EvasionDefender
-from defense.mi_defense import MIDefender
-from defense.poison_defense import PoisonDefender
+from defenses.evasion_defense import EvasionDefender
+from defenses.mi_defense import MIDefender
+from defenses.poison_defense import PoisonDefender
 from models_builder.gnn_models import GNNModelManager
 
 
@@ -502,8 +502,8 @@ class FrameworkAttackDefenseManager:
         """
         import attacks
         import_all_from_package(attacks)  # to import all subclasses properly
-        import defense
-        import_all_from_package(defense)  # to import all subclasses properly
+        import defenses
+        import_all_from_package(defenses)  # to import all subclasses properly
         res = {
             "AD-pa": [e.name for e in all_subclasses(PoisonAttacker) if e.check_availability(gen_dataset, model_manager)],
             "AD-pd": [e.name for e in all_subclasses(PoisonDefender) if e.check_availability(gen_dataset, model_manager)],

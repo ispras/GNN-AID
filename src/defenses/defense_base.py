@@ -2,23 +2,17 @@ from base.datasets_processing import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 
-class Attacker:
-    """ Base class for all attack methods.
+class Defender:
+    """ Base class for all defense methods.
     """
-    name = "Attacker"
+    name = "Defender"
 
     def __init__(
             self
     ):
         pass
 
-    def attack(
-            self,
-            **kwargs
-    ):
-        pass
-
-    def attack_diff(
+    def defense_diff(
             self
     ):
         """ TODO Kirill add function docstring

@@ -7,8 +7,8 @@ from models_builder.models_zoo import model_configs_zoo
 from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, import_all_from_package
 
-import defense
-import_all_from_package(defense)  # to import all subclasses properly
+import defenses
+import_all_from_package(defenses)  # to import all subclasses properly
 
 
 class DefenseTest(unittest.TestCase):

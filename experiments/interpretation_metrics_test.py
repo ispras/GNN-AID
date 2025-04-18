@@ -15,9 +15,9 @@ from src.aux.configs import ModelModificationConfig, ConfigPattern, ModelConfig
 from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
-from defense.JaccardDefense import jaccard_def
+from defenses.jaccard_defense import jaccard_def
 from attacks.metattack import meta_gradient_attack
-from defense.GNNGuard import gnnguard
+from defenses.gnn_guard import gnnguard
 
 
 def load_result_dict(path):
@@ -368,7 +368,7 @@ def calculate_adversial_defence_metrics(
         }
     )
 
-    from defense.evasion_defense import EvasionDefender
+    from defenses.evasion_defense import EvasionDefender
     from src.aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)

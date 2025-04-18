@@ -26,6 +26,8 @@ from attacks.evasion_attacks_collection.rewatt.utils import *
 class EvasionAttacker(
     Attacker
 ):
+    """ Base class for all poison attack methods.
+    """
     def __init__(
             self,
             **kwargs
@@ -36,6 +38,8 @@ class EvasionAttacker(
 class EmptyEvasionAttacker(
     EvasionAttacker
 ):
+    """ Just a stub for evasion attack.
+    """
     name = "EmptyEvasionAttacker"
 
     def attack(

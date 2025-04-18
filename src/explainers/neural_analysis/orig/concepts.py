@@ -21,9 +21,6 @@ class ConceptSet:
 
         print('Constructing base concepts')
 
-        concepts_mutag = MoleculeConcepts({'C': 0, 'N': 1, 'O': 2, 'F': 3, 'I': 4, 'Cl': 5, 'Br': 6})
-        concepts_basic = BasicConcepts()
-
         if task == 'MUTAG':
             concs = [
                 BaseConcept('isC ', lambda g: concepts_mutag.is_element(g, 'C')),
@@ -52,6 +49,224 @@ class ConceptSet:
                 [BaseConcept(f'ndeg={i}', lambda g, i=i: concepts_basic.neigh_degree(g, k=i, operator='=', require=1)
                              ) for i in [1, 2, 3]]
             ]
+        elif task == 'BBBP':
+            concs = [
+                [BaseConcept(f'feature0-greater-than{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=0, k=k, operator='>')) for k in range(1, 6)],
+                [BaseConcept(f'feature2-greater-than{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=2, k=k, operator='>')) for k in range(1, 6)],
+                [BaseConcept(f'feature3-greater-than{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=3, k=k, operator='>')) for k in range(1, 6)],
+                [BaseConcept(f'feature4-greater-than{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=4, k=k, operator='>')) for k in range(1, 6)],
+                [BaseConcept(f'feature6-greater-than{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=6, k=k, operator='>')) for k in range(1, 6)],
+                [BaseConcept(f'feature7-is-{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=7, k=k, operator='=')) for k in range(1, 2)],
+                [BaseConcept(f'feature8-is-{k}',
+                             lambda g, k=k: concepts_basic.feature(g, j=8, k=k, operator='=')) for k in range(1, 2)],
+            ]
+        elif task == 'MUTAGENICITY':
+            concs = [
+                BaseConcept('no2 ', lambda g: concepts_mutagenicity.AB_K(g, 'N', 'O', 2)),
+                BaseConcept('nh2 ', lambda g: concepts_mutagenicity.AB_K(g, 'N', 'H', 2)),
+                BaseConcept('no1 ', lambda g: concepts_mutagenicity.AB_K(g, 'N', 'O', 1)),
+
+                BaseConcept('isC ', lambda g: concepts_mutagenicity.is_element(g, 'C')),
+                BaseConcept('isN ', lambda g: concepts_mutagenicity.is_element(g, 'N')),
+                BaseConcept('isO ', lambda g: concepts_mutagenicity.is_element(g, 'O')),
+                BaseConcept('isF ', lambda g: concepts_mutagenicity.is_element(g, 'F')),
+                BaseConcept('isI ', lambda g: concepts_mutagenicity.is_element(g, 'I')),
+                BaseConcept('isCl', lambda g: concepts_mutagenicity.is_element(g, 'Cl')),
+                BaseConcept('isS', lambda g: concepts_mutagenicity.is_element(g, 'S')),
+                BaseConcept('isK', lambda g: concepts_mutagenicity.is_element(g, 'K')),
+                BaseConcept('isLi', lambda g: concepts_mutagenicity.is_element(g, 'Li')),
+                BaseConcept('isP', lambda g: concepts_mutagenicity.is_element(g, 'P')),
+                BaseConcept('isH', lambda g: concepts_mutagenicity.is_element(g, 'H')),
+                BaseConcept('isCa', lambda g: concepts_mutagenicity.is_element(g, 'Ca')),
+                BaseConcept('isBr', lambda g: concepts_mutagenicity.is_element(g, 'Br')),
+
+                BaseConcept('nxC ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'C', strict=False)),
+                BaseConcept('nxN ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'N', strict=False)),
+                BaseConcept('nxF ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'F', strict=False)),
+                BaseConcept('nxO ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'O', strict=False)),
+                BaseConcept('nxCl', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Cl', strict=False)
+                            ),
+                BaseConcept('nxBr', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Br', strict=False)
+                            ),
+                BaseConcept('nxI ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'I', strict=False)),
+                BaseConcept('nxC ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'C', strict=False)),
+                BaseConcept('nxS ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'S', strict=False)),
+                BaseConcept('nxK ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'K', strict=False)),
+                BaseConcept('nxLi', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Li', strict=False)
+                            ),
+                BaseConcept('nxP ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'P', strict=False)),
+                BaseConcept('nxH ', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'H', strict=False)),
+                BaseConcept('nxCa', lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Ca', strict=False)
+                            ),
+
+                BaseConcept('2hpC',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'C', strict=False, hops=2)),
+                BaseConcept('2hpN',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'N', strict=False, hops=2)),
+                BaseConcept('2hpF',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'F', strict=False, hops=2)),
+                BaseConcept('2hpO',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'O', strict=False, hops=2)),
+                BaseConcept('2hCl',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Cl', strict=False, hops=2)
+                            ),
+                BaseConcept('2hBr',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Br', strict=False, hops=2)
+                            ),
+                BaseConcept('2hpI',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'I', strict=False, hops=2)),
+                BaseConcept('2hpC',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'C', strict=False, hops=2)),
+                BaseConcept('2hpS',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'S', strict=False, hops=2)),
+                BaseConcept('2hpK',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'K', strict=False, hops=2)),
+                BaseConcept('2hLi',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Li', strict=False, hops=2)
+                            ),
+                BaseConcept('2hpP ',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'P', strict=False, hops=2)),
+                BaseConcept('2hpH',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'H', strict=False, hops=2)),
+                BaseConcept('2hCa',
+                            lambda g: concepts_mutagenicity.element_neighbour(g, 'X', 'Ca', strict=False, hops=2)),
+            ]
+        elif task == 'PROTEINS':
+            concs = [
+                BaseConcept('isA_', lambda g: concepts_prot.is_element(g, 'A')),
+                BaseConcept('isB_', lambda g: concepts_prot.is_element(g, 'B')),
+                BaseConcept('isC_', lambda g: concepts_prot.is_element(g, 'C')),
+
+                [BaseConcept('nx1A', lambda g: concepts_prot.element_neighbour(g, 'X', 'A', strict=False)),
+                 BaseConcept('nx2A', lambda g: concepts_prot.element_neighbour(g, 'X', 'A', 'A', strict=False)),
+                 BaseConcept('nx3A', lambda g: concepts_prot.element_neighbour(g, 'X', 'A', 'A', 'A', strict=False))],
+
+                [BaseConcept('nx1B', lambda g: concepts_prot.element_neighbour(g, 'X', 'B', strict=False)),
+                 BaseConcept('nx2B', lambda g: concepts_prot.element_neighbour(g, 'X', 'B', 'B', strict=False)),
+                 BaseConcept('nx3B', lambda g: concepts_prot.element_neighbour(g, 'X', 'B', 'B', 'B', strict=False))],
+
+                [BaseConcept('nx1C', lambda g: concepts_prot.element_neighbour(g, 'X', 'C', strict=False)),
+                 BaseConcept('nx2C', lambda g: concepts_prot.element_neighbour(g, 'X', 'C', 'C', strict=False)),
+                 BaseConcept('nx3C', lambda g: concepts_prot.element_neighbour(g, 'X', 'C', 'C', 'C', strict=False)),
+                 BaseConcept('nx4C',
+                             lambda g: concepts_prot.element_neighbour(g, 'X', 'C', 'C', 'C', 'C', strict=False)),
+                 BaseConcept('nx5C',
+                             lambda g: concepts_prot.element_neighbour(g, 'X', 'C', 'C', 'C', 'C', strict=False))],
+
+                [BaseConcept('nb-nx-1A', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'A',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-2A', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'A',
+                                                                                                                   'A',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-3A', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'A',
+                                                                                                                   'A',
+                                                                                                                   'A',
+                                                                                                                   strict=False)))],
+
+                [BaseConcept('nb-nx-1B', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'B',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-2B', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'B',
+                                                                                                                   'B',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-3B', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'B',
+                                                                                                                   'B',
+                                                                                                                   'B',
+                                                                                                                   strict=False)))],
+
+                [BaseConcept('nb-nx-1C', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'C',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-2C', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'C',
+                                                                                                                   'C',
+                                                                                                                   strict=False))),
+                 BaseConcept('nb-nx-3C', lambda g1: higher_order_wrapper(g1,
+                                                                         lambda g: concepts_prot.element_neighbour(g,
+                                                                                                                   'X',
+                                                                                                                   'C',
+                                                                                                                   'C',
+                                                                                                                   'C',
+                                                                                                                   strict=False)))]
+            ]
+        elif task == 'NCI':
+            concs = [
+                *[BaseConcept(f'is{i}', lambda g, i=i: concepts_nci.is_element(g, str(i))) for i in range(37)],
+                *[BaseConcept(f'nx{i}', lambda g, i=i: concepts_nci.element_neighbour(g, 'X', str(i), strict=False)) for
+                  i in range(37)],
+                *[BaseConcept(f'2hp{i}',
+                              lambda g, i=i: concepts_nci.element_neighbour(g, 'X', str(i), strict=False, hops=2))
+                  for i in range(37)],
+            ]
+        elif task == 'BA':
+            concs = [
+                [BaseConcept(f'big{i}', lambda g, i=i: concepts_basic.degree(g, k=i, operator='>')) for i in
+                 range(1, 100, 3)],
+                [BaseConcept(f'ndeg{i}', lambda g, i=i: concepts_basic.neigh_degree(g, k=30, operator='>', require=i))
+                 for i in range(1, 3)],
+                [BaseConcept(f'NDEG{i}', lambda g, i=i: concepts_basic.neigh_degree(g, k=1, operator='=', require=i))
+                 for i in [1, 2, 3, 4, 5, 10]]]
+        elif task == 'IMDB':
+            concs = [
+                [BaseConcept(f'deg-greater-than{i}', lambda g, i=i: concepts_basic.degree(g, k=i, operator='>'))
+                 for i in range(1, 100, 2)],
+                [BaseConcept(f'has-nb-deg-greater-than-10{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=10, operator='>', require=i)) for i
+                 in [1, 2, 3, 4, 5]],
+                [BaseConcept(f'has-nb-deg-greater-than-30{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=30, operator='>', require=i)) for i
+                 in [1, 2, 3, 4, 5]]]
+        elif task == 'REDDIT':
+            concs = [
+                [BaseConcept(f'deg-greater-than{i}', lambda g, i=i: concepts_basic.degree(g, k=i, operator='>'))
+                 for i in range(1, 100, 3)],
+                [BaseConcept(f'has-nb-deg-greater-than-5{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=5, operator='>', require=i)) for i in
+                 [1, 2]],
+                [BaseConcept(f'has-nb-deg-greater-than-10{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=10, operator='>', require=i)) for i
+                 in [1, 2]],
+                [BaseConcept(f'has-nb-deg-greater-than-30{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=30, operator='>', require=i)) for i
+                 in [1, 2]],
+                [BaseConcept(f'has-nb-with-degree-one{i}',
+                             lambda g, i=i: concepts_basic.neigh_degree(g, k=1, operator='=', require=i)) for i in
+                 [1, 2, 3, 4, 5, 10]]]
+        elif task == 'SST':
+            concs = [
+                [BaseConcept(f'big{i}', lambda g, i=i: concepts_basic.degree(g, k=i, operator='>')) for i in
+                 range(1, 100, 3)],
+                [BaseConcept(f'ndeg{i}', lambda g, i=i: concepts_basic.neigh_degree(g, k=30, operator='>', require=i)
+                             ) for i in range(1, 10)],
+                [BaseConcept(f'NDEG{i}', lambda g, i=i: concepts_basic.neigh_degree(g, k=1, operator='=', require=i)
+                             ) for i in [1, 2, 3, 4, 5, 10]]]
         else:
             raise Exception('Unknown task %s' % task)
 
@@ -380,59 +595,59 @@ class ConceptSet:
         return ConceptSet(*copy.deepcopy(self.concepts))
 
 
-# # experiment for concepts which are not binary values over the nodes but rather
-# # reals.
-# class PolynomialShaper(torch.nn.Module):
-#     def __init__(self, n_degrees, neuron_mat, concept_mat, graph_idxs, epochs=100):
-#         super().__init__()
-#         self.n_degrees = n_degrees
-#         self.neuron_mat = neuron_mat
-#         self.concept_mat = concept_mat
-#         self.n_concepts = concept_mat.shape[0]
-#         self.n_nodes = concept_mat.shape[1]
-#         self.graph_idxs = graph_idxs
-#         self.register_parameter('coefs', torch.nn.Parameter(-0.5 + torch.rand((self.n_concepts, self.n_degrees))))
-#         self.epochs = epochs
-#
-#     def compute(self):
-#         t = torch.zeros((self.n_concepts, self.n_nodes), device=self.coefs.device)
-#
-#         for deg in range(self.n_degrees):
-#             if deg == 0:
-#                 t += self.coefs[:, 0].unsqueeze(1)
-#             else:
-#                 t += self.neuron_mat.pow(deg) * self.coefs[:, deg].unsqueeze(1)
-#
-#         t = (t - self.concept_mat).pow(2)  # (n_concepts, n_nodes)
-#         t = torch_scatter.scatter_add(t, self.graph_idxs)
-#         return t.mean(dim=1)  # (n_concepts, 1)
-#
-#     def optimise(self):
-#         optim = torch.optim.Adam(self.parameters(), lr=0.01)
-#
-#         for _ in range(self.epochs):
-#             t = self.compute().sum()
-#
-#             optim.zero_grad()
-#             t.backward()
-#             optim.step()
-#
-#
-# # a hack
-# def higher_order_wrapper(graph, lamb):
-#     adj_list = edge_index_to_adj_list(graph.edge_index, exclude_self=True)
-#     mask = lamb(graph).node_mask
-#
-#     mask_set = set([i for i in range(mask.shape[0]) if mask[i] != 0])
-#     node_set = set()
-#
-#     for u, neighs in adj_list.items():
-#         for v in neighs:
-#             if v in mask_set:
-#                 node_set.add(u)
-#                 break
-#
-#     return ConceptMask(graph, set(), node_set)
+# experiment for concepts which are not binary values over the nodes but rather
+# reals.
+class PolynomialShaper(torch.nn.Module):
+    def __init__(self, n_degrees, neuron_mat, concept_mat, graph_idxs, epochs=100):
+        super().__init__()
+        self.n_degrees = n_degrees
+        self.neuron_mat = neuron_mat
+        self.concept_mat = concept_mat
+        self.n_concepts = concept_mat.shape[0]
+        self.n_nodes = concept_mat.shape[1]
+        self.graph_idxs = graph_idxs
+        self.register_parameter('coefs', torch.nn.Parameter(-0.5 + torch.rand((self.n_concepts, self.n_degrees))))
+        self.epochs = epochs
+
+    def compute(self):
+        t = torch.zeros((self.n_concepts, self.n_nodes), device=self.coefs.device)
+
+        for deg in range(self.n_degrees):
+            if deg == 0:
+                t += self.coefs[:, 0].unsqueeze(1)
+            else:
+                t += self.neuron_mat.pow(deg) * self.coefs[:, deg].unsqueeze(1)
+
+        t = (t - self.concept_mat).pow(2)  # (n_concepts, n_nodes)
+        t = torch_scatter.scatter_add(t, self.graph_idxs)
+        return t.mean(dim=1)  # (n_concepts, 1)
+
+    def optimise(self):
+        optim = torch.optim.Adam(self.parameters(), lr=0.01)
+
+        for _ in range(self.epochs):
+            t = self.compute().sum()
+
+            optim.zero_grad()
+            t.backward()
+            optim.step()
+
+
+# a hack
+def higher_order_wrapper(graph, lamb):
+    adj_list = edge_index_to_adj_list(graph.edge_index, exclude_self=True)
+    mask = lamb(graph).node_mask
+
+    mask_set = set([i for i in range(mask.shape[0]) if mask[i] != 0])
+    node_set = set()
+
+    for u, neighs in adj_list.items():
+        for v in neighs:
+            if v in mask_set:
+                node_set.add(u)
+                break
+
+    return ConceptMask(graph, set(), node_set)
 
 
 # a concept object which can be applied to a graph as a function, returning a graph mask.
@@ -736,34 +951,17 @@ class MoleculeConcepts:
         return ConceptMask(graph, set(mask), set(np.unique([[pair[0], pair[1]] for pair in mask])))
 
 
-def clean_concepts(neuron_concepts):
-    cleaned_concepts = {}
-    for neuron_idx, dic in neuron_concepts.items():
-        top = sorted([(k, v) for (k, v) in dic.items()], key=lambda x: -x[1][1])
-        val = top[0][1][1]
-        i = 0
-        best_obj = th = None
-        best_obj_name = ''
-        while i < len(top) and top[i][1][1] == val:
-            if best_obj is None or top[i][1][0].length() < best_obj.length():
-                best_obj = top[i][1][0]
-                th = top[i][1][2]
-                best_obj_name = top[i][0]
-            i += 1
-        cleaned_concepts[neuron_idx] = (best_obj, (val, th, best_obj_name))
-    cleaned_concepts = {k: v for (k, v) in sorted(list(cleaned_concepts.items()), key=lambda x: x[1][1], reverse=True)}
-    distilled = []
-    for k, v in cleaned_concepts.items():
-        if v[0] is None:
-            continue
-        if not any([v[0].name() == conc.name() for conc in distilled]):
-            distilled.append(v[0])
-    return cleaned_concepts, distilled
-
-
 def concept_extract(model, dataset, task):
+    from concept_utils import clean_concepts
     neuron_concepts = model.concept_search(task, dataset, depth=3, top=64, augment=False)
     cleaned_concepts, distilled = clean_concepts(neuron_concepts)
     return distilled
 
 
+concepts_mutag = MoleculeConcepts({'C': 0, 'N': 1, 'O': 2, 'F': 3, 'I': 4, 'Cl': 5, 'Br': 6})
+concepts_mutagenicity = MoleculeConcepts({'C': 0, 'O': 1, 'Cl': 2, 'H': 3, 'N': 4, 'F': 5, 'Br': 6,
+                                          'S': 7, 'P': 8, 'I': 9, 'Na': 10, 'K': 11, 'Li': 12, 'Ca': 13})
+concepts_prot = MoleculeConcepts({'A': 0, 'B': 1, 'C': 2})
+concepts_nci = MoleculeConcepts({str(i): i for i in range(37)})
+
+concepts_basic = BasicConcepts()

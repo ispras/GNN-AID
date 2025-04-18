@@ -7,7 +7,7 @@ from torch.cuda import is_available
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.gnn_constructor import GNNStructure
-from explainers.GradCAM.GradCAM import GradCAM, GradCAMOut
+from explainers.gradcam.GradCAM import GradCAM, GradCAMOut
 from aux.declaration import Declare
 import matplotlib.pyplot as plt
 

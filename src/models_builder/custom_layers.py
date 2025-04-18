@@ -4,7 +4,7 @@ import numpy as np
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv
 
-from explainers.ProtGNN.MCTS import mcts
+from explainers.protgnn.MCTS import mcts
 import ctypes
 
 

@@ -2,11 +2,11 @@ import torch_geometric
 from torch_geometric.data import Data
 
 import importlib
-from explainers.NeuralAnalysis.orig import vis, concept_utils
-from explainers.NeuralAnalysis.orig.concept_utils import *
-from explainers.NeuralAnalysis.orig.pipeline import load_dataset
-from explainers.NeuralAnalysis.orig.pipeline import train_standard_model
-from explainers.NeuralAnalysis.orig.concept_ranker import by_weight
+from explainers.neural_analysis.orig import vis, concept_utils
+from explainers.neural_analysis.orig.concept_utils import *
+from explainers.neural_analysis.orig.pipeline import load_dataset
+from explainers.neural_analysis.orig.pipeline import train_standard_model
+from explainers.neural_analysis.orig.concept_ranker import by_weight
 
 print(torch_geometric.__version__)
 

@@ -10,6 +10,7 @@ import numpy as np
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
 
+SOURCE_DIR = root_dir / 'src'
 GRAPHS_DIR = root_dir / 'data'
 MODELS_DIR = root_dir / 'models'
 EXPLANATIONS_DIR = root_dir / 'explanations'
@@ -173,22 +174,15 @@ def import_all_from_package(package) -> None:
     for importer, modname, ispkg in pkgutil.walk_packages(
             path=package.__path__, onerror=lambda x: None):
 
-        # Get the full module name
-        full_modname = package.__name__ + '.' + modname
+        # We consider only modules from the project directory
+        if not Path(os.path.commonpath([SOURCE_DIR, importer.path])) == SOURCE_DIR:
+            continue
 
-        # Import the module
+        full_modname = package.__name__ + '.' + modname
         module = import_module(full_modname, package.__name__)
 
-        # Check if the module is part of your project
-        if hasattr(module, "__file__"):
-            module_path = os.path.abspath(module.__file__)
-            # Check if the module is in the project directory
-            if os.path.commonpath([root_dir, module_path]) == root_dir:
-                if ispkg:
-                    import_all_from_package(module)
-            else:
-                # Skip external library modules
-                continue
+        if ispkg:
+            import_all_from_package(module)
 
 
 class tmp_dir():

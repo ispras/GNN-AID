@@ -21,12 +21,13 @@ from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     MI_ATTACK_PARAMETERS_PATH, \
-    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, \
+    import_all_from_package
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from base.datasets_processing import GeneralDataset
-from explainers.ProtGNN.MCTS import mcts_args
+from explainers.protgnn.MCTS import mcts_args
 
 
 class Metric:
@@ -389,6 +390,8 @@ class GNNModelManager:
         self.poison_attack_name = poison_attack_name
         poison_attack_kwargs = getattr(self.poison_attack_config, CONFIG_OBJ).to_dict()
 
+        import attacks
+        import_all_from_package(attacks)  # to import all subclasses properly
         from attacks.poison_attacks import PoisonAttacker
         name_klass = {e.name: e for e in all_subclasses(PoisonAttacker)}
 
@@ -513,7 +516,9 @@ class GNNModelManager:
         self.poison_defense_name = poison_defense_name
         poison_defense_kwargs = getattr(self.poison_defense_config, CONFIG_OBJ).to_dict()
 
-        from defense.poison_defense import PoisonDefender
+        import defenses
+        import_all_from_package(defenses)  # to import all subclasses properly
+        from defenses.poison_defense import PoisonDefender
         name_klass = {e.name: e for e in all_subclasses(PoisonDefender)}
         klass = name_klass[self.poison_defense_name]
         self.poison_defender = klass(
@@ -554,7 +559,7 @@ class GNNModelManager:
         self.evasion_defense_name = evasion_defense_name
         evasion_defense_kwargs = getattr(self.evasion_defense_config, CONFIG_OBJ).to_dict()
 
-        from defense.evasion_defense import EvasionDefender
+        from defenses.evasion_defense import EvasionDefender
         name_klass = {e.name: e for e in all_subclasses(EvasionDefender)}
         klass = name_klass[self.evasion_defense_name]
         self.evasion_defender = klass(
@@ -598,7 +603,7 @@ class GNNModelManager:
         self.mi_defense_name = mi_defense_name
         mi_defense_kwargs = getattr(self.mi_defense_config, CONFIG_OBJ).to_dict()
 
-        from defense.mi_defense import MIDefender
+        from defenses.mi_defense import MIDefender
         name_klass = {e.name: e for e in all_subclasses(MIDefender)}
         klass = name_klass[self.mi_defense_name]
         self.mi_defender = klass(
