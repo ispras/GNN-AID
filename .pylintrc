@@ -22,6 +22,9 @@ disable=
 max-line-length=100
 indent-string='    '
 
+[TYPECHECK]
+ignored-modules=torch  # pylint can't parse C functions
+
 [REPORTS]
 reports=no
 output-format=colorized
