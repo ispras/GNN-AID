@@ -947,7 +947,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.pre_batch()
         if self.evasion_defender and self.evasion_defense_flag:
-            self.evasion_defender.pre_batch(model_manager=self, batch=batch)
+            self.evasion_defender.pre_batch(model_manager=self, batch=batch, task_type=task_type)
         loss = self.train_on_batch(batch=batch, task_type=task_type)
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.post_batch()
