@@ -5,6 +5,8 @@ from pathlib import Path
 from types import FunctionType
 from typing import Callable, List, Union, Type, Iterable, cast
 
+import numpy as np
+import torch
 import sklearn.metrics
 import torch
 from torch import tensor
@@ -18,6 +20,7 @@ from torch_geometric.nn import InstanceNorm
 from torch_geometric.utils import is_undirected, sort_edge_index
 from torch_sparse import transpose
 
+from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
 from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
@@ -26,7 +29,21 @@ from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_P
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
+from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
+from explainers.explainer import ProgressBar
+from explainers.ProtGNN.MCTS import mcts_args
+from attacks.evasion_attacks import EvasionAttacker
+from attacks.mi_attacks import MIAttacker
+from attacks.poison_attacks import PoisonAttacker
+from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
+    PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+from defense.evasion_defense import EvasionDefender
+from defense.mi_defense import MIDefender
+from defense.poison_defense import PoisonDefender
+from models_builder.models_utils import apply_decorator_to_graph_layers, apply_attention
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
@@ -1753,7 +1770,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
 
 
 class GSATModelManager(FrameworkGNNModelManager):
-    additional_config = ConfigPattern( # TODO check config
+    additional_config = ConfigPattern(  # TODO check config
         _config_class="ModelManagerConfig",
         _config_kwargs={
             "mask_features": [],
@@ -1780,7 +1797,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             gnn: Type = None,
             dataset_path: Union[str, Path] = None,
             learn_edge_features: bool = False,
-            hidden_size: int = 64,
+            hidden_size: int = 16,
             decay_int: int = 10,
             decay_r: float = 0.1,
             init_r: float = 0.9,
@@ -1793,6 +1810,8 @@ class GSATModelManager(FrameworkGNNModelManager):
     ):
         super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
         self.learn_edge_features = learn_edge_features
+        # TODO hidden_size -> must be init with consistence to gnn architecture
+        # TODO check if learn_edge_features == True then model -> GINEConv or other compatible
         self.hidden_size = hidden_size
         self.decay_int = decay_int
         self.decay_r = decay_r
@@ -1804,6 +1823,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         self.extractor_dropout_p = extractor_dropout_p
 
         self.extractor = ExtractorMLP(self.hidden_size, self.learn_edge_features, self.extractor_dropout_p)
+        apply_decorator_to_graph_layers(self.gnn, apply_attention)
 
     def train_on_batch(
             self,
@@ -1812,11 +1832,12 @@ class GSATModelManager(FrameworkGNNModelManager):
     ) -> torch.Tensor:
         if task_type == "multiple-graphs":
 
-            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[-1]
+            level = self.gnn.model_info['last_node_layer_ind']
+            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[level]
             att_log_logits = self.extractor(emb, batch.edge_index, batch.batch)
             att = self.sampling(att_log_logits, self.modification.epochs, training=True)
 
-            if self.learn_edge_features():
+            if self.learn_edge_features:
                 if is_undirected(batch.edge_index):
                     trans_idx, trans_val = transpose(batch.edge_index, att, None, None, coalesced=False)
                     trans_val_perm = GSATModelManager.reorder_like(trans_idx, batch.edge_index, trans_val)
@@ -1826,12 +1847,11 @@ class GSATModelManager(FrameworkGNNModelManager):
             else:
                 edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
 
-            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_attr=batch.edge_attr, edge_atten=edge_att)
-
-            loss = self.gsat_loss()
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_atten=edge_att)
+            loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
         elif task_type == "signle-graph":
-            raise ValueError("Unsupported task type") # TODO check node classification possibility
-        elif task_type == "edge" and False: # TODO Kirill, remove False when release edge recommendation task
+            raise ValueError("Unsupported task type")  # TODO check node classification possibility
+        elif task_type == "edge" and False:  # TODO Kirill, remove False when release edge recommendation task
             self.optimizer.zero_grad()
             edge_index = batch.edge_index
             pos_edge_index = edge_index[:, batch.y == 1]
@@ -1852,8 +1872,9 @@ class GSATModelManager(FrameworkGNNModelManager):
     def gsat_loss(self, att, logits, labels, epoch):
         pred_loss = self.loss_function(logits, labels)
 
-        r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r, init_r=self.init_r)
-        info_loss = (att * torch.log(att/r + 1e-6) + (1-att) * torch.log((1-att)/(1-r+1e-6) + 1e-6)).mean()
+        r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r,
+                                                     init_r=self.init_r)
+        info_loss = (att * torch.log(att / r + 1e-6) + (1 - att) * torch.log((1 - att) / (1 - r + 1e-6) + 1e-6)).mean()
 
         pred_loss = pred_loss * self.pred_loss_coef
         info_loss = info_loss * self.info_loss_coef
@@ -1896,6 +1917,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         edge_att = src_lifted_att * dst_lifted_att
         return edge_att
 
+
 class ExtractorMLP(nn.Module):
 
     def __init__(
@@ -1909,9 +1931,9 @@ class ExtractorMLP(nn.Module):
         dropout_p = extractor_dropout_p
 
         if self.learn_edge_att:
-            self.feature_extractor = MLP([hidden_size * 2, hidden_size * 4, hidden_size, 1], dropout=dropout_p)
+            self.feature_extractor = GSATMLP([hidden_size * 2, hidden_size * 4, hidden_size, 1], dropout=dropout_p)
         else:
-            self.feature_extractor = MLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
+            self.feature_extractor = GSATMLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
 
     def forward(self, emb, edge_index, batch):
         if self.learn_edge_att:
@@ -1923,7 +1945,9 @@ class ExtractorMLP(nn.Module):
             att_log_logits = self.feature_extractor(emb, batch)
         return att_log_logits
 
-class MLP(nn.Sequential):
+
+class GSATMLP(nn.Sequential):
+    # TODO check if specific MLP needed
     def __init__(self, channels, dropout, bias=True):
         m = []
         for i in range(1, len(channels)):
@@ -1934,7 +1958,7 @@ class MLP(nn.Sequential):
                 m.append(nn.ReLU())
                 m.append(nn.Dropout(dropout))
 
-        super(MLP, self).__init__(*m)
+        super(GSATMLP, self).__init__(*m)
 
     def forward(self, inputs, batch):
         for module in self._modules.values():

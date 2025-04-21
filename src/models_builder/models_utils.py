@@ -1,7 +1,10 @@
-from typing import Any
+from typing import Any, Union, Optional
+from collections.abc import Callable
 
 import torch
+from torch import Tensor
 from torch_geometric.nn import MessagePassing
+from torch_geometric.typing import OptPairTensor, Adj, Size
 
 
 def apply_message_gradient_capture(
@@ -40,8 +43,26 @@ def apply_message_gradient_capture(
     layer.get_message_gradients = get_message_gradients
 
 
+def apply_attention(
+        layer: Any,
+        name: str
+) -> None:
+    """Modifies the forward method of the given layer to include edge_atten handling."""
+    original_forward = layer.forward
+
+    def modified_forward(self: Any, *args, edge_atten: Optional[Tensor] = None, **kwargs) -> Tensor:
+        # Inject edge_atten into kwargs if it's provided
+        if edge_atten is not None:
+            kwargs['edge_atten'] = edge_atten
+
+        return original_forward(*args, **kwargs)
+
+    layer.forward = modified_forward.__get__(layer)
+
+
 def apply_decorator_to_graph_layers(
-        model: Any
+        model: Any,
+        dec_f: Callable = apply_message_gradient_capture
 ) -> None:
     # TODO Kirill add more options
     """
@@ -50,7 +71,7 @@ def apply_decorator_to_graph_layers(
     """
     for name, layer in model.named_children():
         if isinstance(layer, MessagePassing):
-            apply_message_gradient_capture(layer, name)
+            dec_f(layer, name)
         elif isinstance(layer, torch.nn.Module):
-            apply_decorator_to_graph_layers(layer)
+            apply_decorator_to_graph_layers(layer, dec_f)
 

@@ -1,3 +1,4 @@
+import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 import unittest
@@ -11,6 +12,8 @@ tmp_dir = utils.MODELS_DIR / (utils.MODELS_DIR.name + str(time()))
 utils.MODELS_DIR = tmp_dir
 
 from base.datasets_processing import DatasetManager
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
@@ -79,6 +82,17 @@ class ModelsTest(unittest.TestCase):
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
         )
+
+        # Multi-graphs - MUTAG
+        self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
+            full_name=("multiple-graphs", "TUDataset", "MUTAG",),
+            dataset_ver_ind=0
+        )
+
+        self.gen_dataset_mg_mutag = self.dataset_mg_mutag
+        self.gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        # dataset_mg_mutag = gen_dataset_mg_mutag
+        self.results_dataset_path_mg_mutag = self.gen_dataset_mg_mutag.results_dir
 
         self.manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",
@@ -184,6 +198,23 @@ class ModelsTest(unittest.TestCase):
         print(metric_loc)
         mg_small_model_path = prot_gnn_mm_mg_small.model_path_info() / 'model'
         prot_gnn_mm_mg_small.load_model_executor(path=mg_small_model_path)
+
+    def test_model_on_multiple_graph_with_gsat(self):
+        gin3_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
+                                                    model_name='gin_gin_gin_lin_lin')
+
+        gsat_gnn_mm_mg_mutag = GSATModelManager(
+            gnn=gin3_lin2_mg_mutag,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_mg_mutag)
+
+        best_acc = gsat_gnn_mm_mg_mutag.train_model(gen_dataset=self.gen_dataset_mg_mutag, steps=100, metrics=[])
+        metric_loc = gsat_gnn_mm_mg_mutag.evaluate_model(
+            gen_dataset=self.gen_dataset_mg_mutag, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        mg_small_model_path = gsat_gnn_mm_mg_mutag.model_path_info() / 'model'
+        gsat_gnn_mm_mg_mutag.load_model_executor(path=mg_small_model_path)
 
 
 if __name__ == '__main__':
