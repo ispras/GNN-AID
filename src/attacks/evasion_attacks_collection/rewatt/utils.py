@@ -92,6 +92,18 @@ def vc_representation(
 
 
 class GraphState:
+    """
+    Represents the current state of the graph for the reinforcement learning environment.
+
+    :param x: Node feature matrix.
+    :type x: torch.Tensor
+    :param edge_index: Edge list.
+    :type edge_index: torch.Tensor
+    :param y: Predicted class label.
+    :type y: torch.Tensor
+    :param y_prob: Probability of the predicted class.
+    :type y_prob: float
+    """
     def __init__(
             self,
             x: torch.Tensor,
@@ -106,6 +118,16 @@ class GraphState:
 
 
 class Action:
+    """
+    Represents a rewiring action in the graph.
+
+    :param v_fir: The attacked node (target of the deleted edge).
+    :type v_fir: int
+    :param v_sec: Source node of the edge to be removed.
+    :type v_sec: int
+    :param v_thi: New source node for the rewired edge.
+    :type v_thi: int
+    """
     def __init__(
             self,
             v_fir: int,
@@ -118,6 +140,18 @@ class Action:
 
 
 class GraphEnvironment:
+    """
+    Environment that applies actions (rewirings) and tracks state transitions.
+
+    :param gnn_model: The GNN model to attack.
+    :type gnn_model: FrameworkGNNConstructor
+    :param initial_state: Initial state of the graph.
+    :type initial_state: GraphState
+    :param eps: Fraction of edges allowed to be changed (attack budget).
+    :type eps: float
+    :param node_idx: Index of the node to attack in node classification tasks. If None, a graph classification task is assumed.
+    :type node_idx: int or None
+    """
     def __init__(
             self,
             gnn_model: FrameworkGNNConstructor,
@@ -128,6 +162,9 @@ class GraphEnvironment:
         """ An environment class that receives agent actions and updates the state. """
         self.gnn_model = gnn_model
         self.K = int(eps * initial_state.edge_index.size(1))
+        if self.K < 1:
+            self.K = 1
+            print("The eps parameter is too small. It has been replaced by 1")
         self.initial_state = initial_state
         self.current_state = initial_state
         if node_idx is not None:
@@ -141,10 +178,12 @@ class GraphEnvironment:
             action: Action
     ) -> Tuple[GraphState, float]:
         """
-        Performs an action, changes the state, and returns the new state and reward.
+        Performs the given action (rewiring), transitions to a new state, and computes the reward.
 
-        :param action: Action.
-        :return: (new state, reward).
+        :param action: The rewiring action to apply.
+        :type action: Action
+        :return: A tuple containing the new state and the corresponding reward.
+        :rtype: Tuple[GraphState, float]
         """
         new_state = self.apply_rewiring(self.current_state, action)
         reward = self.calculate_reward(new_state)
@@ -157,11 +196,14 @@ class GraphEnvironment:
             action: Action
     ) -> GraphState:
         """
-        Applies an edge rewiring operation to the current state.
+        Applies a single rewiring step: deletes one edge and adds a new one.
 
-        :param state: current state of the graph.
-        :param action: Action - nodes involved in rewiring.
-        :return: new state of the graph (GraphState).
+        :param state: The current state before rewiring.
+        :type state: GraphState
+        :param action: The rewiring action to apply.
+        :type action: Action
+        :return: The new graph state after rewiring.
+        :rtype: GraphState
         """
         v_fir, v_sec, v_thi = action.v_fir, action.v_sec, action.v_thi
 
@@ -190,6 +232,14 @@ class GraphEnvironment:
             self,
             new_state: GraphState
     ) -> float:
+        """
+        Calculates the reward for a transition to the new graph state.
+
+        :param new_state: The new state after applying an action.
+        :type new_state: GraphState
+        :return: The computed reward. Returns 1 if class has changed, otherwise a negative penalty.
+        :rtype: float
+        """
         if not torch.equal(new_state.y, self.initial_state.y):
             return 1
         n_r = -1 / self.K
@@ -202,12 +252,33 @@ class ReWattPolicyNet(nn.Module):
             self,
             gnn_model: FrameworkGNNConstructor,
             penultimate_layer_embeddings_dim: int,
+            penultimate_layer_embeddings_idx: int,
             mlp_hidden: int = 16,
             node_idx: int = None,
             h_method: str = 'sum',
             pooling_method: str = 'mean',
             device: str = 'cpu'
     ):
+        """
+        Initializes the policy network used for selecting graph rewiring actions.
+
+        :param gnn_model: The GNN model used to extract node embeddings.
+        :type gnn_model: FrameworkGNNConstructor
+        :param penultimate_layer_embeddings_dim: Dimensionality of the embeddings.
+        :type penultimate_layer_embeddings_dim: int
+        :param penultimate_layer_embeddings_idx: Index of the penultimate layer in the embedding list.
+        :type penultimate_layer_embeddings_idx: int
+        :param mlp_hidden: Hidden size for the internal MLPs.
+        :type mlp_hidden: int
+        :param node_idx: Node index for node classification tasks. None for graph classification.
+        :type node_idx: int or None
+        :param h_method: Method to compute edge features from node pairs ('sum', 'mul', 'max').
+        :type h_method: str
+        :param pooling_method: Method for graph-level embedding pooling ('mean' or 'max').
+        :type pooling_method: str
+        :param device: Device on which to run the model ('cpu' or 'cuda').
+        :type device: str
+        """
         super(ReWattPolicyNet, self).__init__()
         self.device = device
 
@@ -223,6 +294,7 @@ class ReWattPolicyNet(nn.Module):
             param.requires_grad = False
 
         self.penultimate_layer_embeddings_dim = penultimate_layer_embeddings_dim
+        self.penultimate_layer_embeddings_idx = penultimate_layer_embeddings_idx
 
         self.edge_representer = EdgeRepresenter(h_method)
         self.graph_representer = GraphRepresenter(pooling_method)
@@ -241,7 +313,15 @@ class ReWattPolicyNet(nn.Module):
             self,
             state: GraphState
     ) -> Tuple[Action, float]:
-        embeddings = self.gnn_model.get_all_layer_embeddings(state.x, state.edge_index)[self.gnn_model.n_layers - 2]
+        """
+        Selects an action based on the current graph state.
+
+        :param state: The current graph state.
+        :type state: GraphState
+        :return: The selected rewiring action and the log probability of selecting it.
+        :rtype: Tuple[Action, float]
+        """
+        embeddings = self.gnn_model.get_all_layer_embeddings(state.x, state.edge_index)[self.penultimate_layer_embeddings_idx]
         graph_representation = self.graph_representer(embeddings)
 
         if self.graph_classification_task:
@@ -264,6 +344,8 @@ class ReWattPolicyNet(nn.Module):
 
         edge_scores = self.edge_fc(E_s_t)
         edge_probs = torch.softmax(edge_scores.squeeze(), dim=0)
+        if len(edge_probs.size()) < 1:  # if only one edges in v_fir_candidate_edges
+            edge_probs = edge_probs.unsqueeze(dim=0)
         edge_dist = Categorical(edge_probs)
         e_idx = edge_dist.sample()
         log_prob_edge = edge_dist.log_prob(e_idx)
@@ -301,6 +383,8 @@ class ReWattPolicyNet(nn.Module):
 
         third_node_scores = self.third_node_fc(V_s_t)
         third_node_probs = torch.softmax(third_node_scores.squeeze(), dim=0)
+        if len(third_node_probs.size()) < 1:
+            third_node_probs = third_node_probs.unsqueeze(dim=0)
         third_node_dist = Categorical(third_node_probs)
         v_thi_idx = third_node_dist.sample()
         log_prob_third = third_node_dist.log_prob(v_thi_idx)
@@ -319,6 +403,18 @@ class ReWattAgent:
             lr: float = 1e-3,
             gamma: float = 0.99
     ):
+        """
+        Initializes the reinforcement learning agent.
+
+        :param policy_net: The policy network responsible for action selection.
+        :type policy_net: ReWattPolicyNet
+        :param environment: The environment representing the graph.
+        :type environment: GraphEnvironment
+        :param lr: Learning rate for the optimizer.
+        :type lr: float
+        :param gamma: Discount factor for future rewards.
+        :type gamma: float
+        """
         self.policy_net = policy_net
         self.env = environment
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
@@ -337,6 +433,14 @@ class ReWattAgent:
             self,
             epochs: int
     ) -> GraphState:
+        """
+        Trains the agent to learn edge rewiring actions that alter the GNN's predictions.
+
+        :param epochs: Number of training epochs.
+        :type epochs: int
+        :return: The best modified graph state discovered during training.
+        :rtype: GraphState
+        """
         best_y_prob = self.env.initial_state.y_prob
         best_state = GraphState
         for epoch in tqdm(range(epochs)):
@@ -371,6 +475,9 @@ class ReWattAgent:
     def update_policy(
             self
     ) -> None:
+        """
+        Updates the policy network using the collected rewards and log probabilities.
+        """
         R = 0
         returns = []
         for r in reversed(self.rewards):
@@ -378,7 +485,11 @@ class ReWattAgent:
             returns.insert(0, R)
 
         returns = torch.tensor(returns, dtype=torch.float32)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+
+        if len(returns) > 1 and returns.std().item() > 1e-6:
+            returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+        else:
+            returns = returns - returns.mean()
 
         loss = sum([-log_prob * R for log_prob, R in zip(self.log_probs, returns)])
 
