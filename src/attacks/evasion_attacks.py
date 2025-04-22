@@ -5,11 +5,10 @@ from skopt import Optimizer
 
 from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset
+from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports
-from models_builder.gnn_models import GNNModelManager
-from src.attacks.nettack.nettack import Nettack
-from src.attacks.nettack.utils import preprocess_graph, largest_connected_components, data_to_csr_matrix, train_w1_w2
+from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
 
 # PGD imports
 from torch_geometric.utils import k_hop_subgraph
@@ -451,151 +450,70 @@ class PGDAttacker(
         return self.attack_diff
 
 
-class NettackEvasionAttacker(
+class NettackAttacker(
     EvasionAttacker
 ):
-    name = "NettackEvasionAttacker"
+    name = "Nettack"
 
     def __init__(
             self,
             node_idx: int = 0,
-            n_perturbations: Union[int, None] = None,
+            budget: Union[int, None] = None,
             perturb_features: bool = True,
             perturb_structure: bool = True,
             direct: bool = True,
-            n_influencers: int = 0
+            depth: Union[int, None] = None,
+            delta_cutoff: float = 0.004,
+            surrogate_train_ratio: float = 0.1,
+            surrogate_epochs: int = 200
     ):
-
         super().__init__()
-        self.attack_diff = None
         self.node_idx = node_idx
-        self.n_perturbations = n_perturbations
+        self.budget = budget
         self.perturb_features = perturb_features
         self.perturb_structure = perturb_structure
         self.direct = direct
-        self.n_influencers = n_influencers
+        self.depth = depth
+        self.delta_cutoff = delta_cutoff
+        self.surrogate_train_ratio = surrogate_train_ratio
+        self.surrogate_epochs = surrogate_epochs
 
     def attack(
             self,
             model_manager: Type,
-            gen_dataset: GeneralDataset,
+            gen_dataset,
             mask_tensor: torch.Tensor
-    ) -> GeneralDataset:
-        # Prepare
-        data = gen_dataset.data
-        _A_obs, _X_obs, _z_obs = data_to_csr_matrix(data)
-        _A_obs = _A_obs + _A_obs.T
-        _A_obs[_A_obs > 1] = 1
-        lcc = largest_connected_components(_A_obs)
-
-        _A_obs = _A_obs[lcc][:, lcc]
-
-        assert np.abs(_A_obs - _A_obs.T).sum() == 0, "Input graph is not symmetric"
-        assert _A_obs.max() == 1 and len(np.unique(_A_obs[_A_obs.nonzero()].A1)) == 1, "Graph must be unweighted"
-        assert _A_obs.sum(0).A1.min() > 0, "Graph contains singleton nodes"
-
-        _X_obs = _X_obs[lcc].astype('float32')
-        _z_obs = _z_obs[lcc]
-        _N = _A_obs.shape[0]
-        _K = _z_obs.max() + 1
-        _Z_obs = np.eye(_K)[_z_obs]
-        _An = preprocess_graph(_A_obs)
-        degrees = _A_obs.sum(0).A1
-
-        if self.n_perturbations is None:
-            self.n_perturbations = int(degrees[self.node_idx])
-        hidden = model_manager.gnn.GCNConv_0.out_channels
-        # End prepare
-
-        # Learn matrix W1 and W2
-        W1, W2 = train_w1_w2(dataset=gen_dataset, hidden=hidden)
-
-        # Attack
-        nettack = Nettack(_A_obs, _X_obs, _z_obs, W1, W2, self.node_idx, verbose=True)
-
-        nettack.reset()
-        nettack.attack_surrogate(n_perturbations=self.n_perturbations,
-                                 perturb_structure=self.perturb_structure,
-                                 perturb_features=self.perturb_features,
-                                 direct=self.direct,
-                                 n_influencers=self.n_influencers)
-
-        print(f'edges: {nettack.structure_perturbations}')
-        print(f'features: {nettack.feature_perturbations}')
-
-        self._evasion(gen_dataset, nettack.feature_perturbations, nettack.structure_perturbations)
-        self.attack_diff = gen_dataset
-
-        return gen_dataset
-
-    def attack_diff(
-            self
     ):
+        data: Data = gen_dataset.data
+        x, edge_index, y = data.x, data.edge_index, data.y
+
+        num_classes = y.max().item() + 1
+        surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
+        surrogate.train_model(x, edge_index, y, train_ratio=self.surrogate_train_ratio, epochs=self.surrogate_epochs)
+
+        attacker = NettackAttack(
+            model=surrogate,
+            x=x,
+            edge_index=edge_index,
+            num_classes=num_classes,
+            target_node=self.node_idx,
+            direct=self.direct,
+            depth=self.depth,
+            delta_cutoff=self.delta_cutoff
+        )
+
+        mode = "both"
+        if self.perturb_features and not self.perturb_structure:
+            mode = "feature"
+        elif self.perturb_structure and not self.perturb_features:
+            mode = "structure"
+
+        attacker.attack(budget=self.budget, mode=mode)
+
+        return attacker.x, attacker.edge_index
+
+    def attack_diff(self):
         return self.attack_diff
-
-    @staticmethod
-    def _evasion(
-            gen_dataset: GeneralDataset,
-            feature_perturbations,
-            structure_perturbations
-    ):
-        cleaned_feat_pert = list(filter(None, feature_perturbations))
-        if cleaned_feat_pert:  # list is not empty
-            x = gen_dataset.data.x.clone()
-            for vertex, feature in cleaned_feat_pert:
-                if x[vertex, feature] == 0.0:
-                    x[vertex, feature] = 1.0
-                elif x[vertex, feature] == 1.0:
-                    x[vertex, feature] = 0.0
-            gen_dataset.data.x = x
-
-        cleaned_struct_pert = list(filter(None, structure_perturbations))
-        if cleaned_struct_pert:  # list is not empty
-            edge_index = gen_dataset.data.edge_index.clone()
-            # add edges
-            for edge in cleaned_struct_pert:
-                edge_index = torch.cat((edge_index,
-                                        torch.tensor((edge[0], edge[1]), dtype=torch.int32).to(torch.int64).unsqueeze(
-                                            1)), dim=1)
-                edge_index = torch.cat((edge_index,
-                                        torch.tensor((edge[1], edge[0]), dtype=torch.int32).to(torch.int64).unsqueeze(
-                                            1)), dim=1)
-
-            gen_dataset.data.edge_index = edge_index
-
-
-class NettackGroupEvasionAttacker(
-    EvasionAttacker
-):
-    name = "NettackGroupEvasionAttacker"
-
-    def __init__(
-            self,
-            node_idxs: Union[list, int],
-            **kwargs
-    ):
-        super().__init__()
-        if isinstance(node_idxs, int):
-            node_idxs = [node_idxs]
-        self.node_idxs = node_idxs  # kwargs.get("node_idxs")
-        assert isinstance(self.node_idxs, list)
-        self.n_perturbations = kwargs.get("n_perturbations")
-        self.perturb_features = kwargs.get("perturb_features")
-        self.perturb_structure = kwargs.get("perturb_structure")
-        self.direct = kwargs.get("direct")
-        self.n_influencers = kwargs.get("n_influencers")
-        self.attacker = NettackEvasionAttacker(0, **kwargs)
-
-    def attack(
-            self,
-            model_manager: Type,
-            gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor
-    ) -> GeneralDataset:
-        for node_idx in self.node_idxs:
-            self.attacker.node_idx = node_idx
-            gen_dataset = self.attacker.attack(model_manager, gen_dataset, mask_tensor)
-        return gen_dataset
 
 
 class ReWattAttacker(

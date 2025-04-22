@@ -6,13 +6,12 @@
   "element_idx": ["node", "int", 0, {"min": 0, "step": 1}, "?"],
   "epsilon": ["epsilon", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
  },
- "NettackEvasionAttacker": {
+ "Nettack": {
   "node_idx": ["node", "int", 0, {"min":  0, "step": 1}, "Node id to attack"],
-  "n_perturbations": ["n_perturbations", "int", null, {"min":  0, "step": 1}, "Number of perturbations. If None, then n_perturbations = degree(node_idx)"],
+  "budget": ["budget", "int", 5, {"min":  0, "step": 1}, ""],
   "perturb_features": ["perturb_features", "bool", true, {}, "Indicates whether the features can be changed"],
   "perturb_structure": ["perturb_structure", "bool", true, {}, "Indicates whether the structure can be changed"],
-  "direct": ["direct", "bool", true, {}, "Indicates whether to directly modify edges/features of the node attacked or only those of influencers"],
-  "n_influencers": ["n_influencers", "int", 0, {"min":  0, "step": 1}, "Number of influencing nodes. Will be ignored if direct is True"]
+  "direct": ["direct", "bool", true, {}, ""]
  },
  "NettackGroupEvasionAttacker": {
   "node_idxs": ["node", "int", 0, {"min":  0, "step": 1}, "Node id(s) to attack"],

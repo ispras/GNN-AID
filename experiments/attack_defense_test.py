@@ -1602,6 +1602,69 @@ def test_rewatt():
     print(f"After ReWatt attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
+def test_nettack():
+    # ______________________ Attack on node ______________________
+    my_device = device('cpu')
+
+    # Load dataset
+    full_name = ("single-graph", "Planetoid", 'Cora')
+    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+        full_name=full_name,
+        dataset_ver_ind=0
+    )
+
+    gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+
+    manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_class_name": "Adam",
+                "_config_kwargs": {},
+            }
+        }
+    )
+
+    gnn_model_manager = FrameworkGNNModelManager(
+        gnn=gcn_gcn,
+        dataset_path=results_dataset_path,
+        manager_config=manager_config,
+        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+    )
+
+    gnn_model_manager.gnn.to(my_device)
+
+    num_steps = 20
+    gnn_model_manager.train_model(gen_dataset=dataset,
+                                  steps=num_steps,
+                                  save_model_flag=False)
+
+    acc_test = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    print(f"Accuracy on test: {acc_test}")
+
+    # Node for attack
+    node_idx = 40
+
+    # Attack config
+    evasion_attack_config = ConfigPattern(
+        _class_name="Nettack",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "node_idx": node_idx,
+        }
+    )
+
+    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+    # Attack
+    _ = gnn_model_manager.evaluate_model(gen_dataset=dataset,
+                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+
+
+
 if __name__ == '__main__':
     import random
 
@@ -1612,6 +1675,7 @@ if __name__ == '__main__':
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
-    test_fgsm()
+    # test_fgsm()
     # test_pgd_structure()
     # test_rewatt()
+    test_nettack()
