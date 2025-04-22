@@ -1847,6 +1847,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             else:
                 edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
 
+            self.att = att  # for explanation
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_atten=edge_att)
             loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
         elif task_type == "signle-graph":
