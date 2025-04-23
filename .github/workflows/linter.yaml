@@ -29,13 +29,13 @@ jobs:
           echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
 
       - name: Run Pylint Models
-        run: pylint models_builder
+        run: pylint models_builder --fail-under=9.5
       - name: Run Pylint defense
-        run: pylint defense
+        run: pylint defense --fail-under=9.0
       - name: Run Pylint attacks
-        run: pylint attacks
+        run: pylint attacks --fail-under=9.0
       - name: Run Pylint aux
-        run: pylint aux
+        run: pylint aux --fail-under=9.5
       - name: Run Pylint explainers
-        run: pylint explainers
+        run: pylint explainers --fail-under=9.0
 

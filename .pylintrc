@@ -18,6 +18,13 @@ disable=
     unnecessary-pass,
     unbalanced-tuple-unpacking
 
+    f-string-without-interpolation
+    broad-exception-raised
+    unused-import
+
+    possibly-unused-variable
+
+
 [FORMAT]
 max-line-length=100
 indent-string='    '
