@@ -1,8 +1,9 @@
 from typing import Optional
 import torch
 import numpy as np
+from torch import nn
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
-from torch_geometric.nn import GMMConv
+from torch_geometric.nn import GMMConv, InstanceNorm
 
 from explainers.protgnn.MCTS import mcts
 import ctypes
@@ -130,3 +131,95 @@ class ProtLayer(torch.nn.Module):
         # we need weights of last layer in explanation, so we get tensor data without grad and memory pointer
         return self.output_dim, self.num_prototypes_per_class, self.last_layer.weight.data.tolist(), best_prots \
             if best else self.prototype_graphs
+
+class GSATLayer(torch.nn.Module):
+    def __init__(
+            self,
+            full_gnn_id,
+            hidden_size: int = 16,
+            learn_edge_features: bool = False,
+            extractor_dropout_p: float = 0.5,
+    ):
+        super().__init__()
+        # full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
+        self.is_inside = False
+        self.extractor = ExtractorMLP(hidden_size, learn_edge_features, extractor_dropout_p)
+
+
+    def forward(self, x, full_gnn_id):
+        if self.is_inside:
+            return x
+        else:
+            self.is_inside = True
+
+            level = self.gnn.model_info['last_node_layer_ind']
+            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[level]
+            att_log_logits = self.extractor(emb, batch.edge_index, batch.batch)
+            att = self.sampling(att_log_logits, self.modification.epochs, training=True)
+
+            if self.learn_edge_features:
+                if is_undirected(batch.edge_index):
+                    trans_idx, trans_val = transpose(batch.edge_index, att, None, None, coalesced=False)
+                    trans_val_perm = GSATModelManager.reorder_like(trans_idx, batch.edge_index, trans_val)
+                    edge_att = (att + trans_val_perm) / 2
+                else:
+                    edge_att = att
+            else:
+                edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
+
+            self.att = att  # for explanation
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_atten=edge_att)
+            loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+
+            self.is_inside = False
+
+
+class ExtractorMLP(nn.Module):
+
+    def __init__(
+            self,
+            hidden_size,
+            learn_edge_features: bool = False,
+            extractor_dropout_p: float = 0.5,
+    ):
+        super().__init__()
+        self.learn_edge_att = learn_edge_features
+        dropout_p = extractor_dropout_p
+
+        if self.learn_edge_att:
+            self.feature_extractor = GSATMLP([hidden_size * 2, hidden_size * 4, hidden_size, 1], dropout=dropout_p)
+        else:
+            self.feature_extractor = GSATMLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
+
+    def forward(self, emb, edge_index, batch):
+        if self.learn_edge_att:
+            col, row = edge_index
+            f1, f2 = emb[col], emb[row]
+            f12 = torch.cat([f1, f2], dim=-1)
+            att_log_logits = self.feature_extractor(f12, batch[col])
+        else:
+            att_log_logits = self.feature_extractor(emb, batch)
+        return att_log_logits
+
+
+class GSATMLP(nn.Sequential):
+    # TODO check if specific MLP needed
+    def __init__(self, channels, dropout, bias=True):
+        m = []
+        for i in range(1, len(channels)):
+            m.append(nn.Linear(channels[i - 1], channels[i], bias))
+
+            if i < len(channels) - 1:
+                m.append(InstanceNorm(channels[i]))
+                m.append(nn.ReLU())
+                m.append(nn.Dropout(dropout))
+
+        super(GSATMLP, self).__init__(*m)
+
+    def forward(self, inputs, batch):
+        for module in self._modules.values():
+            if isinstance(module, (InstanceNorm)):
+                inputs = module(inputs, batch)
+            else:
+                inputs = module(inputs)
+        return inputs
