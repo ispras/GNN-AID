@@ -16,11 +16,11 @@ disable=
     eval-used,
     abstract-method,
     unnecessary-pass,
-    unbalanced-tuple-unpacking
+    unbalanced-tuple-unpacking,
 
-    f-string-without-interpolation
-    broad-exception-raised
-    unused-import
+    f-string-without-interpolation,
+    broad-exception-raised,
+    unused-import,
 
     possibly-unused-variable
 
