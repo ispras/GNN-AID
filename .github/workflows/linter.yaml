@@ -30,8 +30,8 @@ jobs:
 
       - name: Run Pylint Models
         run: pylint models_builder
-      - name: Run Pylint defense
-        run: pylint defense
+      - name: Run Pylint defenses
+        run: pylint defenses
       - name: Run Pylint attacks
         run: pylint attacks
       - name: Run Pylint aux
