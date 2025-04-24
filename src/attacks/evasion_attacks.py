@@ -210,8 +210,8 @@ class PGDAttacker(
             epsilon: float = 0.5,
             learning_rate: float = 0.001,
             num_iterations: int = 100,
-            num_rand_trials: int = 100,
-            grad_aggr_type: str = 'mean'
+            # num_rand_trials: int = 100,
+            # grad_aggr_type: str = 'mean'
     ):
 
         super().__init__()
@@ -221,8 +221,8 @@ class PGDAttacker(
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.num_iterations = num_iterations
-        self.num_rand_trials = num_rand_trials
-        self.grad_aggr_type = grad_aggr_type
+        # self.num_rand_trials = num_rand_trials
+        # self.grad_aggr_type = grad_aggr_type
 
         # TODO check grad_aggr_type correctness
         # raise ValueError(f"Invalid grad_aggr_type: {self.grad_aggr_type}.")
