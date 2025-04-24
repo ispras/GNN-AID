@@ -397,6 +397,67 @@ class AttacksTest(unittest.TestCase):
                                              metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
         # ---------- ----------------- ----------
 
+    def test_rewatt_SG(self):
+        gat_gat_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gat_gat')
+
+        gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gat_gat_sg_example,
+            dataset_path=self.results_dataset_path_sg_example,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+
+        # Attack config
+        evasion_attack_config = ConfigPattern(
+            _class_name="ReWatt",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "element_idx": 0,
+                "eps": 0.5,
+                "epochs": 10,
+            }
+        )
+
+        gnn_model_manager_sg_example.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
+
+    def test_rewatt_MG(self):
+        gcn_gcn_mg_small = model_configs_zoo(dataset=self.gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
+
+        gnn_model_manager_mg_small = FrameworkGNNModelManager(
+            gnn=gcn_gcn_mg_small,
+            dataset_path=self.results_dataset_path_mg_small,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_mg_small.train_model(gen_dataset=self.gen_dataset_mg_small, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
+
+        # Attack config
+        evasion_attack_config = ConfigPattern(
+            _class_name="ReWatt",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "element_idx": 0,
+                "eps": 0.5,
+                "epochs": 10,
+            }
+        )
+
+        gnn_model_manager_mg_small.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+        metric_loc = gnn_model_manager_mg_small.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
+
 
 if __name__ == '__main__':
     unittest.main()
