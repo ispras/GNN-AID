@@ -8,7 +8,7 @@
  },
  "Nettack": {
   "node_idx": ["node", "int", 0, {"min":  0, "step": 1}, "Node id to attack"],
-  "budget": ["budget", "int", 5, {"min":  0, "step": 1}, ""],
+  "budget": ["budget", "int", 10, {"min":  0, "step": 1}, ""],
   "perturb_features": ["perturb_features", "bool", true, {}, "Indicates whether the features can be changed"],
   "perturb_structure": ["perturb_structure", "bool", true, {}, "Indicates whether the structure can be changed"],
   "direct": ["direct", "bool", true, {}, ""]

@@ -1645,7 +1645,7 @@ def test_nettack():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 40
+    node_idx = 0
 
     # Attack config
     evasion_attack_config = ConfigPattern(

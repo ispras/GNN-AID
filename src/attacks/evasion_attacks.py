@@ -462,9 +462,9 @@ class NettackAttacker(
             perturb_features: bool = True,
             perturb_structure: bool = True,
             direct: bool = True,
-            depth: Union[int, None] = None,
+            depth: Union[int, None] = 2,
             delta_cutoff: float = 0.004,
-            surrogate_train_ratio: float = 0.1,
+            surrogate_train_ratio: float = 0.8,
             surrogate_epochs: int = 200
     ):
         super().__init__()
@@ -484,12 +484,13 @@ class NettackAttacker(
             gen_dataset,
             mask_tensor: torch.Tensor
     ):
-        data: Data = gen_dataset.data
+        data = gen_dataset.data
         x, edge_index, y = data.x, data.edge_index, data.y
 
         num_classes = y.max().item() + 1
         surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
         surrogate.train_model(x, edge_index, y, train_ratio=self.surrogate_train_ratio, epochs=self.surrogate_epochs)
+        surrogate.evaluate(x, edge_index, y)
 
         attacker = NettackAttack(
             model=surrogate,
@@ -508,7 +509,19 @@ class NettackAttacker(
         elif self.perturb_structure and not self.perturb_features:
             mode = "structure"
 
+        # attacker.attack(budget=self.budget, mode=mode)
+
+        logits_before = surrogate.forward(edge_index, x)[self.node_idx]
+        pred_before = logits_before.argmax().item()
+        prob_before = torch.softmax(logits_before, dim=0)[pred_before].item()
+        print(f"Surrogate prediction before attack: {pred_before} (confidence: {prob_before:.4f})")
+
         attacker.attack(budget=self.budget, mode=mode)
+
+        logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.node_idx]
+        pred_after = logits_after.argmax().item()
+        prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
+        print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
 
         return attacker.x, attacker.edge_index
 
