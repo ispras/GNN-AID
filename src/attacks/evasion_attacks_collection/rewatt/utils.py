@@ -467,7 +467,7 @@ class ReWattAgent:
 
             # look at y_prob after K rewirings and save state of the graph that most strongly reduces
             # the probability of a correct prediction
-            if new_state.y_prob < best_y_prob:
+            if new_state.y_prob <= best_y_prob:
                 best_y_prob = new_state.y_prob
                 best_state = new_state
         return best_state
