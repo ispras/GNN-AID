@@ -184,8 +184,6 @@ class NettackAttack:
             mask = ~((self.edge_index[0] == u) & (self.edge_index[1] == v))
             new_edge_index = self.edge_index[:, mask]
             new_degree = self.degree.clone()
-            # FIXME degree is direct
-            new_degree[u] -= 1
             new_degree[v] -= 1
             alpha_new = estimate_powerlaw_alpha(new_degree, self.d_min)
             ll_new = powerlaw_log_likelihood(alpha_new, new_degree, self.d_min)
@@ -226,8 +224,6 @@ class NettackAttack:
                 u, v = best_edge
                 mask = ~((self.edge_index[0] == u) & (self.edge_index[1] == v))
                 self.edge_index = self.edge_index[:, mask]
-                # FIXME degree is direct
-                self.degree[u] -= 1
                 self.degree[v] -= 1
                 applied += 1
                 attempt = 0

@@ -60,6 +60,17 @@ class AttacksTest(unittest.TestCase):
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
 
+
+        # Single-graph - Cora
+        self.dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("single-graph", "Planetoid", "Cora",),
+            dataset_ver_ind=0
+        )
+
+        self.gen_dataset_sg_cora = self.dataset_sg_cora
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
         )
@@ -458,6 +469,34 @@ class AttacksTest(unittest.TestCase):
                                                                           Metric("Accuracy", mask='test')])
         print(metric_loc)
 
+
+    def test_nettack(self):
+        gcn_gcn_sg_cora = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_cora = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_cora,
+            dataset_path=self.results_dataset_path_sg_cora,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+
+        # Attack config
+        evasion_attack_config = ConfigPattern(
+            _class_name="Nettack",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "node_idx": 0,
+            }
+        )
+
+        gnn_model_manager_sg_cora.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+        metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
 
 if __name__ == '__main__':
     unittest.main()

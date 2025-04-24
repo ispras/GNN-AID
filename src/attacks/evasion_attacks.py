@@ -509,19 +509,17 @@ class NettackAttacker(
         elif self.perturb_structure and not self.perturb_features:
             mode = "structure"
 
-        # attacker.attack(budget=self.budget, mode=mode)
-
-        logits_before = surrogate.forward(edge_index, x)[self.node_idx]
-        pred_before = logits_before.argmax().item()
-        prob_before = torch.softmax(logits_before, dim=0)[pred_before].item()
-        print(f"Surrogate prediction before attack: {pred_before} (confidence: {prob_before:.4f})")
+        # logits_before = surrogate.forward(edge_index, x)[self.node_idx]
+        # pred_before = logits_before.argmax().item()
+        # prob_before = torch.softmax(logits_before, dim=0)[pred_before].item()
+        # print(f"Surrogate prediction before attack: {pred_before} (confidence: {prob_before:.4f})")
 
         attacker.attack(budget=self.budget, mode=mode)
 
-        logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.node_idx]
-        pred_after = logits_after.argmax().item()
-        prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
-        print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
+        # logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.node_idx]
+        # pred_after = logits_after.argmax().item()
+        # prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
+        # print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
 
         return attacker.x, attacker.edge_index
 
