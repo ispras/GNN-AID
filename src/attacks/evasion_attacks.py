@@ -455,6 +455,19 @@ class NettackAttacker(
 ):
     name = "Nettack"
 
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        """ Availability check for the given dataset and model manager. """
+        if gen_dataset.is_multi():
+            return False
+        else:
+            x = gen_dataset.data.x
+            is_binary = torch.all((x == 0) | (x == 1)).item()
+            return is_binary
+
     def __init__(
             self,
             node_idx: int = 0,
