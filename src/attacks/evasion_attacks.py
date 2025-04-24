@@ -532,6 +532,10 @@ class NettackAttacker(
 class ReWattAttacker(
     EvasionAttacker
 ):
+    """
+    ReWatt: Reinforcement Learning-based Edge Rewiring Attack on GNNs.
+    """
+
     name = "ReWatt"
 
     @staticmethod
@@ -539,9 +543,11 @@ class ReWattAttacker(
             gen_dataset: GeneralDataset,
             model_manager: GNNModelManager
     ):
-        # FIXME add conditions.
-        #  - smth like len(model.embedding_levels_by_layers) - 2 > 0
-        return True
+        """ Availability check for the given dataset and model manager. """
+        if gen_dataset.is_multi():
+            return True
+        else:
+            return len(model_manager.gnn.embedding_levels_by_layers) - 2 >= 0
 
     def __init__(
             self,
@@ -552,6 +558,30 @@ class ReWattAttacker(
             h_method: str = 'sum',
             pooling_method: str = 'mean',
     ):
+        """
+        Initialize the ReWattAttacker.
+
+        :param element_idx: Index of the node (for node classification) or graph (for graph classification) to attack.
+        :type element_idx: int
+
+        :param eps: Fraction (0 < eps <= 1) of total edges to be considered for rewiring (defines the attack budget).
+        :type eps: float
+
+        :param epochs: Number of training epochs for the reinforcement learning agent.
+        :type epochs: int
+
+        :param mlp_hidden: Hidden dimension size for the MLPs used in the policy network.
+        :type mlp_hidden: int
+
+        :param h_method: Method used to combine node embeddings into edge representations. Options: 'sum', 'mul', 'max'.
+        :type h_method: str
+
+        :param pooling_method: Method for aggregating node embeddings into a graph-level representation. Options: 'mean', 'max'.
+        :type pooling_method: str
+
+        :return: None
+        :rtype: None
+        """
         super().__init__()
         self.element_idx = element_idx
         self.eps = eps
@@ -569,6 +599,21 @@ class ReWattAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
+        """
+        Executes the ReWatt attack on the given graph data and GNN model.
+
+        :param model_manager: model manager.
+        :type model_manager: Type
+
+        :param gen_dataset: general dataset.
+        :type gen_dataset: GeneralDataset
+
+        :param mask_tensor: desc.
+        :type mask_tensor: torch.Tensor
+
+        :return: None.
+        :rtype: None
+        """
         model = model_manager.gnn
         model.eval()
 
@@ -579,16 +624,18 @@ class ReWattAttacker(
             y = gen_dataset.dataset[graph_idx].y.squeeze()
             x = gen_dataset.dataset[graph_idx].x
             y_prob = torch.softmax(model(x, edge_index), dim=1).squeeze().max().item()
+            penultimate_layer_embeddings_idx = model.embedding_levels_by_layers.index('g') - 1
             penultimate_layer_embeddings_dim = (
-                model.get_all_layer_embeddings(x, edge_index)[model.embedding_levels_by_layers.index('g') - 1].size(1))
+                model.get_all_layer_embeddings(x, edge_index)[penultimate_layer_embeddings_idx].size(1))
         else:
             node_idx = self.element_idx
             y = gen_dataset.data.y[node_idx]
             x = gen_dataset.data.x
             edge_index = gen_dataset.data.edge_index
             y_prob = torch.softmax(model(x, edge_index)[node_idx], dim=0).max().item()
+            penultimate_layer_embeddings_idx = len(model.embedding_levels_by_layers) - 2
             penultimate_layer_embeddings_dim = (
-                model.get_all_layer_embeddings(x, edge_index)[len(model.embedding_levels_by_layers) - 2].size(1))
+                model.get_all_layer_embeddings(x, edge_index)[penultimate_layer_embeddings_idx].size(1))
 
         # the attack makes sense when the model's prediction is correct !!!
         # we use y_prob in the attack because in case the attack fails to change the class, we have saved
@@ -598,6 +645,7 @@ class ReWattAttacker(
 
         policy = ReWattPolicyNet(gnn_model=model,
                                  penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
+                                 penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
                                  node_idx=node_idx,
                                  mlp_hidden=self.mlp_hidden,
                                  h_method=self.h_method,
