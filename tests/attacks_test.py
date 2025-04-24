@@ -15,8 +15,31 @@ import_all_from_package(attacks)  # to import all subclasses properly
 class AttacksTest(unittest.TestCase):
     def setUp(self):
         print('setup')
+        self.my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Init datasets
+        # Multi-Graphs - Example
+        self.dataset_mg_small, _, results_dataset_path_sg_small = DatasetManager.get_by_full_name(
+            full_name=("multiple-graphs", "custom", "small",),
+            features={'attr': {'a': 'as_is'}},
+            labeling='binary',
+            dataset_ver_ind=0
+        )
+
+        self.gen_dataset_mg_small = DatasetManager.get_by_config(
+            DatasetConfig(
+                domain="multiple-graphs",
+                group="custom",
+                graph="small"),
+            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+                             labeling='binary',
+                             dataset_ver_ind=0)
+        )
+
+        self.gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_mg_small = self.gen_dataset_mg_small.results_dir
+
+
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
             full_name=("single-graph", "custom", "example",),
@@ -120,6 +143,259 @@ class AttacksTest(unittest.TestCase):
             _config_kwargs={
             }
         )
+
+    def test_fgsm_SG(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                }
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            dataset_path=self.results_dataset_path_sg_example,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_sg_example, steps=200, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
+
+    def test_fgsm_MG(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin_con')
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                }
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            dataset_path=self.results_dataset_path_mg_small,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_mg_small, steps=200, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
+
+    def test_pgd_SG(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                }
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            dataset_path=self.results_dataset_path_sg_example,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_sg_example, steps=200, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="PGD",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": 0,
+                "num_iterations": 10,
+                "epsilon": 0.7,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        # Attack config
+        evasion_attack_config = ConfigPattern(
+            _class_name="PGD",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": 0,
+                "num_iterations": 10,
+                "epsilon": 0.7,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
+
+    def test_pgd_MG(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin_con')
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                }
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            dataset_path=self.results_dataset_path_mg_small,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_mg_small, steps=200, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="PGD",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": 0,
+                "num_iterations": 10,
+                "epsilon": 0.7,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="PGD",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": 0,
+                "num_iterations": 10,
+                "epsilon": 0.7,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
 
 
 if __name__ == '__main__':
