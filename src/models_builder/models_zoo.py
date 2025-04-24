@@ -1282,6 +1282,233 @@ def model_configs_zoo(
         )
     )
 
+    gin_gin_gin_gsat_lin_lin = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GINConv',
+                            'layer_kwargs': None,
+                            'gin_seq': [
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': dataset.num_node_features,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'batchNorm': {
+                                        'batchNorm_name': 'BatchNorm1d',
+                                        'batchNorm_kwargs': {
+                                            'num_features': 16,
+                                            'eps': 1e-05,
+                                        }
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': 16,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                            ],
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 4,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GINConv',
+                            'layer_kwargs': None,
+                            'gin_seq': [
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': 16,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'batchNorm': {
+                                        'batchNorm_name': 'BatchNorm1d',
+                                        'batchNorm_kwargs': {
+                                            'num_features': 16,
+                                            'eps': 1e-05,
+                                        }
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': 16,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                            ],
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 4,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GINConv',
+                            'layer_kwargs': None,
+                            'gin_seq': [
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': 16,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'batchNorm': {
+                                        'batchNorm_name': 'BatchNorm1d',
+                                        'batchNorm_kwargs': {
+                                            'num_features': 16,
+                                            'eps': 1e-05,
+                                        }
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                                {
+                                    'layer': {
+                                        'layer_name': 'Linear',
+                                        'layer_kwargs': {
+                                            'in_features': 16,
+                                            'out_features': 16,
+                                        },
+                                    },
+                                    'activation': {
+                                        'activation_name': 'ReLU',
+                                        'activation_kwargs': None,
+                                    },
+                                },
+                            ],
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 4,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GSAT',
+                            'layer_kwargs': {
+                                'in_features': 16,
+                            },
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 4,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+
+                    {
+                        'label': 'g',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': 16 * 4,
+                                'out_features': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                        'dropout': {
+                            'dropout_name': 'Dropout',
+                            'dropout_kwargs': {
+                                'p': 0.5,
+                            }
+                        },
+                    },
+
+                    {
+                        'label': 'g',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': 16,
+                                'out_features': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
     gin_gin_gin_lin = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(

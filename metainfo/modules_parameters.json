@@ -166,5 +166,15 @@
             "need_full_gnn_flag": true,
             "forward_parameters": "x=x, full_gnn_id=id(self)"
 		}
- }
+ },
+  "GSAT": {
+    "learn_edge_features": ["Edge-based attention of node-based", "bool", false, null, "If set to True, edge_attr expected in layers"],
+    "extractor_dropout_p": ["Dropout rate for GSAT MLP", "float", 0.5, {"min": 0, "max": 1, "step": 0.01}, "Probability for dropout in GSAT MLP"],
+    "_technical_parameter":
+		{
+			"import_info":  ["GSATLayer", ["models_builder.custom_layers"]],
+            "need_full_gnn_flag": true,
+            "forward_parameters": "x=x, edge_index=edge_index, full_gnn_id=id(self)"
+		}
+  }
 }

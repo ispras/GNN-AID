@@ -1797,7 +1797,6 @@ class GSATModelManager(FrameworkGNNModelManager):
             gnn: Type = None,
             dataset_path: Union[str, Path] = None,
             learn_edge_features: bool = False,
-            hidden_size: int = 16,
             decay_int: int = 10,
             decay_r: float = 0.1,
             init_r: float = 0.9,
@@ -1805,14 +1804,11 @@ class GSATModelManager(FrameworkGNNModelManager):
             fix_r: bool = False,
             pred_loss_coef: float = 1,
             info_loss_coef: float = 1,
-            extractor_dropout_p: float = 0.5,
             **kwargs
     ):
         super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
         self.learn_edge_features = learn_edge_features
-        # TODO hidden_size -> must be init with consistence to gnn architecture
         # TODO check if learn_edge_features == True then model -> GINEConv or other compatible
-        self.hidden_size = hidden_size
         self.decay_int = decay_int
         self.decay_r = decay_r
         self.init_r = init_r
@@ -1820,9 +1816,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         self.pred_loss_coef = pred_loss_coef
         self.info_loss_coef = info_loss_coef
         self.fix_r = fix_r
-        self.extractor_dropout_p = extractor_dropout_p
-
-        self.extractor = ExtractorMLP(self.hidden_size, self.learn_edge_features, self.extractor_dropout_p)
+        self.gsat_layer = getattr(self.gnn, self.gnn.gsat_layer_name)
         apply_decorator_to_graph_layers(self.gnn, apply_attention)
 
     def train_on_batch(
@@ -1831,24 +1825,8 @@ class GSATModelManager(FrameworkGNNModelManager):
             task_type: str = None
     ) -> torch.Tensor:
         if task_type == "multiple-graphs":
-
-            level = self.gnn.model_info['last_node_layer_ind']
-            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[level]
-            att_log_logits = self.extractor(emb, batch.edge_index, batch.batch)
-            att = self.sampling(att_log_logits, self.modification.epochs, training=True)
-
-            if self.learn_edge_features:
-                if is_undirected(batch.edge_index):
-                    trans_idx, trans_val = transpose(batch.edge_index, att, None, None, coalesced=False)
-                    trans_val_perm = GSATModelManager.reorder_like(trans_idx, batch.edge_index, trans_val)
-                    edge_att = (att + trans_val_perm) / 2
-                else:
-                    edge_att = att
-            else:
-                edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
-
-            self.att = att  # for explanation
-            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_atten=edge_att)
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            att = self.gsat_layer.att
             loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
         elif task_type == "signle-graph":
             raise ValueError("Unsupported task type")  # TODO check node classification possibility
@@ -1867,7 +1845,7 @@ class GSATModelManager(FrameworkGNNModelManager):
 
             loss = pos_loss + neg_loss
         else:
-            raise ValueError("Unsupported task type")
+            raise ValueError(f"Unsupported task type: {task_type}")
         return loss
 
     def gsat_loss(self, att, logits, labels, epoch):
@@ -1888,33 +1866,4 @@ class GSATModelManager(FrameworkGNNModelManager):
             r = final_r
         return r
 
-    def sampling(self, att_log_logits, epoch, training):
-        att = self.concrete_sample(att_log_logits, temp=1, training=training)
-        return att
-
-    @staticmethod
-    def concrete_sample(att_log_logit, temp, training):
-        if training:
-            random_noise = torch.empty_like(att_log_logit).uniform_(1e-10, 1 - 1e-10)
-            random_noise = torch.log(random_noise) - torch.log(1.0 - random_noise)
-            att_bern = ((att_log_logit + random_noise) / temp).sigmoid()
-        else:
-            att_bern = (att_log_logit).sigmoid()
-        return att_bern
-
-    @staticmethod
-    def reorder_like(from_edge_index, to_edge_index, values):
-        from_edge_index, values = sort_edge_index(from_edge_index, values)
-        ranking_score = to_edge_index[0] * (to_edge_index.max() + 1) + to_edge_index[1]
-        ranking = ranking_score.argsort().argsort()
-        if not (from_edge_index[:, ranking] == to_edge_index).all():
-            raise ValueError("Edges in from_edge_index and to_edge_index are different, impossible to match both.")
-        return values[ranking]
-
-    @staticmethod
-    def lift_node_att_to_edge_att(node_att, edge_index):
-        src_lifted_att = node_att[edge_index[0]]
-        dst_lifted_att = node_att[edge_index[1]]
-        edge_att = src_lifted_att * dst_lifted_att
-        return edge_att
 

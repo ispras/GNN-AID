@@ -4,6 +4,8 @@ import numpy as np
 from torch import nn
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv, InstanceNorm
+from torch_geometric.utils import is_undirected, sort_edge_index
+from torch_sparse import transpose
 
 from explainers.protgnn.MCTS import mcts
 import ctypes
@@ -132,46 +134,86 @@ class ProtLayer(torch.nn.Module):
         return self.output_dim, self.num_prototypes_per_class, self.last_layer.weight.data.tolist(), best_prots \
             if best else self.prototype_graphs
 
+
 class GSATLayer(torch.nn.Module):
     def __init__(
             self,
             full_gnn_id,
-            hidden_size: int = 16,
+            layer_name_in_gnn,
+            in_features: int = 16,
             learn_edge_features: bool = False,
             extractor_dropout_p: float = 0.5,
     ):
         super().__init__()
-        # full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
         self.is_inside = False
-        self.extractor = ExtractorMLP(hidden_size, learn_edge_features, extractor_dropout_p)
+        self.learn_edge_features = learn_edge_features
+        self.extractor = ExtractorMLP(in_features, learn_edge_features, extractor_dropout_p)
+        full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
+        full_gnn.gsat_layer_name = layer_name_in_gnn
 
-
-    def forward(self, x, full_gnn_id):
+    def forward(self, x, edge_index, full_gnn_id):
         if self.is_inside:
             return x
         else:
             self.is_inside = True
 
-            level = self.gnn.model_info['last_node_layer_ind']
-            emb = self.gnn.get_all_layer_embeddings(x=batch.x, edge_index=batch.edge_index, batch=batch.batch)[level]
-            att_log_logits = self.extractor(emb, batch.edge_index, batch.batch)
-            att = self.sampling(att_log_logits, self.modification.epochs, training=True)
+            emb = x  # layer assume that node/edge embs are passed into
+            att_log_logits = self.extractor(emb, edge_index)
+            att = self.sampling(att_log_logits, training=True)
 
             if self.learn_edge_features:
-                if is_undirected(batch.edge_index):
-                    trans_idx, trans_val = transpose(batch.edge_index, att, None, None, coalesced=False)
-                    trans_val_perm = GSATModelManager.reorder_like(trans_idx, batch.edge_index, trans_val)
+                if is_undirected(edge_index):
+                    trans_idx, trans_val = transpose(edge_index, att, None, None, coalesced=False)
+                    trans_val_perm = GSATLayer.reorder_like(trans_idx, edge_index, trans_val)
                     edge_att = (att + trans_val_perm) / 2
                 else:
                     edge_att = att
             else:
-                edge_att = self.lift_node_att_to_edge_att(att, batch.edge_index)
+                edge_att = self.lift_node_att_to_edge_att(att, edge_index)
 
             self.att = att  # for explanation
-            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch, edge_atten=edge_att)
-            loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
-
+            # loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+            full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
+            logits = full_gnn(x, edge_index, edge_att=edge_att)
             self.is_inside = False
+
+            return logits
+
+    def get_r(self, decay_interval, decay_r, current_epoch, init_r=0.9, final_r=0.5):
+        r = init_r - current_epoch // decay_interval * decay_r
+        if r < final_r:
+            r = final_r
+        return r
+
+    def sampling(self, att_log_logits, training):
+        att = self.concrete_sample(att_log_logits, temp=1, training=training)
+        return att
+
+    @staticmethod
+    def concrete_sample(att_log_logit, temp, training):
+        if training:
+            random_noise = torch.empty_like(att_log_logit).uniform_(1e-10, 1 - 1e-10)
+            random_noise = torch.log(random_noise) - torch.log(1.0 - random_noise)
+            att_bern = ((att_log_logit + random_noise) / temp).sigmoid()
+        else:
+            att_bern = (att_log_logit).sigmoid()
+        return att_bern
+
+    @staticmethod
+    def reorder_like(from_edge_index, to_edge_index, values):
+        from_edge_index, values = sort_edge_index(from_edge_index, values)
+        ranking_score = to_edge_index[0] * (to_edge_index.max() + 1) + to_edge_index[1]
+        ranking = ranking_score.argsort().argsort()
+        if not (from_edge_index[:, ranking] == to_edge_index).all():
+            raise ValueError("Edges in from_edge_index and to_edge_index are different, impossible to match both.")
+        return values[ranking]
+
+    @staticmethod
+    def lift_node_att_to_edge_att(node_att, edge_index):
+        src_lifted_att = node_att[edge_index[0]]
+        dst_lifted_att = node_att[edge_index[1]]
+        edge_att = src_lifted_att * dst_lifted_att
+        return edge_att
 
 
 class ExtractorMLP(nn.Module):
@@ -191,14 +233,14 @@ class ExtractorMLP(nn.Module):
         else:
             self.feature_extractor = GSATMLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
 
-    def forward(self, emb, edge_index, batch):
+    def forward(self, emb, edge_index):
         if self.learn_edge_att:
             col, row = edge_index
             f1, f2 = emb[col], emb[row]
             f12 = torch.cat([f1, f2], dim=-1)
-            att_log_logits = self.feature_extractor(f12, batch[col])
+            att_log_logits = self.feature_extractor(f12)
         else:
-            att_log_logits = self.feature_extractor(emb, batch)
+            att_log_logits = self.feature_extractor(emb)
         return att_log_logits
 
 
@@ -216,10 +258,18 @@ class GSATMLP(nn.Sequential):
 
         super(GSATMLP, self).__init__(*m)
 
-    def forward(self, inputs, batch):
+    def forward(self, inputs):
         for module in self._modules.values():
             if isinstance(module, (InstanceNorm)):
-                inputs = module(inputs, batch)
+                inputs = module(inputs)
             else:
                 inputs = module(inputs)
         return inputs
+
+
+class DummyLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, edge_index):
+        return x, edge_index

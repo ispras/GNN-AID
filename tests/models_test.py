@@ -200,11 +200,11 @@ class ModelsTest(unittest.TestCase):
         prot_gnn_mm_mg_small.load_model_executor(path=mg_small_model_path)
 
     def test_model_on_multiple_graph_with_gsat(self):
-        gin3_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
-                                                    model_name='gin_gin_gin_lin_lin')
+        gin3_gsat_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
+                                                    model_name='gin_gin_gin_gsat_lin_lin')
 
         gsat_gnn_mm_mg_mutag = GSATModelManager(
-            gnn=gin3_lin2_mg_mutag,
+            gnn=gin3_gsat_lin2_mg_mutag,
             manager_config=self.manager_config,
             modification=self.default_config,
             dataset_path=self.results_dataset_path_mg_mutag)
