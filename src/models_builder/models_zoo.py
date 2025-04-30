@@ -1527,6 +1527,71 @@ def model_configs_zoo(
         )
     )
 
+    dummy_gcn_gcn_gsat = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'DummyLayer',
+                            'layer_kwargs': None,
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 3,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'stack',
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': dataset.num_classes,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'LogSoftmax',
+                            'activation_kwargs': None,
+                        },
+                    },
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GSAT',
+                            'layer_kwargs': {
+                                'in_features': dataset.num_classes,
+                            },
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
     gin_gin_gin_lin = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(

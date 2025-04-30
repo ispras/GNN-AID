@@ -216,6 +216,23 @@ class ModelsTest(unittest.TestCase):
         mg_small_model_path = gsat_gnn_mm_mg_mutag.model_path_info() / 'model'
         gsat_gnn_mm_mg_mutag.load_model_executor(path=mg_small_model_path)
 
+    def test_model_on_single_graph_with_gsat(self):
+        dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name="dummy_gcn_gcn_gsat")
+
+        gsat_gnn_mm_sg_example = GSATModelManager(
+            gnn=dummy_gcn_2_gsat,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_example
+        )
+
+        gsat_gnn_mm_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=300, metrics=[])
+        metric_loc = gsat_gnn_mm_sg_example.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_example_model_path = gsat_gnn_mm_sg_example.model_path_info() / 'model'
+        gsat_gnn_mm_sg_example.load_model_executor(path=sg_example_model_path)
+
 
 if __name__ == '__main__':
     unittest.main()
