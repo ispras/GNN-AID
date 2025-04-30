@@ -200,16 +200,16 @@ class ModelsTest(unittest.TestCase):
         prot_gnn_mm_mg_small.load_model_executor(path=mg_small_model_path)
 
     def test_model_on_multiple_graph_with_gsat(self):
-        gin3_gsat_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
-                                                    model_name='gin_gin_gin_gsat_lin_lin')
+        dummy_gin3_gsat_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
+                                                    model_name='dummy_gin_gin_gin_gsat_lin_lin')
 
         gsat_gnn_mm_mg_mutag = GSATModelManager(
-            gnn=gin3_gsat_lin2_mg_mutag,
+            gnn=dummy_gin3_gsat_lin2_mg_mutag,
             manager_config=self.manager_config,
             modification=self.default_config,
             dataset_path=self.results_dataset_path_mg_mutag)
 
-        best_acc = gsat_gnn_mm_mg_mutag.train_model(gen_dataset=self.gen_dataset_mg_mutag, steps=100, metrics=[])
+        gsat_gnn_mm_mg_mutag.train_model(gen_dataset=self.gen_dataset_mg_mutag, steps=500, metrics=[])
         metric_loc = gsat_gnn_mm_mg_mutag.evaluate_model(
             gen_dataset=self.gen_dataset_mg_mutag, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)

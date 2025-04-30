@@ -1282,10 +1282,28 @@ def model_configs_zoo(
         )
     )
 
-    gin_gin_gin_gsat_lin_lin = FrameworkGNNConstructor(
+    dummy_gin_gin_gin_gsat_lin_lin = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(
                 [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'DummyLayer',
+                            'layer_kwargs': None,
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 4,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'stack',
+                                },
+                            },
+                        ],
+                    },
                     {
                         'label': 'n',
                         'layer': {
@@ -1329,7 +1347,7 @@ def model_configs_zoo(
                         },
                         'connections': [
                             {
-                                'into_layer': 4,
+                                'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
                                         'pool_type': 'global_add_pool',
@@ -1383,7 +1401,7 @@ def model_configs_zoo(
                         },
                         'connections': [
                             {
-                                'into_layer': 4,
+                                'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
                                         'pool_type': 'global_add_pool',
@@ -1437,7 +1455,7 @@ def model_configs_zoo(
                         },
                         'connections': [
                             {
-                                'into_layer': 4,
+                                'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
                                         'pool_type': 'global_add_pool',
@@ -1458,7 +1476,7 @@ def model_configs_zoo(
                         },
                         'connections': [
                             {
-                                'into_layer': 4,
+                                'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
                                         'pool_type': 'global_add_pool',

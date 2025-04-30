@@ -176,5 +176,13 @@
             "need_full_gnn_flag": true,
             "forward_parameters": "x=x, edge_index=edge_index, full_gnn_id=id(self)"
 		}
+  },
+  "DummyLayer": {
+        "_technical_parameter":
+		{
+			"import_info":  ["DummyLayer", ["models_builder.custom_layers"]],
+            "need_full_gnn_flag": false,
+            "forward_parameters": "x=x"
+		}
   }
 }

@@ -1825,9 +1825,13 @@ class GSATModelManager(FrameworkGNNModelManager):
             task_type: str = None
     ) -> torch.Tensor:
         if task_type == "multiple-graphs":
+            self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             att = self.gsat_layer.att
             loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+            # loss = self.loss_function(clf_logits, batch.y)
+            self.optimizer.zero_grad()
+            # del self.gsat_layer.att
         elif task_type == "signle-graph":
             raise ValueError("Unsupported task type")  # TODO check node classification possibility
         elif task_type == "edge" and False:  # TODO Kirill, remove False when release edge recommendation task

@@ -1,6 +1,7 @@
 from typing import Optional
 import torch
 import numpy as np
+from IPython.testing.decorators import skip_if_no_x11
 from torch import nn
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv, InstanceNorm
@@ -151,7 +152,26 @@ class GSATLayer(torch.nn.Module):
         full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
         full_gnn.gsat_layer_name = layer_name_in_gnn
 
+        self.hook_handle = self.register_forward_pre_hook(self.save_input_hook, with_kwargs=True)
+
+    def save_input_hook(self, module, args, kwargs):
+        x = kwargs['x']
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k.startswith("skip"):
+                    pass
+                else:
+                    x = v
+        self.hook_saved_value = x.detach()
+
     def forward(self, x, edge_index, full_gnn_id):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k.startswith("skip"):
+                    skip_x = v
+                else:
+                    x = v
+
         if self.is_inside:
             return x
         else:
@@ -171,13 +191,24 @@ class GSATLayer(torch.nn.Module):
             else:
                 edge_att = self.lift_node_att_to_edge_att(att, edge_index)
 
-            self.att = att  # for explanation
+            self.att = att # for explanation
             # loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
             full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
-            logits = full_gnn(x, edge_index, edge_att=edge_att)
+            full_gnn(skip_x, edge_index, edge_att=edge_att)
+            full_gnn(skip_x, edge_index)
+
+            x = self.hook_saved_value
+            self.hook_saved_value = None
+            # if self.hook_handle is not None:
+            #     self.hook_handle.remove()
+            #     self.hook_handle = None
+
             self.is_inside = False
 
-            return logits
+            # del att
+            # del self.att
+
+            return x
 
     def get_r(self, decay_interval, decay_r, current_epoch, init_r=0.9, final_r=0.5):
         r = init_r - current_epoch // decay_interval * decay_r
@@ -268,8 +299,8 @@ class GSATMLP(nn.Sequential):
 
 
 class DummyLayer(nn.Module):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def forward(self, x, edge_index):
-        return x, edge_index
+    def forward(self, x):
+        return x

@@ -76,6 +76,11 @@
    "valid_label" : ["n"],
    "strong_restrictions": ["last_node"],
    "model_manager_restrictions": ["GSATModelManager"]
+  },
+  "DummyLayer": {
+   "valid_label": ["n", "g"],
+   "strong_restrictions": [],
+   "model_manager_restrictions": []
   }
  }
 }
