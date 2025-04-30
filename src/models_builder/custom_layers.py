@@ -162,7 +162,8 @@ class GSATLayer(torch.nn.Module):
                     pass
                 else:
                     x = v
-        self.hook_saved_value = x.detach()
+        # self.hook_saved_value = x.detach()
+        self.hook_saved_value = x.clone()
 
     def forward(self, x, edge_index, full_gnn_id):
         if isinstance(x, dict):
@@ -171,6 +172,8 @@ class GSATLayer(torch.nn.Module):
                     skip_x = v
                 else:
                     x = v
+
+        # return x
 
         if self.is_inside:
             return x

@@ -1836,6 +1836,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index)  # TODO check weight param
             att = self.gsat_layer.att
+            # att = torch.zeros_like(clf_logits)
             # Take only predictions and labels of seed nodes
             loss = self.gsat_loss(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs)
             if self.clip is not None:
@@ -1867,7 +1868,9 @@ class GSATModelManager(FrameworkGNNModelManager):
         info_loss = (att * torch.log(att / r + 1e-6) + (1 - att) * torch.log((1 - att) / (1 - r + 1e-6) + 1e-6)).mean()
 
         pred_loss = pred_loss * self.pred_loss_coef
+        # self.info_loss_coef = 0
         info_loss = info_loss * self.info_loss_coef
+        print(self.pred_loss_coef, self.info_loss_coef, pred_loss, info_loss)
         loss = pred_loss + info_loss
         return loss
 

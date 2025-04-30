@@ -48,17 +48,28 @@ class ModelsTest(unittest.TestCase):
             dataset_ver_ind=0
         )
 
-        self.gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
-                             labeling='binary',
-                             dataset_ver_ind=0)
-        )
+        self.gen_dataset_sg_example, _, _ = DatasetManager.get_by_full_name(
+        full_name=("single-graph", "Planetoid", 'Cora'),
+        dataset_ver_ind=0
+    )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("single-graph", "Planetoid", "Cora"),
+            dataset_ver_ind=0
+        )
+
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
@@ -232,6 +243,31 @@ class ModelsTest(unittest.TestCase):
         print(metric_loc)
         sg_example_model_path = gsat_gnn_mm_sg_example.model_path_info() / 'model'
         gsat_gnn_mm_sg_example.load_model_executor(path=sg_example_model_path)
+
+    def test_model_on_cora_graph_with_gsat(self):
+        dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
+        # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
+
+        gsat_gnn_mm_sg_cora = GSATModelManager(
+            gnn=dummy_gcn_2_gsat,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        # gsat_gnn_mm_sg_cora = FrameworkGNNModelManager(
+        #     gnn=dummy_gcn_2_gsat,
+        #     manager_config=self.manager_config,
+        #     modification=self.default_config,
+        #     dataset_path=self.results_dataset_path_sg_cora
+        # )
+
+        gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = gsat_gnn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = gsat_gnn_mm_sg_cora.model_path_info() / 'model'
+        gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
 
 
 if __name__ == '__main__':
