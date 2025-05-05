@@ -66,7 +66,7 @@ class FrameworkExplainersManager:
                 _class_name=explainer_name,
                 _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
                 _config_class="ExplainerInitConfig",
-                _config_kwargs=init_config.to_saveable_dict(),
+                _config_kwargs=init_config.to_savable_dict(),
             )
         self.init_config = init_config
         if modification_config is None:
@@ -77,7 +77,7 @@ class FrameworkExplainersManager:
         elif isinstance(modification_config, ExplainerModificationConfig):
             modification_config = ConfigPattern(
                 _config_class="ExplainerModificationConfig",
-                _config_kwargs=modification_config.to_saveable_dict(),
+                _config_kwargs=modification_config.to_savable_dict(),
             )
         self.modification_config = modification_config
 
@@ -155,8 +155,8 @@ class FrameworkExplainersManager:
             models_path=self.gnn_model_path,
             explainer_name=self.explainer_name,
             explainer_ver_ind=self.modification_config.explainer_ver_ind,
-            explainer_init_kwargs=self.init_config.to_saveable_dict(),
-            explainer_run_kwargs=run_config.to_saveable_dict(),
+            explainer_init_kwargs=self.init_config.to_savable_dict(),
+            explainer_run_kwargs=run_config.to_savable_dict(),
             create_dir_flag=create_dir_flag,
         )
 

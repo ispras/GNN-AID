@@ -51,7 +51,7 @@ def hash_data_sha256(
 def import_by_name(
         name: str,
         packs: list = None
-) -> None:
+) -> Type[Any]:
     """
     Import name from packages, return class
     :param name: class name, full or relative

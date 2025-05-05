@@ -1,7 +1,7 @@
 import json
-from typing import Union, Type
+from typing import Union, Type, Any
 
-from aux.configs import DatasetConfig, DatasetVarConfig
+from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
     SAVE_DIR_STRUCTURE_PATH
 import os
@@ -108,8 +108,8 @@ class Declare:
 
     @staticmethod
     def dataset_prepared_dir(
-            dataset_config: DatasetConfig,
-            dataset_var_config: DatasetVarConfig
+            dataset_config: Union[ConfigPattern, DatasetConfig],
+            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
     ) -> [Path, list]:
         """
         :param dataset_config: DatasetConfig
@@ -127,7 +127,7 @@ class Declare:
             while True:
                 dataset_var_config["dataset_ver_ind"] = ix
                 loc_path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                                 obj_info=dataset_var_config.to_saveable_dict(
+                                                                 obj_info=dataset_var_config.to_savable_dict(
                                                                      compact=True))
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
@@ -135,12 +135,12 @@ class Declare:
             path = loc_path
         else:
             path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                         obj_info=dataset_var_config.to_saveable_dict(compact=True))
+                                                         obj_info=dataset_var_config.to_savable_dict(compact=True))
         return path, files_paths
 
     @staticmethod
     def models_path(
-            class_obj: Type
+            class_obj: 'GNNModelManager'
     ) -> [Path, list]:
         """
         :param class_obj: class base on GNNModelManager
@@ -168,7 +168,7 @@ class Declare:
             poison_attack_kwargs_hash, poison_defense_kwargs_hash,
             mi_defense_kwargs_hash, evasion_defense_kwargs_hash,
             evasion_attack_kwargs_hash, mi_attack_kwargs_hash,
-            *class_obj.modification.to_saveable_dict(compact=True, need_full=False).values()
+            *class_obj.modification.to_savable_dict(compact=True, need_full=False).values()
         ]
         # print(class_obj.modification.to_saveable_dict(compact=True, need_full=False))
 

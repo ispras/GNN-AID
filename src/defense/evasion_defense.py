@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Any
 
 import torch
 
@@ -169,6 +169,7 @@ class AdvTraining(
             attack_type: str = None,
     ):
         super().__init__()
+        self.perturbed_gen_dataset = None
         if not attack_config:
             # build default config
             assert attack_name is not None
@@ -243,7 +244,7 @@ class AdvTraining(
 
     def post_batch(
             self,
-            model_manager: Type,
+            model_manager: Type[Any],
             batch,
             loss: torch.Tensor,
             **kwargs,
