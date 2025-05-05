@@ -9,7 +9,8 @@ from typing import Union, Any, Type, Tuple, List
 
 from aux.utils import setting_class_default_parameters, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, import_by_name, hash_data_sha256
+    OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, import_by_name, hash_data_sha256, \
+    deep_update
 
 CONFIG_SAVE_KWARGS_KEY = '__save_kwargs_to_be_used_for_saving'
 # CONFIG_PARAMS_PATH_KEY = '__default_parameters_file_path'
@@ -202,6 +203,29 @@ class GeneralConfig:
     ) -> dict:
         """ Special method which allows to use json.dumps() on Config object """
         return self.to_dict()
+
+    def clone_with(self, overrides: dict):
+        """
+        Creates a deep cloned instance of a configuration object
+        (typically derived from GeneralConfig), with specified fields
+        overridden. This is useful when working with mostly immutable config
+        objects that need to be reused with minor changes, without mutating the original.
+
+        :param overrides: A dictionary of fields to override in the clone.
+        These keys should match the keys returned by to_dict() and be valid
+        arguments for the config's constructor.
+        :return: A new instance of the same class as config_obj, constructed using
+        the merged dictionary of original config values and the provided overrides.
+        """
+
+        config_data = copy.deepcopy(
+            self.to_saveable_dict()
+        )
+        config_data = deep_update(
+            target=config_data,
+            overrides=overrides
+        )
+        return type(self)(**config_data)
 
 
 class ConfigPattern(
