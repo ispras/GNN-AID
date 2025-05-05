@@ -132,6 +132,14 @@ def test_attack_defense():
         }
     )
 
+    metafull_poison_attack_config_clone = metafull_poison_attack_config.clone_with(
+        overrides={
+            "_config_kwargs": {
+                "num_nodes": dataset.dataset.x.shape[0] - 1
+            }
+        }
+    )
+
     random_poison_attack_config = ConfigPattern(
         _class_name="RandomPoisonAttack",
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
@@ -303,7 +311,7 @@ def test_attack_defense():
 
     try:
         raise FileNotFoundError()
-        # gnn_model_manager.load_model_executor()
+        gnn_model_manager.load_model_executor()
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
         train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
