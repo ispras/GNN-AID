@@ -17,7 +17,7 @@ class Declare:
     def obj_info_to_path(
             what_save: str = None,
             previous_path: Union[str, Path] = None,
-            obj_info: Union[None, list, tuple, dict] = None
+            obj_info: Union[None, list, tuple, dict, Path] = None
     ) -> [Path, list]:
         """
         :param what_save: the path for which object is being built.
@@ -247,7 +247,8 @@ class Declare:
             explainer_name: str,
             explainer_ver_ind: int = None,
             explainer_run_kwargs: dict = None,
-            explainer_init_kwargs: dict = None
+            explainer_init_kwargs: dict = None,
+            create_dir_flag: bool = True,
     ) -> [Path, list]:
         """
         :param explainer_init_kwargs: dict with kwargs for explainer class
@@ -255,6 +256,7 @@ class Declare:
         :param models_path: model path
         :param explainer_name: explainer name. Example: Zorro
         :param explainer_ver_ind: index of explain version
+        :param create_dir_flag:
         :return: path for explanations result file and list with technical files
         """
         explainer_init_kwargs = explainer_init_kwargs.copy()
@@ -281,22 +283,30 @@ class Declare:
             ix = 0
             while True:
                 obj_info["explainer_ver_ind"] = str(ix)
-                loc_path, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                                 obj_info=obj_info)
+                loc_path, files_paths = Declare.obj_info_to_path(
+                    what_save=what_save,
+                    previous_path=path,
+                    obj_info=obj_info
+                )
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
                 ix += 1
             path = loc_path
         else:
-            path, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                         obj_info=obj_info)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        path = path / Path('explanation.json')
-        with open(files_paths[0], "w") as f:
-            json.dump(explainer_init_kwargs, f, indent=2)
-        with open(files_paths[1], "w") as f:
-            json.dump(explainer_run_kwargs, f, indent=2)
+            path, files_paths = Declare.obj_info_to_path(
+                what_save=what_save,
+                previous_path=path,
+                obj_info=obj_info
+            )
+
+        if create_dir_flag:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            path = path / Path('explanation.json')
+            with open(files_paths[0], "w") as f:
+                json.dump(explainer_init_kwargs, f, indent=2)
+            with open(files_paths[1], "w") as f:
+                json.dump(explainer_run_kwargs, f, indent=2)
 
         return path, files_paths
 
@@ -315,7 +325,10 @@ class Declare:
         # BUG Misha, check is correct next line, because in def obj_info_to_path can't be Path or str
         obj_info = explainer_path
 
-        _, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                  obj_info=obj_info)
+        _, files_paths = Declare.obj_info_to_path(
+            what_save=what_save,
+            previous_path=path,
+            obj_info=obj_info
+        )
 
         return files_paths

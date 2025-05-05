@@ -147,7 +147,8 @@ class FrameworkExplainersManager:
 
     def explanation_result_path(
             self,
-            run_config: Union[ConfigPattern, ExplainerRunConfig]
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            create_dir_flag: bool = True,
     ) -> None:
         # TODO pass configs
         self.explainer_result_file_path, self.files_paths = Declare.explanation_file_path(
@@ -156,6 +157,7 @@ class FrameworkExplainersManager:
             explainer_ver_ind=self.modification_config.explainer_ver_ind,
             explainer_init_kwargs=self.init_config.to_saveable_dict(),
             explainer_run_kwargs=run_config.to_saveable_dict(),
+            create_dir_flag=create_dir_flag,
         )
 
     def conduct_experiment(

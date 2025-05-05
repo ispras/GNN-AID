@@ -96,8 +96,10 @@ class ModelLoadBlock(Block):
         """
         DataInfo.refresh_models_dir_structure()
         index, info = DataInfo.models_parse()
-        path, files_paths = Declare.dataset_prepared_dir(self.gen_dataset.dataset_config,
-                                                         self.gen_dataset.dataset_var_config)
+        path, files_paths = Declare.dataset_prepared_dir(
+            self.gen_dataset.dataset_config,
+            self.gen_dataset.dataset_var_config
+        )
         path = os.path.relpath(path, GRAPHS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
             prefix=("data_root", "data_prepared")
