@@ -106,8 +106,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    save_model_flag = False
-    # save_model_flag = True
+    # save_model_flag = False
+    save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
