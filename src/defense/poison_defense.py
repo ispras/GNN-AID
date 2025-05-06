@@ -52,7 +52,7 @@ class BadRandomPoisonDefender(
         self.defense_diff = edge_index_diff
         return gen_dataset
 
-    def defense_diff(
+    def dataset_diff(
             self
     ):
         return self.defense_diff
