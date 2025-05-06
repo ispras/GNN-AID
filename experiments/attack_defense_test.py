@@ -106,8 +106,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    # save_model_flag = False
-    save_model_flag = True
+    save_model_flag = False
+    # save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
@@ -311,7 +311,7 @@ def test_attack_defense():
 
     try:
         raise FileNotFoundError()
-        gnn_model_manager.load_model_executor()
+        # gnn_model_manager.load_model_executor()
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
         train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
@@ -334,7 +334,6 @@ def test_attack_defense():
 
 
 def test_meta():
-    from attacks.metattack import meta_gradient_attack
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     full_name = ("single-graph", "Planetoid", 'Cora')
@@ -515,7 +514,6 @@ def test_nettack_evasion():
 
 
 def test_qattack():
-    from attacks.QAttack import qattack
     my_device = device('cpu')
 
     # Load dataset
@@ -621,7 +619,6 @@ def test_qattack():
 
 
 def test_jaccard():
-    from defense.JaccardDefense import jaccard_def
     # my_device = device('cuda' if is_available() else 'cpu')
     my_device = device('cpu')
 
@@ -773,8 +770,6 @@ def test_jaccard():
 
 
 def test_adv_training():
-    from defense.evasion_defense import AdvTraining
-
     my_device = device('cpu')
     # full_name = ("single-graph", "Planetoid", 'Cora')
     full_name = ("single-graph", "Amazon", 'Photo')

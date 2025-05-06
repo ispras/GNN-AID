@@ -770,7 +770,7 @@ class DatasetManager:
         """
         from base.ptg_datasets import PTGDataset
         dataset = DatasetManager.get_by_config(DatasetConfig.from_full_name(full_name))
-        cfg = PTGDataset.dataset_var_config.to_saveable_dict()
+        cfg = PTGDataset.dataset_var_config.to_savable_dict()
         cfg.update(**kwargs)
         dataset_var_config = DatasetVarConfig(**cfg)
         dataset.build(dataset_var_config=dataset_var_config)

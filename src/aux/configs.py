@@ -5,7 +5,7 @@ from json import JSONEncoder
 import copy
 import inspect
 from pathlib import Path
-from typing import Union, Any, Type, Tuple, List
+from typing import Union, Any, Type, Tuple, List, Self
 
 from aux.utils import setting_class_default_parameters, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, \
@@ -109,7 +109,7 @@ class GeneralConfig:
     def json_for_config(
             self
     ) -> str:
-        config_kwargs = self.to_saveable_dict().copy()
+        config_kwargs = self.to_savable_dict().copy()
         config_kwargs = dict(sorted(config_kwargs.items()))
         json_object = json.dumps(config_kwargs, indent=2)
         return json_object
@@ -119,7 +119,7 @@ class GeneralConfig:
     ) -> str:
         return hash_data_sha256(self.json_for_config().encode('utf-8'))
 
-    def to_saveable_dict(
+    def to_savable_dict(
             self,
             compact: bool = False,
             **kwargs
@@ -140,7 +140,7 @@ class GeneralConfig:
             #     continue
             value = kwargs[key]
             if isinstance(value, (Config, ConfigPattern)):
-                value = value.to_saveable_dict()
+                value = value.to_savable_dict()
             elif isinstance(value, dict):
                 # value = json.dumps(sorted_dict(value), separators=separators, indent=indent)
                 value = sorted_dict(value)
@@ -219,7 +219,7 @@ class GeneralConfig:
         """
 
         config_data = copy.deepcopy(
-            self.to_saveable_dict()
+            self.to_savable_dict()
         )
         config_data = deep_update(
             target=config_data,
@@ -237,7 +237,7 @@ class ConfigPattern(
             _config_kwargs: Union[dict, None],
             _class_name: Union[str, None] = None,
             _import_path: Union[str, Path, None] = None,
-            _class_import_info: str = None):
+            _class_import_info: Union[str, list[str]] = None):
         if _import_path is not None:
             _import_path = str(_import_path)
         super().__init__(_class_name=_class_name, _import_path=_import_path,
@@ -308,6 +308,7 @@ class ConfigPattern(
         return config_obj
 
     def create_obj(self, **kwargs):
+        obj = None
         if self._class_name is not None or self._class_import_info is not None:
             obj_class = import_by_name(self._class_name, self._class_import_info)
         else:
@@ -325,7 +326,7 @@ class ConfigPattern(
 
     def merge(
             self,
-            config: Type
+            config: Union[Self, GeneralConfig]
     ):
         self_config_obj = getattr(self, CONFIG_OBJ)
         if config.__class__.__name__ == "ConfigPattern":
@@ -335,7 +336,7 @@ class ConfigPattern(
             setattr(self, CONFIG_OBJ, self_config_obj.merge(config))
         return self
 
-    def to_saveable_dict(
+    def to_savable_dict(
             self,
             compact: bool = False,
             need_full: bool = True,
@@ -347,6 +348,7 @@ class ConfigPattern(
         Result dict is a deep copy and can be modified.
 
         :param compact: if compact=True, outer dict values are strings without spaces
+        :param need_full:
         :return: dict
         """
         if CONFIG_SAVE_KWARGS_KEY in self.__dict__ and self.__dict__[
@@ -354,11 +356,11 @@ class ConfigPattern(
             kw = self.__dict__[CONFIG_SAVE_KWARGS_KEY]
         else:
             kw = dict(filter(lambda x: x[0] in self._TECHNICAL_KEYS, self.__dict__.items()))
-            kw["_config_kwargs"] = getattr(self, CONFIG_OBJ).to_saveable_dict(compact=compact)
+            kw["_config_kwargs"] = getattr(self, CONFIG_OBJ).to_savable_dict(compact=compact)
         # BUG Kirill, fix for modification
         if not need_full:
             kw = kw["_config_kwargs"]
-        dct = super().to_saveable_dict(compact=compact, **kw)
+        dct = super().to_savable_dict(compact=compact, **kw)
         return dct
 
 
@@ -411,9 +413,10 @@ class Config(
 
     def __eq__(
             self,
-            other: Type
+            other: Type[Any]
     ) -> bool:
-        if type(other) != type(self):
+        if type(other) is not type(self):
+            # TODO Kirill check
             return False
         return all(getattr(self, a) == getattr(other, a) for a in self._config_keys)
 
@@ -446,7 +449,7 @@ class Config(
         kwargs.update(config.copy())
         return type(self)(**kwargs)
 
-    def to_saveable_dict(
+    def to_savable_dict(
             self,
             compact: bool = False,
             **kwargs
@@ -463,7 +466,7 @@ class Config(
             kw = self.__dict__[CONFIG_SAVE_KWARGS_KEY]
         else:
             kw = dict(filter(lambda x: x[0] in self._config_keys, self.__dict__.items()))
-        dct = super().to_saveable_dict(compact=compact, **kw)
+        dct = super().to_savable_dict(compact=compact, **kw)
         return dct
 
 
@@ -474,6 +477,9 @@ class DatasetConfig(
     Contains a set of distinguishing characteristics to identify the dataset or family of datasets.
     Determines the path to the file with raw data in the inner storage.
     """
+    domain: str
+    group: str
+    graph: str
 
     def __init__(
             self,
@@ -582,7 +588,8 @@ class ModelStructureConfig(
     >>>                 {
     >>>                     'layer': {
     >>>                         'layer_name': 'Linear',
-    >>>                         ...
+    >>>                         'layer_kwargs': {
+    >>>                             ...
     >>>                         },
     >>>                     },
     >>>                     'batchNorm': {
@@ -593,7 +600,7 @@ class ModelStructureConfig(
     >>>                     },
     >>>                 },
     >>>                 {
-    >>>                     new block
+    >>>                     'new block'
     >>>                 },
     >>>             ],
     >>>             ...
@@ -629,6 +636,7 @@ class ModelStructureConfig(
     >>>     },
     >>> }
     Example of gin layer:
+    .. code-block:: python
     >>> {
     >>>     'label': 'n',
     >>>     'layer': {
@@ -698,6 +706,7 @@ class ModelStructureConfig(
     >>>     },
     >>> }
     """
+    layers: Any
 
     def __init__(
             self,

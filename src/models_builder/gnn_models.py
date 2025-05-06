@@ -4,7 +4,7 @@ import random
 from math import ceil
 from pathlib import Path
 from types import FunctionType
-from typing import Callable, List, Union, Any, Type, Protocol
+from typing import Callable, List, Union, Any, Type, Protocol, Iterable, cast
 
 import numpy as np
 import torch
@@ -71,7 +71,7 @@ class Metric:
     def __init__(
             self,
             name: str,
-            mask: Union[str, List[bool]],
+            mask: Union[str, List[bool], torch.Tensor],
             **kwargs
     ):
         """
@@ -132,7 +132,7 @@ class GNNModelManager:
         elif isinstance(manager_config, ModelManagerConfig):
             manager_config = ConfigPattern(
                 _config_class="ModelManagerConfig",
-                _config_kwargs=manager_config.to_saveable_dict(),
+                _config_kwargs=manager_config.to_savable_dict(),
             )
         # TODO Kirill, write raise Exception
         # else:
@@ -236,7 +236,7 @@ class GNNModelManager:
     def get_name(
             self
     ) -> str:
-        manager_name = self.manager_config.to_saveable_dict()
+        manager_name = self.manager_config.to_savable_dict()
         # FIXME Kirill, make ModelManagerConfig and remove manager_name[CONFIG_CLASS_NAME]
         manager_name[CONFIG_CLASS_NAME] = self.__class__.__name__
         # for key, value in kwargs.items():
@@ -369,7 +369,7 @@ class GNNModelManager:
 
     def set_poison_attacker(
             self,
-            poison_attack_config: PoisonAttackConfig = None,
+            poison_attack_config: Union[ConfigPattern, PoisonAttackConfig] = None,
             poison_attack_name: str = None
     ) -> None:
         if poison_attack_config is None:
@@ -386,15 +386,17 @@ class GNNModelManager:
                 _class_name=poison_attack_name,
                 _import_path=POISON_ATTACK_PARAMETERS_PATH,
                 _config_class="PoisonAttackConfig",
-                _config_kwargs=poison_attack_config.to_saveable_dict(),
+                _config_kwargs=poison_attack_config.to_savable_dict(),
             )
         self.poison_attack_config = poison_attack_config
         if poison_attack_name is None:
             poison_attack_name = self.poison_attack_config._class_name
         elif poison_attack_name != self.poison_attack_config._class_name:
-            raise Exception(f"poison_attack_name and self.poison_attack_config._class_name should be equal, "
-                            f"but now poison_attack_name is {poison_attack_name}, "
-                            f"self.poisontorch.optim_attack_config._class_name is {self.poison_attack_config._class_name}")
+            raise Exception(
+                f"poison_attack_name and self.poison_attack_config._class_name should be equal, "
+                f"but now poison_attack_name is {poison_attack_name}, "
+                f"self.poison_attack_config._class_name is {self.poison_attack_config._class_name}"
+            )
         self.poison_attack_name = poison_attack_name
         poison_attack_kwargs = getattr(self.poison_attack_config, CONFIG_OBJ).to_dict()
 
@@ -411,7 +413,7 @@ class GNNModelManager:
 
     def set_evasion_attacker(
             self,
-            evasion_attack_config: EvasionAttackConfig = None,
+            evasion_attack_config: Union[ConfigPattern, EvasionAttackConfig] = None,
             evasion_attack_name: str = None
     ) -> None:
         if evasion_attack_config is None:
@@ -428,15 +430,17 @@ class GNNModelManager:
                 _class_name=evasion_attack_name,
                 _import_path=EVASION_ATTACK_PARAMETERS_PATH,
                 _config_class="EvasionAttackConfig",
-                _config_kwargs=evasion_attack_config.to_saveable_dict(),
+                _config_kwargs=evasion_attack_config.to_savable_dict(),
             )
         self.evasion_attack_config = evasion_attack_config
         if evasion_attack_name is None:
             evasion_attack_name = self.evasion_attack_config._class_name
         elif evasion_attack_name != self.evasion_attack_config._class_name:
-            raise Exception(f"evasion_attack_name and self.evasion_attack_config._class_name should be equal, "
-                            f"but now evasion_attack_name is {evasion_attack_name}, "
-                            f"self.evasion_attack_config._class_name is {self.evasion_attack_config._class_name}")
+            raise Exception(
+                f"evasion_attack_name and self.evasion_attack_config._class_name should be equal, "
+                f"but now evasion_attack_name is {evasion_attack_name}, "
+                f"self.evasion_attack_config._class_name is {self.evasion_attack_config._class_name}"
+            )
         self.evasion_attack_name = evasion_attack_name
         evasion_attack_kwargs = getattr(self.evasion_attack_config, CONFIG_OBJ).to_dict()
 
@@ -451,7 +455,7 @@ class GNNModelManager:
 
     def set_mi_attacker(
             self,
-            mi_attack_config: MIAttackConfig = None,
+            mi_attack_config: Union[ConfigPattern, MIAttackConfig] = None,
             mi_attack_name: str = None
     ) -> None:
         if mi_attack_config is None:
@@ -468,15 +472,17 @@ class GNNModelManager:
                 _class_name=mi_attack_name,
                 _import_path=MI_ATTACK_PARAMETERS_PATH,
                 _config_class="MIAttackConfig",
-                _config_kwargs=mi_attack_config.to_saveable_dict(),
+                _config_kwargs=mi_attack_config.to_savable_dict(),
             )
         self.mi_attack_config = mi_attack_config
         if mi_attack_name is None:
             mi_attack_name = self.mi_attack_config._class_name
         elif mi_attack_name != self.mi_attack_config._class_name:
-            raise Exception(f"mi_attack_name and self.mi_attack_config._class_name should be equal, "
-                            f"but now mi_attack_name is {mi_attack_name}, "
-                            f"self.mi_attack_config._class_name is {self.mi_attack_config._class_name}")
+            raise Exception(
+                f"mi_attack_name and self.mi_attack_config._class_name should be equal, "
+                f"but now mi_attack_name is {mi_attack_name}, "
+                f"self.mi_attack_config._class_name is {self.mi_attack_config._class_name}"
+            )
         self.mi_attack_name = mi_attack_name
         mi_attack_kwargs = getattr(self.mi_attack_config, CONFIG_OBJ).to_dict()
 
@@ -491,7 +497,7 @@ class GNNModelManager:
 
     def set_poison_defender(
             self,
-            poison_defense_config: PoisonDefenseConfig = None,
+            poison_defense_config: Union[ConfigPattern, PoisonDefenseConfig] = None,
             poison_defense_name: str = None
     ) -> None:
         if poison_defense_config is None:
@@ -508,15 +514,17 @@ class GNNModelManager:
                 _class_name=poison_defense_name,
                 _import_path=POISON_DEFENSE_PARAMETERS_PATH,
                 _config_class="PoisonDefenseConfig",
-                _config_kwargs=poison_defense_config.to_saveable_dict(),
+                _config_kwargs=poison_defense_config.to_savable_dict(),
             )
         self.poison_defense_config = poison_defense_config
         if poison_defense_name is None:
             poison_defense_name = self.poison_defense_config._class_name
         elif poison_defense_name != self.poison_defense_config._class_name:
-            raise Exception(f"poison_defense_name and self.poison_defense_config._class_name should be equal, "
-                            f"but now poison_defense_name is {poison_defense_name}, "
-                            f"self.poison_defense_config._class_name is {self.poison_defense_config._class_name}")
+            raise Exception(
+                f"poison_defense_name and self.poison_defense_config._class_name should be equal, "
+                f"but now poison_defense_name is {poison_defense_name}, "
+                f"self.poison_defense_config._class_name is {self.poison_defense_config._class_name}"
+            )
         self.poison_defense_name = poison_defense_name
         poison_defense_kwargs = getattr(self.poison_defense_config, CONFIG_OBJ).to_dict()
 
@@ -531,7 +539,7 @@ class GNNModelManager:
 
     def set_evasion_defender(
             self,
-            evasion_defense_config: EvasionDefenseConfig = None,
+            evasion_defense_config: Union[ConfigPattern, EvasionDefenseConfig] = None,
             evasion_defense_name: str = None
     ) -> None:
         if evasion_defense_config is None:
@@ -548,15 +556,17 @@ class GNNModelManager:
                 _class_name=evasion_defense_name,
                 _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
                 _config_class="EvasionDefenseConfig",
-                _config_kwargs=evasion_defense_config.to_saveable_dict(),
+                _config_kwargs=evasion_defense_config.to_savable_dict(),
             )
         self.evasion_defense_config = evasion_defense_config
         if evasion_defense_name is None:
             evasion_defense_name = self.evasion_defense_config._class_name
         elif evasion_defense_name != self.evasion_defense_config._class_name:
-            raise Exception(f"evasion_defense_name and self.evasion_defense_config._class_name should be equal, "
-                            f"but now evasion_defense_name is {evasion_defense_name}, "
-                            f"self.evasion_defense_config._class_name is {self.evasion_defense_config._class_name}")
+            raise Exception(
+                f"evasion_defense_name and self.evasion_defense_config._class_name should be equal, "
+                f"but now evasion_defense_name is {evasion_defense_name}, "
+                f"self.evasion_defense_config._class_name is {self.evasion_defense_config._class_name}"
+            )
         self.evasion_defense_name = evasion_defense_name
         evasion_defense_kwargs = getattr(self.evasion_defense_config, CONFIG_OBJ).to_dict()
 
@@ -571,7 +581,7 @@ class GNNModelManager:
 
     def set_mi_defender(
             self,
-            mi_defense_config: MIDefenseConfig = None,
+            mi_defense_config: Union[ConfigPattern, MIDefenseConfig] = None,
             mi_defense_name: str = None
     ) -> None:
         """
@@ -591,15 +601,17 @@ class GNNModelManager:
                 _class_name=mi_defense_name,
                 _import_path=MI_DEFENSE_PARAMETERS_PATH,
                 _config_class="MIDefenseConfig",
-                _config_kwargs=mi_defense_config.to_saveable_dict(),
+                _config_kwargs=mi_defense_config.to_savable_dict(),
             )
         self.mi_defense_config = mi_defense_config
         if mi_defense_name is None:
             mi_defense_name = self.mi_defense_config._class_name
         elif mi_defense_name != self.mi_defense_config._class_name:
-            raise Exception(f"mi_defense_name and self.mi_defense_config._class_name should be equal, "
-                            f"but now mi_defense_name is {mi_defense_name}, "
-                            f"self.mi_defense_config._class_name is {self.mi_defense_config._class_name}")
+            raise Exception(
+                f"mi_defense_name and self.mi_defense_config._class_name should be equal, "
+                f"but now mi_defense_name is {mi_defense_name}, "
+                f"self.mi_defense_config._class_name is {self.mi_defense_config._class_name}"
+            )
         self.mi_defense_name = mi_defense_name
         mi_defense_kwargs = getattr(self.mi_defense_config, CONFIG_OBJ).to_dict()
 
@@ -696,9 +708,9 @@ class GNNModelManager:
         """
         result = {}
         if hasattr(self, 'manager_config'):
-            result["manager"] = self.manager_config.to_saveable_dict()
+            result["manager"] = self.manager_config.to_savable_dict()
         if hasattr(self, 'modification'):
-            result["modification"] = self.modification.to_saveable_dict()
+            result["modification"] = self.modification.to_savable_dict()
         if hasattr(self, 'epochs'):
             result["epochs"] = f"Epochs={self.epochs}"
         return result
@@ -788,6 +800,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     """
     GNN model control class. Have methods: train_model, save_model, load_model
     """
+    gnn: torch.nn.Module
     additional_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -821,7 +834,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     to prevent leakage of the response during training.
     """
 
-    def __init__(self, gnn: Type = None,
+    def __init__(self, gnn: torch.nn.Module = None,
                  dataset_path: Union[str, Path] = None,
                  **kwargs
                  ):
@@ -886,7 +899,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset,
             steps: int = None,
-            pbar: Protocol = None,
+            pbar: Union['tqdm', None] = None,
             metrics: Union[List[Metric], Metric] = None,
             **kwargs
     ) -> None:
@@ -920,17 +933,32 @@ class FrameworkGNNModelManager(GNNModelManager):
         task_type = gen_dataset.domain()
         if task_type == "single-graph":
             # FIXME Kirill, add data_x_copy mask
-            loader = NeighborLoader(gen_dataset.dataset._data,
-                                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
-                                    batch_size=self.batch, shuffle=True)
+            loader = cast(
+                Iterable,
+                NeighborLoader(
+                    gen_dataset.dataset._data,
+                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
+                    batch_size=self.batch, shuffle=True
+                )
+            )
         elif task_type == "multiple-graphs":
             train_dataset = gen_dataset.dataset.index_select(gen_dataset.train_mask)
-            loader = DataLoader(train_dataset, batch_size=self.batch, shuffle=True)
+            loader = cast(
+                Iterable,
+                DataLoader(
+                    train_dataset, batch_size=self.batch, shuffle=True
+                )
+            )
         # TODO Kirill, remove False when release edge recommendation task
         elif task_type == "edge" and False:
-            loader = LinkNeighborLoader(gen_dataset.dataset._data,
-                                        num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
-                                        batch_size=self.batch, shuffle=True)
+            loader = cast(
+                Iterable,
+                LinkNeighborLoader(
+                    gen_dataset.dataset._data,
+                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
+                    batch_size=self.batch, shuffle=True
+                )
+            )
         else:
             raise ValueError("Unsupported task type")
         loss = 0
@@ -1030,7 +1058,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             path: Union[str, Path, None] = None,
             **kwargs
-    ) -> Type:
+    ) -> torch.nn.Module:
         """
         Load model from torch save format
 
@@ -1170,8 +1198,14 @@ class FrameworkGNNModelManager(GNNModelManager):
         with torch.no_grad():  # Turn off gradients computation
             if gen_dataset.is_multi():
                 dataset = gen_dataset.dataset
-                part_loader = DataLoader(
-                    dataset.index_select(mask), batch_size=self.batch, shuffle=False)
+                part_loader = cast(
+                    Iterable,
+                    DataLoader(
+                        dataset.index_select(mask),
+                        batch_size=self.batch,
+                        shuffle=False
+                    )
+                )
                 full_out = torch.empty(0, device=dataset.data.x.device)
                 # y_true = torch.Tensor()
                 if hasattr(self, 'optimizer'):
@@ -1227,7 +1261,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     def evaluate_model(
             self,
             gen_dataset: GeneralDataset,
-            metrics: Union[List[Metric], Metric]
+            metrics: Union[List[Metric], Metric, torch.Tensor]
     ) -> dict:
         """
         Compute metrics for a model result on a part of dataset specified by the metric mask.
@@ -1346,7 +1380,12 @@ class FrameworkGNNModelManager(GNNModelManager):
         socket = socket or self.socket
         if socket is None:
             return False
-        socket.send(block=block, msg=msg, tag=tag, obligate=obligate)
+        socket.send(
+            block=block,
+            msg=msg,
+            tag=tag,
+            obligate=obligate
+        )
         return True
 
     def send_epoch_results(
@@ -1460,7 +1499,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self,
             path: Union[str, Path, None] = None,
             **kwargs
-    ) -> Type:
+    ) -> torch.nn.Module:
         """
         Load model from torch save format
 
