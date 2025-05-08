@@ -6,7 +6,7 @@ from typing import Union, Callable, Any, Type
 from flask_socketio import SocketIO
 from tqdm import tqdm
 
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 
 class ProgressBar(tqdm):

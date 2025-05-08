@@ -453,28 +453,22 @@ class DatasetConfig(
 
     def __init__(
             self,
-            domain: str = None,
-            group: str = None,
-            graph: str = None
+            full_name: tuple = None,
+            init_kwargs: Union[dict, None] = None
     ):
         """
         """
-        super().__init__(domain=domain, group=group, graph=graph)
+        assert len(full_name) >= 2
+        if init_kwargs is None:
+            init_kwargs = {}
+        super().__init__(full_name=full_name, init_kwargs=init_kwargs)
 
-    def full_name(
+    def path(
             self
-    ) -> tuple:
-        """ Return all fields as a tuple. """
-        return tuple([self.domain, self.group, self.graph])
-
-    @staticmethod
-    def from_full_name(
-            full_name: tuple
-    ) -> object:
-        """ Build DatasetConfig from a name tuple. """
-        res = DatasetConfig(
-            domain=full_name[0], group=full_name[1], graph=full_name[2])
-        return res
+    ) -> str:
+        """ Return all fields as a path part. """
+        import os
+        return os.sep.join(self.full_name)
 
 
 class DatasetVarConfig(Config):
@@ -487,12 +481,12 @@ class DatasetVarConfig(Config):
             self,
             features: dict = None,
             labeling: Union[str, dict] = None,
+            task: str = None,
             dataset_ver_ind: int = None
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling,
-            dataset_ver_ind=dataset_ver_ind)
+            features=features, labeling=labeling, task=task, dataset_ver_ind=dataset_ver_ind)
 
 
 class ModelStructureConfig(

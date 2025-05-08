@@ -14,7 +14,8 @@ from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETE
     EVASION_DEFENSE_PARAMETERS_PATH
 from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from src.aux.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager, GeneralDataset
+from src.base.datasets_processing import DatasetManager
+from base.gen_dataset import GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
 
 from defense.poison_defense import PoisonDefender

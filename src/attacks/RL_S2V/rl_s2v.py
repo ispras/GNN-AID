@@ -1,6 +1,8 @@
 from attacks.RL_S2V.utils import edge_index_to_dict_of_lists
 from attacks.evasion_attacks import EvasionAttacker
 from attacks.RL_S2V.rl_modules import *
+from base.gen_dataset import GeneralDataset
+
 
 class RLS2VAttacker(EvasionAttacker):
     name = "RLS2VAttack"

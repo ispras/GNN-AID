@@ -5,7 +5,7 @@ from typing import Union, Type
 from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from aux.declaration import Declare
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
 from explainers.explainer_metrics import NodesExplainerMetric
 

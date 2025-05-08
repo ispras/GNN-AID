@@ -6,7 +6,7 @@ import networkx as nx
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from base.datasets_processing import DatasetInfo
+from base.gen_dataset import DatasetInfo
 
 
 class DatasetConverter:
@@ -293,7 +293,7 @@ def example_single():
 
     # Write info and labels
     nx.write_gml(g, raw / 'graph.gml')
-    with open(raw / '.info', 'w') as f:
+    with open('metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 1,
@@ -374,7 +374,7 @@ def example_multi():
     nx.write_gml(g1, raw / 'graph1.gml')
     nx.write_gml(g2, raw / 'graph2.gml')
     nx.write_gml(g3, raw / 'graph3.gml')
-    with open(raw / '.info', 'w') as f:
+    with open('metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 3,

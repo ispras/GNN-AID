@@ -4,7 +4,7 @@ import torch
 from attacks.attack_base import Attacker
 from pathlib import Path
 
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 POISON_ATTACKS_DIR = Path(__file__).parent.resolve() / 'poison_attacks_collection'
 

@@ -8,15 +8,15 @@ import torch
 from torch_geometric.data import Data, InMemoryDataset
 
 from aux.declaration import Declare
-from base.datasets_processing import GeneralDataset, DatasetInfo
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from base.ptg_datasets import LocalDataset
+from base.gen_dataset import LocalDataset, DatasetInfo, GeneralDataset
 
 
-class CustomDataset(
+class KnownFormatDataset(
     GeneralDataset
 ):
-    """ User-defined dataset in 'ij' format.
+    """
+    Fully custom dataset: with building graph from raw files and custom feature creation.
     """
     def __init__(
             self,
@@ -26,12 +26,9 @@ class CustomDataset(
         Args:
             dataset_config: DatasetConfig dict from frontend
         """
-        super().__init__(dataset_config)
-
-        # assert self.labels_dir.exists()
-        self.info = DatasetInfo.read(self.info_path)
         self.node_map = None  # Optional nodes mapping: node_map[i] = original id of node i
-        self.edge_index = None
+
+        super(KnownFormatDataset, self).__init__(dataset_config)
 
     @property
     def node_attributes_dir(
@@ -148,20 +145,165 @@ class CustomDataset(
             else:  # nodes labels
                 assert all_nodes[0] == set(map(int, labels.keys()))
 
-    def build(
-            self,
-            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
+    def _compute_dataset_data(
+            self
+    ) -> None:
+        """
+        """
+        self.info = DatasetInfo.read(self.info_path)
+        self.dataset_data = {}
+
+        # Read edges and attributes
+        if self.is_multi():
+            # FIXME misha format
+            count = self.info.count
+            node_maps = []  # list of node_maps
+
+            # Read edges
+            with open(self.edge_index_path, 'r') as f:
+                edge_index = json.load(f)
+
+            with open(self.edges_path, 'r') as f:
+                g_ix = 0
+                node_index = 0
+                ptg_edge_index = [[], []]  # Over each graph
+                node_map = {}
+                node_maps.append(node_map)
+                for l, line in enumerate(f.readlines()):
+                    i, j = map(int, line.split())
+                    if i not in node_map:
+                        node_map[i] = node_index
+                        node_index += 1
+                    if j not in node_map:
+                        node_map[j] = node_index
+                        node_index += 1
+                    if self.info.remap:
+                        i = node_map[i]
+                        j = node_map[j]
+                    # TODO misha can we reuse one of them?
+                    ptg_edge_index[0].append(i)
+                    ptg_edge_index[1].append(j)
+                    if not self.info.directed:
+                        ptg_edge_index[0].append(j)
+                        ptg_edge_index[1].append(i)
+
+                    if l == edge_index[g_ix] - 1:
+                        if self.info.remap:
+                            if len(node_maps[g_ix]) < self.info.nodes[g_ix]:
+                                # Get the full nodes list from 1st labeling
+                                labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
+                                with open(labeling_path, 'r') as f:
+                                    labeling_dict = json.load(f)
+                                for node in labeling_dict.keys():
+                                    node = int(node)
+                                    if node not in node_maps[g_ix]:
+                                        node_maps[g_ix][node] = node_index
+                                        node_index += 1
+                        self.dataset_data['edges'].append(torch.tensor(np.asarray(ptg_edge_index)))
+                        g_ix += 1
+                        if g_ix == count:
+                            break
+                        node_index = 0
+                        # edges = []
+                        ptg_edge_index = [[], []]
+                        node_map = {}
+                        node_maps.append(node_map)
+
+            if self.info.remap:
+                # Original ids in the order of appearance
+                self.node_map = []
+                for node_map in node_maps:
+                    self.node_map.append(list(node_map.keys()))
+                self.info.node_info = {"id": self.node_map}
+
+            assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
+            assert len(self.dataset_data['edges']) == self.info.count
+
+            # Read attributes
+            self.dataset_data['node_attributes'] = {}
+            for a in self.info.node_attributes["names"]:
+                with open(self.node_attributes_dir / a, 'r') as f:
+                    self.dataset_data['node_attributes'][a] = json.load(f)
+
+        else:
+            node_map = {}
+            ptg_edge_index = [[], []]
+            node_index = 0
+            with open(self.edges_path, 'r') as f:
+                for line in f.readlines():
+                    i, j = map(int, line.split())
+                    if i not in node_map:
+                        node_map[i] = node_index
+                        node_index += 1
+                    if j not in node_map:
+                        node_map[j] = node_index
+                        node_index += 1
+                    if self.info.remap:
+                        i = node_map[i]
+                        j = node_map[j]
+                    # TODO misha can we reuse one of them?
+                    ptg_edge_index[0].append(i)
+                    ptg_edge_index[1].append(j)
+                    if not self.info.directed:
+                        ptg_edge_index[0].append(j)
+                        ptg_edge_index[1].append(i)
+
+                self.dataset_data['edges'] = [torch.tensor(np.asarray(ptg_edge_index))]
+                if self.info.remap:
+                    if len(node_map) < self.info.nodes[0]:
+                        labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
+                        with open(labeling_path, 'r') as f:
+                            labeling_dict = json.load(f)
+                        for node in labeling_dict.keys():
+                            node = int(node)
+                            if node not in node_map:
+                                node_map[node] = node_index
+                                node_index += 1
+                    # assert node_index == self.info.nodes[0]
+                    # Original ids in the order of appearance
+                    self.node_map = list(node_map.keys())
+                    self.info.node_info = {"id": self.node_map}
+
+            assert node_index == self.info.nodes[0]
+            assert len(self.dataset_data['edges']) == self.info.count
+
+            # Read attributes
+            self.dataset_data['node_attributes'] = {}
+            if self.node_attributes_dir.exists():
+                for a in os.listdir(self.node_attributes_dir):
+                    with open(self.node_attributes_dir / a, 'r') as f:
+                        self.dataset_data['node_attributes'][a] = [{
+                            node_map[int(n)]: v for n, v in json.load(f).items()
+                            if int(n) in node_map}]
+
+        # Check for obligate parameters
+        assert len(self.dataset_data['edges']) > 0
+        # assert len(info["labelings"]) > 0  # for VK we generate based on files
+
+    def _compute_dataset_var_data(
+            self
     ) -> None:
         """ Build ptg dataset based on dataset_var_config and create DatasetVarData.
         """
-        if dataset_var_config == self.dataset_var_config:
-            # PTG is cached
-            return
+        # self.dataset_var_data = None
+        # self.stats.update_var_config()  fixme
+        # self.dataset_var_config = dataset_var_config
+        self.dataset = LocalDataset(None, self.results_dir, process_func=self._create_ptg)
 
-        self.dataset_var_data = None
-        self.stats.update_var_config()
-        self.dataset_var_config = dataset_var_config
-        self.dataset = LocalDataset(self.results_dir, process_func=self._create_ptg)
+        # Define auxiliary fields
+        self.dataset_var_data = {}
+        if self.is_hetero():
+            raise NotImplementedError
+
+        else:
+            self.dataset_var_data['node_features'] = [data.x for data in self.dataset]
+            # self.dataset_var_data['edge_features'] = []
+            self.dataset_var_data['labels'] = [data.y for data in self.dataset]
+
+        if not self.is_multi():  # fixme do we really want it ?
+            self.dataset_var_data['node_features'] = self.dataset_var_data['node_features'][0]
+            # self.dataset_var_data['edge_features'] = []
+            self.dataset_var_data['labels'] = self.dataset_var_data['labels'][0]
 
     def _compute_stat(
             self,
@@ -228,166 +370,11 @@ class CustomDataset(
 
         raise NotImplementedError()
 
-    def _compute_dataset_data(
-            self
-    ) -> None:
-        """ Get DatasetData for debug graph
-        Structure according to https://docs.google.com/spreadsheets/d/1fNI3sneeGoOFyIZP_spEjjD-7JX2jNl_P8CQrA4HZiI/edit#gid=1096434224
-        """
-        # TODO misha - can we use ptg dataset? Problem is that it is not built at this stage.
-        # super()._compute_dataset_data()
-
-        self.dataset_data = {
-            "edges": [],
-        }
-
-        # Read edges and attributes
-        if self.is_multi():
-            # FIXME misha format
-            count = self.info.count
-            node_maps = []  # list of node_maps
-
-            # Read edges
-            with open(self.edge_index_path, 'r') as f:
-                edge_index = json.load(f)
-
-            with open(self.edges_path, 'r') as f:
-                g_ix = 0
-                node_index = 0
-                self.edge_index = []
-                edges = []
-                ptg_edge_index = [[], []]  # Over each graph
-                node_map = {}
-                node_maps.append(node_map)
-                for l, line in enumerate(f.readlines()):
-                    i, j = map(int, line.split())
-                    if i not in node_map:
-                        node_map[i] = node_index
-                        node_index += 1
-                    if j not in node_map:
-                        node_map[j] = node_index
-                        node_index += 1
-                    if self.info.remap:
-                        i = node_map[i]
-                        j = node_map[j]
-                    # TODO misha can we reuse one of them?
-                    edges.append([i, j])
-                    ptg_edge_index[0].append(i)
-                    ptg_edge_index[1].append(j)
-                    if not self.info.directed:
-                        ptg_edge_index[0].append(j)
-                        ptg_edge_index[1].append(i)
-
-                    if l == edge_index[g_ix] - 1:
-                        if self.info.remap:
-                            if len(node_maps[g_ix]) < self.info.nodes[g_ix]:
-                                # Get the full nodes list from 1st labeling
-                                labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
-                                with open(labeling_path, 'r') as f:
-                                    labeling_dict = json.load(f)
-                                for node in labeling_dict.keys():
-                                    node = int(node)
-                                    if node not in node_maps[g_ix]:
-                                        node_maps[g_ix][node] = node_index
-                                        node_index += 1
-                        self.dataset_data['edges'].append(edges)
-                        self.edge_index.append(torch.tensor(np.asarray(ptg_edge_index)))
-                        g_ix += 1
-                        if g_ix == count:
-                            break
-                        node_index = 0
-                        edges = []
-                        ptg_edge_index = [[], []]
-                        node_map = {}
-                        node_maps.append(node_map)
-
-            if self.info.remap:
-                # Original ids in the order of appearance
-                self.node_map = []
-                for node_map in node_maps:
-                    self.node_map.append(list(node_map.keys()))
-                self.info.node_info = {"id": self.node_map}
-
-            assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
-            assert len(self.dataset_data['edges']) == self.info.count
-
-            # Read attributes
-            self.dataset_data["node_attributes"] = {}
-            for a in self.info.node_attributes["names"]:
-                with open(self.node_attributes_dir / a, 'r') as f:
-                    self.dataset_data["node_attributes"][a] = json.load(f)
-
-        else:
-            node_map = {}
-            edges = []
-            ptg_edge_index = [[], []]
-            node_index = 0
-            with open(self.edges_path, 'r') as f:
-                for line in f.readlines():
-                    i, j = map(int, line.split())
-                    if i not in node_map:
-                        node_map[i] = node_index
-                        node_index += 1
-                    if j not in node_map:
-                        node_map[j] = node_index
-                        node_index += 1
-                    if self.info.remap:
-                        i = node_map[i]
-                        j = node_map[j]
-                    # TODO misha can we reuse one of them?
-                    edges.append([i, j])
-                    ptg_edge_index[0].append(i)
-                    ptg_edge_index[1].append(j)
-                    if not self.info.directed:
-                        ptg_edge_index[0].append(j)
-                        ptg_edge_index[1].append(i)
-
-                self.dataset_data['edges'].append(edges)
-                self.edge_index = [torch.tensor(np.asarray(ptg_edge_index))]
-                if self.info.remap:
-                    if len(node_map) < self.info.nodes[0]:
-                        labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
-                        with open(labeling_path, 'r') as f:
-                            labeling_dict = json.load(f)
-                        for node in labeling_dict.keys():
-                            node = int(node)
-                            if node not in node_map:
-                                node_map[node] = node_index
-                                node_index += 1
-                    # assert node_index == self.info.nodes[0]
-                    # Original ids in the order of appearance
-                    self.node_map = list(node_map.keys())
-                    self.info.node_info = {"id": self.node_map}
-
-            assert node_index == self.info.nodes[0]
-            assert len(self.dataset_data['edges']) == self.info.count
-
-            # Read attributes
-            self.dataset_data["node_attributes"] = {}
-            if self.node_attributes_dir.exists():
-                for a in os.listdir(self.node_attributes_dir):
-                    with open(self.node_attributes_dir / a, 'r') as f:
-                        self.dataset_data["node_attributes"][a] = [{
-                            node_map[int(n)]: v for n, v in json.load(f).items()
-                            if int(n) in node_map}]
-
-        # Check for obligate parameters
-        assert len(self.dataset_data["edges"]) > 0
-        # assert len(info["labelings"]) > 0  # for VK we generate based on files
-
-        # self.dataset_data['info'] = self.info.to_dict()
-        # if self.info.name == "":
-        #     self.dataset_data['info']['name'] = '/'.join(self.dataset_config.full_name())
-
     def _create_ptg(
             self
     ) -> None:
         """ Create PTG Dataset and save tensors
         """
-        if self.edge_index is None:
-            # TODO Misha think if it's good
-            self._compute_dataset_data()
-
         data_list = []
         for ix in range(self.info.count):
             node_features = self._feature_tensor(ix)
@@ -395,7 +382,7 @@ class CustomDataset(
             x = torch.tensor(node_features, dtype=torch.float)
             y = torch.tensor(labels)
             data = Data(
-                x=x, edge_index=self.edge_index[ix], y=y,
+                x=x, edge_index=self.dataset_data['edges'][ix], y=y,
                 num_classes=self.info.labelings[self.dataset_var_config.labeling]
             )
             data_list.append(data)

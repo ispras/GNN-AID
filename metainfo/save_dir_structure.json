@@ -1,14 +1,6 @@
 {
   "data_root": {
-    "domain": {
-      "add_key_name_flag": false,
-      "files_info": null
-    },
-    "group": {
-      "add_key_name_flag": false,
-      "files_info": null
-    },
-    "graph": {
+    "path": {
       "add_key_name_flag": false,
       "files_info": null
     }
@@ -24,6 +16,10 @@
       "files_info": null
     },
     "labeling": {
+      "add_key_name_flag": true,
+      "files_info": null
+    },
+    "task": {
       "add_key_name_flag": true,
       "files_info": null
     },

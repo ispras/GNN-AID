@@ -23,7 +23,7 @@ from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH,
     hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 from explainers.explainer import ProgressBar
 from explainers.ProtGNN.MCTS import mcts_args
 from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \

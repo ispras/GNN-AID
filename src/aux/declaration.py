@@ -101,7 +101,7 @@ class Declare:
         :return: forms the path to the data folder and adds to it the path to a specific dataset
         """
         path = GRAPHS_DIR
-        dataset_config_val = dataset_config.full_name()
+        dataset_config_val = [dataset_config.path()]
         path, files_paths = Declare.obj_info_to_path(previous_path=path, what_save="data_root",
                                                      obj_info=dataset_config_val)
         return path, files_paths

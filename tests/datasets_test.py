@@ -175,7 +175,7 @@ class DatasetsTest(unittest.TestCase):
         with open(raw / 'test.ij', 'w') as f:
             f.write("10 11\n")
             f.write("10 12\n")
-        with open(raw / '.info', 'w') as f:
+        with open('metainfo', 'w') as f:
             json.dump({
                 "count": 1,
                 "directed": False,
@@ -267,7 +267,7 @@ class DatasetsTest(unittest.TestCase):
             f.write("0 4\n")
         with open(raw / 'test.edge_index', 'w') as f:
             f.write("[3, 7, 11]")
-        with open(raw / '.info', 'w') as f:
+        with open('metainfo', 'w') as f:
             json.dump({
                 "count": 3,
                 "directed": False,
@@ -377,7 +377,7 @@ class DatasetsTest(unittest.TestCase):
                                                 default_edge_attr_value={'weight': -1, 'type': -1})
 
             # Write info and labels
-            with open(raw / '.info', 'w') as f:
+            with open('metainfo', 'w') as f:
                 json.dump({
                     "name": name,
                     "count": 1,
@@ -429,7 +429,7 @@ class DatasetsTest(unittest.TestCase):
             ps = PrefixStorage.from_json(f.read())
 
         for full_name in ps:
-            dc = DatasetConfig.from_full_name(full_name)
+            dc = DatasetConfig(full_name)
             print(f"Checking {dc}")
 
             try:

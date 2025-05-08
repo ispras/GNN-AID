@@ -8,7 +8,7 @@ from typing import Type, Union, List, Any
 import numpy as np
 import torch
 
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 for pack in [
     'defense.GNNGuard.gnnguard',

@@ -9,7 +9,7 @@ from aux.data_info import DataInfo
 from aux.declaration import Declare
 from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import GNNModelManager
 from web_interface.back_front.block import Block, WrapperBlock

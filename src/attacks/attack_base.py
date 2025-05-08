@@ -1,6 +1,6 @@
 from typing import Type
 
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 
 class Attacker:

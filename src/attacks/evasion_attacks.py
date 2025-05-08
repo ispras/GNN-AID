@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 from attacks.attack_base import Attacker
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 # Nettack imports
 from src.attacks.nettack.nettack import Nettack

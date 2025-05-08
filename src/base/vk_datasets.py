@@ -178,7 +178,7 @@ class VKDataset(
 
         # TODO Misha do we want add node attributes to send to front? See attr name
         #  Problem is that attr names are diff in attrs folder and in .info
-        self.dataset_data["node_attributes"] = {}
+        self.dataset_data['node_attributes'] = {}
 
         # # Add node labelings present in folder
         # labelings = {}
@@ -213,7 +213,7 @@ class VKDataset(
                     attr_dict = json.load(f)
                     for i, node in self._iter_nodes():
                         # print(node)
-                        one_hot = list(AttrInfo.one_hot(full_name=self.dataset_config.full_name(),
+                        one_hot = list(AttrInfo.one_hot(full_name=self.dataset_config.full_name,
                                                         attribute=key_loc,
                                                         value=attr_dict[node],
                                                         add_none=self.add_none))

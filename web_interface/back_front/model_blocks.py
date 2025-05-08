@@ -13,7 +13,7 @@ from aux.prefix_storage import PrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
     IMPORT_INFO_KEY
-from base.datasets_processing import GeneralDataset, VisiblePart
+from base.gen_dataset import VisiblePart, GeneralDataset
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
 from models_builder.gnn_models import ModelManagerConfig, GNNModelManager, Metric
 from web_interface.back_front.block import Block, WrapperBlock

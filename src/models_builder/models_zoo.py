@@ -1,4 +1,4 @@
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 from models_builder.gnn_constructor import FrameworkGNNConstructor
 from aux.configs import ModelConfig, ModelStructureConfig
 

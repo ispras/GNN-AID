@@ -8,7 +8,7 @@ import networkx as nx
 from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
-from base.datasets_processing import GeneralDataset
+from base.gen_dataset import GeneralDataset
 
 
 class DatasetStats:
@@ -164,7 +164,7 @@ class DatasetStats:
         """
         # assert self.info.count == 1
         # data: Data = self.dataset.get(0)
-        edges = self.gen_dataset.dataset_data["edges"][0]
+        edges = self.gen_dataset.dataset_data['edges'][0]
         num_nodes = self.gen_dataset.info.nodes[0]
 
         # Simple stats
@@ -259,7 +259,7 @@ class DatasetStats:
         """ Compute statistics for a multiple-graphs dataset.
         Result could be: a number, a string, a distribution, a dict of ones.
         """
-        edges = self.gen_dataset.dataset_data["edges"]
+        edges = self.gen_dataset.dataset_data['edges']
 
         # Var stats
         if stat == "label_distr":

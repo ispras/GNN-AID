@@ -10,7 +10,8 @@ from torch_geometric.data import Data, HeteroData, InMemoryDataset
 from aux.utils import GRAPHS_DIR
 from aux.declaration import Declare
 from base.custom_datasets import CustomDataset
-from base.datasets_processing import GeneralDataset, DatasetInfo, DatasetManager, VisiblePart
+from base.datasets_processing import DatasetManager
+from base.gen_dataset import DatasetInfo, VisiblePart, GeneralDataset
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
@@ -189,16 +190,16 @@ class CustomHeteroDataset(
             self.info.node_info = {"id": self.node_map}
 
         # Read attributes
-        self.dataset_data["node_attributes"] = {nt: {} for nt in self.node_types}
+        self.dataset_data['node_attributes'] = {nt: {} for nt in self.node_types}
         for nt in self.node_types:
             for ix, attr in enumerate(self.info.node_attributes[nt]["names"]):
                 with open(self.node_attributes_dir / nt / attr, 'r') as f:
                     attributes = json.load(f)
-                self.dataset_data["node_attributes"][nt][attr] = [{
+                self.dataset_data['node_attributes'][nt][attr] = [{
                         node_map[nt][int(n)]: v for n, v in attributes.items()}]
 
         # Check for obligate parameters
-        assert len(self.dataset_data["edges"]) > 0
+        assert len(self.dataset_data['edges']) > 0
         # assert len(info["labelings"]) > 0  # for VK we generate based on files
 
         # self.dataset_data['info'] = self.info.to_dict()
@@ -370,7 +371,7 @@ class CustomHeteroDataset(
             # TODO IMP misha replace with getting data from tensors instead of keeping the whole data
             features[nt] = {}
             for ix in ixes:
-                features[nt][ix] = self.dataset_var_data['features'][nt][ix]
+                features[nt][ix] = self.dataset_var_data['node_features'][nt][ix]
             if nt in self.dataset_var_config.labeling:
                 labels[nt] = {}
                 for ix in ixes:

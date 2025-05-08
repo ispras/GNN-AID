@@ -16,8 +16,6 @@ from aux.prefix_storage import PrefixStorage
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor
 
-DATASET_KEYS = ("domain", "group", "graph")
-
 
 class DataInfo:
     """
@@ -47,8 +45,8 @@ class DataInfo:
         with open(DATA_INFO_DIR_data, 'w', encoding='utf-8') as f:
             # IMP suggest create a constant for "dataset_ver_ind" and such strings, same for next 2 functions
             prev_path = ''
-            for path in Path(GRAPHS_DIR).glob('**/raw/.info'):
-                path = path.parts[root_dir_len + 1:-2]
+            for path in Path(GRAPHS_DIR).glob('**/.info'):
+                path = path.parts[root_dir_len + 1:-1]
                 path = str(Path(*path)) + '\n'
                 if prev_path != path:
                     f.write(path)
