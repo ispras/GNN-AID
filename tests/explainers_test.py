@@ -1,3 +1,4 @@
+import collections
 import collections.abc
 
 # from experiments.SubgraphX_MultiGraph_Example import dataset
@@ -20,6 +21,9 @@ from base.datasets_processing import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
+    ExplainerInitConfig, ConfigPattern, ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
 import explainers
 import_all_from_package(explainers)  # to import all subclasses properly
@@ -67,6 +71,22 @@ class ExplainersTest(unittest.TestCase):
         gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.dataset_sg_example = gen_dataset_sg_example
         results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("single-graph", "Planetoid", "Cora"),
+            dataset_ver_ind=0
+        )
+
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
@@ -178,6 +198,41 @@ class ExplainersTest(unittest.TestCase):
         self.gnn_model_manager_mg_small.train_model(
             gen_dataset=gen_dataset_mg_small, steps=50, save_model_flag=False,
             metrics=[Metric("F1", mask='test')])
+
+        self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
+        # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
+
+        self.gsat_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+            }
+        )
+
+        self.default_config = ModelModificationConfig(
+            model_ver_ind=0,
+        )
+
+        self.gsat_gnn_mm_sg_cora = GSATModelManager(
+            gnn=self.dummy_gcn_2_gsat,
+            manager_config=self.gsat_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        # gsat_gnn_mm_sg_cora = FrameworkGNNModelManager(
+        #     gnn=dummy_gcn_2_gsat,
+        #     manager_config=self.manager_config,
+        #     modification=self.default_config,
+        #     dataset_path=self.results_dataset_path_sg_cora
+        # )
+
+        self.gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = self.gsat_gnn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = self.gsat_gnn_mm_sg_cora.model_path_info() / 'model'
+        self.gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
 
     def test_PGE_SG(self):
         # FIXME not working with another tests
@@ -485,6 +540,35 @@ class ExplainersTest(unittest.TestCase):
     #     )
     #     explainer.conduct_experiment(explainer_run_config)
 
+    def test_GSAT_SG(self):
+        warnings.warn("Start GSATExplainer")
+        explainer_init_config = ConfigPattern(
+            _class_name="GSAT",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GSAT",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+                        'element_idx': 0,
+                    },
+                }
+            }
+        )
+        explainer_GSAT = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.gen_dataset_sg_cora, gnn_manager=self.gsat_gnn_mm_sg_cora,
+            explainer_name='GSAT',
+        )
+        explainer_GSAT.conduct_experiment(explainer_run_config)
 
 if __name__ == '__main__':
     unittest.main()

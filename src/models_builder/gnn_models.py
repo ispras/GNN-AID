@@ -1817,7 +1817,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         self.info_loss_coef = info_loss_coef
         self.fix_r = fix_r
         self.gsat_layer = getattr(self.gnn, self.gnn.gsat_layer_name)
-        apply_decorator_to_graph_layers(self.gnn, apply_attention)
+        # apply_decorator_to_graph_layers(self.gnn, apply_attention)
 
     def train_on_batch(
             self,
@@ -1835,7 +1835,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         elif task_type == "single-graph":
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index)  # TODO check weight param
-            att = self.gsat_layer.att
+            att = self.gsat_layer.edge_att
             # att = torch.zeros_like(clf_logits)
             # Take only predictions and labels of seed nodes
             loss = self.gsat_loss(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs)

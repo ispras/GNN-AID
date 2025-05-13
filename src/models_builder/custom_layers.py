@@ -3,10 +3,12 @@ import torch
 import numpy as np
 from IPython.testing.decorators import skip_if_no_x11
 from torch import nn
+from torch.utils import checkpoint
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv, InstanceNorm
 from torch_geometric.utils import is_undirected, sort_edge_index
 from torch_sparse import transpose
+from src.models_builder.models_utils import apply_attention_to_messages
 
 from explainers.protgnn.MCTS import mcts
 import ctypes
@@ -153,6 +155,7 @@ class GSATLayer(torch.nn.Module):
         full_gnn.gsat_layer_name = layer_name_in_gnn
 
         self.hook_handle = self.register_forward_pre_hook(self.save_input_hook, with_kwargs=True)
+        self.handlers = None
 
     def save_input_hook(self, module, args, kwargs):
         x = kwargs['x']
@@ -177,6 +180,7 @@ class GSATLayer(torch.nn.Module):
 
         if self.is_inside:
             return x
+            # return self.extractor(x, edge_index)
         else:
             self.is_inside = True
 
@@ -194,22 +198,33 @@ class GSATLayer(torch.nn.Module):
             else:
                 edge_att = self.lift_node_att_to_edge_att(att, edge_index)
 
-            self.att = att # for explanation
+            self.edge_att = edge_att  # for explanation
             # loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+
             full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
-            full_gnn(skip_x, edge_index, edge_att=edge_att)
-            full_gnn(skip_x, edge_index)
+
+            # full_gnn.gsat_attention = self.edge_att
+            if self.handlers is not None:
+                for h in self.handlers:
+                    h.remove()
+                self.handlers = None
+
+            self.handlers = apply_attention_to_messages(full_gnn, self.edge_att)
+
+            # checkpoint.checkpoint(full_gnn, skip_x, edge_index, att)
+            full_gnn(skip_x, edge_index, edge_att=self.edge_att)
+
+            if self.handlers is not None:
+                for h in self.handlers:
+                    h.remove()
+                self.handlers = None
+
+            # full_gnn(skip_x, edge_index)
 
             x = self.hook_saved_value
             self.hook_saved_value = None
-            # if self.hook_handle is not None:
-            #     self.hook_handle.remove()
-            #     self.hook_handle = None
 
             self.is_inside = False
-
-            # del att
-            # del self.att
 
             return x
 
@@ -247,6 +262,13 @@ class GSATLayer(torch.nn.Module):
         src_lifted_att = node_att[edge_index[0]]
         dst_lifted_att = node_att[edge_index[1]]
         edge_att = src_lifted_att * dst_lifted_att
+
+        # Calculate self-loop attention
+        self_loop_att = node_att * node_att
+
+        # Concatenate self-loop attention at the end
+        edge_att = torch.cat((edge_att, self_loop_att), dim=0)
+
         return edge_att
 
 

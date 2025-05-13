@@ -237,7 +237,7 @@ class ModelsTest(unittest.TestCase):
             dataset_path=self.results_dataset_path_sg_example
         )
 
-        gsat_gnn_mm_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=300, metrics=[])
+        gsat_gnn_mm_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[])
         metric_loc = gsat_gnn_mm_sg_example.evaluate_model(
             gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)

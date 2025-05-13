@@ -15,8 +15,8 @@ from explainers.neural_analysis.our.concept_ranker import by_weight
 from explainers.neural_analysis.our.concepts import ConceptSet
 
 
-class NeuralAnalysisExplainer(Explainer):
 
+class NeuralAnalysisExplainer(Explainer):
     # TODO model.n_layers - layer can be reworked with _check_model_structure
 
     name = 'NeuralAnalysis'
@@ -53,7 +53,6 @@ class NeuralAnalysisExplainer(Explainer):
     @finalize_decorator
     def run(self, mode, kwargs, finalize=True):
 
-
         # if 'level' not in kwargs:
         #     level = self.model.model_info['last_node_layer_ind']
         # else:
@@ -64,7 +63,8 @@ class NeuralAnalysisExplainer(Explainer):
 
         if mode == 'global':
             if 'level' not in kwargs:
-                pbar_n = (kwargs['depth'] - 1) * self.model.get_neurons()[self.model.model_info['last_graph_layer_ind'] - 1]
+                pbar_n = (kwargs['depth'] - 1) * self.model.get_neurons()[
+                    self.model.model_info['last_graph_layer_ind'] - 1]
                 self.pbar.reset(pbar_n)
             else:
                 pbar_n = (kwargs['depth'] - 1) * self.model.get_neurons['level']
@@ -88,7 +88,7 @@ class NeuralAnalysisExplainer(Explainer):
                 raise NotImplementedError
         else:
             raise NotImplementedError
-        self.pbar.n = pbar_n - 1 # TODO some kind of patch maybe fix needed
+        self.pbar.n = pbar_n - 1  # TODO some kind of patch maybe fix needed
         self.pbar.update(1)
         self.pbar.close()
 
@@ -155,7 +155,8 @@ class NeuralAnalysisExplainer(Explainer):
             # feature_maps = model.partial_forward(graph.x.to(model.device), graph.edge_index.to(model.device),
             #                                     ret_layer=model.n_layers - level).detach().cpu().T
 
-            feature_maps = self.model.get_all_layer_embeddings(x=graph.x, edge_index=graph.edge_index)[level].detach().cpu().T
+            feature_maps = self.model.get_all_layer_embeddings(x=graph.x, edge_index=graph.edge_index)[
+                level].detach().cpu().T
 
             # # TEST
             # con = model.conn_dict[(model.n_layers - level, 3)][0]
@@ -214,7 +215,8 @@ class NeuralAnalysisExplainer(Explainer):
         from explainers.neural_analysis.our import concept_ranker
 
         if entropic or show_contribs:
-            vals_ent = concept_ranker.by_entropy(self.model, graph.x, graph.edge_index, y, epochs=200, beta=1, sort=False)
+            vals_ent = concept_ranker.by_entropy(self.model, graph.x, graph.edge_index, y, epochs=200, beta=1,
+                                                 sort=False)
 
         if show_contribs:
             vals_abs = concept_ranker.by_weight_x_val(self.model, graph.x, graph.edge_index, y, sort=False)
@@ -223,7 +225,8 @@ class NeuralAnalysisExplainer(Explainer):
         # concept_layer = self.forward(x.to(self.device), edge_index.to(self.device)).detach().cpu().numpy()
         # self.include_top = True
 
-        feature_maps = self.model.get_all_layer_embeddings(x=graph.x, edge_index=graph.edge_index)[level].detach().cpu().T
+        feature_maps = self.model.get_all_layer_embeddings(x=graph.x, edge_index=graph.edge_index)[
+            level].detach().cpu().T
 
         concept_layer = self.concept_layer(graph.x, graph.edge_index, level, feature_maps=feature_maps)
 
