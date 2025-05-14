@@ -165,7 +165,7 @@ def test_attack_defense():
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
-            "threshold": 0.05,
+            "threshold": 0.5,
         }
     )
 
@@ -332,7 +332,12 @@ def test_attack_defense():
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
 
-    gnn_model_manager.poison_defender.dataset_diff()
+    diff = gnn_model_manager.poison_defender.dataset_diff()
+    # dataset_test, _, _ = DatasetManager.get_by_full_name(
+    #     full_name=full_name,
+    #     dataset_ver_ind=0
+    # )
+    # dataset_test = dataset_test.apply_modification(artifact=diff)
 
 
 def test_meta():
