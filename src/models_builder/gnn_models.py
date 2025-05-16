@@ -1280,6 +1280,18 @@ class FrameworkGNNModelManager(GNNModelManager):
             gen_dataset: GeneralDataset,
             poison_attack_diff_file_path: Union[str, Path] = None,
     ) -> GeneralDataset:
+        """
+        Loads and applies poisoning attack artifacts to the dataset if available; otherwise, executes the attack
+        and generates the necessary artifacts.
+
+        Parameters:
+            gen_dataset (GeneralDataset): Object containing dataset data and configuration metadata.
+            poison_attack_diff_file_path (str, optional): Path to precomputed poisoning artifacts. If None,
+                the default path from the dataset configuration is used.
+
+        Returns:
+            GeneralDataset: A modified dataset with the poisoning attack applied.
+        """
         if poison_attack_diff_file_path is None:
             _, files_paths = Declare.models_path(self)
             poison_attack_diff_file_path = files_paths[3]
@@ -1300,6 +1312,18 @@ class FrameworkGNNModelManager(GNNModelManager):
             gen_dataset: GeneralDataset,
             poison_defense_diff_file_path: Union[str, Path] = None,
     ) -> GeneralDataset:
+        """
+        Loads and applies defense artifacts against poisoning attacks if available; otherwise, executes the defense
+        method and generates the necessary artifacts.
+
+        Parameters:
+            gen_dataset (GeneralDataset): Object containing dataset data and configuration metadata.
+            poison_defense_diff_file_path (str, optional): Path to precomputed defense artifacts. If None,
+                the default path from the dataset configuration is used.
+
+        Returns:
+            GeneralDataset: A modified dataset with the poisoning defense applied.
+        """
         if poison_defense_diff_file_path is None:
             _, files_paths = Declare.models_path(self)
             poison_defense_diff_file_path = files_paths[5]
