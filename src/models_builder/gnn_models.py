@@ -24,6 +24,7 @@ from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH,
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from explainers.explainer import ProgressBar
 from explainers.ProtGNN.MCTS import mcts_args
 from attacks.evasion_attacks import EvasionAttacker
@@ -91,6 +92,8 @@ class Metric:
         if self.name in Metric.available_metrics:
             if y_true.device != "cpu":
                 y_true = y_true.cpu()
+            if y_pred.device != "cpu":
+                y_pred = y_pred.cpu()
             return Metric.available_metrics[self.name](y_true, y_pred, **self.kwargs)
         raise NotImplementedError()
 
@@ -339,6 +342,9 @@ class GNNModelManager:
             dir_path, files_paths = Declare.models_path(self)
             dir_path.mkdir(exist_ok=True, parents=True)
             path = dir_path / 'model'
+        else:
+            assert files_paths is not None
+            assert len(files_paths) != 11
         gnn_name_file = files_paths[0]
         gnn_mm_kwargs_file = files_paths[1]
 
@@ -373,9 +379,9 @@ class GNNModelManager:
             f.write(self.evasion_defense_config.json_for_config())
         with open(evasion_attack_kwargs_file, "w") as f:
             f.write(self.evasion_attack_config.json_for_config())
-        if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
-            with open(evasion_attack_diff_file, 'w') as file:
-                json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
+        # if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
+        #     with open(evasion_attack_diff_file, 'w') as file:
+        #         json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
         with open(mi_attack_kwargs_file, "w") as f:
             f.write(self.mi_attack_config.json_for_config())
         return path.parent
@@ -1133,17 +1139,31 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
         """
+        _, files_paths = Declare.models_path(self)
+        poison_attack_diff_file_path, poison_defense_diff_file_path = files_paths[3], files_paths[5]
         if self.poison_attacker and self.poison_attack_flag:
-            loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
-            self.poison_attacker.dataset_diff()
-            if loc is not None:
-                gen_dataset = loc
+            try:
+                # raise FileNotFoundError
+                artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+                self.poison_attacker.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
 
         if self.poison_defender and self.poison_defense_flag:
-            loc = self.poison_defender.defense(gen_dataset=gen_dataset)
-            self.poison_defender.dataset_diff()
-            if loc is not None:
-                gen_dataset = loc
+            try:
+                # raise FileNotFoundError
+                artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_defender.defense(gen_dataset=gen_dataset)
+                self.poison_defender.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
         self.socket = socket
         pbar = ProgressBar(self.socket, "mt")
 
