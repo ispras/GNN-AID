@@ -246,33 +246,26 @@ class GraphModificationArtifact:
 
     def to_json(
         self,
-        filepath: Union[str, Path]
-    ) -> None:
+    ) -> Dict:
         """
-        Saves the artifact to a JSON file.
-
-        :param filepath: Path to the JSON file.
+        Serialized the artifact to a JSON format.
         """
-        try:
-            serialized = {
-                "nodes": {
-                    "remove": self.nodes["remove"],
-                    "add": {
-                        k: self._tensor_to_list(v) for k, v in self.nodes["add"].items()
-                    },
-                    "change_f": self.nodes["change_f"]
+        serialized = {
+            "nodes": {
+                "remove": self.nodes["remove"],
+                "add": {
+                    k: self._tensor_to_list(v) for k, v in self.nodes["add"].items()
                 },
-                "edges": {
-                    "remove": self.edges["remove"],
-                    "add": [
-                        [a, b, self._tensor_to_list(c)] for a, b, c in self.edges["add"]
-                    ]
-                }
+                "change_f": self.nodes["change_f"]
+            },
+            "edges": {
+                "remove": self.edges["remove"],
+                "add": [
+                    [a, b, self._tensor_to_list(c)] for a, b, c in self.edges["add"]
+                ]
             }
-            with open(filepath, 'w') as file:
-                json.dump(serialized, file, indent=2)
-        except Exception as e:
-            raise RuntimeError(f"Failed to save artifact to {filepath}: {str(e)}")
+        }
+        return serialized
 
     @classmethod
     def from_json(

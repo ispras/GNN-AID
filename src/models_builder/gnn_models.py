@@ -341,12 +341,16 @@ class GNNModelManager:
             path = dir_path / 'model'
         gnn_name_file = files_paths[0]
         gnn_mm_kwargs_file = files_paths[1]
+
         poison_attack_kwargs_file = files_paths[2]
-        poison_defense_kwargs_file = files_paths[3]
-        mi_defense_kwargs_file = files_paths[4]
-        evasion_defense_kwargs_file = files_paths[5]
-        evasion_attack_kwargs_file = files_paths[6]
-        mi_attack_kwargs_file = files_paths[7]
+        poison_attack_diff_file = files_paths[3]
+        poison_defense_kwargs_file = files_paths[4]
+        poison_defense_diff_file = files_paths[5]
+        mi_defense_kwargs_file = files_paths[6]
+        evasion_defense_kwargs_file = files_paths[7]
+        evasion_attack_kwargs_file = files_paths[8]
+        evasion_attack_diff_file = files_paths[9]
+        mi_attack_kwargs_file = files_paths[10]
         self.save_model(path)
 
         with open(gnn_name_file, "w") as f:
@@ -355,14 +359,23 @@ class GNNModelManager:
             f.write(self.get_name())
         with open(poison_attack_kwargs_file, "w") as f:
             f.write(self.poison_attack_config.json_for_config())
+        if self.poison_attack_flag and self.poison_attacker.attack_diff is not None:
+            with open(poison_attack_diff_file, 'w') as file:
+                json.dump(self.poison_attacker.attack_diff.to_json(), file, indent=2)
         with open(poison_defense_kwargs_file, "w") as f:
             f.write(self.poison_defense_config.json_for_config())
+        if self.poison_defense_flag and self.poison_defender.defense_diff is not None:
+            with open(poison_defense_diff_file, 'w') as file:
+                json.dump(self.poison_defender.defense_diff.to_json(), file, indent=2)
         with open(mi_defense_kwargs_file, "w") as f:
             f.write(self.mi_defense_config.json_for_config())
         with open(evasion_defense_kwargs_file, "w") as f:
             f.write(self.evasion_defense_config.json_for_config())
         with open(evasion_attack_kwargs_file, "w") as f:
             f.write(self.evasion_attack_config.json_for_config())
+        if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
+            with open(evasion_attack_diff_file, 'w') as file:
+                json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
         with open(mi_attack_kwargs_file, "w") as f:
             f.write(self.mi_attack_config.json_for_config())
         return path.parent
@@ -1122,11 +1135,13 @@ class FrameworkGNNModelManager(GNNModelManager):
         """
         if self.poison_attacker and self.poison_attack_flag:
             loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+            self.poison_attacker.dataset_diff()
             if loc is not None:
                 gen_dataset = loc
 
         if self.poison_defender and self.poison_defense_flag:
             loc = self.poison_defender.defense(gen_dataset=gen_dataset)
+            self.poison_defender.dataset_diff()
             if loc is not None:
                 gen_dataset = loc
         self.socket = socket

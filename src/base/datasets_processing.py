@@ -714,7 +714,10 @@ class GeneralDataset:
         """
         data: Data = self.data
         device = data.x.device if hasattr(data, 'x') else 'cpu'
-
+        from data_structures.graph_modification_artifacts import GraphModificationArtifact
+        assert isinstance(artifact, GraphModificationArtifact), (
+            f"Invalid type: expected GraphModificationArtifact, got {type(artifact).__name__}"
+        )
         # === Handle node operations ===
         y = data.y
         edge_index = data.edge_index

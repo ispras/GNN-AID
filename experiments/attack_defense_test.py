@@ -106,8 +106,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    save_model_flag = False
-    # save_model_flag = True
+    # save_model_flag = False
+    save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
@@ -332,12 +332,13 @@ def test_attack_defense():
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
 
-    diff = gnn_model_manager.poison_defender.dataset_diff()
+    # diff = gnn_model_manager.poison_defender.defense_diff
     # dataset_test, _, _ = DatasetManager.get_by_full_name(
     #     full_name=full_name,
     #     dataset_ver_ind=0
     # )
     # dataset_test = dataset_test.apply_modification(artifact=diff)
+    # print()
 
 
 def test_meta():
