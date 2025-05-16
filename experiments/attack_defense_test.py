@@ -312,6 +312,12 @@ def test_attack_defense():
     try:
         raise FileNotFoundError()
         # gnn_model_manager.load_model_executor()
+        # dataset = gnn_model_manager.apply_poison_attack_diff(
+        #     gen_dataset=dataset
+        # )
+        # dataset = gnn_model_manager.apply_poison_defense_diff(
+        #     gen_dataset=dataset
+        # )
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
         train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,

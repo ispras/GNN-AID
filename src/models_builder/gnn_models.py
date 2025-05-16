@@ -1139,31 +1139,13 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
         """
-        _, files_paths = Declare.models_path(self)
-        poison_attack_diff_file_path, poison_defense_diff_file_path = files_paths[3], files_paths[5]
-        if self.poison_attacker and self.poison_attack_flag:
-            try:
-                # raise FileNotFoundError
-                artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
-                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
-            except Exception as e:
-                print(f"An error occurred: {type(e).__name__} - {e}")
-                loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
-                self.poison_attacker.dataset_diff()
-                if loc is not None:
-                    gen_dataset = loc
+        gen_dataset = self.load_or_execute_poisoning_attack(
+            gen_dataset=gen_dataset
+        )
+        gen_dataset = self.load_or_execute_poisoning_defense(
+            gen_dataset=gen_dataset
+        )
 
-        if self.poison_defender and self.poison_defense_flag:
-            try:
-                # raise FileNotFoundError
-                artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
-                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
-            except Exception as e:
-                print(f"An error occurred: {type(e).__name__} - {e}")
-                loc = self.poison_defender.defense(gen_dataset=gen_dataset)
-                self.poison_defender.dataset_diff()
-                if loc is not None:
-                    gen_dataset = loc
         self.socket = socket
         pbar = ProgressBar(self.socket, "mt")
 
@@ -1292,6 +1274,46 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
 
         return full_out
+
+    def load_or_execute_poisoning_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_attack_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        if poison_attack_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_attack_diff_file_path = files_paths[3]
+        if self.poison_attacker and self.poison_attack_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+                self.poison_attacker.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
+
+    def load_or_execute_poisoning_defense(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_defense_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        if poison_defense_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_defense_diff_file_path = files_paths[5]
+        if self.poison_defender and self.poison_defense_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_defender.defense(gen_dataset=gen_dataset)
+                self.poison_defender.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
 
     def evaluate_model(
             self,
