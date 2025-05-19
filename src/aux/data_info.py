@@ -8,10 +8,10 @@ from typing import List, Tuple, Union, Dict, Mapping
 # from pydantic.v1.utils import deep_update
 
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DATA_INFO_DIR, \
-    USER_MODELS_DIR, METAINFO_DIR, SAVE_DIR_STRUCTURE_PATH
+    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH
 import os
 from pathlib import Path
-from aux.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import PrefixStorage
 
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor

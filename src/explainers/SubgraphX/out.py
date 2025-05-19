@@ -1,14 +1,12 @@
 from typing import Callable, Optional
 from typing import List, Tuple, Dict
 import torch
-import abc
-from tqdm import tqdm
 from dig.xgraph.method.shapley import MarginalSubgraphDataset
 
 from torch import Tensor
 
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 
 
 # FIXME Monkey Patch for SubgraphX until DIG library doesn't support torch-geometric 2.3.1

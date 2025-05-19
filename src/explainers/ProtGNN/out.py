@@ -1,5 +1,5 @@
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import Explanation
+from data_structures.explanation import Explanation
 
 
 class ProtExplainer(Explainer):

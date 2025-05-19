@@ -1,7 +1,7 @@
 import json
-from typing import Union, Type, Any
+from typing import Union
 
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
     SAVE_DIR_STRUCTURE_PATH
 import os

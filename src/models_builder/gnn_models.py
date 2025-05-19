@@ -1,23 +1,20 @@
 import importlib.util
 import json
-import random
 from math import ceil
 from pathlib import Path
 from types import FunctionType
-from typing import Callable, List, Union, Any, Type, Protocol, Iterable, cast
+from typing import Callable, List, Union, Type, Iterable, cast
 
-import numpy as np
 import torch
 import sklearn.metrics
 from flask_socketio import SocketIO
 from torch.nn.utils import clip_grad_norm
 from torch import tensor
-import torch.nn.functional as F
 from torch.cuda import is_available
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
 
-from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
+from data_structures.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
 from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, model_managers_info_by_names_list, \
     hash_data_sha256, \
@@ -30,7 +27,7 @@ from explainers.ProtGNN.MCTS import mcts_args
 from attacks.evasion_attacks import EvasionAttacker
 from attacks.mi_attacks import MIAttacker
 from attacks.poison_attacks import PoisonAttacker
-from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
+from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
     PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH

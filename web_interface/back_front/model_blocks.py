@@ -6,10 +6,10 @@ from typing import Union
 import torch
 from torch_geometric.data import Dataset
 
-from aux.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
+from data_structures.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
 from aux.data_info import UserCodeInfo, DataInfo
 from aux.declaration import Declare
-from aux.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import PrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
     IMPORT_INFO_KEY
@@ -417,7 +417,6 @@ class ModelTrainerBlock(Block):
         """ Runs model to compute predictions and logits """
         # TODO add set of nodes
         assert self.model_manager
-        from models_builder.gnn_models import Metric
         self._check_metrics(metrics)
         metrics_values = self.model_manager.evaluate_model(
             self.gen_dataset, metrics=metrics)

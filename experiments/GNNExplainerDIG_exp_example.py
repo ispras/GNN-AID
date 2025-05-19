@@ -4,7 +4,7 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
-from aux.configs import ExplainerRunConfig, ConfigPattern, ModelManagerConfig, ModelModificationConfig
+from data_structures.configs import ConfigPattern, ModelManagerConfig, ModelModificationConfig
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 from explainers.explainers_manager import FrameworkExplainersManager
 

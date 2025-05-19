@@ -2,13 +2,10 @@ import torch
 
 import warnings
 
-from torch import device
-from torch.cuda import is_available
-
 from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, model_managers_info_by_names_list, TECHNICAL_PARAMETER_KEY
 from models_builder.gnn_models import Metric
-from aux.configs import CONFIG_CLASS_NAME
+from data_structures.configs import CONFIG_CLASS_NAME
 from base.datasets_processing import DatasetManager
 
 

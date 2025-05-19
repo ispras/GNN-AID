@@ -3,10 +3,8 @@ from typing import Type, Any
 import torch
 
 from defense.defense_base import Defender
-from src.aux.utils import import_by_name
-from src.aux.configs import ModelModificationConfig, ConfigPattern, EvasionAttackConfig
-from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH
+from data_structures.configs import ConfigPattern, EvasionAttackConfig
+from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from attacks.evasion_attacks import FGSMAttacker
 from attacks.QAttack import qattack
 from torch_geometric import data

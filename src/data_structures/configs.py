@@ -7,10 +7,9 @@ import inspect
 from pathlib import Path
 from typing import Union, Any, Type, Tuple, List, Self
 
-from aux.utils import setting_class_default_parameters, EXPLAINERS_INIT_PARAMETERS_PATH, \
-    EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, import_by_name, hash_data_sha256, \
-    deep_update
+from aux.utils import setting_class_default_parameters, \
+    OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, import_by_name, \
+    deep_update, hash_data_sha256
 
 CONFIG_SAVE_KWARGS_KEY = '__save_kwargs_to_be_used_for_saving'
 # CONFIG_PARAMS_PATH_KEY = '__default_parameters_file_path'
@@ -303,7 +302,7 @@ class ConfigPattern(
             self,
             save_kwargs: dict
     ) -> Type:
-        config_class = import_by_name(self._config_class, ["aux.configs"])
+        config_class = import_by_name(self._config_class, ["data_structures.configs"])
         config_obj = config_class(save_kwargs=save_kwargs, **self._config_kwargs)
         return config_obj
 

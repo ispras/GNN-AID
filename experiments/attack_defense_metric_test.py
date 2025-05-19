@@ -6,11 +6,10 @@ from torch import device
 
 from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
 from models_builder.attack_defense_metric import AttackMetric, DefenseMetric
-from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
-from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelModificationConfig, ConfigPattern
+from src.models_builder.gnn_models import FrameworkGNNModelManager
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 

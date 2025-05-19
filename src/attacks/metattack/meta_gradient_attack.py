@@ -9,7 +9,7 @@ from torch import optim
 from tqdm import tqdm
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.models_zoo import model_configs_zoo
-from aux.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from aux.utils import OPTIMIZERS_PARAMETERS_PATH
 from torch_geometric.utils import dense_to_sparse
 
