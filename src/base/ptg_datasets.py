@@ -11,7 +11,7 @@ from torch_geometric.data.data import BaseData
 
 from aux.utils import import_by_name, root_dir, root_dir_len
 from base.datasets_processing import GeneralDataset, is_in_torch_geometric_datasets, DatasetInfo
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
 class PTGDataset(
@@ -51,7 +51,6 @@ class PTGDataset(
                 import_path = Path(api['import_path'])
 
                 # Parse import path and locate module
-                import sys
                 imp = None
                 parts = import_path.parts
                 # If submodule of current project

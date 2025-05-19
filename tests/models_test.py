@@ -1,4 +1,3 @@
-import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 import unittest
@@ -13,7 +12,7 @@ utils.MODELS_DIR = tmp_dir
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
 
 

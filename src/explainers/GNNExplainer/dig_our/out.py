@@ -7,11 +7,10 @@ from torch_geometric.nn import MessagePassing
 from dig.version import debug
 from dig.xgraph.models.utils import subgraph
 
-from explainers.GNNExplainer.dig_our.utils import symmetric_edge_mask_indirect_graph
 from explainers.GNNExplainer.dig_our.utils.base_explainer import ExplainerBase
 
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 from typing import Union
 
 

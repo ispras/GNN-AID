@@ -3,8 +3,7 @@ import os
 from pathlib import Path
 from typing import Union
 
-from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, ExplainerRunConfig, \
-    ConfigPattern
+from data_structures.configs import ExplainerModificationConfig, ConfigPattern
 from aux.data_info import DataInfo
 from aux.declaration import Declare
 from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \

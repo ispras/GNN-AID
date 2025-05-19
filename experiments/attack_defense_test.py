@@ -4,11 +4,10 @@ import warnings
 
 from torch import device
 
-from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 from attacks.QAttack import qattack
@@ -20,8 +19,6 @@ from defense.ProGNN.prognn import ProGNNDefender
 
 
 def test_attack_defense():
-    from attacks.CLGA import CLGA
-
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     full_name = None
@@ -106,8 +103,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    # save_model_flag = False
-    save_model_flag = True
+    save_model_flag = False
+    # save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)

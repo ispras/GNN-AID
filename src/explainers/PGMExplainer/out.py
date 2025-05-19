@@ -15,7 +15,7 @@ from torch_geometric.utils.subgraph import get_num_hops
 from torch_geometric.explain import Explainer as torchExplainerRunner
 
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 
 
 class PGMExplainer(Explainer):

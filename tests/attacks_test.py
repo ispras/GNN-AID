@@ -4,7 +4,7 @@ import torch
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from aux.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
@@ -57,7 +57,6 @@ class AttacksTest(unittest.TestCase):
 
 
     def test_metattack_full(self):
-        from attacks.metattack import meta_gradient_attack
         poison_attack_config = ConfigPattern(
             _class_name="MetaAttackFull",
             _import_path=POISON_ATTACK_PARAMETERS_PATH,

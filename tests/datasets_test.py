@@ -161,8 +161,8 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_ij_single(self):
         """ """
-        from aux.configs import DatasetVarConfig
-        from aux.configs import DatasetConfig
+        from data_structures.configs import DatasetVarConfig
+        from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
         from base.custom_datasets import CustomDataset
         import json
@@ -242,8 +242,8 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_ij_multi(self):
         """ """
-        from aux.configs import DatasetVarConfig
-        from aux.configs import DatasetConfig
+        from data_structures.configs import DatasetVarConfig
+        from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
         from base.custom_datasets import CustomDataset
         import json
@@ -325,10 +325,9 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_other_single(self):
         """ """
-        from aux.configs import DatasetVarConfig
-        from aux.configs import DatasetConfig
+        from data_structures.configs import DatasetVarConfig
+        from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
-        from base.custom_datasets import CustomDataset
         from base.dataset_converter import DatasetConverter
         from base.datasets_processing import DatasetManager
         import json
@@ -420,11 +419,11 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from aux.prefix_storage import PrefixStorage
+        from data_structures.prefix_storage import PrefixStorage
         from aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         from base.datasets_processing import DatasetManager
-        from aux.configs import DatasetConfig
+        from data_structures.configs import DatasetConfig
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = PrefixStorage.from_json(f.read())
 

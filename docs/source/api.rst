@@ -39,7 +39,7 @@ Interpretation
 
 Auxiliary functions
 ========================
-.. automodule:: aux.configs
+.. automodule:: data_structures.configs
    :members: 
 
 

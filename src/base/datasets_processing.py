@@ -9,7 +9,7 @@ import torch_geometric
 from torch import default_generator, randperm
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
 from aux.utils import TORCH_GEOM_GRAPHS_PATH, tmp_dir
@@ -1147,6 +1147,6 @@ def merge_directories(
 def is_in_torch_geometric_datasets(
         full_name: tuple = None
 ) -> bool:
-    from aux.prefix_storage import PrefixStorage
+    from data_structures.prefix_storage import PrefixStorage
     with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
         return PrefixStorage.from_json(f.read()).check(full_name)

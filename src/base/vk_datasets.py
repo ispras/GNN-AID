@@ -11,7 +11,7 @@ import numpy as np
 
 from aux.utils import GRAPHS_DIR
 from base.custom_datasets import CustomDataset
-from aux.configs import DatasetConfig
+from data_structures.configs import DatasetConfig
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
 

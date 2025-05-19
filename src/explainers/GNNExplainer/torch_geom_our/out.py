@@ -1,20 +1,20 @@
 from math import sqrt
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import torch
 from torch import Tensor
 from torch.nn.parameter import Parameter
 
 from torch_geometric.nn import MessagePassing
-from torch_geometric.explain import ExplainerConfig, Explanation, ModelConfig
+from torch_geometric.explain import Explanation
 from torch_geometric.explain.algorithm import ExplainerAlgorithm
 from torch_geometric.explain.algorithm.utils import clear_masks, set_masks
-from torch_geometric.explain.config import MaskType, ModelMode, ModelTaskLevel
+from torch_geometric.explain.config import MaskType, ModelMode
 
 from torch_geometric.explain import Explainer as torchExplainerRunner
 
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 
 
 class GNNExplainer(Explainer):

@@ -1,4 +1,3 @@
-import collections
 import collections.abc
 
 # from experiments.SubgraphX_MultiGraph_Example import dataset
@@ -21,8 +20,7 @@ from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARA
 from base.datasets_processing import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
-    ExplainerInitConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
 
 # from src.aux import utils

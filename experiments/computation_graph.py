@@ -2,17 +2,14 @@ from collections import namedtuple
 from graphviz import Digraph
 from torch.autograd import Variable
 import torch
-import warnings
 
 from torch import device
 from torch.cuda import is_available
-from torch_geometric.nn import SAGEConv, MessagePassing
+from torch_geometric.nn import MessagePassing
 
-from aux.configs import ModelConfig
-from models_builder.gnn_models import FrameworkGNNModelManager
+from data_structures.configs import ModelConfig
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNStructure
 from base.datasets_processing import DatasetManager
-from models_builder.models_zoo import model_configs_zoo
 
 Node = namedtuple('Node', ('name', 'inputs', 'attr', 'op'))
 
