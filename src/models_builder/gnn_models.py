@@ -24,6 +24,7 @@ from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH,
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from explainers.explainer import ProgressBar
 from explainers.ProtGNN.MCTS import mcts_args
 from attacks.evasion_attacks import EvasionAttacker
@@ -91,6 +92,8 @@ class Metric:
         if self.name in Metric.available_metrics:
             if y_true.device != "cpu":
                 y_true = y_true.cpu()
+            if y_pred.device != "cpu":
+                y_pred = y_pred.cpu()
             return Metric.available_metrics[self.name](y_true, y_pred, **self.kwargs)
         raise NotImplementedError()
 
@@ -339,14 +342,21 @@ class GNNModelManager:
             dir_path, files_paths = Declare.models_path(self)
             dir_path.mkdir(exist_ok=True, parents=True)
             path = dir_path / 'model'
+        else:
+            assert files_paths is not None
+            assert len(files_paths) != 11
         gnn_name_file = files_paths[0]
         gnn_mm_kwargs_file = files_paths[1]
+
         poison_attack_kwargs_file = files_paths[2]
-        poison_defense_kwargs_file = files_paths[3]
-        mi_defense_kwargs_file = files_paths[4]
-        evasion_defense_kwargs_file = files_paths[5]
-        evasion_attack_kwargs_file = files_paths[6]
-        mi_attack_kwargs_file = files_paths[7]
+        poison_attack_diff_file = files_paths[3]
+        poison_defense_kwargs_file = files_paths[4]
+        poison_defense_diff_file = files_paths[5]
+        mi_defense_kwargs_file = files_paths[6]
+        evasion_defense_kwargs_file = files_paths[7]
+        evasion_attack_kwargs_file = files_paths[8]
+        evasion_attack_diff_file = files_paths[9]
+        mi_attack_kwargs_file = files_paths[10]
         self.save_model(path)
 
         with open(gnn_name_file, "w") as f:
@@ -355,14 +365,23 @@ class GNNModelManager:
             f.write(self.get_name())
         with open(poison_attack_kwargs_file, "w") as f:
             f.write(self.poison_attack_config.json_for_config())
+        if self.poison_attack_flag and self.poison_attacker.attack_diff is not None:
+            with open(poison_attack_diff_file, 'w') as file:
+                json.dump(self.poison_attacker.attack_diff.to_json(), file, indent=2)
         with open(poison_defense_kwargs_file, "w") as f:
             f.write(self.poison_defense_config.json_for_config())
+        if self.poison_defense_flag and self.poison_defender.defense_diff is not None:
+            with open(poison_defense_diff_file, 'w') as file:
+                json.dump(self.poison_defender.defense_diff.to_json(), file, indent=2)
         with open(mi_defense_kwargs_file, "w") as f:
             f.write(self.mi_defense_config.json_for_config())
         with open(evasion_defense_kwargs_file, "w") as f:
             f.write(self.evasion_defense_config.json_for_config())
         with open(evasion_attack_kwargs_file, "w") as f:
             f.write(self.evasion_attack_config.json_for_config())
+        # if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
+        #     with open(evasion_attack_diff_file, 'w') as file:
+        #         json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
         with open(mi_attack_kwargs_file, "w") as f:
             f.write(self.mi_attack_config.json_for_config())
         return path.parent
@@ -1120,15 +1139,13 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
         """
-        if self.poison_attacker and self.poison_attack_flag:
-            loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
-            if loc is not None:
-                gen_dataset = loc
+        gen_dataset = self.load_or_execute_poisoning_attack(
+            gen_dataset=gen_dataset
+        )
+        gen_dataset = self.load_or_execute_poisoning_defense(
+            gen_dataset=gen_dataset
+        )
 
-        if self.poison_defender and self.poison_defense_flag:
-            loc = self.poison_defender.defense(gen_dataset=gen_dataset)
-            if loc is not None:
-                gen_dataset = loc
         self.socket = socket
         pbar = ProgressBar(self.socket, "mt")
 
@@ -1257,6 +1274,78 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
 
         return full_out
+
+    def load_or_execute_poisoning_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_attack_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        """
+        Loads and applies poisoning attack artifacts to the dataset if available; otherwise, executes the attack
+        and generates the necessary artifacts.
+
+        Parameters
+        ----------
+        gen_dataset : GeneralDataset
+            Object containing dataset data and configuration metadata.
+        poison_attack_diff_file_path : str, optional
+            Path to precomputed poisoning artifacts. If None, the default path from the dataset configuration is used.
+
+        Returns
+        -------
+        GeneralDataset
+            A modified dataset with the poisoning attack applied.
+        """
+        if poison_attack_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_attack_diff_file_path = files_paths[3]
+        if self.poison_attacker and self.poison_attack_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+                self.poison_attacker.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
+
+    def load_or_execute_poisoning_defense(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_defense_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        """
+        Loads and applies defense artifacts against poisoning attacks if available; otherwise, executes the defense
+        method and generates the necessary artifacts.
+
+        Parameters
+        ----------
+        gen_dataset : GeneralDataset
+            Object containing dataset data and configuration metadata.
+        poison_defense_diff_file_path : str, optional
+            Path to precomputed defense artifacts. If None, the default path from the dataset configuration is used.
+
+        Returns
+        -------
+        GeneralDataset
+            A modified dataset with the poisoning defense applied.
+        """
+        if poison_defense_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_defense_diff_file_path = files_paths[5]
+        if self.poison_defender and self.poison_defense_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_defender.defense(gen_dataset=gen_dataset)
+                self.poison_defender.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
 
     def evaluate_model(
             self,

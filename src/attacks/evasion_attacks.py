@@ -438,7 +438,7 @@ class PGDAttacker(
 
             self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
 
-    def attack_diff(
+    def dataset_diff(
             self
     ):
         return self.attack_diff
@@ -521,7 +521,7 @@ class NettackEvasionAttacker(
 
         return gen_dataset
 
-    def attack_diff(
+    def dataset_diff(
             self
     ):
         return self.attack_diff

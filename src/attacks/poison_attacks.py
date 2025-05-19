@@ -63,7 +63,7 @@ class RandomPoisonAttack(
         self.attack_diff = edge_index_diff
         return gen_dataset
 
-    def attack_diff(
+    def dataset_diff(
             self
     ):
         return self.attack_diff

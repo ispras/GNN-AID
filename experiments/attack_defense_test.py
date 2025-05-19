@@ -106,8 +106,8 @@ def test_attack_defense():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
-    save_model_flag = False
-    # save_model_flag = True
+    # save_model_flag = False
+    save_model_flag = True
 
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
@@ -165,7 +165,7 @@ def test_attack_defense():
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
-            "threshold": 0.05,
+            "threshold": 0.5,
         }
     )
 
@@ -302,8 +302,8 @@ def test_attack_defense():
     )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
-    # gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 
     warnings.warn("Start training")
@@ -312,6 +312,12 @@ def test_attack_defense():
     try:
         raise FileNotFoundError()
         # gnn_model_manager.load_model_executor()
+        # dataset = gnn_model_manager.apply_poison_attack_diff(
+        #     gen_dataset=dataset
+        # )
+        # dataset = gnn_model_manager.apply_poison_defense_diff(
+        #     gen_dataset=dataset
+        # )
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
         train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
@@ -331,6 +337,14 @@ def test_attack_defense():
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
+
+    # diff = gnn_model_manager.poison_defender.defense_diff
+    # dataset_test, _, _ = DatasetManager.get_by_full_name(
+    #     full_name=full_name,
+    #     dataset_ver_ind=0
+    # )
+    # dataset_test = dataset_test.apply_modification(artifact=diff)
+    # print()
 
 
 def test_meta():
