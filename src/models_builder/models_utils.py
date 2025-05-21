@@ -103,4 +103,7 @@ def attention_message_hook(att, layer):
         if not hasattr(layer, 'add_self_loops') or not layer.add_self_loops:
             return lambda module, input, out: out * att[out.shape[0], :]  # TODO assert here?
         else:
-            return lambda module, input, out: out * att
+            if hasattr(layer, 'heads'):
+                return lambda module, input, out: out * att.view(att.shape[0], 1, 1)
+            else:
+                return lambda module, input, out: out * att

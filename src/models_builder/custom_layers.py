@@ -317,6 +317,8 @@ class GSATMLP(nn.Sequential):
     def forward(self, inputs):
         for module in self._modules.values():
             if isinstance(module, (InstanceNorm)):
+                if inputs.shape[0] == 1:  # TODO sort of monkey-patch
+                    continue
                 inputs = module(inputs)
             else:
                 inputs = module(inputs)

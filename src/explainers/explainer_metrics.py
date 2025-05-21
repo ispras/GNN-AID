@@ -120,7 +120,7 @@ class NodesExplainerMetric:
         if "nodes" in explanation_data and explanation_data["nodes"] and len(explanation_data["nodes"]) != 0:
             num += len(explanation["data"]["nodes"])
             den += local_subset.shape[0]
-        if "edges" in explanation_data and explanation_data["edges"] and len(explanation_data["nodes"]) != 0:
+        if "edges" in explanation_data and explanation_data["edges"] and len(explanation_data["edges"]) != 0:
             num += len(explanation["data"]["edges"])
             den += local_edge_index.shape[1]
         if "features" in explanation_data and explanation_data["features"] and len(explanation_data["features"]) != 0:

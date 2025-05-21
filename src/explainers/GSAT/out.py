@@ -72,7 +72,7 @@ class GSATExplainer(Explainer):
     def _finalize(self):
         mode = self._run_mode
         # assert mode == "global"
-        self.explanation = AttributionExplanation(local=mode, edges="binary")
+        self.explanation = AttributionExplanation(local=mode, nodes="binary", edges="binary")
 
         edge_index = self.raw_explanation
         edges_values = {}
@@ -83,6 +83,16 @@ class GSATExplainer(Explainer):
             edges_values[f"{src},{dst}"] = 1
 
         self.explanation.add_edges(edges_values)
+
+        # Nodes
+        nodes_values = {}
+        for i in range(edge_index.shape[1]):
+            src = edge_index[0, i].item()
+            dst = edge_index[1, i].item()
+            nodes_values[src] = 1
+            nodes_values[dst] = 1
+
+        self.explanation.add_nodes(nodes_values)
 
 
         # Remove unpickable attributes
