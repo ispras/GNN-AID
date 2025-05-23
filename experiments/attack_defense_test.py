@@ -198,20 +198,6 @@ def test_attack_defense():
         }
     )
 
-    netattackgroup_evasion_attack_config = ConfigPattern(
-        _class_name="NettackGroupEvasionAttacker",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "node_idxs": [random.randint(0, 500) for _ in range(20)],  # Nodes for attack
-            "n_perturbations": 50,
-            "perturb_features": True,
-            "perturb_structure": True,
-            "direct": True,
-            "n_influencers": 10
-        }
-    )
-
     gradientregularization_evasion_defense_config = ConfigPattern(
         _class_name="GradientRegularizationDefender",
         _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
