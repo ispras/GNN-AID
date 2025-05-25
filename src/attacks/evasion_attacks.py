@@ -506,6 +506,8 @@ class NettackAttacker(
         surrogate.evaluate(x, edge_index, y)
 
         attacker = NettackAttack(
+            real_class=data.y[self.node_idx].item(),
+            gnn_model=model_manager.gnn,
             model=surrogate,
             x=x,
             edge_index=edge_index,
