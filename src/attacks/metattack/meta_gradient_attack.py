@@ -320,7 +320,6 @@ class MetaAttackFull(BaseMeta):
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
 
-        # FIXME georgiy, what if attack_structure=False ?
         if self.attack_structure:
             gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
         if self.attack_features:
@@ -361,7 +360,6 @@ class MetaAttackFull(BaseMeta):
                 if self.sparse_features:
                     hidden = adj_norm @ torch.spmm(hidden, w) + b
                 else:
-                    # FIXME georgiy, when  RuntimeError: mat1 and mat2 shapes cannot be multiplied
                     hidden = adj_norm @ hidden @ w + b
 
                 if self.with_relu and ix != len(self.weights) - 1:
@@ -529,8 +527,10 @@ class MetaAttackApprox(BaseMeta):
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
 
-        # FIXME georgiy, what if attack_structure=False ?
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_structure:
+            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_features:
+            gen_dataset.dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):

@@ -119,11 +119,11 @@ class AttacksTest(unittest.TestCase):
 
     def test_metattack_bug(self):
         poison_attack_config = ConfigPattern(
-            _class_name="MetaAttackFull",
+            _class_name="MetaAttackApprox",
             _import_path=POISON_ATTACK_PARAMETERS_PATH,
             _config_class="PoisonAttackConfig",
             _config_kwargs={
-                "attack_structure": False,
+                "attack_structure": True,
                 "attack_features": True,
                 "num_nodes": self.gen_dataset_sg_example.dataset.x.shape[0]  # is there more fancy way?
             }
