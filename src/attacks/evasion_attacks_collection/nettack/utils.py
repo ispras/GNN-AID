@@ -89,7 +89,9 @@ def estimate_powerlaw_alpha(degrees, d_min=2):
 
 
 class NettackAttack:
-    def __init__(self, model, x, edge_index, num_classes, target_node, direct=True, depth=None, delta_cutoff=0.004):
+    def __init__(self, real_class, gnn_model, model, x, edge_index, num_classes, target_node, direct=True, depth=None, delta_cutoff=0.004):
+        self.real_class = real_class
+        self.gnn_model = gnn_model
         self.model = model
         self.x = x.clone().detach()
         self.edge_index = edge_index.clone().detach()
@@ -203,6 +205,8 @@ class NettackAttack:
         applied = 0
         attempt = 0
         while applied < budget:
+            if self.gnn_model(self.x, self.edge_index)[self.target_node].argmax().item() != self.real_class:
+                break
             print(f"--- Perturbation {applied + 1} / {budget} (Attempt{attempt + 1}) ---")
             best_node, best_feature, feature_score = (None, None, float('inf'))
             best_edge, edge_score = (None, float('inf'))
