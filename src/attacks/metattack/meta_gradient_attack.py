@@ -321,7 +321,10 @@ class MetaAttackFull(BaseMeta):
             self.modified_features = self.get_modified_features(ori_features).detach()
 
         # FIXME georgiy, what if attack_structure=False ?
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_structure:
+            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_features:
+            gen_dataset.dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):

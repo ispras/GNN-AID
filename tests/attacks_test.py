@@ -123,7 +123,7 @@ class AttacksTest(unittest.TestCase):
             _import_path=POISON_ATTACK_PARAMETERS_PATH,
             _config_class="PoisonAttackConfig",
             _config_kwargs={
-                "attack_structure": True,
+                "attack_structure": False,
                 "attack_features": True,
                 "num_nodes": self.gen_dataset_sg_example.dataset.x.shape[0]  # is there more fancy way?
             }
