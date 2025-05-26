@@ -117,6 +117,33 @@ class AttacksTest(unittest.TestCase):
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
+    def test_metattack_bug(self):
+        poison_attack_config = ConfigPattern(
+            _class_name="MetaAttackApprox",
+            _import_path=POISON_ATTACK_PARAMETERS_PATH,
+            _config_class="PoisonAttackConfig",
+            _config_kwargs={
+                "attack_structure": True,
+                "attack_features": True,
+                "num_nodes": self.gen_dataset_sg_example.dataset.x.shape[0]  # is there more fancy way?
+            }
+        )
+
+        gcn_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn')
+
+        gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gcn_sg_example,
+            dataset_path=self.results_dataset_path_sg_example,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+
     def test_metattack_approx(self):
         torch.manual_seed(100)  # DEBUG
 
@@ -147,6 +174,18 @@ class AttacksTest(unittest.TestCase):
         print(metric_loc)
 
     def test_qattack_Cora(self):
+        # TODO complete test?
+
+        gcn_gcn_sg_cora = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_cora = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_cora,
+            dataset_path=self.results_dataset_path_sg_cora,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+
         evasion_attack_config = ConfigPattern(
             _class_name="QAttack",
             _import_path=EVASION_ATTACK_PARAMETERS_PATH,
@@ -154,6 +193,42 @@ class AttacksTest(unittest.TestCase):
             _config_kwargs={
             }
         )
+
+        gnn_model_manager_sg_cora.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
+
+    def test_qattack_example(self):
+        gcn_gcn_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_example,
+            dataset_path=self.results_dataset_path_sg_example,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+
+        evasion_attack_config = ConfigPattern(
+            _class_name="QAttack",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+            }
+        )
+
+        gnn_model_manager_sg_example.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
+
 
     def test_fgsm_SG(self):
         gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
