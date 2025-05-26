@@ -86,7 +86,7 @@ class BaseMeta(PoisonAttacker):
 
         self.feature_shape = tuple(gen_dataset.data.x.shape)
         if self.attack_features:
-            self.feature_changes = Parameter(torch.FloatTensor(self.feature_shape))
+            self.feature_changes = Parameter(torch.zeros(self.feature_shape, dtype=torch.float32))
             self.feature_changes.data.fill_(0)
 
     def attack(self, gen_dataset: GeneralDataset):
