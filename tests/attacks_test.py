@@ -8,7 +8,7 @@ from data_structures.configs import ModelModificationConfig, DatasetConfig, Data
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
@@ -118,6 +118,32 @@ class AttacksTest(unittest.TestCase):
             _config_kwargs={
             }
         )
+
+    def test_mi_naive(self):
+        mi_attack_config = ConfigPattern(
+            _class_name="NaiveMIAttacker",
+            _import_path=MI_ATTACK_PARAMETERS_PATH,
+            _config_class="MIAttackConfig",
+            _config_kwargs={
+            }
+        )
+
+        gcn_gcn_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_example,
+            dataset_path=self.results_dataset_path_sg_example,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_example.set_mi_attacker(mi_attack_config=mi_attack_config)
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
+        print(metric_loc)
 
 
 if __name__ == '__main__':
