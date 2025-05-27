@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import torch
 
 from base.datasets_processing import DatasetManager
@@ -125,6 +126,7 @@ class AttacksTest(unittest.TestCase):
             _import_path=MI_ATTACK_PARAMETERS_PATH,
             _config_class="MIAttackConfig",
             _config_kwargs={
+                'threshold': 0.61
             }
         )
 
@@ -139,10 +141,18 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_mi_attacker(mi_attack_config=mi_attack_config)
 
+        attack_cnt = 2
+        # seed = 42
+        seed = None
+        if seed is not None:
+            np.random.seed(seed)
+        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+
         gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_example.labels, target_list=target_list)
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
-                                                                 metrics=[Metric("F1", mask='test', average='macro'),
-                                                                          Metric("Accuracy", mask='test')])
+                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                          Metric("Accuracy", mask=mask_loc)])
         print(metric_loc)
 
 

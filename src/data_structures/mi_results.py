@@ -1,7 +1,7 @@
 import torch
 
 class MIResultsStore:
-    def init(self):
+    def __init__(self):
         self._store = {}  # dict: mask_bytes → annotation_tensor (bool)
 
     def _tensor_to_key(self, tensor: torch.Tensor) -> bytes:
@@ -22,5 +22,6 @@ class MIResultsStore:
 
     def get_results(self):
         # return - разметка на трейн (аннотация), разметка на тест (mask array xor аннотация)
-        pass
-        # return annotation,
+        for key_bytes, annotation in self._store.items():
+            mask_array = torch.frombuffer(key_bytes, dtype=torch.uint8)
+            yield annotation, mask_array.bool() & (mask_array.bool() ^ annotation)

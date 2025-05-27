@@ -1388,7 +1388,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
         if self.mi_attacker and self.mi_attack_flag:
-            self.call_mi_attack(gen_dataset=gen_dataset, mask=mask, model_manager=self)
+            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(
@@ -1416,11 +1416,11 @@ class FrameworkGNNModelManager(GNNModelManager):
     def call_mi_attack(
             self,
             gen_dataset: GeneralDataset,
-            model_manager: Type,
-            mask: Union[str, List[bool], torch.Tensor] = 'test'
+            model: torch.nn.Module,
+            mask_tensor: Union[str, List[bool], torch.Tensor] = 'test'
     ):
         if self.mi_attacker:
-            self.mi_attacker.attack()
+            self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
 
     def compute_stats_data(
             self,

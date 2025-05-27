@@ -1,6 +1,6 @@
 import torch
 
-from typing import Type
+from typing import Type, Union, List
 from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset
 from data_structures.mi_results import MIResultsStore
@@ -38,17 +38,19 @@ class NaiveMIAttacker(MIAttacker):
 
     def attack(
         self,
-        model_manager: Type,
+        model: torch.nn.Module,  # more accurate typing?
         gen_dataset: GeneralDataset,
-        mask_tensor: torch.Tensor,
+        mask_tensor: Union[str, List[bool], torch.Tensor],
     ):
-        model_manager.gnn.eval()
+        assert not isinstance(mask_tensor, str), "Input of original mask seems senseless"
+
+        model.eval()
 
         data = gen_dataset.data
         with torch.no_grad():
-            probs = model_manager.get_predictions(data.x, data.edge_index)
+            probs = model.get_predictions(data.x, data.edge_index)
             max_probs = torch.max(probs, dim=1).values
-            inferred_train_mask = max_probs > self.thrsh
+            inferred_train_mask = (max_probs > self.thrsh) & mask_tensor
             self.results.add(mask_tensor, inferred_train_mask)
 
         return self.results
