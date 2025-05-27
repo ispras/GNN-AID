@@ -503,7 +503,7 @@ class NettackAttacker(
         num_classes = y.max().item() + 1
         surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
         surrogate.train_model(x, edge_index, y, train_ratio=self.surrogate_train_ratio, epochs=self.surrogate_epochs)
-        surrogate.evaluate(x, edge_index, y)
+        # surrogate.evaluate(x, edge_index, y)
 
         attacker = NettackAttack(
             real_class=data.y[self.node_idx].item(),
