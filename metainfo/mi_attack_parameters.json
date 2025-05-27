@@ -4,6 +4,12 @@
 
  "NaiveMIAttacker": {
   "threshold": ["Threshold", "float", 0.75, {"min": 0, "max": 1, "step":  0.01}, "Threshold for model confidence. High conf -> obj from train"]
+ },
+
+ "ShadowModelMIAttacker": {
+  "shadow_data_ratio": ["Shadow data ratio", "float", 0.25, {"min": 0, "max": 1, "step":  0.01}, "Percentage of original dataset available for intruder"],
+  "shadow_epochs": ["Shadow epochs", "int", 10, {"min":  1, "step": 1}, "Number of train epochs for shadow model"],
+  "classifier_type": ["Classifier type", "str", "svc", ["svc"], "Type of classifier for MI"]
  }
 }
 
