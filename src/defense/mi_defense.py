@@ -52,7 +52,7 @@ class NoiseMIDefender(MIDefender):
             beta: float = 0.5,
             gamma: float = 1.0,
             noise_scale: float = 0.1,
-            temperature: float = 1.0,
+            temperature: float = 2.0,
             **kwargs
     ):
         """

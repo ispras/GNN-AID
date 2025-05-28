@@ -22,7 +22,36 @@ class MIAttacker(
             **kwargs
     ):
         super().__init__()
+        self.results = MIResultsStore()
 
+    @staticmethod
+    def compute_single_attack_accuracy(
+            mask: torch.Tensor,
+            inferred_labels: torch.Tensor,
+            mask_true: torch.Tensor
+    ) -> float:
+        """
+        Computes accuracy for a single attack result (mask + inferred labels pair).
+
+        Args:
+            mask: Key from results store (boolean tensor form)
+            inferred_labels: Value from results store (predicted labels tensor)
+            mask_true: Tensor of true labels for all nodes in the graph
+
+        Returns:
+            float: Accuracy (0.0 to 1.0) of correct predictions among attacked samples
+                   Returns 0.0 if no samples were attacked
+        """
+        attacked_indices = mask.nonzero().squeeze()
+
+        if attacked_indices.numel() == 0:
+            return 0.0
+
+        true_labels = mask_true[attacked_indices]
+        pred_labels = inferred_labels[attacked_indices]
+
+        correct = (true_labels == pred_labels).sum().item()
+        return correct / len(attacked_indices)
 
 class EmptyMIAttacker(
     MIAttacker
@@ -42,7 +71,6 @@ class NaiveMIAttacker(MIAttacker):
     def __init__(self, threshold: float = 0.75, **kwargs):
         super().__init__(**kwargs)
         self.thrsh = threshold
-        self.results = MIResultsStore()
 
     def attack(
         self,
@@ -79,7 +107,6 @@ class ShadowModelMIAttacker(MIAttacker):
         self.shadow_epochs = shadow_epochs
         self.classifier_type = classifier_type
         self.classifier = None
-        self.results = MIResultsStore()
 
         # TODO customizable surrogate model
         # TODO customizable classifier
