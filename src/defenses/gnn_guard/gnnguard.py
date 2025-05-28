@@ -108,12 +108,10 @@ from src.aux.configs import ModelConfig
 class GNNGuard(PoisonDefender):
     name = 'GNNGuard'
 
-    def __init__(self, model=None, lr=0.01, train_iters=100, attention=False, drop=False, device='cpu', with_bias=False, with_relu=False):
+    def __init__(self, model=None, lr=0.01, train_iters=100, attention=False, drop=False, device='cpu'):
         super().__init__()
         assert device is not None, "Please specify 'device'!"
         self.model = model
-        self.with_bias = with_bias
-        self.with_relu = with_relu
         self.attention = attention
         self.lr = lr
         self.device = device
