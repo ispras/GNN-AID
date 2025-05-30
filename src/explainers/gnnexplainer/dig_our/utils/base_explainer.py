@@ -1,23 +1,17 @@
-from typing import List, Tuple, Dict
-
 from math import sqrt
+from typing import List, Tuple
 
-import torch
-from torch import Tensor
-import torch.nn as nn
-import matplotlib.pyplot as plt
 import networkx as nx
-from torch_geometric.nn import MessagePassing
-from torch_geometric.utils.loop import add_self_loops, remove_self_loops
-from torch_geometric.data import Data, Batch
-from torch_geometric.utils import to_networkx
+import torch
+import torch.nn as nn
 from dig.xgraph.models.utils import subgraph
-from rdkit import Chem
 from matplotlib.axes import Axes
-
-import numpy as np
-from dig.xgraph.models import GNNPool
-
+from rdkit import Chem
+from torch import Tensor
+from torch_geometric.data import Data
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import to_networkx
+from torch_geometric.utils.loop import add_self_loops
 
 EPS = 1e-15
 
@@ -212,6 +206,7 @@ class ExplainerBase(nn.Module):
         kwargs['cmap'] = kwargs.get('cmap') or 'cool'
 
         # calculate Graph positions
+        import matplotlib.pyplot as plt
         pos = nx.kamada_kawai_layout(G)
         ax = plt.gca()
 
