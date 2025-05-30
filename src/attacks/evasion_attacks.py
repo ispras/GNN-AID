@@ -444,7 +444,7 @@ class PGDAttacker(
 
             self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
 
-    def attack_diff(
+    def dataset_diff(
             self
     ):
         return self.attack_diff
@@ -481,6 +481,7 @@ class NettackAttacker(
             surrogate_epochs: int = 200
     ):
         super().__init__()
+        self.attack_diff = None
         self.node_idx = node_idx
         self.budget = budget
         self.perturb_features = perturb_features
@@ -494,7 +495,7 @@ class NettackAttacker(
     def attack(
             self,
             model_manager: Type,
-            gen_dataset,
+            gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
         data = gen_dataset.data

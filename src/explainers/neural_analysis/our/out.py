@@ -1,20 +1,19 @@
-from explainers.explainer import Explainer, finalize_decorator
-import numpy as np
-from tqdm import tqdm
-from collections import defaultdict
-import torch
 import copy
+from collections import defaultdict
+
+import numpy as np
 import shap
+import torch
+from tqdm import tqdm
 
-from time import time
-
-from explainers.neural_analysis.our.concepts import ConceptSet
+from aux.utils import import_by_name
+from data_structures.explanation import ConceptExplanationGlobal
+from explainers.explainer import Explainer, finalize_decorator
 from explainers.neural_analysis.orig.concept_utils import clean_concepts
 from explainers.neural_analysis.orig.graph_utils import edge_index_to_tuples, add_edge
 from explainers.neural_analysis.our.concept_ranker import by_weight
-from explainers.explanation import ConceptExplanationGlobal
+from explainers.neural_analysis.our.concepts import ConceptSet
 
-from aux.utils import import_by_name
 
 class NeuralAnalysisExplainer(Explainer):
 
@@ -35,7 +34,6 @@ class NeuralAnalysisExplainer(Explainer):
             augment: whether augment dataset or not
             omega: ? ? ?
         """
-        from sklearn.model_selection import train_test_split
         gen_dataset.train_test_split(percent_train_class=0.1)
         Explainer.__init__(self, gen_dataset, model)
 

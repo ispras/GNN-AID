@@ -7,8 +7,8 @@ import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
 
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from base.datasets_processing import GeneralDataset, DatasetInfo
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from base.ptg_datasets import LocalDataset
 
 

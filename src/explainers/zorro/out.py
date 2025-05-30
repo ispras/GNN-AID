@@ -1,13 +1,11 @@
 from numpy import nan, inf
-from numpy import nan, inf
 from torch import is_tensor, no_grad, ones
 from torch import zeros_like, zeros, cat
 from torch_geometric.utils import k_hop_subgraph
-from tqdm import tqdm
 
 from explainers.zorro.original import Zorro
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 
 
 class ZorroExplainer(Explainer, Zorro):

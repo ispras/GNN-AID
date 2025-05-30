@@ -1,10 +1,8 @@
 import warnings
-from torch import device
-from torch.cuda import is_available
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig
+from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig
 from models_builder.models_zoo import model_configs_zoo
 
 

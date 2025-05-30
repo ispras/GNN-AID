@@ -9,7 +9,7 @@ import torch_geometric
 from torch import default_generator, randperm
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
 from aux.utils import TORCH_GEOM_GRAPHS_PATH, tmp_dir
@@ -694,6 +694,182 @@ class GeneralDataset:
         else:
             assert Exception("Path for save file is None")
 
+    def apply_modification(
+            self,
+            artifact: 'GraphModificationArtifact'
+    ) -> 'GeneralDataset':
+        """
+        Applies graph structure and feature modifications described in a GraphModificationArtifact
+        to the current GeneralDataset object and returns the modified version.
+
+        This includes:
+          - Removing and adding edges
+          - Adding new nodes and their features
+          - Removing nodes and updating the feature matrix with index remapping
+          - Modifying individual node features
+          - Reindexing nodes to maintain consistent connectivity
+
+        :param artifact: GraphModificationArtifact containing node and edge changes
+        :return: self (GeneralDataset)
+        """
+        data: Data = self.data
+        device = data.x.device if hasattr(data, 'x') else 'cpu'
+        from data_structures.graph_modification_artifacts import GraphModificationArtifact
+        assert isinstance(artifact, GraphModificationArtifact), (
+            f"Invalid type: expected GraphModificationArtifact, got {type(artifact).__name__}"
+        )
+        # === Handle node operations ===
+        y = data.y
+        edge_index = data.edge_index
+        x = data.x
+        num_nodes = x.size(0)
+        feature_dim = x.size(1)
+
+        # Validate node removals
+        removed_node_ids = set(int(n) for n in artifact.nodes['remove'])
+        assert all(0 <= n < num_nodes for n in removed_node_ids), (
+            f"Invalid node IDs in 'remove': {removed_node_ids} (max index {num_nodes - 1})"
+        )
+
+        # Validate node additions
+        existing_ids = set(range(num_nodes))
+        add_node_items = artifact.nodes['add'].items()
+        added_node_ids = set(int(n) for n in artifact.nodes['add'].keys())
+        assert not (added_node_ids & existing_ids), (
+            f"Cannot add nodes with existing IDs: {added_node_ids & existing_ids}"
+        )
+
+        # Validate node feature changes
+        change_features = artifact.nodes['change_f']
+        for node_id, feats in change_features.items():
+            nid = int(node_id)
+            assert 0 <= nid < num_nodes or nid in added_node_ids, (
+                f"Invalid node id {nid} in change_f: not in current or added nodes"
+            )
+            for feat_idx in feats:
+                fid = int(feat_idx)
+                assert 0 <= fid < feature_dim, (
+                    f"Invalid feature index {fid} for node {nid}"
+                )
+
+        # Build initial mapping and mask for nodes to keep
+        if removed_node_ids:
+            keep_mask = torch.tensor([
+                i not in removed_node_ids for i in range(num_nodes)
+            ], dtype=torch.bool, device=device)
+            remap = {}
+            new_index = 0
+            for old_index in range(num_nodes):
+                if old_index not in removed_node_ids:
+                    remap[old_index] = new_index
+                    new_index += 1
+
+            x = data.x[keep_mask]
+
+            if hasattr(data, 'y') and data.y is not None:
+                y = data.y[keep_mask]
+        else:
+            remap = {i: i for i in range(num_nodes)}
+
+        # Add new nodes (after reindexing existing ones)
+        if add_node_items:
+            new_node_start = len(remap)
+            for i, (node_id, _) in enumerate(add_node_items):
+                remap[int(node_id)] = new_node_start + i
+
+            new_features = torch.stack([
+                feat.to(device) for _, feat in add_node_items
+            ])
+            x = torch.cat([data.x, new_features], dim=0)
+
+            if hasattr(data, 'y') and data.y is not None:
+                new_labels = torch.full(
+                    (new_features.size(0),),
+                    -1,
+                    dtype=data.y.dtype,
+                    device=device
+                )
+                y = torch.cat([data.y, new_labels], dim=0)
+
+        # Modify node features
+        for node_id, feature_changes in change_features.items():
+            true_node_id = int(node_id)
+            if true_node_id in removed_node_ids:
+                continue  # Skip modifications to removed nodes
+
+            mapped_id = remap.get(true_node_id, None)
+            if mapped_id is None:
+                continue
+
+            for feat_idx, new_val in feature_changes.items():
+                feat_idx = int(feat_idx)
+                assert 0 <= feat_idx < feature_dim, (
+                    f"Feature index {feat_idx} out of bounds for node {true_node_id}"
+                )
+                data.x[mapped_id, feat_idx] = new_val
+
+        # === Edge processing ===
+        edge_index_cpu = data.edge_index.cpu()
+        edge_attr = getattr(data, 'edge_attr', None)
+        has_edge_attr = edge_attr is not None
+
+        edge_list = edge_index_cpu.t().tolist()
+        edge_attr_list = (
+            edge_attr.cpu().tolist() if has_edge_attr else [None] * len(edge_list)
+        )
+        current_edge_set = set((u, v) for u, v in edge_list)
+
+        # Validate edge removals
+        removed_edges_set = set((int(u), int(v)) for u, v in artifact.edges['remove'])
+        assert removed_edges_set <= current_edge_set, (
+            f"Some edges to remove do not exist: {removed_edges_set - current_edge_set}"
+        )
+
+        # Validate edge additions
+        added_edges_set = set((int(u), int(v)) for u, v, _ in artifact.edges['add'])
+        assert not (added_edges_set & current_edge_set), (
+            f"Some added edges already exist: {added_edges_set & current_edge_set}"
+        )
+
+        filtered_edges = []
+        filtered_attrs = []
+
+        for idx, (u, v) in enumerate(edge_list):
+            if u in removed_node_ids or v in removed_node_ids:
+                continue
+            if (u, v) in removed_edges_set:
+                continue
+            filtered_edges.append([remap[u], remap[v]])
+            if has_edge_attr:
+                filtered_attrs.append(edge_attr_list[idx])
+
+        for edge in artifact.edges['add']:
+            u, v, attr = edge
+            u = int(u)
+            v = int(v)
+            if u in removed_node_ids or v in removed_node_ids:
+                continue
+            filtered_edges.append([remap.get(u, u), remap.get(v, v)])
+            if has_edge_attr:
+                filtered_attrs.append(attr.tolist() if attr is not None else [0.0])
+
+        edge_index_tensor = torch.tensor(filtered_edges, dtype=torch.long).t().contiguous()
+        edge_index = edge_index_tensor.to(device)
+
+        if has_edge_attr:
+            edge_attr_tensor = torch.tensor(
+                filtered_attrs, dtype=edge_attr.dtype
+            ).to(device)
+            edge_attr = edge_attr_tensor
+
+        # === Update GeneralDataset properties ===
+        self.dataset.data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
+        # self.dataset.num_classes = int(data.y.max().item()) + 1 if hasattr(data, 'y') and data.y is not None else 0
+        # self.dataset.num_node_features = data.x.size(1)
+        self._labels = data.y if hasattr(data, 'y') else None
+
+        return self
+
 
 class DatasetManager:
     """
@@ -770,7 +946,7 @@ class DatasetManager:
         """
         from base.ptg_datasets import PTGDataset
         dataset = DatasetManager.get_by_config(DatasetConfig.from_full_name(full_name))
-        cfg = PTGDataset.dataset_var_config.to_saveable_dict()
+        cfg = PTGDataset.dataset_var_config.to_savable_dict()
         cfg.update(**kwargs)
         dataset_var_config = DatasetVarConfig(**cfg)
         dataset.build(dataset_var_config=dataset_var_config)
@@ -971,6 +1147,6 @@ def merge_directories(
 def is_in_torch_geometric_datasets(
         full_name: tuple = None
 ) -> bool:
-    from aux.prefix_storage import PrefixStorage
+    from data_structures.prefix_storage import PrefixStorage
     with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
         return PrefixStorage.from_json(f.read()).check(full_name)

@@ -7,11 +7,10 @@ import torch
 
 from aux.custom_decorators import timing_decorator
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
-    EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, POISON_ATTACK_PARAMETERS_PATH
+    EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_constructor import FrameworkGNNConstructor
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelModificationConfig, ConfigPattern, ModelConfig
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo

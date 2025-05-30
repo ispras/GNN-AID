@@ -1,4 +1,5 @@
 from base.datasets_processing import GeneralDataset
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from models_builder.gnn_models import GNNModelManager
 
 
@@ -10,7 +11,7 @@ class Attacker:
     def __init__(
             self
     ):
-        pass
+        self.attack_diff = None
 
     def attack(
             self,
@@ -18,12 +19,20 @@ class Attacker:
     ):
         pass
 
-    def attack_diff(
+    def dataset_diff(
             self
-    ):
-        """ TODO Kirill add function docstring
-        """
-        pass
+    ) -> GraphModificationArtifact:
+        diff = GraphModificationArtifact()
+
+        # diff.remove_nodes([0, 1])
+        # diff.add_node(999, torch.tensor([0.1, 0.2, 0.3]))
+        # diff.change_node_feature(2, 0, 0.5)
+        # 
+        # diff.add_edge(2, 999, torch.tensor([1.0]))
+        # diff.remove_edge(4, 5)
+
+        self.attack_diff = diff
+        return diff
 
     @staticmethod
     def check_availability(

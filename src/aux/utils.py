@@ -52,7 +52,7 @@ def hash_data_sha256(
 def import_by_name(
         name: str,
         packs: list = None
-) -> None:
+) -> Type[Any]:
     """
     Import name from packages, return class
     :param name: class name, full or relative
@@ -155,6 +155,26 @@ def setting_class_default_parameters(
     class_kwargs_for_init = class_kwargs.copy()
 
     return class_kwargs_for_save, class_kwargs_for_init
+
+
+def deep_update(
+        target: dict,
+        overrides: dict
+) -> dict:
+    """
+    Recursively update a dictionary with values from overrides.
+    Nested dictionaries are merged instead of overwritten.
+    """
+    for key, value in overrides.items():
+        if (
+                key in target
+                and isinstance(target[key], dict)
+                and isinstance(value, dict)
+        ):
+            deep_update(target[key], value)
+        else:
+            target[key] = value
+    return target
 
 
 def all_subclasses(

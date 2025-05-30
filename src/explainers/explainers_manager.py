@@ -2,7 +2,7 @@ import json
 from socket import SocketIO
 from typing import Union, Type
 
-from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
+from data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from aux.declaration import Declare
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, import_all_from_package
 from base.datasets_processing import GeneralDataset
@@ -51,7 +51,7 @@ class FrameworkExplainersManager:
                 _class_name=explainer_name,
                 _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
                 _config_class="ExplainerInitConfig",
-                _config_kwargs=init_config.to_saveable_dict(),
+                _config_kwargs=init_config.to_savable_dict(),
             )
         self.init_config = init_config
         if modification_config is None:
@@ -62,7 +62,7 @@ class FrameworkExplainersManager:
         elif isinstance(modification_config, ExplainerModificationConfig):
             modification_config = ConfigPattern(
                 _config_class="ExplainerModificationConfig",
-                _config_kwargs=modification_config.to_saveable_dict(),
+                _config_kwargs=modification_config.to_savable_dict(),
             )
         self.modification_config = modification_config
 
@@ -132,15 +132,17 @@ class FrameworkExplainersManager:
 
     def explanation_result_path(
             self,
-            run_config: Union[ConfigPattern, ExplainerRunConfig]
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            create_dir_flag: bool = True,
     ) -> None:
         # TODO pass configs
         self.explainer_result_file_path, self.files_paths = Declare.explanation_file_path(
             models_path=self.gnn_model_path,
             explainer_name=self.explainer_name,
             explainer_ver_ind=self.modification_config.explainer_ver_ind,
-            explainer_init_kwargs=self.init_config.to_saveable_dict(),
-            explainer_run_kwargs=run_config.to_saveable_dict(),
+            explainer_init_kwargs=self.init_config.to_savable_dict(),
+            explainer_run_kwargs=run_config.to_savable_dict(),
+            create_dir_flag=create_dir_flag,
         )
 
     def conduct_experiment(

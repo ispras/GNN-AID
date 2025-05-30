@@ -132,6 +132,14 @@ def test_attack_defense():
         }
     )
 
+    metafull_poison_attack_config_clone = metafull_poison_attack_config.clone_with(
+        overrides={
+            "_config_kwargs": {
+                "num_nodes": dataset.dataset.x.shape[0] - 1
+            }
+        }
+    )
+
     random_poison_attack_config = ConfigPattern(
         _class_name="RandomPoisonAttack",
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
@@ -157,7 +165,7 @@ def test_attack_defense():
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
-            "threshold": 0.05,
+            "threshold": 0.5,
         }
     )
 
@@ -195,6 +203,20 @@ def test_attack_defense():
             "perturb_structure": True,
             "direct": True,
             "n_influencers": 3
+        }
+    )
+
+    netattackgroup_evasion_attack_config = ConfigPattern(
+        _class_name="NettackGroupEvasionAttacker",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "node_idxs": [random.randint(0, 500) for _ in range(20)],  # Nodes for attack
+            "n_perturbations": 50,
+            "perturb_features": True,
+            "perturb_structure": True,
+            "direct": True,
+            "n_influencers": 10
         }
     )
 
@@ -280,8 +302,8 @@ def test_attack_defense():
     )
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=random_poison_attack_config)
-    # gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 
     warnings.warn("Start training")
@@ -290,6 +312,12 @@ def test_attack_defense():
     try:
         raise FileNotFoundError()
         # gnn_model_manager.load_model_executor()
+        # dataset = gnn_model_manager.apply_poison_attack_diff(
+        #     gen_dataset=dataset
+        # )
+        # dataset = gnn_model_manager.apply_poison_defense_diff(
+        #     gen_dataset=dataset
+        # )
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
         train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
@@ -310,9 +338,16 @@ def test_attack_defense():
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
 
+    # diff = gnn_model_manager.poison_defender.defense_diff
+    # dataset_test, _, _ = DatasetManager.get_by_full_name(
+    #     full_name=full_name,
+    #     dataset_ver_ind=0
+    # )
+    # dataset_test = dataset_test.apply_modification(artifact=diff)
+    # print()
+
 
 def test_meta():
-    from attacks.metattack import meta_gradient_attack
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     full_name = ("single-graph", "Planetoid", 'Cora')
@@ -493,7 +528,6 @@ def test_nettack_evasion():
 
 
 def test_qattack():
-    from attacks.qattack import qattack
     my_device = device('cpu')
 
     # Load dataset
@@ -599,7 +633,6 @@ def test_qattack():
 
 
 def test_jaccard():
-    from defenses.jaccard_defense import jaccard_def
     # my_device = device('cuda' if is_available() else 'cpu')
     my_device = device('cpu')
 
@@ -751,8 +784,6 @@ def test_jaccard():
 
 
 def test_adv_training():
-    from defenses.evasion_defense import AdvTraining
-
     my_device = device('cpu')
     # full_name = ("single-graph", "Planetoid", 'Cora')
     full_name = ("single-graph", "Amazon", 'Photo')
@@ -1588,75 +1619,11 @@ def test_rewatt():
     print(f"After ReWatt attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
-def test_nettack():
-    # ______________________ Attack on node ______________________
-    my_device = device('cpu')
-
-    # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
-    )
-
-    gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
-
-    manager_config = ConfigPattern(
-        _config_class="ModelManagerConfig",
-        _config_kwargs={
-            "mask_features": [],
-            "optimizer": {
-                "_class_name": "Adam",
-                "_config_kwargs": {},
-            }
-        }
-    )
-
-    gnn_model_manager = FrameworkGNNModelManager(
-        gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
-        manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
-    )
-
-    gnn_model_manager.gnn.to(my_device)
-
-    num_steps = 20
-    gnn_model_manager.train_model(gen_dataset=dataset,
-                                  steps=num_steps,
-                                  save_model_flag=False)
-
-    acc_test = gnn_model_manager.evaluate_model(gen_dataset=dataset,
-                                                metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
-    print(f"Accuracy on test: {acc_test}")
-
-    # Node for attack
-    node_idx = 0
-
-    # Attack config
-    evasion_attack_config = ConfigPattern(
-        _class_name="Nettack",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "node_idx": node_idx,
-        }
-    )
-
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
-
-    # Attack
-    _ = gnn_model_manager.evaluate_model(gen_dataset=dataset,
-                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
-
-
-
 if __name__ == '__main__':
     import random
 
     random.seed(10)
-    # test_attack_defense()
-    # test_meta()
+    test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
@@ -1664,4 +1631,3 @@ if __name__ == '__main__':
     # test_fgsm()
     # test_pgd_structure()
     # test_rewatt()
-    test_nettack()

@@ -11,7 +11,7 @@ from torch_geometric.nn import MessagePassing
 
 from aux.utils import import_by_name, CUSTOM_LAYERS_INFO_PATH, MODULES_PARAMETERS_PATH, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY
-from aux.configs import ModelConfig, CONFIG_CLASS_NAME, ModelStructureConfig
+from data_structures.configs import ModelConfig, CONFIG_CLASS_NAME, ModelStructureConfig, ConfigPattern
 
 
 class GNNConstructor:
@@ -103,7 +103,7 @@ class GNNConstructor:
             obj_name_flag: bool = False,
             **kwargs
     ):
-        gnn_name = self.model_config.to_saveable_dict().copy()
+        gnn_name = self.model_config.to_savable_dict().copy()
         gnn_name[CONFIG_CLASS_NAME] = self.__class__.__name__
         if obj_name_flag:
             gnn_name['obj_name'] = self.obj_name
@@ -134,7 +134,7 @@ class GNNConstructor:
 
     def get_full_info(
             self,
-            tensor_size_limit: int=None
+            tensor_size_limit: int = None
     ) -> dict:
         """ Get available info about model for frontend
         """
@@ -154,6 +154,12 @@ class GNNConstructor:
             pass
 
         return result
+
+    def get_weights(self, tensor_size_limit):
+        pass
+
+    def get_neurons(self):
+        pass
 
 
 class GNNConstructorTorch(
@@ -203,7 +209,7 @@ class GNNConstructorTorch(
 
     def get_weights(
             self,
-            tensor_size_limit: str = None
+            tensor_size_limit: Union[int, torch.Tensor] = None
     ):
         """
         Get model weights calling torch.nn.Module.state_dict() to draw them on the frontend.
@@ -246,7 +252,7 @@ class FrameworkGNNConstructor(
 
     def __init__(
             self,
-            model_config: ModelConfig = None,
+            model_config: Union[ModelConfig, ConfigPattern] = None,
     ):
         """
         :param model_config: description of the gnn structure
@@ -467,7 +473,7 @@ class FrameworkGNNConstructor(
             self,
             *args,
             **kwargs
-    ) -> torch.Tensor:
+    ) -> Union[torch.Tensor, Dict[int, torch.Tensor]]:
         layer_ind = -1
         tensor_storage = {}
         dim_cat = 0
@@ -475,6 +481,7 @@ class FrameworkGNNConstructor(
         save_emb_flag = self._save_emb_flag
 
         x, edge_index, batch, edge_weight = self.arguments_read(*args, **kwargs)
+        x, edge_index, batch, edge_weight = self.move_to_device(x, edge_index, batch, edge_weight)
         feat = x
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
@@ -599,6 +606,25 @@ class FrameworkGNNConstructor(
             self
     ) -> set:
         return self.model_manager_restrictions
+
+    @staticmethod
+    def move_to_device(
+            x: torch.Tensor = None,
+            edge_index: torch.Tensor = None,
+            batch: Type = None,
+            edge_weight: torch.Tensor = None
+    ) -> [torch.Tensor, torch.Tensor, Type, torch.Tensor]:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        def to_device(tensor):
+            return tensor.to(device) if tensor is not None else None
+
+        x = to_device(x)
+        edge_index = to_device(edge_index)
+        batch = to_device(batch)
+        edge_weight = to_device(edge_weight)
+
+        return x, edge_index, batch, edge_weight
 
     @staticmethod
     def arguments_read(

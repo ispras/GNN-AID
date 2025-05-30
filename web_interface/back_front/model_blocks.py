@@ -6,10 +6,10 @@ from typing import Union
 import torch
 from torch_geometric.data import Dataset
 
-from aux.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
+from data_structures.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
 from aux.data_info import UserCodeInfo, DataInfo
 from aux.declaration import Declare
-from aux.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import PrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
     IMPORT_INFO_KEY
@@ -96,8 +96,10 @@ class ModelLoadBlock(Block):
         """
         DataInfo.refresh_models_dir_structure()
         index, info = DataInfo.models_parse()
-        path, files_paths = Declare.dataset_prepared_dir(self.gen_dataset.dataset_config,
-                                                         self.gen_dataset.dataset_var_config)
+        path, files_paths = Declare.dataset_prepared_dir(
+            self.gen_dataset.dataset_config,
+            self.gen_dataset.dataset_var_config
+        )
         path = os.path.relpath(path, GRAPHS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
             prefix=("data_root", "data_prepared")
@@ -257,8 +259,8 @@ class ModelManagerBlock(Block):
         assert self.gnn is not None
 
         # Import correct class
-        # from web_interface.main_multi import FrontendClient
-        from web_interface.main_fastapi import FrontendClient
+        from web_interface.main_multi import FrontendClient
+        # from web_interface.main_fastapi import FrontendClient
         if self.klass in FrontendClient.get_parameters("FW"):
             mm_class = import_by_name(self.klass, ["models_builder.gnn_models"])
 
@@ -458,4 +460,3 @@ class ModelTrainerBlock(Block):
                     avg = m.kwargs.get('average', 'binary')
                     if avg == 'binary':
                         m.kwargs['average'] = 'macro'
-

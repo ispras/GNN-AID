@@ -1,20 +1,13 @@
 import torch.nn as nn
-import torch.nn.functional as F
-import math
 import torch
-from torch.nn.parameter import Parameter
-from torch.nn.modules.module import Module
-from torch_geometric.nn import GCNConv
 
 # from defenses.GNNGuard.base_model import BaseModel
 from defenses.poison_defense import PoisonDefender
 
 from models_builder.gnn_models import FrameworkGNNModelManager
-from models_builder.gnn_constructor import FrameworkGNNConstructor
 from models_builder.models_zoo import model_configs_zoo
-from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
-from aux.utils import import_by_name, CUSTOM_LAYERS_INFO_PATH, MODULES_PARAMETERS_PATH, hash_data_sha256, \
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH
+from data_structures.configs import ModelModificationConfig, ConfigPattern
+from aux.utils import import_by_name, TECHNICAL_PARAMETER_KEY, OPTIMIZERS_PARAMETERS_PATH
 
 
 import warnings
@@ -28,8 +21,6 @@ from scipy.sparse import lil_matrix
 import scipy.sparse as sp
 
 import numpy as np
-
-from src.aux.configs import ModelConfig
 
 
 # class BaseGCN(BaseModel):

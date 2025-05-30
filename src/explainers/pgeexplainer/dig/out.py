@@ -14,7 +14,7 @@ from torch_geometric.utils import to_networkx
 
 from explainers.pgeexplainer.dig.utils import k_hop_subgraph_with_default_whole_graph, get_topk_edges_subgraph
 from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 
 
 from aux.utils import root_dir

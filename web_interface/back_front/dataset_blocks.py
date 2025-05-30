@@ -2,8 +2,8 @@ import json
 
 from aux.data_info import DataInfo
 from aux.utils import TORCH_GEOM_GRAPHS_PATH
-from base.datasets_processing import DatasetManager, GeneralDataset, VisiblePart
-from aux.configs import DatasetConfig, DatasetVarConfig
+from base.datasets_processing import DatasetManager, GeneralDataset
+from data_structures.configs import DatasetConfig, DatasetVarConfig
 from web_interface.back_front.block import Block
 from web_interface.back_front.utils import json_dumps, get_config_keys
 

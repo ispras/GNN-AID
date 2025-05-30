@@ -1,19 +1,16 @@
-import torch
-from torch import Tensor
-from torch.nn.functional import cross_entropy
-from torch_geometric.utils.loop import add_remaining_self_loops
-from torch_geometric.nn import MessagePassing
-
-from dig.version import debug
-from dig.xgraph.models.utils import subgraph
-
-from explainers.gnnexplainer.dig_our.utils import symmetric_edge_mask_indirect_graph
-from explainers.gnnexplainer.dig_our.utils.base_explainer import ExplainerBase
-
-from explainers.explainer import Explainer, finalize_decorator
-from explainers.explanation import AttributionExplanation
 from typing import Union
 
+import torch
+from dig.version import debug
+from dig.xgraph.models.utils import subgraph
+from torch import Tensor
+from torch.nn.functional import cross_entropy
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils.loop import add_remaining_self_loops
+
+from data_structures.explanation import AttributionExplanation
+from explainers.explainer import Explainer, finalize_decorator
+from explainers.gnnexplainer.dig_our.utils.base_explainer import ExplainerBase
 
 EPS = 1e-15
 

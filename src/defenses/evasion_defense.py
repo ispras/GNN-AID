@@ -1,13 +1,13 @@
 import copy
-from typing import Type
+from typing import Type, Any
 import torch
-from torch_geometric import data
 
+from defenses.defense_base import Defender
+from data_structures.configs import ConfigPattern, EvasionAttackConfig
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from attacks.evasion_attacks import FGSMAttacker
 from attacks.qattack import qattack
-from defenses.defense_base import Defender
-from src.aux.configs import ConfigPattern, EvasionAttackConfig
-from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from torch_geometric import data
 
 
 class EvasionDefender(
@@ -173,6 +173,7 @@ class AdvTraining(
             attack_type: str = None,
     ):
         super().__init__()
+        self.perturbed_gen_dataset = None
         if not attack_config:
             # build default config
             assert attack_name is not None
@@ -247,7 +248,7 @@ class AdvTraining(
 
     def post_batch(
             self,
-            model_manager: Type,
+            model_manager: Type[Any],
             batch,
             loss: torch.Tensor,
             **kwargs,

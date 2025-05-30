@@ -8,7 +8,7 @@ from torch.nn.functional import cross_entropy
 from typing import Union
 
 from explainers.gnnexplainer.dig_our.utils.base_explainer import ExplainerBase
-from explainers.explanation import AttributionExplanation
+from data_structures.explanation import AttributionExplanation
 from explainers.graphmask.torch_utils import LagrangianOptimization
 from explainers.explainer import Explainer, finalize_decorator
 
