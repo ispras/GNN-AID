@@ -1,5 +1,6 @@
 import json
 from enum import Enum
+from multiprocessing.queues import Queue
 from typing import Union
 
 from aux.utils import FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH, \
@@ -69,10 +70,11 @@ class FrontendClient:
             self,
             sid: str,
             mode: ClientMode,
+            queue: Queue
     ):
         self.sid = sid  # socket ID
         self.mode = mode  # mode: analysis, interpretation, defense
-        self.socket = SocketConnect(sid=sid)
+        self.socket = SocketConnect(sid=sid, queue=queue)
 
         # Build the diagram
         self.diagram = Diagram()

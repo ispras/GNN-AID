@@ -7,7 +7,6 @@ from typing import Callable, List, Union, Type, Protocol
 
 import sklearn.metrics
 import torch
-from flask_socketio import SocketIO
 from torch import tensor
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
@@ -28,6 +27,7 @@ from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH,
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from base.datasets_processing import GeneralDataset
 from explainers.protgnn.MCTS import mcts_args
+from web_interface.back_front.utils import SocketConnect
 
 
 class Metric:
@@ -1081,7 +1081,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             mode: Union[str, None] = None,
             steps=None,
             metrics: List[Metric] = None,
-            socket: SocketIO = None
+            socket: SocketConnect = None
     ) -> Union[str, Path]:
         """
         Convenient train method.

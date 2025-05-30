@@ -35,7 +35,7 @@ def worker_process(
     #  Easier to send it directly to url
 
     sid = parent_queue.get()  # Wait until sid is received
-    client = FrontendClient(sid, mode)
+    client = FrontendClient(sid, mode, Queue())
     print(f"Created FrontendClient with sid {sid}")
 
     while True:
@@ -169,7 +169,7 @@ def handle_connect(
 
 
 @socketio.on('disconnect')
-def handle_disconnect(
+def handle_disconnect(*args, **kwargs
 ) -> None:
     session_id = session.get('session_id')
     print('handle_disconnect, session_id=', session_id, 'sid=', request.sid)
@@ -236,6 +236,7 @@ def start_client(
 def stop_session(
         session_id: str
 ):
+    print('stop_session', session_id)
     process, child_queue, parent_queue = active_sessions[session_id]
 
     # Stop corresponding process
@@ -305,8 +306,9 @@ if __name__ == '__main__':
 
     # For development
     if app.debug:
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False)
         print('Flask DEBUG')
-        socketio.run(app, host='0.0.0.0', debug=False)
+        print('Go to http://127.0.0.1:5000/')
     # For production
     else:
         from gevent import pywsgi

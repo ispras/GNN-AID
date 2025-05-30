@@ -12,7 +12,8 @@ class Controller {
             reconnectionDelay: 1000,
         })
         this.socket.on('connect', () => {
-            console.log('socket connected')
+            console.log('socket connected, sid=', this.socket.id)
+            // this.sessionId = this.socket.id
             if (this.isActive) {
                 // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
                 // Means re-connection to server. Need to reload the page
@@ -59,11 +60,10 @@ class Controller {
 
         this.socket.on('message', async (data) => {
             // Message to block listeners
+            console.log('received msg')
             let msg = JSON_parse(data["msg"])
             let block = data["block"]
             let func = data["func"]
-            // if (msg)
-            //     console.log('received msg from', block, 'of len =', data["msg"].length)
             if (block in this.presenter.blockListeners) {
                 for (const listener of this.presenter.blockListeners[block]) {
                     switch (func) {
