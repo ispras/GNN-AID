@@ -998,8 +998,11 @@ class FrameworkGNNModelManager(GNNModelManager):
         if self.evasion_defender and self.evasion_defense_flag:
             self.evasion_defender.pre_batch(model_manager=self, batch=batch, task_type=task_type)
         loss = self.train_on_batch(batch=batch, task_type=task_type)
+        mi_defender_dict = None
         if self.mi_defender and self.mi_defense_flag:
-            self.mi_defender.post_batch()
+            mi_defender_dict = self.mi_defender.post_batch(model_manager=self, batch=batch)
+        if mi_defender_dict and "loss" in mi_defender_dict:
+            loss = mi_defender_dict["loss"]
         evasion_defender_dict = None
         if self.evasion_defender and self.evasion_defense_flag:
             evasion_defender_dict = self.evasion_defender.post_batch(
@@ -1390,7 +1393,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
         if self.mi_attacker and self.mi_attack_flag:
-            self.call_mi_attack()
+            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(
@@ -1415,9 +1418,14 @@ class FrameworkGNNModelManager(GNNModelManager):
                 mask_tensor=mask_tensor
             )
 
-    def call_mi_attack(self):
+    def call_mi_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            model: torch.nn.Module,
+            mask_tensor: Union[str, List[bool], torch.Tensor] = 'test'
+    ):
         if self.mi_attacker:
-            self.mi_attacker.attack()
+            self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
 
     def compute_stats_data(
             self,

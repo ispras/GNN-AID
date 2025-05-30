@@ -1,11 +1,15 @@
 import unittest
+import numpy as np
 
+from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
+
 from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, import_all_from_package
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, \
+    import_all_from_package
 
 import defenses
 import_all_from_package(defenses)  # to import all subclasses properly
@@ -35,6 +39,22 @@ class DefenseTest(unittest.TestCase):
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("single-graph", "Planetoid", "Cora"),
+            dataset_ver_ind=0
+        )
+
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
@@ -79,6 +99,97 @@ class DefenseTest(unittest.TestCase):
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
+    def test_noise_mi_defender(self):
+        mi_attack_config = ConfigPattern(
+            _class_name="ShadowModelMIAttacker",
+            _import_path=MI_ATTACK_PARAMETERS_PATH,
+            _config_class="MIAttackConfig",
+            _config_kwargs={
+            }
+        )
+
+        mi_defense_config = ConfigPattern(
+            _class_name="NoiseMIDefender",
+            _import_path=MI_DEFENSE_PARAMETERS_PATH,
+            _config_class="MIDefenseConfig",
+            _config_kwargs={
+            }
+        )
+
+        gcn_gcn_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_example,
+            dataset_path=self.results_dataset_path_sg_example,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_example.set_mi_attacker(mi_attack_config=mi_attack_config)
+        gnn_model_manager_sg_example.set_mi_defender(mi_defense_config=mi_defense_config)
+
+        attack_cnt = 2
+        # seed = 42
+        seed = None
+        if seed is not None:
+            np.random.seed(seed)
+        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_example.labels, target_list=target_list)
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                          Metric("Accuracy", mask=mask_loc)])
+        print(metric_loc)
+
+    def test_noise_mi_defender_cora(self):
+        mi_attack_config = ConfigPattern(
+            _class_name="NaiveMIAttacker",
+            _import_path=MI_ATTACK_PARAMETERS_PATH,
+            _config_class="MIAttackConfig",
+            _config_kwargs={
+                'threshold': 0.2
+            }
+        )
+
+        mi_defense_config = ConfigPattern(
+            _class_name="NoiseMIDefender",
+            _import_path=MI_DEFENSE_PARAMETERS_PATH,
+            _config_class="MIDefenseConfig",
+            _config_kwargs={
+                'temperature': 50
+            }
+        )
+
+        gcn_gcn_sg_cora = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_cora = FrameworkGNNModelManager(
+            gnn=gcn_gcn_sg_cora,
+            dataset_path=self.results_dataset_path_sg_cora,
+            modification=self.default_config,
+            manager_config=self.manager_config,
+        )
+
+        gnn_model_manager_sg_cora.set_mi_attacker(mi_attack_config=mi_attack_config)
+        gnn_model_manager_sg_cora.set_mi_defender(mi_defense_config=mi_defense_config)
+
+        attack_cnt = 100
+        # seed = 42
+        seed = None
+        if seed is not None:
+            np.random.seed(seed)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_cora.labels, target_list=target_list)
+        metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
+                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                          Metric("Accuracy", mask=mask_loc)])
+        print(metric_loc)
+
+        for mask, res in gnn_model_manager_sg_cora.mi_attacker.results.items():
+            print(f"MI Attack accuracy:"
+                  f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
 
 if __name__ == '__main__':
     unittest.main()
