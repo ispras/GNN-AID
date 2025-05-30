@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import torch
+import os
 
 from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
@@ -14,6 +15,8 @@ from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_P
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
+        # os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Monkey for home coding
+
         print('setup')
 
         # Init datasets
@@ -267,7 +270,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora.set_mi_attacker(mi_attack_config=mi_attack_config)
 
-        attack_cnt = 100
+        attack_cnt = 500
         # seed = 42
         seed = None
         if seed is not None:
