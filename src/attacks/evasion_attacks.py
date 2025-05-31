@@ -19,7 +19,8 @@ from models_builder.models_utils import apply_decorator_to_graph_layers
 from torch_geometric.data import Data
 
 # ReWatt imports
-from attacks.evasion_attacks_collection.rewatt.utils import *
+from attacks.evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
+    GraphState, ReWattAgent
 
 
 class EvasionAttacker(

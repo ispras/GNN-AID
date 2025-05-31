@@ -7,10 +7,10 @@ from torch import device
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
-from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager
-from src.models_builder.models_zoo import model_configs_zoo
+from models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from data_structures.configs import ModelModificationConfig, ConfigPattern
+from base.datasets_processing import DatasetManager
+from models_builder.models_zoo import model_configs_zoo
 from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
 from defenses.jaccard_defense import jaccard_def
@@ -20,7 +20,7 @@ from defenses.pro_gnn.prognn import ProGNNDefender
 
 
 def test_attack_defense():
-    from attacks.CLGA import CLGA
+    from attacks.clga import CLGA
 
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 

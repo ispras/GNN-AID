@@ -11,6 +11,7 @@ scikit-optimize==0.10.2
 
 # For explainers
 dive-into-graphs==1.1.0
+matplotlib==3.2.0  # for DIG
 
 # PGMExplainer
 pgmpy==0.1.24
