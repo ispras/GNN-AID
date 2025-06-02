@@ -1,6 +1,6 @@
 class Controller {
-    constructor(sessionId, mode) {
-        this.sessionId = sessionId // ID of session
+    constructor(mode) {
+        this.sid = null
         this.isActive = false // this controller was started
         this.mode = mode
         this.presenter = new Presenter()
@@ -13,7 +13,7 @@ class Controller {
         })
         this.socket.on('connect', () => {
             console.log('socket connected, sid=', this.socket.id)
-            // this.sessionId = this.socket.id
+            this.sid = this.socket.id
             if (this.isActive) {
                 // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
                 // Means re-connection to server. Need to reload the page
@@ -23,7 +23,7 @@ class Controller {
             }
             else {
                 this.isActive = true
-                console.log('session_id', this.sessionId)
+                console.log('sid', this.sid)
                 this.run()
             }
         })
@@ -124,8 +124,8 @@ class Controller {
 
     async ajaxRequest(url, data) {
         let result = null
-        console.assert(!('sessionId' in data))
-        data['sessionId'] = this.sessionId
+        console.assert(!('sid' in data))
+        data['sid'] = this.sid
         // console.log('ajaxRequest', data)
         await $.ajax({
             type: 'POST',

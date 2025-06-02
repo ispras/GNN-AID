@@ -1,72 +1,71 @@
-import torch
 from collections import defaultdict
-from enum import Enum
-from rdkit import Chem
+
+import torch
 
 """ The molecule code comes from https://github.com/Wuyxin/ReFine """
 
 
-def e_map_mutag(bond_type, reverse=False):
-    from rdkit import Chem
-    if not reverse:
-        if bond_type == Chem.BondType.SINGLE:
-            return 0
-        elif bond_type == Chem.BondType.DOUBLE:
-            return 1
-        elif bond_type == Chem.BondType.AROMATIC:
-            return 2
-        elif bond_type == Chem.BondType.TRIPLE:
-            return 3
-        else:
-            raise Exception("No bond type found")
-
-    if bond_type == 0:
-        return Chem.BondType.SINGLE
-    elif bond_type == 1:
-        return Chem.BondType.DOUBLE
-    elif bond_type == 2:
-        return Chem.BondType.AROMATIC
-    elif bond_type == 3:
-        return Chem.BondType.TRIPLE
-    else:
-        raise Exception("No bond type found")
-
-
-class x_map_mutag(Enum):
-    C = 0
-    N = 1
-    O = 2
-    F = 3
-    I = 4
-    Cl = 5
-    Br = 6
+# def e_map_mutag(bond_type, reverse=False):
+#     from rdkit import Chem
+#     if not reverse:
+#         if bond_type == Chem.BondType.SINGLE:
+#             return 0
+#         elif bond_type == Chem.BondType.DOUBLE:
+#             return 1
+#         elif bond_type == Chem.BondType.AROMATIC:
+#             return 2
+#         elif bond_type == Chem.BondType.TRIPLE:
+#             return 3
+#         else:
+#             raise Exception("No bond type found")
+#
+#     if bond_type == 0:
+#         return Chem.BondType.SINGLE
+#     elif bond_type == 1:
+#         return Chem.BondType.DOUBLE
+#     elif bond_type == 2:
+#         return Chem.BondType.AROMATIC
+#     elif bond_type == 3:
+#         return Chem.BondType.TRIPLE
+#     else:
+#         raise Exception("No bond type found")
 
 
-def graph_to_mol(X, edge_index, edge_attr):
-    mol = Chem.RWMol()
-    X = [
-        Chem.Atom(x_map_mutag(x.index(1)).name)
-        for x in X
-    ]
+# class x_map_mutag(Enum):
+#     C = 0
+#     N = 1
+#     O = 2
+#     F = 3
+#     I = 4
+#     Cl = 5
+#     Br = 6
 
-    E = edge_index
-    for x in X:
-        print(x)
-        mol.AddAtom(x)
 
-    for atom in mol.GetAtoms():
-        atom.SetProp('atomLabel', atom.GetSymbol())
-
-    if edge_attr is None:
-        edge_attr = [[1, 0, 0, 0] for _ in range(len(edge_index))]
-
-    for (u, v), attr in zip(E, edge_attr):
-        attr = e_map_mutag(attr.index(1), reverse=True)
-
-        if mol.GetBondBetweenAtoms(u, v):
-            continue
-        mol.AddBond(u, v, attr)
-    return mol
+# def graph_to_mol(X, edge_index, edge_attr):
+#     mol = Chem.RWMol()
+#     X = [
+#         Chem.Atom(x_map_mutag(x.index(1)).name)
+#         for x in X
+#     ]
+#
+#     E = edge_index
+#     for x in X:
+#         print(x)
+#         mol.AddAtom(x)
+#
+#     for atom in mol.GetAtoms():
+#         atom.SetProp('atomLabel', atom.GetSymbol())
+#
+#     if edge_attr is None:
+#         edge_attr = [[1, 0, 0, 0] for _ in range(len(edge_index))]
+#
+#     for (u, v), attr in zip(E, edge_attr):
+#         attr = e_map_mutag(attr.index(1), reverse=True)
+#
+#         if mol.GetBondBetweenAtoms(u, v):
+#             continue
+#         mol.AddBond(u, v, attr)
+#     return mol
 
 
 def edge_index_to_adj_list(edge_index, hops=1, exclude_self=False):
@@ -106,23 +105,23 @@ def edge_index_to_adj_matrix(edge_index, x=None):
     return A
 
 
-def k_hop_neighbourhood(edge_index, node, k):
-    adj = edge_index_to_adj_list(edge_index)
-    visited = set()
-    ret = []
-
-    queue = [(node, 0)]
-    while queue != []:
-        u, d = queue.pop(-1)
-        if d == k:
-            continue
-        for v in adj[u]:
-            if v not in visited:
-                queue.insert(0, (v, d + 1))
-                ret.append(v)
-                visited.add(v)
-
-    return ret
+# def k_hop_neighbourhood(edge_index, node, k):
+#     adj = edge_index_to_adj_list(edge_index)
+#     visited = set()
+#     ret = []
+#
+#     queue = [(node, 0)]
+#     while queue != []:
+#         u, d = queue.pop(-1)
+#         if d == k:
+#             continue
+#         for v in adj[u]:
+#             if v not in visited:
+#                 queue.insert(0, (v, d + 1))
+#                 ret.append(v)
+#                 visited.add(v)
+#
+#     return ret
 
 
 def add_edge(g, u, v):

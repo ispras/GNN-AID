@@ -292,13 +292,12 @@
     //     // xhr.send('User left the page');
     // })
 
-    const sessionId = "{{ session_id }}"
     const mode = "{{ mode }}"
 
-    console.log('html page created, sessionId=', sessionId, 'mode=', mode)
+    console.log('html page created, mode=', mode)
 
     // Create client controller
-    let controller = new Controller(sessionId, mode)
+    let controller = new Controller(mode)
   </script>
 </body>
 </html>

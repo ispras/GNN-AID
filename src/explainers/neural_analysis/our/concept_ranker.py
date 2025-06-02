@@ -1,9 +1,9 @@
-import numpy as np
-import shap
+from collections import OrderedDict
+
 import torch
 from torch.nn.functional import cross_entropy
 from tqdm import tqdm
-from collections import OrderedDict
+
 
 class ConceptEntropyMasker(torch.nn.Module):
     def __init__(self, explainer, epochs: int = 100, lr: float = 0.01, alpha: float = 0.001, beta: float = 0.1):
@@ -73,12 +73,6 @@ def by_weight(explainer, label, layer=None):
         return idxs.cpu().numpy(), importance[idxs].cpu().numpy()
 
 
-def by_weight_adv(model, label):
-    importance = model.lin1.weight[label].detach() - model.lin1.weight[1 - label].detach()
-    idxs = importance.argsort().flip([0])
-    return idxs.cpu().numpy(), importance[idxs].cpu().numpy()
-
-
 def by_weight_x_val(model, x, edge_index, label, sort=False):
     concept_layer = model.concept_layer(x.to(model.device), edge_index.to(model.device))[0]
     importance = (model.lin1.weight[label] * concept_layer).detach()
@@ -90,32 +84,6 @@ def by_weight_x_val(model, x, edge_index, label, sort=False):
     return importance.cpu().numpy()
 
 
-def by_shap(model, train_dataset, x, edge_index, label):
-    X_train = []
-
-    for data in train_dataset:
-        data = data.to(model.device)
-        neurons = model.concept_layer(data.x, data.edge_index, data.batch)
-        X_train.append(neurons.detach())
-
-    X_test = model.concept_layer(x.to(model.device), edge_index.to(model.device))
-
-    X_train = torch.row_stack(X_train)
-
-    top_level = torch.nn.Sequential(
-        model.lin1,
-        torch.nn.Softmax()
-    )
-
-    explainer = shap.DeepExplainer(top_level, X_train)
-    shap_values = explainer.shap_values(X_test)
-
-    idxs = shap_values[label].squeeze().argsort()[::-1]
-    scores = shap_values[label].squeeze()[idxs]
-
-    return idxs, scores
-
-
 def by_entropy(model, x, edge_index, label, epochs=100, lr=0.1, alpha=0.001, beta=0.1, debug=False, sort=False):
     cem = ConceptEntropyMasker(model, epochs=epochs, lr=lr, alpha=alpha, beta=beta)
     mask = cem(x=x, edge_index=edge_index, label=label, show_progress=debug)
@@ -125,11 +93,3 @@ def by_entropy(model, x, edge_index, label, epochs=100, lr=0.1, alpha=0.001, bet
         return idxs.cpu().numpy(), mask[idxs].sigmoid().cpu().numpy()
 
     return mask.sigmoid().cpu().numpy()
-
-
-def by_entropy_x_val(model, x, edge_index, label, epochs=100, lr=0.1, alpha=0.001, beta=0.1, debug=False, sort=False):
-    _, mask = by_entropy(model, x, edge_index, label, epochs=100, lr=0.1, alpha=0.001, beta=0.1, debug=False)
-    concept_layer = model.concept_layer(x.to(model.device), edge_index.to(model.device))[0]
-    mask = (torch.tensor(mask).to(model.device) * concept_layer).detach()
-    idxs = mask.argsort().flip([0])
-    return idxs.cpu().numpy(), mask[idxs].cpu().numpy()
