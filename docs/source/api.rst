@@ -18,23 +18,10 @@ Creating and managing models
    :members:
 
 
-Evasion Attacks
-==============================
-.. automodule:: attacks.evasion_attacks
-   :members:
-
-
-Evasion Defense
-==============================
-.. automodule:: defenses.evasion_defense
-   :members:
-
-
 Interpretation
 ==================
 .. automodule:: explainers.explainer
-   :members: 
-
+   :members:
 
 
 Auxiliary functions
