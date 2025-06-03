@@ -110,12 +110,12 @@ class SocketConnect:
         self.tag_queue[tag].push(data, self.obj_id, obligate)  # FIXME tmp
         self.obj_id += 1
 
-        # self.mpqueue.put(data)
-        # print('put msg to mpqueue', str(data)[:40])
+        self.mpqueue.put(data)
+        print('put msg to mpqueue', str(data)[:40])
 
-        if not self.active:
-            print('Thread.start')
-            Thread(target=self._cycle, args=()).start()
+        # if not self.active:
+        #     print('Thread.start')
+        #     Thread(target=self._cycle, args=()).start()
 
     def _send(
             self

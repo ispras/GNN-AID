@@ -126,13 +126,18 @@ class Controller {
         let result = null
         console.assert(!('sid' in data))
         data['sid'] = this.sid
-        // console.log('ajaxRequest', data)
+        console.log('ajaxRequest', data)
         await $.ajax({
             type: 'POST',
             url: url,
             data: data,
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
             success: (res, status, jqXHR) => {
                 result = res
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', status, error);
+                console.error('Response:', xhr.responseText);
             }
         })
         if (result && '{['.includes(result[0])) {
