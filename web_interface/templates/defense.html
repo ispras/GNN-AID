@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+<!--{% set mode = "defense" %}-->
 
 {% block title %}
     GNN-AID - Defense
@@ -9,11 +10,19 @@
 {% endblock %}
 
 
-{% block menu_content %}
-<span style="color: red">Attack-defense functions are not implemented yet</span>
+{% block menu_before_train_content %}
+  <div id="menu-model-beforetrain-view">
+    <!-- generated stuff -->
+  </div>
 {% endblock %}
 
-{% block panel_content %}
+{% block menu_after_train_content %}
+  <div id="menu-model-aftertrain-view">
+    <!-- generated stuff -->
+  </div>
+{% endblock %}
+
+{% block panel_attack_defense_content %}
 <div class="info-panel mode attack" id="panel-attack-view" style="display: none">
     Attack panel
     <!-- generated stuff -->

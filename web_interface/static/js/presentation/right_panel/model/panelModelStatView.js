@@ -103,9 +103,8 @@ class PanelModelStatView extends PanelView {
     }
 
     onReceive(block, data) {
-        if (block === "mt") {
+        if (block === "mt" || block === "at") {
             if ("metrics" in data) {
-
                 this.update(data["metrics"])
             }
         }

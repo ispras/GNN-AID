@@ -21,7 +21,7 @@ class MenuModelCustomView extends MenuView {
     }
 
     async _accept() {
-        await Controller.blockRequest(this.requestBlock, 'modify',
+        await controller.blockRequest(this.requestBlock, 'modify',
             this.prefixStorage.getConfig())
     }
 
@@ -35,7 +35,7 @@ class MenuModelCustomView extends MenuView {
 
     async _refresh() {
         blockDiv(this.$div, true)
-        let [ps, info] = await Controller.ajaxRequest('/model', {do: "index", type: "custom"})
+        let [ps, info] = await controller.ajaxRequest('/model', {do: "index", type: "custom"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
         this.info = JSON_parse(info)
         this._build()

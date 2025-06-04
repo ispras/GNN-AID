@@ -139,7 +139,7 @@ class CustomDataset(
                     assert set(attributes.values()).issubset(set(self.info.edge_attributes["values"][ix]))
 
         # Check labels
-        for labelling, n_classes in self.info.labelings.items():
+        for labelling, _ in self.info.labelings.items():
             with open(self.labels_dir / labelling, 'r') as f:
                 labels = json.load(f)
             if self.is_multi():  # graph labels
@@ -462,7 +462,8 @@ class CustomDataset(
             for ix, v in enumerate(values):
                 if x == v:
                     res[ix] = 1
-                    return res
+                    break
+            return res
 
         def as_is(
                 x

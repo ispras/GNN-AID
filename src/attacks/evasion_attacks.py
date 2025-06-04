@@ -1,13 +1,14 @@
 from typing import Type, Union
 import torch
 import numpy as np
+from skopt import Optimizer
 
 from attacks.attack_base import Attacker
 from base.datasets_processing import GeneralDataset
+from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports
-from src.attacks.nettack.nettack import Nettack
-from src.attacks.nettack.utils import preprocess_graph, largest_connected_components, data_to_csr_matrix, train_w1_w2
+from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
 
 # PGD imports
 from torch_geometric.utils import k_hop_subgraph
@@ -18,12 +19,15 @@ from models_builder.models_utils import apply_decorator_to_graph_layers
 from torch_geometric.data import Data
 
 # ReWatt imports
-from attacks.evasion_attacks_collection.rewatt.utils import *
+from attacks.evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
+    GraphState, ReWattAgent
 
 
 class EvasionAttacker(
     Attacker
 ):
+    """ Base class for all poison attack methods.
+    """
     def __init__(
             self,
             **kwargs
@@ -34,6 +38,8 @@ class EvasionAttacker(
 class EmptyEvasionAttacker(
     EvasionAttacker
 ):
+    """ Just a stub for evasion attack.
+    """
     name = "EmptyEvasionAttacker"
 
     def attack(
@@ -142,6 +148,7 @@ class FGSMAttacker(
                 model.eval()
                 num_hops = model.n_layers
 
+                print('node_idx', node_idx)
                 subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
                                                                            num_hops=num_hops,
                                                                            edge_index=edge_index,
@@ -204,8 +211,8 @@ class PGDAttacker(
             epsilon: float = 0.5,
             learning_rate: float = 0.001,
             num_iterations: int = 100,
-            num_rand_trials: int = 100,
-            grad_aggr_type: str = 'mean'
+            # num_rand_trials: int = 100,
+            # grad_aggr_type: str = 'mean'
     ):
 
         super().__init__()
@@ -215,8 +222,8 @@ class PGDAttacker(
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.num_iterations = num_iterations
-        self.num_rand_trials = num_rand_trials
-        self.grad_aggr_type = grad_aggr_type
+        # self.num_rand_trials = num_rand_trials
+        # self.grad_aggr_type = grad_aggr_type
 
         # TODO check grad_aggr_type correctness
         # raise ValueError(f"Invalid grad_aggr_type: {self.grad_aggr_type}.")
@@ -444,155 +451,118 @@ class PGDAttacker(
         return self.attack_diff
 
 
-class NettackEvasionAttacker(
+class NettackAttacker(
     EvasionAttacker
 ):
-    name = "NettackEvasionAttacker"
+    name = "Nettack"
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        """ Availability check for the given dataset and model manager. """
+        if gen_dataset.is_multi():
+            return False
+        else:
+            x = gen_dataset.data.x
+            is_binary = torch.all((x == 0) | (x == 1)).item()
+            return is_binary
 
     def __init__(
             self,
             node_idx: int = 0,
-            n_perturbations: Union[int, None] = None,
+            budget: Union[int, None] = None,
             perturb_features: bool = True,
             perturb_structure: bool = True,
             direct: bool = True,
-            n_influencers: int = 0
+            depth: Union[int, None] = 2,
+            delta_cutoff: float = 0.004,
+            surrogate_train_ratio: float = 0.8,
+            surrogate_epochs: int = 200
     ):
-
         super().__init__()
         self.attack_diff = None
         self.node_idx = node_idx
-        self.n_perturbations = n_perturbations
+        self.budget = budget
         self.perturb_features = perturb_features
         self.perturb_structure = perturb_structure
         self.direct = direct
-        self.n_influencers = n_influencers
+        self.depth = depth
+        self.delta_cutoff = delta_cutoff
+        self.surrogate_train_ratio = surrogate_train_ratio
+        self.surrogate_epochs = surrogate_epochs
 
     def attack(
             self,
             model_manager: Type,
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
-    ) -> GeneralDataset:
-        # Prepare
+    ):
         data = gen_dataset.data
-        _A_obs, _X_obs, _z_obs = data_to_csr_matrix(data)
-        _A_obs = _A_obs + _A_obs.T
-        _A_obs[_A_obs > 1] = 1
-        lcc = largest_connected_components(_A_obs)
+        x, edge_index, y = data.x, data.edge_index, data.y
 
-        _A_obs = _A_obs[lcc][:, lcc]
+        num_classes = y.max().item() + 1
+        surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
+        surrogate.train_model(x, edge_index, y, train_ratio=self.surrogate_train_ratio, epochs=self.surrogate_epochs)
+        # surrogate.evaluate(x, edge_index, y)
 
-        assert np.abs(_A_obs - _A_obs.T).sum() == 0, "Input graph is not symmetric"
-        assert _A_obs.max() == 1 and len(np.unique(_A_obs[_A_obs.nonzero()].A1)) == 1, "Graph must be unweighted"
-        assert _A_obs.sum(0).A1.min() > 0, "Graph contains singleton nodes"
+        attacker = NettackAttack(
+            real_class=data.y[self.node_idx].item(),
+            gnn_model=model_manager.gnn,
+            model=surrogate,
+            x=x,
+            edge_index=edge_index,
+            num_classes=num_classes,
+            target_node=self.node_idx,
+            direct=self.direct,
+            depth=self.depth,
+            delta_cutoff=self.delta_cutoff
+        )
 
-        _X_obs = _X_obs[lcc].astype('float32')
-        _z_obs = _z_obs[lcc]
-        _N = _A_obs.shape[0]
-        _K = _z_obs.max() + 1
-        _Z_obs = np.eye(_K)[_z_obs]
-        _An = preprocess_graph(_A_obs)
-        degrees = _A_obs.sum(0).A1
+        mode = "both"
+        if self.perturb_features and not self.perturb_structure:
+            mode = "feature"
+        elif self.perturb_structure and not self.perturb_features:
+            mode = "structure"
 
-        if self.n_perturbations is None:
-            self.n_perturbations = int(degrees[self.node_idx])
-        hidden = model_manager.gnn.GCNConv_0.out_channels
-        # End prepare
+        # logits_before = surrogate.forward(edge_index, x)[self.node_idx]
+        # pred_before = logits_before.argmax().item()
+        # prob_before = torch.softmax(logits_before, dim=0)[pred_before].item()
+        # print(f"Surrogate prediction before attack: {pred_before} (confidence: {prob_before:.4f})")
 
-        # Learn matrix W1 and W2
-        W1, W2 = train_w1_w2(dataset=gen_dataset, hidden=hidden)
+        attacker.attack(budget=self.budget, mode=mode)
 
-        # Attack
-        nettack = Nettack(_A_obs, _X_obs, _z_obs, W1, W2, self.node_idx, verbose=True)
+        # logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.node_idx]
+        # pred_after = logits_after.argmax().item()
+        # prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
+        # print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
 
-        nettack.reset()
-        nettack.attack_surrogate(n_perturbations=self.n_perturbations,
-                                 perturb_structure=self.perturb_structure,
-                                 perturb_features=self.perturb_features,
-                                 direct=self.direct,
-                                 n_influencers=self.n_influencers)
+        return attacker.x, attacker.edge_index
 
-        print(f'edges: {nettack.structure_perturbations}')
-        print(f'features: {nettack.feature_perturbations}')
-
-        self._evasion(gen_dataset, nettack.feature_perturbations, nettack.structure_perturbations)
-        self.attack_diff = gen_dataset
-
-        return gen_dataset
-
-    def dataset_diff(
-            self
-    ):
+    def attack_diff(self):
         return self.attack_diff
-
-    @staticmethod
-    def _evasion(
-            gen_dataset: GeneralDataset,
-            feature_perturbations,
-            structure_perturbations
-    ):
-        cleaned_feat_pert = list(filter(None, feature_perturbations))
-        if cleaned_feat_pert:  # list is not empty
-            x = gen_dataset.data.x.clone()
-            for vertex, feature in cleaned_feat_pert:
-                if x[vertex, feature] == 0.0:
-                    x[vertex, feature] = 1.0
-                elif x[vertex, feature] == 1.0:
-                    x[vertex, feature] = 0.0
-            gen_dataset.data.x = x
-
-        cleaned_struct_pert = list(filter(None, structure_perturbations))
-        if cleaned_struct_pert:  # list is not empty
-            edge_index = gen_dataset.data.edge_index.clone()
-            # add edges
-            for edge in cleaned_struct_pert:
-                edge_index = torch.cat((edge_index,
-                                        torch.tensor((edge[0], edge[1]), dtype=torch.int32).to(torch.int64).unsqueeze(
-                                            1)), dim=1)
-                edge_index = torch.cat((edge_index,
-                                        torch.tensor((edge[1], edge[0]), dtype=torch.int32).to(torch.int64).unsqueeze(
-                                            1)), dim=1)
-
-            gen_dataset.data.edge_index = edge_index
-
-
-class NettackGroupEvasionAttacker(
-    EvasionAttacker
-):
-    name = "NettackGroupEvasionAttacker"
-
-    def __init__(
-            self,
-            node_idxs: list,
-            **kwargs
-    ):
-        super().__init__()
-        self.node_idxs = node_idxs  # kwargs.get("node_idxs")
-        assert isinstance(self.node_idxs, list)
-        self.n_perturbations = kwargs.get("n_perturbations")
-        self.perturb_features = kwargs.get("perturb_features")
-        self.perturb_structure = kwargs.get("perturb_structure")
-        self.direct = kwargs.get("direct")
-        self.n_influencers = kwargs.get("n_influencers")
-        self.attacker = NettackEvasionAttacker(0, **kwargs)
-
-    def attack(
-            self,
-            model_manager: Type,
-            gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor
-    ) -> GeneralDataset:
-        for node_idx in self.node_idxs:
-            self.attacker.node_idx = node_idx
-            gen_dataset = self.attacker.attack(model_manager, gen_dataset, mask_tensor)
-        return gen_dataset
 
 
 class ReWattAttacker(
     EvasionAttacker
 ):
+    """
+    ReWatt: Reinforcement Learning-based Edge Rewiring Attack on GNNs.
+    """
+
     name = "ReWatt"
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        """ Availability check for the given dataset and model manager. """
+        if gen_dataset.is_multi():
+            return True
+        else:
+            return len(model_manager.gnn.embedding_levels_by_layers) - 2 >= 0
 
     def __init__(
             self,
@@ -603,6 +573,30 @@ class ReWattAttacker(
             h_method: str = 'sum',
             pooling_method: str = 'mean',
     ):
+        """
+        Initialize the ReWattAttacker.
+
+        :param element_idx: Index of the node (for node classification) or graph (for graph classification) to attack.
+        :type element_idx: int
+
+        :param eps: Fraction (0 < eps <= 1) of total edges to be considered for rewiring (defines the attack budget).
+        :type eps: float
+
+        :param epochs: Number of training epochs for the reinforcement learning agent.
+        :type epochs: int
+
+        :param mlp_hidden: Hidden dimension size for the MLPs used in the policy network.
+        :type mlp_hidden: int
+
+        :param h_method: Method used to combine node embeddings into edge representations. Options: 'sum', 'mul', 'max'.
+        :type h_method: str
+
+        :param pooling_method: Method for aggregating node embeddings into a graph-level representation. Options: 'mean', 'max'.
+        :type pooling_method: str
+
+        :return: None
+        :rtype: None
+        """
         super().__init__()
         self.element_idx = element_idx
         self.eps = eps
@@ -620,6 +614,21 @@ class ReWattAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
+        """
+        Executes the ReWatt attack on the given graph data and GNN model.
+
+        :param model_manager: model manager.
+        :type model_manager: Type
+
+        :param gen_dataset: general dataset.
+        :type gen_dataset: GeneralDataset
+
+        :param mask_tensor: desc.
+        :type mask_tensor: torch.Tensor
+
+        :return: None.
+        :rtype: None
+        """
         model = model_manager.gnn
         model.eval()
 
@@ -630,16 +639,18 @@ class ReWattAttacker(
             y = gen_dataset.dataset[graph_idx].y.squeeze()
             x = gen_dataset.dataset[graph_idx].x
             y_prob = torch.softmax(model(x, edge_index), dim=1).squeeze().max().item()
+            penultimate_layer_embeddings_idx = model.embedding_levels_by_layers.index('g') - 1
             penultimate_layer_embeddings_dim = (
-                model.get_all_layer_embeddings(x, edge_index)[model.embedding_levels_by_layers.index('g') - 1].size(1))
+                model.get_all_layer_embeddings(x, edge_index)[penultimate_layer_embeddings_idx].size(1))
         else:
             node_idx = self.element_idx
             y = gen_dataset.data.y[node_idx]
             x = gen_dataset.data.x
             edge_index = gen_dataset.data.edge_index
             y_prob = torch.softmax(model(x, edge_index)[node_idx], dim=0).max().item()
+            penultimate_layer_embeddings_idx = len(model.embedding_levels_by_layers) - 2
             penultimate_layer_embeddings_dim = (
-                model.get_all_layer_embeddings(x, edge_index)[len(model.embedding_levels_by_layers) - 2].size(1))
+                model.get_all_layer_embeddings(x, edge_index)[penultimate_layer_embeddings_idx].size(1))
 
         # the attack makes sense when the model's prediction is correct !!!
         # we use y_prob in the attack because in case the attack fails to change the class, we have saved
@@ -649,6 +660,7 @@ class ReWattAttacker(
 
         policy = ReWattPolicyNet(gnn_model=model,
                                  penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
+                                 penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
                                  node_idx=node_idx,
                                  mlp_hidden=self.mlp_hidden,
                                  h_method=self.h_method,

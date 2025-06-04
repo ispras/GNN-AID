@@ -1,50 +1,45 @@
+from gevent import monkey; monkey.patch_all()  # Must go before other imports
+
 import json
 import logging
-import multiprocessing
-from multiprocessing import Pipe
-from multiprocessing.connection import Connection
+import gevent.queue
+from gevent import Greenlet
+from multiprocessing import Pipe, Queue
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit
 import uuid
 
 from aux.data_info import DataInfo
-from web_interface.back_front.frontend_client import FrontendClient
+from web_interface.back_front.frontend_client import FrontendClient, ClientMode
 from web_interface.back_front.utils import WebInterfaceError, json_dumps, json_loads
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '57916211bb0b13ce0c676dfde280ba245'
-## Need to run redis server: sudo apt install redis-server
-socketio = SocketIO(app, async_mode='threading', message_queue='redis://', cors_allowed_origins="*")
+# Need to run redis server: sudo apt install redis-server
+socketio = SocketIO(app, async_mode='gevent', message_queue='redis://', cors_allowed_origins="*")
 
 # Store active sessions
-active_sessions = {}  # {session Id -> sid, process, conn}
+active_sessions = {}  # {session Id -> greenlet (process), child_queue, parent_queue}
 
 
 def worker_process(
         process_id: str,
-        conn: Connection,
-        sid: str
+        # conn: Connection,
+        child_queue: Queue,
+        parent_queue: Queue,
+        mode: ClientMode
 ) -> None:
     print(f"Process {process_id} started")
     # TODO problem is each process sends data to main process then to frontend.
     #  Easier to send it directly to url
 
-    client = FrontendClient(sid)
-    # client.socket.socket.send('hello from subprocess')
-
-    # import time
-    # from threading import Thread
-    # 
-    # def report(process_id):
-    #     while True:
-    #         print(f"Process {process_id} is working...")
-    #         time.sleep(1)
-    #
-    # Thread(target=report, args=(process_id,)).start()
+    sid = parent_queue.get()  # Wait until sid is received
+    client = FrontendClient(sid, mode, Queue())
+    print(f"Created FrontendClient with sid {sid}")
 
     while True:
-        command = conn.recv()  # This blocks until a command is received
+        command = parent_queue.get()  # This blocks until a command is received
         type = command.get('type')
         args = command.get('args')
         print(f"Received command: {type} with args: {args}")
@@ -95,7 +90,7 @@ def worker_process(
             else:
                 raise WebInterfaceError(f"Unknown 'part' command {get} for dataset")
 
-            conn.send(result)
+            child_queue.put(result)
 
         elif type == "block":
             block = args.get('block')
@@ -106,7 +101,6 @@ def worker_process(
             print(f"request_block: block={block}, func={func}, params={params}")
             # TODO what if raise exception? process will stop
             client.request_block(block, func, params)
-            # conn.send('{}')
 
         elif type == "model":
             do = args.get('do')
@@ -120,8 +114,12 @@ def worker_process(
                         result = client.mloadBlock.get_index()
                     elif type == "custom":
                         result = client.mcustomBlock.get_index()
-                else:
+                elif do in ['train', 'reset', 'run', 'save']:
                     result = client.mtBlock.do(do, args)
+                elif do in ['run with attacks']:
+                    result = client.atBlock.do(do, args)
+                else:
+                    raise WebInterfaceError(f"Unknown do command: '{do}'")
 
             if get:
                 if get == "satellites":
@@ -134,7 +132,7 @@ def worker_process(
                         result = ''
 
             assert result is not None
-            conn.send(result)
+            child_queue.put(result)
 
         elif type == "explainer":
             do = args.get('do')
@@ -153,43 +151,29 @@ def worker_process(
             else:
                 raise WebInterfaceError(f"Unknown 'do' command {do} for explainer")
 
-            conn.send(result)
+            child_queue.put(result)
 
-        elif type == "EXIT":
+        elif type == "STOP":
+            print(f"Process {process_id} received STOP command; it will finish")
             break
-
-    print(f"Process {process_id} received STOP command")
-    # client.drop()
 
 
 @socketio.on('connect')
 def handle_connect(
 ) -> None:
-    # FIXME create process not when socket connects but when a new tab is open
-    session_id = str(uuid.uuid4())
-    print('handle_connect', session_id, request.sid)
-    emit('session_id', {'session_id': session_id})
+    session_id = session.get('session_id')
+    print('handle_connect, session_id=', session_id, 'sid=', request.sid)
 
-    # Create a couple of connections
-    parent_conn, child_conn = Pipe()
-
-    # Start the worker process
-    process = multiprocessing.Process(target=worker_process,
-                                      args=(session_id, child_conn, request.sid))
-    active_sessions[session_id] = request.sid, process, parent_conn
-    process.start()
+    _, child_queue, parent_queue = active_sessions[session_id]
+    parent_queue.put(request.sid)
 
 
 @socketio.on('disconnect')
-def handle_disconnect(
+def handle_disconnect(*args, **kwargs
 ) -> None:
-    print('handle_disconnect from some websocket')
-
-    for session_id, (sid, process, parent_conn) in active_sessions.items():
-        if sid == request.sid:
-            # print(f"Disconnected: {session_id}")
-            stop_session(session_id)
-            break
+    session_id = session.get('session_id')
+    print('handle_disconnect, session_id=', session_id, 'sid=', request.sid)
+    stop_session(session_id)
 
 
 @app.route('/')
@@ -197,47 +181,68 @@ def home(
 ) -> str:
     # FIXME ?
     DataInfo.refresh_all_data_info()
-    return render_template('analysis.html')
+
+    mode = ClientMode.analysis
+    session_id = start_client(mode)
+    return render_template('analysis.html', session_id=session_id, mode=mode.value)
 
 
 @app.route('/analysis')
 def analysis(
 ) -> str:
-    return render_template('analysis.html')
+    mode = ClientMode.analysis
+    session_id = start_client(mode)
+    return render_template('analysis.html', session_id=session_id, mode=mode.value)
 
 
 @app.route('/interpretation')
 def interpretation(
 ) -> str:
-    return render_template('interpretation.html')
+    mode = ClientMode.interpretation
+    session_id = start_client(mode)
+    return render_template('interpretation.html', session_id=session_id, mode='lalala')
 
 
 @app.route('/defense')
 def defense(
 ) -> str:
-    return render_template('defense.html')
+    mode = ClientMode.defense
+    session_id = start_client(mode)
+    return render_template('defense.html', session_id=session_id, mode=mode.value)
 
 
-@app.route("/drop", methods=['GET', 'POST'])
-def drop(
+def start_client(
+        mode: ClientMode
 ) -> str:
-    if request.method == 'POST':
-        session_id = json.loads(request.data)['sessionId']
-        if session_id in active_sessions:
-            # raise WebInterfaceError(f"Session {session_id} is not active")
-            stop_session(session_id)
-        return ''
+    # Generate unique session id and save it in flask.session
+    session_id = str(uuid.uuid4())
+    session['session_id'] = session_id
+    print('start_client', mode, 'session_id', session_id)
+
+    # Create 2 gevent queues for communication
+    parent_queue = gevent.queue.Queue()  # messages from main to worker
+    child_queue = gevent.queue.Queue()  # messages from worker to main
+
+    # Create and start greenlet (alternative to Process)
+    greenlet = Greenlet.spawn(
+        worker_process,
+        session_id, child_queue, parent_queue, mode)
+
+    active_sessions[session_id] = greenlet, child_queue, parent_queue
+
+    return session_id
 
 
 def stop_session(
         session_id: str
 ):
-    _, process, conn = active_sessions[session_id]
+    print('stop_session', session_id)
+    process, child_queue, parent_queue = active_sessions[session_id]
 
     # Stop corresponding process
     try:
         # Send stop command
-        conn.send({'type': "STOP"})
+        parent_queue.put({'type': "STOP"})
     except Exception as e:
         print('exception:', e)
 
@@ -245,9 +250,9 @@ def stop_session(
     process.join(timeout=1)
 
     # If the process is still alive, terminate it
-    if process.is_alive():
+    if not process.dead:
         print(f"Forcefully terminating process {session_id}")
-        process.terminate()
+        process.kill()
         process.join(timeout=1)
 
     del active_sessions[session_id]
@@ -275,11 +280,9 @@ def block(
 ) -> str:
     if request.method == 'POST':
         session_id = request.form.get('sessionId')
-        assert session_id in active_sessions
+        _, _, parent_queue = active_sessions[session_id]
         print('block request from', session_id)
-        _, process, conn = active_sessions[session_id]
-
-        conn.send({'type': 'block', 'args': request.form})
+        parent_queue.put({'type': 'block', 'args': request.form})
         return '{}'
 
 
@@ -289,25 +292,26 @@ def url(
 ) -> str:
     assert url in ['dataset', 'model', 'explainer']
     if request.method == 'POST':
-        sid = request.form.get('sessionId')
-        _, process, conn = active_sessions[sid]
-        print(url, 'request from', sid)
+        session_id = request.form.get('sessionId')
+        _, child_queue, parent_queue = active_sessions[session_id]
+        print(url, 'request from', session_id)
 
-        conn.send({'type': url, 'args': request.form})
-        return conn.recv()
+        parent_queue.put({'type': url, 'args': request.form})
+        return child_queue.get()
 
 
 if __name__ == '__main__':
     # print(f"Async mode is: {socketio.async_mode}")
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    app.debug = True
 
-    # TODO switch to 'run' in production
-    #  In production mode the eventlet web server is used if available,
-    #  else the gevent web server is used. If eventlet and gevent are not installed,
-    #  the Werkzeug development web server is used.
-    # app.run(debug=True, port=4568)
-
-    # TODO Flask development web server is used, use eventlet or gevent,
-    #  see https://flask-socketio.readthedocs.io/en/latest/deployment.html
-    # socketio.run(app, host='0.0.0.0', debug=True, port=4567,
-    #              allow_unsafe_werkzeug=True)
+    # For development
+    if app.debug:
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+        print('Flask DEBUG')
+        print('Go to http://127.0.0.1:5000/')
+    # For production
+    else:
+        from gevent import pywsgi
+        from geventwebsocket.handler import WebSocketHandler
+        server = pywsgi.WSGIServer(('0.0.0.0', 5000), app, handler_class=WebSocketHandler)
+        server.serve_forever()

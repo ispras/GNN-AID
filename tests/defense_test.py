@@ -1,5 +1,4 @@
 import unittest
-
 import numpy as np
 
 from attacks.mi_attacks import MIAttacker
@@ -9,7 +8,11 @@ from data_structures.configs import ModelModificationConfig, DatasetConfig, Data
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, \
+    import_all_from_package
+
+import defenses
+import_all_from_package(defenses)  # to import all subclasses properly
 
 
 class DefenseTest(unittest.TestCase):

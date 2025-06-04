@@ -60,11 +60,11 @@ class ExplainerLoadBlock(Block):
     def _init(
             self,
             gen_dataset: GeneralDataset,
-            gmm: GNNModelManager
+            gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
-        self.gmm = gmm
+        self.gmm, _ = gmm_and_metrics
         return [gen_dataset.dataset.num_node_features, gen_dataset.is_multi(), self.get_index()]
         # return self.get_index()
 
@@ -147,11 +147,11 @@ class ExplainerInitBlock(Block):
     def _init(
             self,
             gen_dataset: GeneralDataset,
-            gmm: GNNModelManager
+            gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
-        self.gmm = gmm
+        self.gmm, _ = gmm_and_metrics
         return FrameworkExplainersManager.available_explainers(self.gen_dataset, self.gmm)
 
     def _finalize(
