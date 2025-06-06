@@ -213,7 +213,8 @@ class ExplainerRunBlock(Block):
             )
 
             print(f"explainer_run_config: {self.explainer_run_config.to_json()}")
-            self._run_explainer()
+            from threading import Thread
+            Thread(target=self._run_explainer, args=()).start()
             return ''
 
         # elif do == "save":

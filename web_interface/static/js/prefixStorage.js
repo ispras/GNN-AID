@@ -67,7 +67,7 @@ class PrefixStorage {
 
     // Build PrefixStorage from its json
     static fromJSON(string) {
-        let obj = JSON.parse(string)
+        let obj = JSON_parse(string)
         let ps = new PrefixStorage(obj["keys"])
         ps.content = obj["content"]
         return ps

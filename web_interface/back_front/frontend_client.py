@@ -68,13 +68,11 @@ class FrontendClient:
 
     def __init__(
             self,
-            sid: str,
+            socket_connect: SocketConnect,
             mode: ClientMode,
-            queue: Queue
     ):
-        self.sid = sid  # socket ID
         self.mode = mode  # mode: analysis, interpretation, defense
-        self.socket = SocketConnect(sid=sid, queue=queue)
+        self.socket = socket_connect
 
         # Build the diagram
         self.diagram = Diagram()

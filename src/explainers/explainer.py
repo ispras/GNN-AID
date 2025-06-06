@@ -3,17 +3,17 @@ from time import sleep
 from abc import ABC, abstractmethod
 from typing import Union, Callable, Any, Type
 
-from flask_socketio import SocketIO
 from tqdm import tqdm
 
 from base.datasets_processing import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
+from web_interface.back_front.utils import SocketConnect
 
 
 class ProgressBar(tqdm):
     def __init__(
             self,
-            socket: SocketIO,
+            socket: SocketConnect,
             dst,
             *args,
             **kwargs
