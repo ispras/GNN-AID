@@ -97,7 +97,8 @@ async def handle_ask(request):
     if ask_cmd == "parameters":
         type_ = data.get('type')
         params = FrontendClient.get_parameters(type_)
-        return web.json_response(params)
+        params = json_dumps(params)
+        return web.Response(text=params)
     else:
         return web.Response(status=400, text=f"Unknown 'ask' command {ask_cmd}")
 

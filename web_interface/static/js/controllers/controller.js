@@ -129,7 +129,7 @@ class Controller {
         console.assert(!('sid' in data))
         data['sid'] = this.sid
         data['sessionId'] = this.sessionId
-        console.log('ajax request', data)
+        // console.log('ajax request', data)
         await $.ajax({
             type: 'POST',
             url: url,
@@ -138,7 +138,7 @@ class Controller {
             // contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
             success: (res, status, jqXHR) => {
                 result = res
-                console.log('got ajax result', result)
+                // console.log('got ajax result', result)
             },
             error: function(xhr, status, error) {
                 console.error('AJAX error:', status, error);

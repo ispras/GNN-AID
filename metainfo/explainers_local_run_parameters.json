@@ -2,7 +2,7 @@
  "Zorro": {
   "element_idx": ["Node","int",0,{"min": 0},null],
   "tau": ["tau", "float", 0.15, {"min": 0, "max": 1, "step": 0.01}, "Tau-metric of explanation from the article"],
-  "recursion_depth": ["Recursion depth", "int", "Infinity", {"min": 1, "special": ["Infinity"]}, "?"],
+  "recursion_depth": ["Recursion depth", "int", Infinity, {"min": 1, "special": [Infinity]}, "?"],
   "save_initial_improve": ["Save initial improve", "bool", false, null, "?"],
   "_technical_parameter": {
    "dataset": ["single"]
