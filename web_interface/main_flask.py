@@ -12,7 +12,7 @@ import uuid
 
 from aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import FrontendClient, ClientMode
-from web_interface.back_front.utils import WebInterfaceError, json_dumps, json_loads
+from web_interface.back_front.utils import WebInterfaceError, json_dumps, json_loads, SocketConnect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '57916211bb0b13ce0c676dfde280ba245'
@@ -35,7 +35,8 @@ def worker_process(
     #  Easier to send it directly to url
 
     sid = parent_queue.get()  # Wait until sid is received
-    client = FrontendClient(sid, mode, Queue())
+    socket_connect = FlaskSocketConnect(sid, socketio)
+    client = FrontendClient(socket_connect, mode)
     print(f"Created FrontendClient with sid {sid}")
 
     while True:
@@ -184,7 +185,7 @@ def home(
 
     mode = ClientMode.analysis
     session_id = start_client(mode)
-    return render_template('analysis.html', session_id=session_id, mode=mode.value)
+    return render_template('analysis.html', sessionId=session_id, mode=mode.value)
 
 
 @app.route('/analysis')
@@ -192,7 +193,7 @@ def analysis(
 ) -> str:
     mode = ClientMode.analysis
     session_id = start_client(mode)
-    return render_template('analysis.html', session_id=session_id, mode=mode.value)
+    return render_template('analysis.html', sessionId=session_id, mode=mode.value)
 
 
 @app.route('/interpretation')
@@ -200,7 +201,7 @@ def interpretation(
 ) -> str:
     mode = ClientMode.interpretation
     session_id = start_client(mode)
-    return render_template('interpretation.html', session_id=session_id, mode='lalala')
+    return render_template('interpretation.html', sessionId=session_id, mode='lalala')
 
 
 @app.route('/defense')
@@ -208,7 +209,7 @@ def defense(
 ) -> str:
     mode = ClientMode.defense
     session_id = start_client(mode)
-    return render_template('defense.html', session_id=session_id, mode=mode.value)
+    return render_template('defense.html', sessionId=session_id, mode=mode.value)
 
 
 def start_client(
@@ -300,18 +301,35 @@ def url(
         return child_queue.get()
 
 
-if __name__ == '__main__':
+class FlaskSocketConnect(SocketConnect):
+    def __init__(self, sid: str, socket: SocketIO = None):
+        super().__init__()
+        if socket is None:
+            self.socket = SocketIO(message_queue='redis://')
+        else:
+            self.socket = socket
+        self.sid = sid
+
+    def _send_data(self, data):
+        self.socket.send(data, to=self.sid)
+
+
+def run_flask_server(port=5000, debug=False):
     # print(f"Async mode is: {socketio.async_mode}")
-    app.debug = True
+    app.debug = debug
 
     # For development
     if app.debug:
-        socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+        socketio.run(app, host='0.0.0.0', port=port, debug=True)
         print('Flask DEBUG')
-        print('Go to http://127.0.0.1:5000/')
+        print(f'Go to http://127.0.0.1:{port}/')
     # For production
     else:
         from gevent import pywsgi
         from geventwebsocket.handler import WebSocketHandler
-        server = pywsgi.WSGIServer(('0.0.0.0', 5000), app, handler_class=WebSocketHandler)
+        server = pywsgi.WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
         server.serve_forever()
+
+
+if __name__ == '__main__':
+    run_flask_server()

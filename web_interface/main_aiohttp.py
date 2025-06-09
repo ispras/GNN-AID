@@ -1,0 +1,349 @@
+import asyncio
+import json
+import logging
+# import multiprocessing as mp
+# mp.set_start_method("spawn", force=True)
+
+from multiprocessing import Process, Queue
+from typing import Dict
+from aiohttp import web
+import socketio
+import jinja2
+import aiohttp_jinja2
+
+from aux.data_info import DataInfo
+from web_interface.back_front.frontend_client import ClientMode, FrontendClient
+from web_interface.back_front.utils import WebInterfaceError, json_loads, json_dumps, SocketConnect
+
+# Socket.IO server (ASGI not used here)
+sio = socketio.AsyncServer(async_mode="aiohttp")
+app = web.Application()
+sio.attach(app)
+
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader("templates"))
+
+clients = {}  # client_id (sid) -> asyncio.Task
+queues: Dict[str, Queue] = {}
+
+
+# Route for interpretation
+# @aiohttp_jinja2.template("interpretation.html")
+async def handle_interpretation(request):
+    print("[http] /interpretation")
+    DataInfo.refresh_all_data_info()
+    # return {
+    #     "request": request,
+    #     "mode": ClientMode.interpretation.value
+    # }
+    context = {
+            "request": request,
+            "mode": "interpretation"
+        }
+    return aiohttp_jinja2.render_template("interpretation.html", request, context)
+
+
+# # Route for home and analysis
+# @aiohttp_jinja2.template("analysis.html")
+# async def handle_analysis(request):
+#     print("[http] /analysis")
+#     # FIXME
+#     DataInfo.refresh_all_data_info()
+#     return {
+#         "request": request,
+#         "mode": ClientMode.analysis.value
+#     }
+
+
+# Route for defense
+@aiohttp_jinja2.template("defense.html")
+async def handle_defense(request):
+    print("[http] /defense")
+    DataInfo.refresh_all_data_info()
+    return {
+        "request": request,
+        "mode": ClientMode.defense.value
+    }
+
+
+# Route: POST /block
+async def handle_block(request):
+    data = await request.post()
+    sid = data.get("sid")
+
+    if sid not in clients:
+        return web.Response(status=404, text="Unknown SID")
+
+    response_queue, _, request_queue = queues[sid]
+
+    print('handler: http request from', sid, 'args', dict(data))
+    request_queue.put({"type": 'block', "args": dict(data)})
+
+    # Wait for response from worker
+    result = response_queue.get()
+    print('handler: got response')
+    return web.Response(text=str(result))
+
+
+# /ask endpoint
+async def handle_ask(request):
+    data = await request.post()
+    sid = data.get('sid')
+    if sid not in clients:
+        return web.Response(status=400, text="Unknown SID")
+
+    print('ask request from', sid)
+    ask_cmd = data.get('ask')
+
+    if ask_cmd == "parameters":
+        type_ = data.get('type')
+        params = FrontendClient.get_parameters(type_)
+        params = json_dumps(params)
+        return web.Response(text=params)
+    else:
+        return web.Response(status=400, text=f"Unknown 'ask' command {ask_cmd}")
+
+
+# dynamic /{url} endpoint
+async def handle_url(request):
+    url = request.match_info.get("url")
+    print('url', url)
+    if url not in ['dataset', 'model', 'explainer']:
+        return web.Response(status=404, text="Invalid URL")
+
+    if request.method == "POST":
+        data = await request.post()
+        sid = data.get("sid")
+
+        if sid not in clients:
+            return web.Response(status=404, text="Unknown SID")
+
+        response_queue, _, request_queue = queues[sid]
+
+        print(url, 'request from', sid)
+        request_queue.put({"type": url, "args": dict(data)})
+
+        result = response_queue.get()
+        return web.Response(text=str(result))
+
+    return web.Response(status=405, text="Method Not Allowed")
+
+
+# Register routes
+# app.router.add_get("/", handle_analysis)
+# app.router.add_get("/analysis", handle_analysis)
+# app.router.add_get("/defense", handle_defense)
+app.router.add_get("/interpretation", handle_interpretation)
+app.router.add_post("/block", handle_block)
+app.router.add_post("/ask", handle_ask)
+app.router.add_post("/{url}", handle_url)
+
+app.router.add_static('/static/', path='static', name='static')
+
+
+# Socket.IO connection
+@sio.event
+async def connect(sid, environ):
+    # Parse mode from query
+    query_string = environ.get('QUERY_STRING', '')
+    query = dict(qc.split('=') for qc in query_string.split('&') if '=' in qc)
+    mode = query.get('mode', None)
+    mode = ClientMode(mode)
+
+    print(f"[connect] {sid}, mode={mode}")
+    task = asyncio.create_task(client_wrapper(sid, mode))
+    clients[sid] = task
+
+
+@sio.event
+async def disconnect(sid):
+    print(f"[disconnect] {sid}")
+    clients.pop(sid, None)
+
+
+async def client_wrapper(sid: str, mode: ClientMode):
+    response_queue = Queue()
+    msg_queue = Queue()
+    request_queue = Queue()
+    queues[sid] = response_queue, msg_queue, request_queue
+
+    print("creating process")
+    proc = Process(
+        target=worker_process,
+        args=(sid, response_queue, msg_queue, request_queue, mode))
+    proc.start()
+    print("Process created")
+
+    loop = asyncio.get_event_loop()
+    try:
+        while True:
+            if not proc.is_alive() and msg_queue.empty():
+                print('proc is not alive anymore and queue is empty')
+                break
+
+            msg = await loop.run_in_executor(None, msg_queue.get)
+            print(f"got msg from queue [{len(msg)}] {str(msg)[:80]}")
+            await sio.emit("message", msg, to=sid)
+
+        print("end while")
+
+    # except asyncio.CancelledError:
+    #     print('asyncio.CancelledError')
+    #     stop_event.set()
+    #     proc.join(timeout=1)
+    #     if proc.is_alive():
+    #         proc.terminate()
+    #         proc.join(timeout=1)
+    except Exception as e:
+        print('exception', e)
+
+
+# Worker process logic
+def worker_process(
+        sid: str,
+        response_queue: Queue,
+        msg_queue: Queue,
+        request_queue: Queue,
+        mode: ClientMode
+) -> None:
+    print(f"Process {sid} started")
+
+    sid = sid
+    socket_connect = AiohttpSocketConnect(msg_queue)
+    client = FrontendClient(socket_connect, mode)
+    print(f"Created FrontendClient with sid {sid}")
+
+    while True:
+        print('Worker is waiting for command...')
+        command = request_queue.get()
+        type = command.get('type')
+        args = command.get('args')
+        print(f"Worker: received command: {type} with args: {args}")
+
+        if type == "dataset":
+            get = args.get('get')
+            set = args.get('set')
+            part = args.get('part')
+            if part:
+                part = json_loads(part)
+
+            if set == "visible_part":
+                result = client.dcBlock.set_visible_part(part=part)
+
+            elif get == "data":
+                dataset_data = client.dcBlock.get_dataset_data(part=part)
+                data = json.dumps(dataset_data)
+                logging.info(f"Length of dataset_data: {len(data)}")
+                result = data
+
+            elif get == "var_data":
+                if not client.dvcBlock.is_set():
+                    result = ''
+                else:
+                    dataset_var_data = client.dvcBlock.get_dataset_var_data(part=part)
+                    data = json.dumps(dataset_var_data)
+                    logging.info(f"Length of dataset_var_data: {len(data)}")
+                    result = data
+
+            elif get == "stat":
+                stat = args.get('stat')
+                result = json_dumps(client.dcBlock.get_stat(stat))
+
+            elif get == "index":
+                result = client.dcBlock.get_index()
+
+            else:
+                raise WebInterfaceError(f"Unknown 'part' command {get} for dataset")
+
+            response_queue.put(result)
+            print("Worker puts result to response_queue")
+
+        elif type == "block":
+            print("block section")
+            block = args.get('block')
+            func = args.get('func')
+            params = args.get('params')
+            if params:
+                params = json_loads(params)
+            print(f"request_block: block={block}, func={func}, params={params}")
+            # TODO what if raise exception? process will stop
+            client.request_block(block, func, params)
+            response_queue.put('')
+            print("Worker puts result to response_queue")
+
+        elif type == "model":
+            do = args.get('do')
+            get = args.get('get')
+
+            if do:
+                print(f"model.do: do={do}, params={args}")
+                if do == 'index':
+                    type = args.get('type')
+                    if type == "saved":
+                        result = client.mloadBlock.get_index()
+                    elif type == "custom":
+                        result = client.mcustomBlock.get_index()
+                elif do in ['train', 'reset', 'run', 'save']:
+                    result = client.mtBlock.do(do, args)
+                elif do in ['run with attacks']:
+                    result = client.atBlock.do(do, args)
+                else:
+                    raise WebInterfaceError(f"Unknown do command: '{do}'")
+
+            if get:
+                if get == "satellites":
+                    if client.mmcBlock.is_set():
+                        part = args.get('part')
+                        if part:
+                            part = json_loads(part)
+                        result = client.mmcBlock.get_satellites(part=part)
+                    else:
+                        result = ''
+
+            assert result is not None
+            response_queue.put(result)
+
+        elif type == "explainer":
+            do = args.get('do')
+
+            print(f"explainer.do: do={do}, params={args}")
+
+            if do in ["run", "stop"]:
+                result = client.erBlock.do(do, args)
+
+            elif do == 'index':
+                result = client.elBlock.get_index()
+
+            # elif do == "save":
+            #     return client.save_explanation()
+
+            else:
+                raise WebInterfaceError(f"Unknown 'do' command {do} for explainer")
+
+            response_queue.put(result)
+
+        elif type == "STOP":
+            print(f"Process {sid} received STOP command; it will finish")
+            break
+        else:
+            raise WebInterfaceError(f"Unknown command type: 'f{type}'")
+
+
+class AiohttpSocketConnect(SocketConnect):
+    """
+    Implementation for aiohttp - puts messages to multiprocessing.Queue
+    """
+    def __init__(self, queue: Queue):
+        super().__init__()
+        self.mp_queue = queue
+
+    def _send_data(self, data):
+        self.mp_queue.put_nowait(data)
+        print(f"put msg to mpqueue [{len(str(data))}] {str(data)[:40]}")
+
+
+def run_aiohttp_server(port=5000):
+    web.run_app(app, port=port)
+
+
+if __name__ == '__main__':
+    run_aiohttp_server()

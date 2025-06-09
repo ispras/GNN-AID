@@ -386,7 +386,11 @@ class ModelTrainerBlock(Block):
             steps = json.loads(params.get('steps'))
             self.metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
             self._adjust_metrics()
-            self._train_model(mode=mode, steps=steps)
+
+            from threading import Thread
+            Thread(target=self._train_model, args=(mode, steps)).start()
+            # NOTE: we need to return context instantly to avoid main process waiting and blocking
+            # emitting messages to frontend
             return ''
 
         elif do == "save":

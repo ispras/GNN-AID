@@ -293,11 +293,12 @@
     // })
 
     const mode = "{{ mode }}"
+    const sessionId = "{{ sessionId }}"
 
-    console.log('html page created, mode=', mode)
+    console.log('html page created, sessionId=', sessionId, 'mode=', mode)
 
     // Create client controller
-    let controller = new Controller(mode)
+    let controller = new Controller(sessionId, mode)
   </script>
 </body>
 </html>

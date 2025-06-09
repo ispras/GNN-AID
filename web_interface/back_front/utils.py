@@ -1,12 +1,8 @@
-from threading import Thread
-from time import sleep
-
-from flask_socketio import SocketIO
-from typing import Any
-
 import json
 from collections import deque
-from multiprocessing import Queue as mpQueue
+from threading import Thread
+from time import sleep
+from typing import Any
 
 import numpy as np
 
@@ -64,20 +60,13 @@ class Queue(deque):
 class SocketConnect:
     """ Sends messages to JS socket from a python process
     """
+    _framework = '?'
     # max_packet_size = 1024**2  # 1MB limit by default
 
     def __init__(
             self,
-            sid: str,
-            queue: mpQueue
     ):
-        # if socket is None:
-        self.socket = SocketIO(message_queue='redis://')
-        # else:
-        #     self.socket = socket
-        self.sid = sid
         self.queue = deque()  # general queue
-        self.mpqueue = queue  # FIXME
         self.tag_queue = {}  # {tag -> Queue}
         self.obj_id = 0  # Messages ids counter
         self.sleep_time = 0.5
@@ -106,25 +95,19 @@ class SocketConnect:
         self.queue.append((data, tag, self.obj_id))
         if tag not in self.tag_queue:
             self.tag_queue[tag] = Queue()
-        print('push', tag, self.obj_id, obligate)
         self.tag_queue[tag].push(data, self.obj_id, obligate)  # FIXME tmp
         self.obj_id += 1
 
-        self.mpqueue.put(data)
-        print('put msg to mpqueue', str(data)[:40])
-
-        # if not self.active:
-        #     print('Thread.start')
-        #     Thread(target=self._cycle, args=()).start()
+        if not self.active:
+            print('Thread.start')
+            Thread(target=self._cycle, args=()).start()
 
     def _send(
             self
     ) -> None:
         """ Send leftmost actual data element from the queue. """
-        print('_send()')
         data = None
         # Find actual data elem
-        print('len(self.queue)', len(self.queue))
         while len(self.queue) > 0:
             data, tag, id = self.queue.popleft()
             # Check if actual
@@ -134,13 +117,10 @@ class SocketConnect:
         if data is None:
             return
 
-        print('self.socket.send()')
-        self.socket.send(data, to=self.sid)
-        # await self.sio.emit(data, to=self.sid)
-        print('self.socket.send() done')
         size = len(json_dumps(data))
         if size > 25e6:
             raise RuntimeError(f"Too big package size: {size} bytes")
+        self._send_data(data)
         self.sleep_time = 0.5 * size / 25e6 * 10
         print('sent data', id, tag, 'of len=', size, 'sleep', self.sleep_time)
 
@@ -150,14 +130,16 @@ class SocketConnect:
         """ Send messages from the queue until it is empty. """
         self.active = True
         while True:
-            print('len(self.queue) =', len(self.queue))
             if len(self.queue) == 0:
                 self.active = False
                 break
             self._send()
-            print('self.sleep_time =', self.sleep_time)
             sleep(self.sleep_time)
-            print('sleep done')
+
+    def _send_data(self, data):
+        """ Send data to web socket. """
+        # To be implemented in subclass
+        raise NotImplementedError
 
 
 def json_dumps(

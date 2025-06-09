@@ -1,8 +1,9 @@
 class Controller {
-    constructor(mode) {
+    constructor(sessionId, mode) {
+        this.sessionId = sessionId // ID of session
         this.sid = null
-        this.isActive = false // this controller was started
         this.mode = mode
+        this.isActive = false // this controller was started
         this.presenter = new Presenter()
 
         // Setup socket connection
@@ -10,6 +11,7 @@ class Controller {
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
+            query: {mode: mode},
         })
         this.socket.on('connect', () => {
             console.log('socket connected, sid=', this.socket.id)
@@ -17,13 +19,13 @@ class Controller {
             if (this.isActive) {
                 // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
                 // Means re-connection to server. Need to reload the page
-                alert("This session is outdated. Press OK to reload the page.")
+                alert("Web-socket connection is lost. Press OK to reload the page.")
                 this.isActive = false
                 window.location.reload(true)
             }
             else {
                 this.isActive = true
-                console.log('sid', this.sid)
+                console.log('sid', this.sid, 'sessionId', this.sessionId)
                 this.run()
             }
         })
@@ -52,7 +54,7 @@ class Controller {
             console.log('Disconnected from server, sid=', this.socket.id);
             if (this.isActive) {
                 // Show a notification to the user
-                alert("This session is outdated. Press OK to reload the page.")
+                alert("Web-socket connection is lost. Press OK to reload the page.")
                 this.isActive = false
                 window.location.reload(true)
             }
@@ -60,7 +62,7 @@ class Controller {
 
         this.socket.on('message', async (data) => {
             // Message to block listeners
-            console.log('received msg')
+            // console.log('received msg', data)
             let msg = JSON_parse(data["msg"])
             let block = data["block"]
             let func = data["func"]
@@ -126,14 +128,17 @@ class Controller {
         let result = null
         console.assert(!('sid' in data))
         data['sid'] = this.sid
-        console.log('ajaxRequest', data)
+        data['sessionId'] = this.sessionId
+        // console.log('ajax request', data)
         await $.ajax({
             type: 'POST',
             url: url,
             data: data,
-            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            // contentType: 'application/json',
+            // contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
             success: (res, status, jqXHR) => {
                 result = res
+                // console.log('got ajax result', result)
             },
             error: function(xhr, status, error) {
                 console.error('AJAX error:', status, error);
