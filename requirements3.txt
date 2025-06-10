@@ -17,9 +17,3 @@ pgmpy==0.1.24
 
 # For synthetic datasets
 matplotlib
-
-# Possible (check!)
-psutil
-# tf2onnx==1.14.0
-# onnx2torch==1.2.0
-# onnx==1.10.0

@@ -27,37 +27,31 @@ queues: Dict[str, Queue] = {}
 
 
 # Route for interpretation
-# @aiohttp_jinja2.template("interpretation.html")
+@aiohttp_jinja2.template("interpretation.html")
 async def handle_interpretation(request):
-    print("[http] /interpretation")
+    # print("[http] /interpretation")
     DataInfo.refresh_all_data_info()
-    # return {
-    #     "request": request,
-    #     "mode": ClientMode.interpretation.value
-    # }
-    context = {
-            "request": request,
-            "mode": "interpretation"
-        }
-    return aiohttp_jinja2.render_template("interpretation.html", request, context)
+    return {
+        "request": request,
+        "mode": ClientMode.interpretation.value
+    }
 
 
-# # Route for home and analysis
-# @aiohttp_jinja2.template("analysis.html")
-# async def handle_analysis(request):
-#     print("[http] /analysis")
-#     # FIXME
-#     DataInfo.refresh_all_data_info()
-#     return {
-#         "request": request,
-#         "mode": ClientMode.analysis.value
-#     }
+# Route for home and analysis
+@aiohttp_jinja2.template("analysis.html")
+async def handle_analysis(request):
+    # print("[http] /analysis")
+    DataInfo.refresh_all_data_info()
+    return {
+        "request": request,
+        "mode": ClientMode.analysis.value
+    }
 
 
 # Route for defense
 @aiohttp_jinja2.template("defense.html")
 async def handle_defense(request):
-    print("[http] /defense")
+    # print("[http] /defense")
     DataInfo.refresh_all_data_info()
     return {
         "request": request,
@@ -129,9 +123,9 @@ async def handle_url(request):
 
 
 # Register routes
-# app.router.add_get("/", handle_analysis)
-# app.router.add_get("/analysis", handle_analysis)
-# app.router.add_get("/defense", handle_defense)
+app.router.add_get("/", handle_analysis)
+app.router.add_get("/analysis", handle_analysis)
+app.router.add_get("/defense", handle_defense)
 app.router.add_get("/interpretation", handle_interpretation)
 app.router.add_post("/block", handle_block)
 app.router.add_post("/ask", handle_ask)

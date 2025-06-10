@@ -193,7 +193,7 @@ def test_attack_defense():
     )
 
     netattack_evasion_attack_config = ConfigPattern(
-        _class_name="NettackEvasionAttacker",
+        _class_name="Nettack",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
@@ -203,20 +203,6 @@ def test_attack_defense():
             "perturb_structure": True,
             "direct": True,
             "n_influencers": 3
-        }
-    )
-
-    netattackgroup_evasion_attack_config = ConfigPattern(
-        _class_name="NettackGroupEvasionAttacker",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "node_idxs": [random.randint(0, 500) for _ in range(20)],  # Nodes for attack
-            "n_perturbations": 50,
-            "perturb_features": True,
-            "perturb_structure": True,
-            "direct": True,
-            "n_influencers": 10
         }
     )
 
@@ -312,10 +298,10 @@ def test_attack_defense():
     try:
         raise FileNotFoundError()
         # gnn_model_manager.load_model_executor()
-        # dataset = gnn_model_manager.apply_poison_attack_diff(
+        # dataset = gnn_model_manager.load_or_execute_poisoning_attack(
         #     gen_dataset=dataset
         # )
-        # dataset = gnn_model_manager.apply_poison_defense_diff(
+        # dataset = gnn_model_manager.load_or_execute_poisoning_defense(
         #     gen_dataset=dataset
         # )
     except FileNotFoundError:
@@ -488,7 +474,7 @@ def test_nettack_evasion():
 
     # Attack config
     evasion_attack_config = ConfigPattern(
-        _class_name="NettackEvasionAttacker",
+        _class_name="Nettack",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
