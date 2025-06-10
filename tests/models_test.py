@@ -13,7 +13,6 @@ utils.MODELS_DIR = tmp_dir
 
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from aux.configs import ModelManagerConfig, ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
@@ -109,13 +108,15 @@ class ModelsTest(unittest.TestCase):
             _config_class="ModelManagerConfig",
             _config_kwargs={
                 "mask_features": [],
-                # "optimizer": {
-                #     # "_config_class": "Config",
-                #     "_class_name": "Adam",
-                #     # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
-                #     # "_class_import_info": ["torch.optim"],
-                #     "_config_kwargs": {},
-                # }
+                "optimizer": {
+                    # "_config_class": "Config",
+                    "_class_name": "Adam",
+                    # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                    # "_class_import_info": ["torch.optim"],
+                    "_config_kwargs": {
+                        "lr": 0.01
+                    },
+                }
             }
         )
 
@@ -268,6 +269,24 @@ class ModelsTest(unittest.TestCase):
         print(metric_loc)
         sg_cora_model_path = gsat_gnn_mm_sg_cora.model_path_info() / 'model'
         gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
+    def test_model_on_cora(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
+
+        gcn_gcn_mm_sg_cora = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        gcn_gcn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = gcn_gcn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = gcn_gcn_mm_sg_cora.model_path_info() / 'model'
+        gcn_gcn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
 
 
 if __name__ == '__main__':

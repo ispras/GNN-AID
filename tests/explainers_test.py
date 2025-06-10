@@ -22,7 +22,7 @@ from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
+from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
     ExplainerInitConfig, ConfigPattern, ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
 import explainers
@@ -202,12 +202,28 @@ class ExplainersTest(unittest.TestCase):
         self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
         # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
 
+
         self.gsat_config = ConfigPattern(
             _config_class="ModelManagerConfig",
             _config_kwargs={
                 "mask_features": [],
+                "optimizer": {
+                    # "_config_class": "Config",
+                    "_class_name": "Adam",
+                    # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                    # "_class_import_info": ["torch.optim"],
+                    "_config_kwargs": {
+                        "lr": 0.01
+                    },
+                }
             }
         )
+        # self.gsat_config = ConfigPattern(
+        #     _config_class="ModelManagerConfig",
+        #     _config_kwargs={
+        #         "mask_features": [],
+        #     }
+        # )
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,

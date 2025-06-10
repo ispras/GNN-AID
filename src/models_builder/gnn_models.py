@@ -5,45 +5,22 @@ from pathlib import Path
 from types import FunctionType
 from typing import Callable, List, Union, Type, Iterable, cast
 
-import numpy as np
-import torch
 import sklearn.metrics
 import torch
 from torch import tensor
-from torch import nn
-import torch.nn.functional as F
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
-from torch_geometric.nn import InstanceNorm
-from torch_geometric.utils import is_undirected, sort_edge_index
-from torch_sparse import transpose
 
-from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME
 from aux.data_info import UserCodeInfo
-from aux.declaration import Declare
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    MI_ATTACK_PARAMETERS_PATH, \
-    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
-from explainers.explainer import ProgressBar
-from explainers.ProtGNN.MCTS import mcts_args
-from attacks.evasion_attacks import EvasionAttacker
-from attacks.mi_attacks import MIAttacker
-from attacks.poison_attacks import PoisonAttacker
-from aux.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, EvasionAttackConfig, MIAttackConfig, \
-    PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from defense.evasion_defense import EvasionDefender
-from defense.mi_defense import MIDefender
-from defense.poison_defense import PoisonDefender
-from models_builder.models_utils import apply_decorator_to_graph_layers, apply_attention
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
@@ -899,7 +876,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 ).merge(self.manager_config)
 
         # Add fields from additional config
-        self.manager_config = self.manager_config.merge(self.additional_config)
+        self.manager_config = self.additional_config.merge(self.manager_config)
 
         self.gnn = gnn
 
