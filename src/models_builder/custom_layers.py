@@ -199,6 +199,7 @@ class GSATLayer(torch.nn.Module):
                 edge_att = self.lift_node_att_to_edge_att(att, edge_index)
 
             self.edge_att = edge_att  # for explanation
+            self.node_att = att  # for explanation
             # loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
 
             full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value

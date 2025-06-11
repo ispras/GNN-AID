@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from torch import Tensor
@@ -17,7 +17,14 @@ class GSATExplainer(Explainer):
         """ Availability check for the given dataset and model manager. """
         return any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules())
 
-    def __init__(self, gen_dataset, model, device, thrsh):
+    def __init__(
+            self,
+            gen_dataset,
+            model,
+            device,
+            expl_type: Literal['binary', 'continuous'] = 'continuous',
+            thrsh: float = 0.5
+    ):
         Explainer.__init__(self, gen_dataset, model)
 
         if hasattr(self.model, 'eval'):
@@ -25,6 +32,7 @@ class GSATExplainer(Explainer):
         self.device = device
         if hasattr(self.model, 'to'):
             self.model.to(self.device)
+        self.expl_type = expl_type
         self.thrsh = thrsh
 
     @finalize_decorator
@@ -64,36 +72,65 @@ class GSATExplainer(Explainer):
         self.explained_node = node_idx = kwargs.get('node_idx')
 
         self.model.get_predictions(x, edge_index).squeeze()
-        att = getattr(self.model, self.model.gsat_layer_name).edge_att
-        raw_explanation = self.get_filtered_k_hop_subgraph(node_idx, self.model.get_num_hops(), edge_index, att, self.thrsh)
+        edge_att = getattr(self.model, self.model.gsat_layer_name).edge_att
+        node_att = getattr(self.model, self.model.gsat_layer_name).node_att
+        if self.expl_type == 'binary':
+            raw_explanation = self.get_filtered_k_hop_subgraph(node_idx, self.model.get_num_hops(), edge_index, edge_att,
+                                                               self.thrsh)
+        else:
+            edge_dict = {}
+            for i in range(edge_index.shape[1]):
+                edge = (edge_index[0, i].item(), edge_index[1, i].item())
+                att = edge_att[i].item()
+                edge_dict[edge] = att
+            raw_explanation = {'edge_dict': edge_dict, 'node_att': node_att}  # no self-loops
 
         return raw_explanation
 
     def _finalize(self):
         mode = self._run_mode
         # assert mode == "global"
-        self.explanation = AttributionExplanation(local=mode, nodes="binary", edges="binary")
+        if self.expl_type == 'binary':
+            self.explanation = AttributionExplanation(local=mode, nodes="binary", edges="binary")
 
-        edge_index = self.raw_explanation
-        edges_values = {}
+            edge_index = self.raw_explanation
 
-        for i in range(edge_index.shape[1]):
-            src = edge_index[0, i].item()
-            dst = edge_index[1, i].item()
-            edges_values[f"{src},{dst}"] = 1
+            edges_values = {}
+            for i in range(edge_index.shape[1]):
+                src = edge_index[0, i].item()
+                dst = edge_index[1, i].item()
+                edges_values[f"{src},{dst}"] = 1
 
-        self.explanation.add_edges(edges_values)
+            self.explanation.add_edges(edges_values)
 
-        # Nodes
-        nodes_values = {}
-        for i in range(edge_index.shape[1]):
-            src = edge_index[0, i].item()
-            dst = edge_index[1, i].item()
-            nodes_values[src] = 1
-            nodes_values[dst] = 1
+            # Nodes
+            nodes_values = {}
+            for i in range(edge_index.shape[1]):
+                src = edge_index[0, i].item()
+                dst = edge_index[1, i].item()
+                nodes_values[src] = 1
+                nodes_values[dst] = 1
 
-        self.explanation.add_nodes(nodes_values)
+            self.explanation.add_nodes(nodes_values)
 
+            # Remove unpickable attributes
+            self.pbar = None
+        else:
+            self.explanation = AttributionExplanation(local=mode, nodes="continuous", edges="continuous")
 
-        # Remove unpickable attributes
-        self.pbar = None
+            edge_dict, node_att = self.raw_explanation['edge_dict'], self.raw_explanation['node_att']
+
+            edges_values = {}
+            for k, v in edge_dict.items():
+                src = k[0]
+                dst = k[1]
+                edges_values[f"{src},{dst}"] = v
+
+            self.explanation.add_edges(edges_values)
+
+            # Nodes
+            nodes_values = {}
+            for i, val in enumerate(node_att.squeeze().tolist()):
+                nodes_values[i] = val
+
+            self.explanation.add_nodes(nodes_values)
