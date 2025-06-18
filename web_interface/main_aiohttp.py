@@ -60,25 +60,6 @@ async def handle_defense(request):
 
 
 # Route: POST /block
-async def handle_block(request):
-    data = await request.post()
-    sid = data.get("sid")
-
-    if sid not in clients:
-        return web.Response(status=404, text="Unknown SID")
-
-    response_queue, _, request_queue = queues[sid]
-
-    print('handler: http request from', sid, 'args', dict(data))
-    request_queue.put({"type": 'block', "args": dict(data)})
-
-    # Wait for response from worker
-    result = response_queue.get()
-    print('handler: got response')
-    return web.Response(text=str(result))
-
-
-# /ask endpoint
 async def handle_ask(request):
     data = await request.post()
     sid = data.get('sid')
@@ -101,7 +82,7 @@ async def handle_ask(request):
 async def handle_url(request):
     url = request.match_info.get("url")
     print('url', url)
-    if url not in ['dataset', 'model', 'explainer']:
+    if url not in ['dataset', 'model', 'explainer', 'block']:
         return web.Response(status=404, text="Invalid URL")
 
     if request.method == "POST":
@@ -113,11 +94,12 @@ async def handle_url(request):
 
         response_queue, _, request_queue = queues[sid]
 
-        print(url, 'request from', sid)
+        print(url, 'http request from', sid, 'args', dict(data))
         request_queue.put({"type": url, "args": dict(data)})
 
+        # Wait for response from worker
         result = response_queue.get()
-        return web.Response(text=str(result))
+        return web.Response(text=json.dumps(result), content_type='application/json')
 
     return web.Response(status=405, text="Method Not Allowed")
 
@@ -127,7 +109,6 @@ app.router.add_get("/", handle_analysis)
 app.router.add_get("/analysis", handle_analysis)
 app.router.add_get("/defense", handle_defense)
 app.router.add_get("/interpretation", handle_interpretation)
-app.router.add_post("/block", handle_block)
 app.router.add_post("/ask", handle_ask)
 app.router.add_post("/{url}", handle_url)
 
