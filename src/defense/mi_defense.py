@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from typing import Literal
+from typing import Literal, Type, Any
 from defense.defense_base import Defender
 
 
@@ -75,7 +75,10 @@ class NoiseMIDefender(MIDefender):
         if noise_type not in ["reverse_sigmoid", "random", "none"]:
             raise ValueError(f"Invalid noise_type: {noise_type}")
 
-    def _apply_reverse_sigmoid(self, logits: torch.Tensor) -> torch.Tensor:
+    def _apply_reverse_sigmoid(
+            self,
+            logits: torch.Tensor
+    ) -> torch.Tensor:
         """Apply reverse sigmoid perturbation in logit space."""
         # Convert to probabilities temporarily for perturbation
         probs = F.softmax(logits / self.temperature, dim=-1)
@@ -93,7 +96,10 @@ class NoiseMIDefender(MIDefender):
         # Convert back to logits using inverse softmax with temperature
         return torch.log(perturbed_probs) * self.temperature
 
-    def _apply_uniform_noise(self, logits: torch.Tensor) -> torch.Tensor:
+    def _apply_uniform_noise(
+            self,
+            logits: torch.Tensor
+    ) -> torch.Tensor:
         """Add random noise directly to logits while preserving order."""
         # Get class rankings to preserve order
         ranks = logits.argsort(dim=-1, descending=True)
@@ -110,8 +116,8 @@ class NoiseMIDefender(MIDefender):
 
     def post_batch(
             self,
-            model_manager,
-            batch,
+            model_manager: Type[Any],
+            batch: torch.tensor,
             **kwargs
     ) -> dict:
         """

@@ -139,7 +139,11 @@ class ShadowModelMIAttacker(MIAttacker):
         # TODO customizable surrogate model
         # TODO customizable classifier
 
-    def _train_shadow_model(self, gen_dataset, shadow_train_mask):
+    def _train_shadow_model(
+            self,
+            gen_dataset: GeneralDataset,
+            shadow_train_mask: torch.Tensor
+    ):
         """
         Train the shadow model on the shadow dataset
         """
@@ -164,7 +168,12 @@ class ShadowModelMIAttacker(MIAttacker):
             optimizer.step()
         return shadow_model
 
-    def _train_attack_classifier(self, shadow_model, shadow_data, shadow_train_mask):
+    def _train_attack_classifier(
+            self,
+            shadow_model: torch.nn.Module,
+            shadow_data: GeneralDataset,
+            shadow_train_mask: torch.tensor
+    ):
         """
         Train the attack classifier using shadow model outputs
         """
