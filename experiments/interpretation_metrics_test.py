@@ -82,7 +82,8 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
         'GNNExplainer(torch-geom)': {},
         'SubgraphX': {"max_nodes": 5},
         'Zorro': {},
-        'PGExplainer(dig)': {}
+        'PGExplainer(dig)': {},
+        'GSAT': {}
     }
     dataset_key_name = "_".join(dataset_full_name)
     metrics_path = root_dir / "experiments" / "explainers_metrics"
@@ -166,6 +167,10 @@ def calculate_unprotected_metrics(
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
+    if explainer_name == 'GSAT':
+        lr = 0.01
+    else:
+        lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -175,7 +180,9 @@ def calculate_unprotected_metrics(
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -879,8 +886,10 @@ if __name__ == '__main__':
         # 'GNNExplainer(torch-geom)',
         # 'SubgraphX',
         # "Zorro",
+        "GSAT",
         "PGExplainer(dig)"
     ]
+
     models = [
         'gcn_gcn',
         'gcn_gcn_gcn',
@@ -888,12 +897,18 @@ if __name__ == '__main__':
         'sage_sage_sage',
         'gin_gin',
         'gat_gat',
+        'dummy_gcn_gcn_gsat',
+        'dummy_gcn_gcn_gcn_gsat',
+        'dummy_sage_sage_gsat',
+        'dummy_sage_sage_sage_gsat',
+        'dummy_gin_gin_gsat',
+        'dummy_gat_gat_gsat',
     ]
 
     datasets = [
-        # ("single-graph", "Planetoid", 'Cora'),
-        # ("single-graph", "Planetoid", 'CiteSeer'),
-        # ("single-graph", "Planetoid", 'PubMed'),
+        ("single-graph", "Planetoid", 'Cora'),
+        ("single-graph", "Planetoid", 'CiteSeer'),
+        ("single-graph", "Planetoid", 'PubMed'),
         ("single-graph", "Amazon", 'Computers'),
         ("single-graph", "Amazon", 'Photo'),
     ]
@@ -901,10 +916,15 @@ if __name__ == '__main__':
         for i in range(3, 13):
             for model_name in models:
                 for explainer in explainers:
+                    if model_name.startswith('dummy') and explainer == 'PGExplainer(dig)':
+                        continue
+                    if explainer == 'GSAT' and not (model_name.startswith('dummy')):
+                        continue
                     try:
                         print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
                         run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
-                    except:
+                    except Exception as e:
+                        print(f"ERROR: {e}")
                         continue
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)
