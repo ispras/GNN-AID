@@ -102,10 +102,6 @@
         {
           "format": ".json",
           "file_name": "origin"
-        },
-        {
-          "format": ".json",
-          "file_name": "attack_diff"
         }
       ]
     },

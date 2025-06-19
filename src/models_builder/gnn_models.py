@@ -335,7 +335,7 @@ class GNNModelManager:
             path = dir_path / 'model'
         else:
             assert files_paths is not None
-            assert len(files_paths) != 11
+        assert len(files_paths) == 10
         gnn_name_file = files_paths[0]
         gnn_mm_kwargs_file = files_paths[1]
 
@@ -346,8 +346,8 @@ class GNNModelManager:
         mi_defense_kwargs_file = files_paths[6]
         evasion_defense_kwargs_file = files_paths[7]
         evasion_attack_kwargs_file = files_paths[8]
-        evasion_attack_diff_file = files_paths[9]
-        mi_attack_kwargs_file = files_paths[10]
+        # evasion_attack_diff_file = files_paths[9]
+        mi_attack_kwargs_file = files_paths[9]
         self.save_model(path)
 
         with open(gnn_name_file, "w") as f:
