@@ -96,7 +96,10 @@ def apply_attention_to_messages(
     return handlers
 
 
-def attention_message_hook(att, layer):
+def attention_message_hook(
+        att: Optional[torch.Tensor],
+        layer: torch.nn.Module
+):
     if att is None:
         return lambda module, input, out: out
     else:

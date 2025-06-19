@@ -1710,7 +1710,10 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             for p in self.prot_layer.last_layer.parameters():
                 p.requires_grad = True
 
-    def after_epoch(self, gen_dataset):
+    def after_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
         # TODO compare is_best with different metrics to be implemented
 
         # check if best model
@@ -1837,7 +1840,13 @@ class GSATModelManager(FrameworkGNNModelManager):
             raise ValueError(f"Unsupported task type: {task_type}")
         return loss
 
-    def gsat_loss(self, att, logits, labels, epoch):
+    def gsat_loss(
+            self,
+            att: torch.Tensor,
+            logits: torch.Tensor,
+            labels: torch.Tensor,
+            epoch: int
+    ) -> torch.Tensor:
         pred_loss = self.loss_function(logits, labels)
 
         r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r,
@@ -1851,7 +1860,14 @@ class GSATModelManager(FrameworkGNNModelManager):
         loss = pred_loss + info_loss
         return loss
 
-    def get_r(self, decay_interval, decay_r, current_epoch, init_r=0.9, final_r=0.5):
+    def get_r(
+            self,
+            decay_interval: float,
+            decay_r: float,
+            current_epoch: int,
+            init_r=0.9,
+            final_r=0.5
+    ) -> float:
         r = init_r - current_epoch // decay_interval * decay_r
         if r < final_r:
             r = final_r

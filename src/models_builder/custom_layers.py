@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable, Sized, List
 import torch
 import numpy as np
 from IPython.testing.decorators import skip_if_no_x11
@@ -157,7 +157,12 @@ class GSATLayer(torch.nn.Module):
         self.hook_handle = self.register_forward_pre_hook(self.save_input_hook, with_kwargs=True)
         self.handlers = None
 
-    def save_input_hook(self, module, args, kwargs):
+    def save_input_hook(
+            self,
+            module,
+            args,
+            kwargs
+    ):
         x = kwargs['x']
         if isinstance(x, dict):
             for k, v in x.items():
@@ -165,10 +170,14 @@ class GSATLayer(torch.nn.Module):
                     pass
                 else:
                     x = v
-        # self.hook_saved_value = x.detach()
         self.hook_saved_value = x.clone()
 
-    def forward(self, x, edge_index, full_gnn_id):
+    def forward(
+            self,
+            x: torch.Tensor,
+            edge_index: torch.Tensor,
+            full_gnn_id
+    ) -> torch.Tensor:
         if isinstance(x, dict):
             for k, v in x.items():
                 if k.startswith("skip"):
@@ -176,11 +185,8 @@ class GSATLayer(torch.nn.Module):
                 else:
                     x = v
 
-        # return x
-
         if self.is_inside:
             return x
-            # return self.extractor(x, edge_index)
         else:
             self.is_inside = True
 
@@ -229,18 +235,20 @@ class GSATLayer(torch.nn.Module):
 
             return x
 
-    def get_r(self, decay_interval, decay_r, current_epoch, init_r=0.9, final_r=0.5):
-        r = init_r - current_epoch // decay_interval * decay_r
-        if r < final_r:
-            r = final_r
-        return r
-
-    def sampling(self, att_log_logits, training):
+    def sampling(
+            self,
+            att_log_logits,
+            training
+    ) -> torch.Tensor:
         att = self.concrete_sample(att_log_logits, temp=1, training=training)
         return att
 
     @staticmethod
-    def concrete_sample(att_log_logit, temp, training):
+    def concrete_sample(
+            att_log_logit: torch.Tensor,
+            temp: float,
+            training: bool
+    ) -> torch.Tensor:
         if training:
             random_noise = torch.empty_like(att_log_logit).uniform_(1e-10, 1 - 1e-10)
             random_noise = torch.log(random_noise) - torch.log(1.0 - random_noise)
@@ -250,7 +258,11 @@ class GSATLayer(torch.nn.Module):
         return att_bern
 
     @staticmethod
-    def reorder_like(from_edge_index, to_edge_index, values):
+    def reorder_like(
+            from_edge_index: torch.Tensor,
+            to_edge_index: torch.Tensor,
+            values: torch.Tensor
+    ) -> torch.Tensor:
         from_edge_index, values = sort_edge_index(from_edge_index, values)
         ranking_score = to_edge_index[0] * (to_edge_index.max() + 1) + to_edge_index[1]
         ranking = ranking_score.argsort().argsort()
@@ -259,7 +271,10 @@ class GSATLayer(torch.nn.Module):
         return values[ranking]
 
     @staticmethod
-    def lift_node_att_to_edge_att(node_att, edge_index):
+    def lift_node_att_to_edge_att(
+            node_att,
+            edge_index
+    ):
         src_lifted_att = node_att[edge_index[0]]
         dst_lifted_att = node_att[edge_index[1]]
         edge_att = src_lifted_att * dst_lifted_att
@@ -290,7 +305,11 @@ class ExtractorMLP(nn.Module):
         else:
             self.feature_extractor = GSATMLP([hidden_size * 1, hidden_size * 2, hidden_size, 1], dropout=dropout_p)
 
-    def forward(self, emb, edge_index):
+    def forward(
+            self,
+            emb,
+            edge_index
+    ):
         if self.learn_edge_att:
             col, row = edge_index
             f1, f2 = emb[col], emb[row]
@@ -303,7 +322,12 @@ class ExtractorMLP(nn.Module):
 
 class GSATMLP(nn.Sequential):
     # TODO check if specific MLP needed
-    def __init__(self, channels, dropout, bias=True):
+    def __init__(
+            self,
+            channels: List,
+            dropout: float,
+            bias: bool = True
+    ):
         m = []
         for i in range(1, len(channels)):
             m.append(nn.Linear(channels[i - 1], channels[i], bias))
@@ -315,7 +339,10 @@ class GSATMLP(nn.Sequential):
 
         super(GSATMLP, self).__init__(*m)
 
-    def forward(self, inputs):
+    def forward(
+            self,
+            inputs
+    ):
         for module in self._modules.values():
             if isinstance(module, (InstanceNorm)):
                 if inputs.shape[0] == 1:  # TODO sort of monkey-patch
@@ -327,8 +354,14 @@ class GSATMLP(nn.Sequential):
 
 
 class DummyLayer(nn.Module):
-    def __init__(self, **kwargs):
+    def __init__(
+            self,
+            **kwargs
+    ):
         super().__init__(**kwargs)
 
-    def forward(self, x):
+    def forward(
+            self,
+            x
+    ):
         return x
