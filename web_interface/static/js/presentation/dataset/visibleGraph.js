@@ -387,7 +387,7 @@ class VisibleGraph {
     // Get a list of attributes values for a node (of a graph)
     getNodeAttrs(node, graph=0) {
         let nodeAttrs = this.datasetData["node_attributes"]
-        if (nodeAttrs == null)
+        if (nodeAttrs == null || Object.keys(nodeAttrs).length === 0)
             return null
         let res = []
         for (const a of this.datasetInfo["node_attributes"]["names"]) {
@@ -419,6 +419,8 @@ class VisibleGraph {
 
     // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
     setSatellite(satellite, on=true) {
+        if (this.nodePrimitives == null) // E.g. we rebuild graph during training
+            return
         // Replace satellite elements
         let $g = this.svgPanel.get("nodes-" + satellite)
         if (!on) {
