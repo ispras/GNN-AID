@@ -1,5 +1,6 @@
 import copy
 
+import numpy as np
 import torch
 
 from typing import Type, Union, List
@@ -176,7 +177,8 @@ class ShadowModelMIAttacker(MIAttacker):
             self,
             shadow_model: torch.nn.Module,
             shadow_data: GeneralDataset,
-            shadow_train_mask: torch.tensor
+            shadow_train_mask: torch.tensor,
+            original_train_mask: torch.Tensor
     ):
         """
         Train the attack classifier using shadow model outputs
@@ -189,7 +191,7 @@ class ShadowModelMIAttacker(MIAttacker):
         # Prepare features and labels for attack classifier
         # X = max_probs.reshape(-1, 1)  # Using prediction confidence as feature
         X = probs[shadow_train_mask].cpu().numpy()
-        y = shadow_data.train_mask[shadow_train_mask].cpu().numpy().astype(int)  # Membership labels
+        y = original_train_mask[shadow_train_mask].cpu().numpy().astype(int)  # Membership labels
 
         if self.classifier_type == 'svc':
             self.classifier = SVC(kernel='rbf', probability=False)
@@ -216,20 +218,22 @@ class ShadowModelMIAttacker(MIAttacker):
         else:
             self.model_name = 'gcn_gcn'
 
-        dataset = copy.deepcopy(gen_dataset)
+        shadow_dataset = copy.deepcopy(gen_dataset)
 
-        num_nodes = dataset.dataset.data.x.shape[0]
+        num_nodes = gen_dataset.dataset.data.x.shape[0]
         shadow_indices = torch.randperm(num_nodes)[:int(num_nodes * self.shadow_data_ratio)]
-        shadow_train_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        shadow_train_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
+        shadow_test_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
         shadow_train_mask[shadow_indices[:int(len(shadow_indices) * 0.75)]] = True  # 75-25 split
-        dataset.train_mask = shadow_train_mask
-        dataset.test_mask = ~dataset.train_mask
+        shadow_test_mask[shadow_indices[int(len(shadow_indices) * 0.75):]] = True
+        shadow_dataset.train_mask = shadow_train_mask
+        shadow_dataset.test_mask = shadow_test_mask
 
         print("Training shadow model...")
-        shadow_model = self._train_shadow_model(dataset, shadow_train_mask)
+        shadow_model = self._train_shadow_model(shadow_dataset, shadow_train_mask)
 
         print("Training attack classifier...")
-        self._train_attack_classifier(shadow_model, dataset, shadow_train_mask)
+        self._train_attack_classifier(shadow_model, shadow_dataset, shadow_train_mask, gen_dataset.train_mask)
 
         print("Performing attack on target model...")
         model.eval()
@@ -238,7 +242,8 @@ class ShadowModelMIAttacker(MIAttacker):
             probs = torch.softmax(outputs, dim=1)
             max_probs = torch.max(probs, dim=1).values.cpu().numpy()
         # Predict membership using attack classifier
-        X_target = max_probs.reshape(-1, 1)
+        # X_target = max_probs.reshape(-1, 1)
+        X_target = probs
         inferred_train_mask = torch.tensor(self.classifier.predict(X_target),
                                            dtype=torch.bool, device=mask_tensor.device)
 
