@@ -72,12 +72,18 @@
           <div id="menu-model-manager-view">
             <!-- generated stuff -->
           </div>
+
+          {% block menu_before_train_content %}{% endblock %}
+
           <div id="menu-model-trainer-view">
             <!-- generated stuff -->
           </div>
+
+          {% block menu_after_train_content %}{% endblock %}
+
         </details>
 
-        {% block menu_content %}{% endblock %}
+        {% block menu_explainers_content %}{% endblock %}
 
 <!----------        VISUALS        --------------->
         <details class="controls-section" id="menu-visuals" open>
@@ -110,7 +116,9 @@
             <!-- generated stuff -->
           </div>
 
-          {% block panel_content %}{% endblock %}
+          {% block panel_explainer_content %}{% endblock %}
+
+          {% block panel_attack_defense_content %}{% endblock %}
 
         </div>
     </div>
@@ -118,7 +126,7 @@
     </span>
   </div>
 
-  <script src="static/js/libs/socket.io-4.0.1.js"></script>
+  <script src="static/js/libs/socket.io-4.6.1.js"></script>
   <script src="static/js/libs/jquery-3.6.0.js"></script>
   <script src="static/js/libs/chart-3.7.1.min.js"></script>
   <script src="static/js/libs/datatables-1.13.2.min.js"></script>
@@ -144,7 +152,9 @@
   <script src="static/js/presentation/left_menu/model/menuModelConstructorView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelCustomView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelManagerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuBeforeTrainView.js"></script>
   <script src="static/js/presentation/left_menu/model/menuModelTrainerView.js"></script>
+  <script src="static/js/presentation/left_menu/model/menuAfterTrainView.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/layer.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/sequential.js"></script>
   <script src="static/js/presentation/left_menu/model/builder/connections.js"></script>
@@ -259,7 +269,7 @@
 
     // Throw alert when user tries to reload the page
     window.addEventListener('beforeunload', function (e) {
-        if (Controller.isActive) {
+        if (controller.isActive) {
             e.preventDefault()
             // Chrome requires returnValue to be set
             e.returnValue = ''
@@ -268,22 +278,27 @@
             return 'Are you sure you want to leave this page? Unsaved progress will be lost.'
         }
     })
-    // This will run when the user actually leaves the page
-    window.addEventListener('unload', function () {
-        console.log('User has left the page')
-        // if (Controller.isActive) {
-            navigator.sendBeacon("/drop", JSON.stringify({sessionId: Controller.sessionId}))
-        // }
+    // // This will run when the user actually leaves the page
+    // window.addEventListener('unload', function () {
+    //     console.log('User has left the page')
+    //     // if (Controller.isActive) {
+    //         navigator.sendBeacon("/drop", JSON.stringify({sessionId: controller.sessionId}))
+    //     // }
+    //
+    //     // // You could also send an AJAX request to log this event on your server
+    //     // // Note: This must be a synchronous request due to the nature of the unload event
+    //     // var xhr = new XMLHttpRequest();
+    //     // xhr.open('POST', '/log-exit', false);
+    //     // xhr.send('User left the page');
+    // })
 
-        // // You could also send an AJAX request to log this event on your server
-        // // Note: This must be a synchronous request due to the nature of the unload event
-        // var xhr = new XMLHttpRequest();
-        // xhr.open('POST', '/log-exit', false);
-        // xhr.send('User left the page');
-    })
+    const mode = "{{ mode }}"
+    const sessionId = "{{ sessionId }}"
+
+    console.log('html page created, sessionId=', sessionId, 'mode=', mode)
 
     // Create client controller
-    let controller = new Controller()
+    let controller = new Controller(sessionId, mode)
   </script>
 </body>
 </html>

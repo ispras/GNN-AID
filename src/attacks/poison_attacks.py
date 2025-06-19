@@ -1,9 +1,7 @@
+from pathlib import Path
 import numpy as np
-import torch
 
 from attacks.attack_base import Attacker
-from pathlib import Path
-
 from base.datasets_processing import GeneralDataset
 
 POISON_ATTACKS_DIR = Path(__file__).parent.resolve() / 'poison_attacks_collection'
@@ -12,6 +10,8 @@ POISON_ATTACKS_DIR = Path(__file__).parent.resolve() / 'poison_attacks_collectio
 class PoisonAttacker(
     Attacker
 ):
+    """ Base class for all poison attack methods.
+    """
     def __init__(
             self,
             **kwargs
@@ -22,6 +22,8 @@ class PoisonAttacker(
 class EmptyPoisonAttacker(
     PoisonAttacker
 ):
+    """ Just a stub for poison attack.
+    """
     name = "EmptyPoisonAttacker"
 
     def attack(

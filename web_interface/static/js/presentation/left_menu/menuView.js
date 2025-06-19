@@ -44,7 +44,7 @@ class MenuView extends View {
             blockLeftMenu(false)
             return -1
         }
-        let errors = await Controller.blockRequest(this.requestBlock, 'submit')
+        let errors = await controller.blockRequest(this.requestBlock, 'submit')
         // If submit was successful, onSubmit() will be called
         // Otherwise do    blockLeftMenu(false)
     }
@@ -65,7 +65,7 @@ class MenuView extends View {
             console.log(this.constructor.name + "[" + this.requestBlock + "].unlock()")
         if (this.state === MVState.LOCKED) {
             // NOTE state will become ACTIVE at onUnlock()
-            await Controller.blockRequest(
+            await controller.blockRequest(
                 this.requestBlock, 'unlock', {toDefault: toDefault})
             // blockDiv(this.$mainDiv, false)
         }

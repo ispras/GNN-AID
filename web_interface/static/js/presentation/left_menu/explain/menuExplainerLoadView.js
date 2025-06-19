@@ -42,7 +42,7 @@ class MenuExplainerLoadView extends MenuView {
 
     async _accept() {
         let ep = this.prefixStorage.getConfig()
-        await Controller.blockRequest(this.requestBlock, 'modify', ep)
+        await controller.blockRequest(this.requestBlock, 'modify', ep)
     }
 
     // Build cascade menu
@@ -55,7 +55,7 @@ class MenuExplainerLoadView extends MenuView {
 
     async _refresh() {
         blockDiv(this.$div, true)
-        let [ps, info] = await Controller.ajaxRequest('/explainer', {do: "index"})
+        let [ps, info] = await controller.ajaxRequest('/explainer', {do: "index"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
         this.info = JSON_parse(info)
         this._build()

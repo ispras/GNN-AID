@@ -4,21 +4,24 @@ import warnings
 
 from torch import device
 
+from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
-from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager
-from src.models_builder.models_zoo import model_configs_zoo
-from attacks.QAttack import qattack
+from base.datasets_processing import DatasetManager
+from models_builder.models_zoo import model_configs_zoo
+from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
-from defense.JaccardDefense import jaccard_def
+from defenses.jaccard_defense import jaccard_def
 from attacks.metattack import meta_gradient_attack
-from defense.GNNGuard import gnnguard
-from defense.ProGNN.prognn import ProGNNDefender
+from defenses.gnn_guard import gnnguard
+from defenses.pro_gnn.prognn import ProGNNDefender
 
 
 def test_attack_defense():
+    from attacks.clga import CLGA
+
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     full_name = None
@@ -190,7 +193,7 @@ def test_attack_defense():
     )
 
     netattack_evasion_attack_config = ConfigPattern(
-        _class_name="NettackEvasionAttacker",
+        _class_name="Nettack",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
@@ -200,20 +203,6 @@ def test_attack_defense():
             "perturb_structure": True,
             "direct": True,
             "n_influencers": 3
-        }
-    )
-
-    netattackgroup_evasion_attack_config = ConfigPattern(
-        _class_name="NettackGroupEvasionAttacker",
-        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-        _config_class="EvasionAttackConfig",
-        _config_kwargs={
-            "node_idxs": [random.randint(0, 500) for _ in range(20)],  # Nodes for attack
-            "n_perturbations": 50,
-            "perturb_features": True,
-            "perturb_structure": True,
-            "direct": True,
-            "n_influencers": 10
         }
     )
 
@@ -309,10 +298,10 @@ def test_attack_defense():
     try:
         raise FileNotFoundError()
         # gnn_model_manager.load_model_executor()
-        # dataset = gnn_model_manager.apply_poison_attack_diff(
+        # dataset = gnn_model_manager.load_or_execute_poisoning_attack(
         #     gen_dataset=dataset
         # )
-        # dataset = gnn_model_manager.apply_poison_defense_diff(
+        # dataset = gnn_model_manager.load_or_execute_poisoning_defense(
         #     gen_dataset=dataset
         # )
     except FileNotFoundError:
@@ -485,7 +474,7 @@ def test_nettack_evasion():
 
     # Attack config
     evasion_attack_config = ConfigPattern(
-        _class_name="NettackEvasionAttacker",
+        _class_name="Nettack",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
@@ -822,7 +811,7 @@ def test_adv_training():
             # "num_nodes": dataset.dataset.x.shape[0]
         }
     )
-    from defense.evasion_defense import EvasionDefender
+    from defenses.evasion_defense import EvasionDefender
     from src.aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)

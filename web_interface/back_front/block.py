@@ -59,7 +59,7 @@ class Block:
         # Properties
         self.diagram = None  # Diagram, to be bind after constructor
         self.name = name  # Unique understandable name of block
-        self.condition = []  # Boolean function over required blocks
+        self.condition = None  # Boolean function over required blocks
         self.requires = []  # List of Blocks that must be ready to unlock this Block
         self.influences = []  # List of Blocks that are locked until this Block is not ready
         self.socket = socket
@@ -69,7 +69,7 @@ class Block:
         self._is_set = False  # Indicator of whether block is defined
         self._config = BlockConfig()  # The config of this Block, result formed from frontend
         self._object = None  # Result of backend request, will be passed to dependent blocks
-        self._result = None  # Info to be send to frontend at submit
+        self._result = None  # Info to be sent to frontend at submit
 
     def is_set(
             self
@@ -121,7 +121,7 @@ class Block:
     def finalize(
             self
     ) -> None:
-        """ Check config correctness and make block to be defined """
+        """ Check config correctness and make block defined. """
         if self._is_set:
             print(f'Block[{self.name}] already set')
             return
@@ -181,6 +181,7 @@ class Block:
         if self._is_set:
             print(f'Block[{self.name}].unlock()')
             self._is_set = False
+            self._unlock()
             self._send('onUnlock', {"toDefault": toDefault})
 
             if toDefault:
@@ -191,6 +192,12 @@ class Block:
 
             if self.diagram:
                 self.diagram.on_drop(self)
+
+    def _unlock(
+            self
+    ) -> None:
+        """ Reject changes made in this block. """
+        pass
 
     def breik(
             self,

@@ -30,7 +30,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential python3-dev
+        sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
     - name: Install dependencies part 1
       run: |
         pip install -r requirements1.txt
@@ -39,10 +39,13 @@ jobs:
         pip install -r requirements2.txt
     - name: Install dependencies part 3
       run: |
-        pip install -r requirements3.txt --no-deps
+        pip install -r requirements3.txt
     - name: Set PYTHONPATH
       run: |
         echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+        export PYTHONPATH=$GITHUB_ENV
     - name: Run tests
       run: |
+        python3 -m unittest -v -f tests/attacks_test.*
+        python3 -m unittest -v -f tests/defense_test.*
         python3 -m unittest -v -f tests/explainers_test.*

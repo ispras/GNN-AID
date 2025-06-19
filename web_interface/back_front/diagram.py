@@ -39,6 +39,10 @@ class Diagram:
             to: Union[list, Block],
             condition=all
     ) -> None:
+        if isinstance(to, list):
+            raise NotImplementedError
+        if to.condition is not None:
+            raise RuntimeError(f"Cannot add another dependency to block {to.name}.")
         # assert condition in [all, any]
         if not isinstance(_from, list):
             _from = [_from]

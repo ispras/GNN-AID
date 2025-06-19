@@ -13,7 +13,7 @@ class Graph extends VisibleGraph {
 
     async _build() {
         // Set graph data from dataset
-        this.datasetData = await Controller.ajaxRequest('/dataset', {get: "data"})
+        this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
 
         // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes

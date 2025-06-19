@@ -13,26 +13,16 @@ import shutil
 import signal
 from time import time
 
-
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
 from base.datasets_processing import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
-
-# from src.aux import utils
-# from src.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-#     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-# from src.base.datasets_processing import DatasetManager
-# from src.explainers.explainers_manager import FrameworkExplainersManager
-# from src.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-# from src.aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
-#     ExplainerInitConfig, ConfigPattern
-# from src.models_builder.models_zoo import model_configs_zoo
-
+import explainers
+import_all_from_package(explainers)  # to import all subclasses properly
 
 tmp_dir = utils.EXPLANATIONS_DIR / (utils.EXPLANATIONS_DIR.name + str(time()))
 utils.EXPLANATIONS_DIR = tmp_dir

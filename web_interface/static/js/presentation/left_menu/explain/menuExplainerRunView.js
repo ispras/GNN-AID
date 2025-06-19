@@ -111,7 +111,7 @@ class MenuExplainerRunView extends MenuView {
         this.visibleGraph.dropExplanation()
         let $btn = mode === "local" ? this.$runLocal : this.$runGlobal
         $btn.prop("disabled", true)
-        await Controller.ajaxRequest('/explainer', {
+        await controller.ajaxRequest('/explainer', {
             do: "run", explainerRunConfig: JSON_stringify(explainerRunConfig)})
         $btn.prop("disabled", false)
     }

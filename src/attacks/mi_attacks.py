@@ -17,6 +17,8 @@ from models_builder.models_zoo import model_configs_zoo
 class MIAttacker(
     Attacker
 ):
+    """ Base class for all membership inference (MI) attack methods.
+    """
     def __init__(
             self,
             **kwargs
@@ -84,6 +86,8 @@ class MIAttacker(
 class EmptyMIAttacker(
     MIAttacker
 ):
+    """ Just a stub for MI attack.
+    """
     name = "EmptyMIAttacker"
 
     def attack(

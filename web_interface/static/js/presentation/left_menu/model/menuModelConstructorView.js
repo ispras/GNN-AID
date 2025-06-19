@@ -32,7 +32,7 @@ class MenuModelConstructorView extends MenuView {
             return -1
 
         console.log("architecture", mc)
-        await Controller.blockRequest(this.requestBlock, 'modify', {layers: mc})
+        await controller.blockRequest(this.requestBlock, 'modify', {layers: mc})
     }
 
     // Update skip-connections according to number of blocks of each type

@@ -1,10 +1,11 @@
-from typing import Type
-
 from base.datasets_processing import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
+from models_builder.gnn_models import GNNModelManager
 
 
 class Attacker:
+    """ Base class for all attack methods.
+    """
     name = "Attacker"
 
     def __init__(
@@ -36,8 +37,11 @@ class Attacker:
     @staticmethod
     def check_availability(
             gen_dataset: GeneralDataset,
-            model_manager: Type
+            model_manager: GNNModelManager
     ):
-        return False
+        """ Check whether the method can be applied for the given dataset and model manager.
 
-
+        :param gen_dataset: dataset
+        :param model_manager: model manager
+        """
+        return True  # TODO implement in all subclasses

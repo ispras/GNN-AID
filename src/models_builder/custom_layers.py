@@ -4,7 +4,7 @@ import numpy as np
 # from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv
 
-from explainers.ProtGNN.MCTS import mcts
+from explainers.protgnn.MCTS import mcts
 import ctypes
 
 
@@ -88,6 +88,8 @@ class ProtLayer(torch.nn.Module):
         return similarity, distance
 
     def projection(self, gnn, dataset, data_indices, data, thrsh=10):
+        best_graph = None
+        best_coalition = None
         gnn.eval()
         for i in range(self.num_prototypes_per_class * self.output_dim):
             count = 0
