@@ -78,12 +78,17 @@ class GSATExplainer(Explainer):
             raw_explanation = self.get_filtered_k_hop_subgraph(node_idx, self.model.get_num_hops(), edge_index, edge_att,
                                                                self.thrsh)
         else:
+            subset, edge_index_subgraph, mapping, edge_mask = k_hop_subgraph(
+                node_idx, self.model.get_num_hops(), edge_index, relabel_nodes=False
+            )
             edge_dict = {}
             for i in range(edge_index.shape[1]):
+                if not edge_mask[i]:
+                    continue
                 edge = (edge_index[0, i].item(), edge_index[1, i].item())
                 att = edge_att[i].item()
                 edge_dict[edge] = att
-            raw_explanation = {'edge_dict': edge_dict, 'node_att': node_att}  # no self-loops
+            raw_explanation = {'edge_dict': edge_dict, 'node_att': node_att[subset]}  # no self-loops
 
         return raw_explanation
 

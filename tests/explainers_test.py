@@ -584,7 +584,8 @@ class ExplainersTest(unittest.TestCase):
             dataset=self.gen_dataset_sg_cora, gnn_manager=self.gsat_gnn_mm_sg_cora,
             explainer_name='GSAT',
         )
-        explainer_GSAT.conduct_experiment(explainer_run_config)
+        explanation = explainer_GSAT.conduct_experiment(explainer_run_config)
+
 
 if __name__ == '__main__':
     unittest.main()
