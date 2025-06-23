@@ -887,16 +887,16 @@ if __name__ == '__main__':
         # 'SubgraphX',
         # "Zorro",
         "GSAT",
-        "PGExplainer(dig)"
+        # "PGExplainer(dig)"
     ]
 
     models = [
-        'gcn_gcn',
-        'gcn_gcn_gcn',
-        'sage_sage',
-        'sage_sage_sage',
-        'gin_gin',
-        'gat_gat',
+        # 'gcn_gcn',
+        # 'gcn_gcn_gcn',
+        # 'sage_sage',
+        # 'sage_sage_sage',
+        # 'gin_gin',
+        # 'gat_gat',
         'dummy_gcn_gcn_gsat',
         'dummy_gcn_gcn_gcn_gsat',
         'dummy_sage_sage_gsat',

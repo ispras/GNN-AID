@@ -1,10 +1,7 @@
-from typing import Optional, Iterable, Sized, List
+from typing import Optional, List
 import torch
 import numpy as np
-from IPython.testing.decorators import skip_if_no_x11
 from torch import nn
-from torch.utils import checkpoint
-# from explainers.explainer_results_to_json import ProtExplanationGlobal
 from torch_geometric.nn import GMMConv, InstanceNorm
 from torch_geometric.utils import is_undirected, sort_edge_index
 from torch_sparse import transpose
