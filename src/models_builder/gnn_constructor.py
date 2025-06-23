@@ -327,7 +327,10 @@ class FrameworkGNNConstructor(
                     self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
                     self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
                 )
-                layer_init_class = layer_class(**elem['layer']['layer_kwargs'])
+                if elem['layer']['layer_kwargs'] is None:
+                    layer_init_class = layer_class()
+                else:
+                    layer_init_class = layer_class(**elem['layer']['layer_kwargs'])
                 setattr(self, f"{elem['layer']['layer_name']}_{i}", layer_init_class)
 
             if 'batchNorm' in elem:
@@ -499,39 +502,65 @@ class FrameworkGNNConstructor(
                 layer_ind = curr_layer_ind
                 x_copy = torch.clone(x)
                 connection_tensor = torch.empty(0, device=x_copy.device)
+                x_dict = {}
                 for key, value in self.conn_dict.items():
                     if key[1] == curr_layer_ind:
                         if key[1] - key[0] == 1:
                             zeroing_x_flag = True
-                        for con in self.conn_dict[key]:
-                            if self.embedding_levels_by_layers[key[1]] == 'n' and \
-                                    self.embedding_levels_by_layers[key[0]] == 'n':
-                                connection_tensor = torch.cat((connection_tensor,
-                                                               tensor_storage[key[0]]), 1)
-                                dim_cat = 1
-                            elif self.embedding_levels_by_layers[key[1]] == 'g' and \
-                                    self.embedding_levels_by_layers[key[0]] == 'g':
-                                connection_tensor = torch.cat((connection_tensor,
-                                                               tensor_storage[key[0]]), 0)
-                                dim_cat = 0
-                            elif self.embedding_levels_by_layers[key[1]] == 'g' and \
-                                    self.embedding_levels_by_layers[key[0]] == 'n':
-                                con_pool = import_by_name(con['pool']['pool_type'],
-                                                          ["torch_geometric.nn"])
-                                tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
-                                connection_tensor = torch.cat((connection_tensor,
-                                                               tensor_after_pool), 1)
-                                dim_cat = 1
+                        for con in value:
+                            aggregation_type = con.get('aggregation_type', 'cat')
+
+                            if aggregation_type == 'cat':
+                                if connection_tensor is None:
+                                    connection_tensor = tensor_storage[key[0]]
+                                else:
+                                    if self.embedding_levels_by_layers[key[1]] == 'n' and \
+                                            self.embedding_levels_by_layers[key[0]] == 'n':
+                                        connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 1)
+                                        dim_cat = 1
+                                    elif self.embedding_levels_by_layers[key[1]] == 'g' and \
+                                            self.embedding_levels_by_layers[key[0]] == 'g':
+                                        connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 0)
+                                        dim_cat = 0
+                                    elif self.embedding_levels_by_layers[key[1]] == 'g' and \
+                                            self.embedding_levels_by_layers[key[0]] == 'n':
+                                        con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
+                                        tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
+                                        connection_tensor = torch.cat((connection_tensor, tensor_after_pool), 1)
+                                        dim_cat = 1
+                                    else:
+                                        raise Exception(
+                                            f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
+                                            f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
+                                        )
+
+                            elif aggregation_type == 'stack':
+                                if self.embedding_levels_by_layers[key[1]] == 'n' and self.embedding_levels_by_layers[
+                                                                                                        key[0]] == 'n':
+                                    x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
+                                elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
+                                                                                                        key[0]] == 'g':
+                                    x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
+                                elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
+                                                                                                        key[0]] == 'n':
+                                    con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
+                                    tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
+                                    x_dict[f'skip_{key[0]}'] = tensor_after_pool
+                                else:
+                                    raise Exception(
+                                        f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
+                                        f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
+                                    )
                             else:
-                                raise Exception(
-                                    "Connection from layer type "
-                                    f"{self.embedding_levels_by_layers[curr_layer_ind - 1]} to"
-                                    f" layer type {self.embedding_levels_by_layers[curr_layer_ind]}"
-                                    "is not supported now")
-                if zeroing_x_flag:
-                    x = connection_tensor
-                else:
-                    x = torch.cat((x_copy, connection_tensor), dim_cat)
+                                raise ValueError(f"Unknown aggregation type: {aggregation_type}")
+                if len(x_dict) > 0:  # stack
+                    x_dict[f'prev_{curr_layer_ind - 1}'] = x_copy
+                    x = x_dict
+                else:  # cat
+                    if zeroing_x_flag:
+                        x = connection_tensor
+                    else:
+                        x = torch.cat((x_copy, connection_tensor), dim_cat)
 
             # QUE Kirill, maybe we should not off UserWarning
             with warnings.catch_warnings():

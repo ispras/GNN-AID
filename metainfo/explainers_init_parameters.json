@@ -83,7 +83,11 @@
 
  "NeuralAnalysis": {
   "task": ["task", "string", "MUTAG", ["MUTAG", "MUTAGENICITY", "PROTEINS", "NCI", "BA", "IMDB", "REDDIT", "SST", "BA2Motif"], "Domain field of Dataset"]
- }
+ },
 
+ "GSAT": {
+  "expl_type": ["Explanation type", "string", "continuous", ["binary", "continuous"], "Get continuous mask or thresholded"],
+  "thrsh": ["Threshold", "float", 0.2, {"min": 0, "max":  1}, "Threshold for attention"]
 }
+ }
 

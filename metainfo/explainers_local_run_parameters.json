@@ -65,7 +65,15 @@
    "locality": ["global", "local"],
    "locality_filter": {"global": ["global_run_arg"], "local": ["local_run_arg"]}
    }
-  }
+  },
+
+  "GSAT": {
+  "element_idx": ["Node","int",0,{"min": 0},null],
+  "_technical_parameter": {
+   "dataset": ["single", "multiple"],
+   "locality": ["global", "local"],
+   "locality_filter": {"global": ["global_run_arg"], "local": ["local_run_arg"]}}
+ }
 
 }
 
