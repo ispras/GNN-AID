@@ -1,5 +1,6 @@
 import torch
 
+
 class MIResultsStore:
     def __init__(self):
         self._store = {}  # dict: mask_bytes → annotation_tensor (bool)

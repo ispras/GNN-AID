@@ -22,9 +22,12 @@ config
 pics
 results
 sphinx_docs
+*explainers_metrics*
+experiments/explainers_metrics/**/*_metrics.json
 
 data
 explanations
+<base.ptg_datasets.PTGDataset object*
 models
 models_exp
 results

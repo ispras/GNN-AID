@@ -14,14 +14,13 @@ from torch_geometric.data import DataLoader
 from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
 
 from aux.data_info import UserCodeInfo
-from aux.declaration import Declare
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    MI_ATTACK_PARAMETERS_PATH, \
-    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
+from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
@@ -877,7 +876,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 ).merge(self.manager_config)
 
         # Add fields from additional config
-        self.manager_config = self.manager_config.merge(self.additional_config)
+        self.manager_config = self.additional_config.merge(self.manager_config)
 
         self.gnn = gnn
 
@@ -1711,7 +1710,10 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             for p in self.prot_layer.last_layer.parameters():
                 p.requires_grad = True
 
-    def after_epoch(self, gen_dataset):
+    def after_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
         # TODO compare is_best with different metrics to be implemented
 
         # check if best model
@@ -1745,3 +1747,130 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         last_projection = (step % self.proj_epochs == 0 and step + self.proj_epochs >= steps)
 
         return self.early_stop_count >= self.early_stopping_marker or last_projection
+
+
+class GSATModelManager(FrameworkGNNModelManager):
+    additional_config = ConfigPattern(  # TODO check config
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_config_class": "Config",
+                "_class_name": "Adam",
+                "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.optim"],
+                "_config_kwargs": {},
+            },
+            # FUNCTIONS_PARAMETERS_PATH,
+            "loss_function": {
+                "_config_class": "Config",
+                "_class_name": "CrossEntropyLoss",
+                "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.nn"],
+                "_config_kwargs": {},
+            },
+        }
+    )
+
+    def __init__(
+            self,
+            gnn: Type = None,
+            dataset_path: Union[str, Path] = None,
+            learn_edge_features: bool = False,
+            decay_int: int = 10,
+            decay_r: float = 0.1,
+            init_r: float = 0.9,
+            final_r: float = 0.1,
+            fix_r: bool = False,
+            pred_loss_coef: float = 1,
+            info_loss_coef: float = 1,
+            **kwargs
+    ):
+        super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
+        self.learn_edge_features = learn_edge_features
+        # TODO check if learn_edge_features == True then model -> GINEConv or other compatible
+        self.decay_int = decay_int
+        self.decay_r = decay_r
+        self.init_r = init_r
+        self.final_r = final_r
+        self.pred_loss_coef = pred_loss_coef
+        self.info_loss_coef = info_loss_coef
+        self.fix_r = fix_r
+        self.gsat_layer = getattr(self.gnn, self.gnn.gsat_layer_name)
+        # apply_decorator_to_graph_layers(self.gnn, apply_attention)
+
+    def train_on_batch(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        if task_type == "multiple-graphs":
+            self.optimizer.zero_grad()
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            att = self.gsat_layer.att
+            loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+            # loss = self.loss_function(clf_logits, batch.y)
+            self.optimizer.zero_grad()
+            # del self.gsat_layer.att
+        elif task_type == "single-graph":
+            self.optimizer.zero_grad()
+            clf_logits = self.gnn(batch.x, batch.edge_index)  # TODO check weight param
+            att = self.gsat_layer.edge_att
+            # att = torch.zeros_like(clf_logits)
+            # Take only predictions and labels of seed nodes
+            loss = self.gsat_loss(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs)
+            if self.clip is not None:
+                clip_grad_norm(self.gnn.parameters(), self.clip)
+            self.optimizer.zero_grad()
+        elif task_type == "edge" and False:  # TODO Kirill, remove False when release edge recommendation task
+            self.optimizer.zero_grad()
+            edge_index = batch.edge_index
+            pos_edge_index = edge_index[:, batch.y == 1]
+            neg_edge_index = edge_index[:, batch.y == 0]
+
+            pos_out = self.gnn(batch.x, pos_edge_index)
+            neg_out = self.gnn(batch.x, neg_edge_index)
+
+            # TODO check if we need to take out[:batch.batch_size]
+            pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
+            neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
+
+            loss = pos_loss + neg_loss
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+        return loss
+
+    def gsat_loss(
+            self,
+            att: torch.Tensor,
+            logits: torch.Tensor,
+            labels: torch.Tensor,
+            epoch: int
+    ) -> torch.Tensor:
+        pred_loss = self.loss_function(logits, labels)
+
+        r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r,
+                                                     init_r=self.init_r)
+        info_loss = (att * torch.log(att / r + 1e-6) + (1 - att) * torch.log((1 - att) / (1 - r + 1e-6) + 1e-6)).mean()
+
+        pred_loss = pred_loss * self.pred_loss_coef
+        # self.info_loss_coef = 0
+        info_loss = info_loss * self.info_loss_coef
+        print(self.pred_loss_coef, self.info_loss_coef, pred_loss, info_loss)
+        loss = pred_loss + info_loss
+        return loss
+
+    def get_r(
+            self,
+            decay_interval: float,
+            decay_r: float,
+            current_epoch: int,
+            init_r=0.9,
+            final_r=0.5
+    ) -> float:
+        r = init_r - current_epoch // decay_interval * decay_r
+        if r < final_r:
+            r = final_r
+        return r
+
+
