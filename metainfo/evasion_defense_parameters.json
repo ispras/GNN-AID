@@ -16,7 +16,7 @@
   "reconstruction_loss_weight": ["reconstruction_loss_weight", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
  },
  "AdvTraining": {
-  "attack_name": ["attack_name", "str", "FGSM", {}, "?"]
+  "attack_name": ["attack_name", "dynamic", null, {"params_type": "AD-ea", "result_to": "attack_config", "possible": ["PGD", "FGSM", "QAttack"]}, "Name of evasion attack used to build adversarial examples. Select one to set its parameters."]
  }
 }
 

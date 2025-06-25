@@ -4,14 +4,871 @@ import os
 from pathlib import Path
 from typing import Union
 
+import torch
 import torch_geometric
-from torch_geometric.data import Dataset, InMemoryDataset
+from torch import default_generator, randperm
+from torch_geometric.data import Dataset, InMemoryDataset, Data
 
-from aux.configs import DatasetConfig, DatasetVarConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
-from aux.utils import tmp_dir
-from base.gen_dataset import DatasetInfo, GeneralDataset
+from aux.utils import TORCH_GEOM_GRAPHS_PATH, tmp_dir
+
+
+class DatasetInfo:
+    """
+    Description for a dataset.
+    Some fields are obligate, others are not.
+    """
+
+    def __init__(
+            self
+    ):
+        self.name: str = None
+        self.count: int = None
+        self.directed: bool = None
+        self.nodes: list = None
+        self.remap: bool = False
+        self.node_attributes: dict = None
+        self.edge_attributes: dict = {
+            "names": [],
+            "types": [],
+            "values": []
+        }
+        self.labelings: dict = None
+        self.node_attr_slices: dict = None
+        self.edge_attr_slices: dict = None
+        self.node_info: dict = {}
+        self.edge_info: dict = {}
+        self.graph_info: dict = {}
+
+    def check_validity(
+            self
+    ) -> None:
+        """ Check existing fields have allowed values. """
+        assert self.count > 0
+        assert len(self.node_attributes) > 0
+        assert all(key in self.node_attributes for key in ["names", "types", "values"])
+        for attributes in [self.node_attributes, self.edge_attributes]:
+            for n, t, v in zip(attributes["names"], attributes["types"], attributes["values"]):
+                assert isinstance(n, str)
+                assert t in {"continuous", "categorical", "other"}
+                if t == "continuous":
+                    assert isinstance(v, list) and len(v) == 2 and v[0] < v[1]
+                elif t == "continuous":
+                    assert isinstance(v, list)
+                elif t == "other":
+                    assert isinstance(v, int) and v > 0
+        assert len(self.labelings) > 0
+        for k, v in self.labelings.items():
+            # TODO Misha - what about regression?
+            assert isinstance(k, str)
+            assert isinstance(v, int) and v > 1
+
+    def check_consistency(
+            self
+    ) -> None:
+        """ Check existing fields are consistent. """
+        assert self.count == len(self.nodes)
+        assert len(self.node_attributes["names"]) == len(self.node_attributes["types"]) == len(
+            self.node_attributes["values"])
+        assert len(self.edge_attributes["names"]) == len(self.edge_attributes["types"]) == len(
+            self.edge_attributes["values"])
+
+    def check_sufficiency(
+            self
+    ) -> None:
+        """ Check all obligate fields are defined. """
+        for attr in self.__dict__.keys():
+            if attr is None:
+                raise ValueError(f"Attribute '{attr}' of metainfo should be defined.")
+
+    def check_consistency_with_dataset(
+            self,
+            dataset: Dataset
+    ) -> None:
+        """ Check if metainfo fields are consistent with PTG dataset. """
+        assert self.count == len(dataset)
+        from base.ptg_datasets import is_graph_directed
+        assert self.directed == is_graph_directed(dataset.get(0))
+        assert self.remap is False
+        assert len(self.node_attributes["names"]) == 1
+        assert self.node_attributes["types"][0] == "other"
+        # TODO check features values range
+
+    def check(
+            self
+    ) -> None:
+        """ Check metainfo is sufficient, consistent, and valid. """
+        self.check_sufficiency()
+        self.check_consistency()
+        self.check_validity()
+
+    def to_dict(
+            self
+    ) -> dict:
+        """ Return info as a dictionary. """
+        return dict(self.__dict__)
+
+    def save(
+            self,
+            path: Union[str, Path]
+    ) -> None:
+        """ Save into file non-null info. """
+        not_nones = {k: v for k, v in self.__dict__.items() if v is not None}
+        path.parent.mkdir(exist_ok=True, parents=True)
+        with path.open('w') as f:
+            json.dump(not_nones, f, indent=1)
+
+    @staticmethod
+    def induce(
+            dataset: Dataset
+    ) -> object:
+        """ Induce metainfo from a given PTG dataset.
+        """
+        res = DatasetInfo()
+        res.count = len(dataset)
+        from base.ptg_datasets import is_graph_directed
+        res.directed = is_graph_directed(dataset.get(0))
+        res.nodes = [len(dataset.get(ix).x) for ix in range(len(dataset))]
+        res.node_attributes = {
+            "names": ["unknown"],
+            "types": ["other"],
+            "values": [len(dataset.get(0).x[0])]
+        }
+        res.labelings = {"origin": dataset.num_classes}
+        res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
+        res.check()
+        return res
+
+    @staticmethod
+    def read(
+            path: Union[str, Path]
+    ) -> object:
+        """ Read info from a file. """
+        with path.open('r') as f:
+            a_dict = json.load(f)
+        res = DatasetInfo()
+        for k, v in a_dict.items():
+            setattr(res, k, v)
+        res.node_attr_slices, res.edge_attr_slices = res.get_attributes_slices_form_attributes(
+            res.node_attributes, res.edge_attributes)
+        res.check()
+        return res
+
+    @staticmethod
+    def get_attributes_slices_form_attributes(
+            node_attributes: dict,
+            edge_attributes: dict,
+    ) -> (dict, dict):
+        node_attr_slices = {}
+        if node_attributes:
+            start_attr_index = 0
+            for i in range(len(node_attributes['names'])):
+                if node_attributes['types'][i] == 'other':
+                    attr_len = node_attributes['values'][i]
+                elif node_attributes['types'][i] == 'categorical':
+                    attr_len = len(node_attributes['values'][i])
+                else:
+                    attr_len = 1
+                node_attr_slices[node_attributes['names'][i]] = (
+                    start_attr_index, start_attr_index + attr_len)
+                start_attr_index = start_attr_index + attr_len
+
+        edge_attr_slices = {}
+        if edge_attributes:
+            start_attr_index = 0
+            for i in range(len(edge_attributes['names'])):
+                if edge_attributes['types'][i] == 'other':
+                    attr_len = edge_attributes['values'][i]
+                elif edge_attributes['types'][i] == 'categorical':
+                    attr_len = len(edge_attributes['values'][i])
+                else:
+                    attr_len = 1
+                edge_attr_slices[edge_attributes['names'][i]] = (
+                    start_attr_index, start_attr_index + attr_len)
+                start_attr_index = start_attr_index + attr_len
+
+        return node_attr_slices, edge_attr_slices
+
+
+class VisiblePart:
+    def __init__(
+            self,
+            gen_dataset,
+            center: [int, list] = None,
+            depth: [int] = None
+    ):
+        """ Compute a part of dataset specified by a center node/graph and a depth
+
+        :param gen_dataset:
+        :param center: central node/graph or a list of nodes/graphs
+        :param depth: neighborhood depth or number of graphs before and after center to take,
+         e.g. center=7, depth=2 will give 5,6,7,8,9 graphs
+        :return:
+        """
+        #         neigh   graph   graphs
+        # nodes   [[n]]     n      [n]
+        # graphs    -       -      [g]
+        # edges   [[e]]   [[e]]   [[e]]
+        self.graphs = None
+        self.nodes = None
+        self.edges = None
+
+        self._ixes = None
+
+        if gen_dataset.is_multi():
+            if center is not None:  # Get several graphs
+                if isinstance(center, list):
+                    self._ixes = center
+                else:
+                    if depth is None:
+                        depth = 3
+                    self._ixes = range(
+                        max(0, center - depth),
+                        min(gen_dataset.info.count, center + depth + 1))
+            else:  # Get all graphs
+                self._ixes = range(gen_dataset.info.count)
+
+            self.graphs = list(self._ixes)
+            self.nodes = [gen_dataset.info.nodes[ix] for ix in self._ixes]
+            self.edges = [gen_dataset.dataset_data['edges'][ix] for ix in self._ixes]
+
+        else:  # single
+            assert gen_dataset.info.count == 1
+
+            if center is not None:  # Get neighborhood
+                if isinstance(center, list):
+                    raise NotImplementedError
+                if depth is None:
+                    depth = 2
+
+                nodes = {0: {center}}
+                edges = {0: []}  # incoming edges
+                prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
+
+                all_edges = gen_dataset.dataset_data['edges'][0]
+                for d in range(1, depth + 1):
+                    ns = nodes[d - 1]
+                    es_next = []
+                    ns_next = set()
+                    for i, j in all_edges:
+                        # Get all incoming edges * -> j
+                        if j in ns and i not in prev_nodes:
+                            es_next.append((i, j))
+                            if i not in ns:
+                                ns_next.add(i)
+
+                        if not gen_dataset.info.directed:
+                            # Check also outcoming edge i -> *, excluding already added
+                            if i in ns and j not in prev_nodes:
+                                es_next.append((j, i))
+                                if j not in ns:
+                                    ns_next.add(j)
+
+                    prev_nodes.update(ns)
+                    nodes[d] = ns_next
+                    edges[d] = es_next
+
+                self.nodes = [list(ns) for ns in nodes.values()]
+                self.edges = [list(es) for es in edges.values()]
+                self._ixes = [n for ns in self.nodes for n in ns]
+
+            else:  # Get whole graph
+                self.edges = gen_dataset.dataset_data['edges']
+                self.nodes = gen_dataset.info.nodes[0]
+                self._ixes = list(range(self.nodes))
+
+    def ixes(
+            self
+    ) -> list:
+        return self._ixes
+
+    def as_dict(
+            self
+    ) -> dict:
+        res = {}
+        if self.nodes:
+            res['nodes'] = self.nodes
+        if self.edges:
+            res['edges'] = self.edges
+        if self.graphs:
+            res['graphs'] = self.graphs
+        return res
+
+    def filter(
+            self,
+            array
+    ) -> dict:
+        """ Suppose ixes = [2,4]: [a, b, c, d] ->  {2: b, 4: d}
+        """
+        return {ix: array[ix] for ix in self._ixes}
+
+
+class GeneralDataset:
+    """ Generalisation of PTG and user-defined datasets: custom, VK, etc.
+    """
+
+    def __init__(
+            self,
+            dataset_config: Union[DatasetConfig, ConfigPattern]
+    ):
+        """
+        Args:
+            dataset_config: DatasetConfig dict from frontend
+        """
+        # Configuration
+        self.dataset_config = dataset_config
+        self.dataset_data = None  # structure data prepared for frontend
+        self.visible_part: VisiblePart = None  # index of visible nodes/graphs at frontend
+
+        self.dataset_var_config: DatasetVarConfig = None
+        self.dataset_var_data = None  # features data prepared for frontend
+
+        self.name = self.dataset_config.graph  # Last folder name
+        from base.dataset_stats import DatasetStats
+        self.stats = DatasetStats(self)  # dict of {stat -> value}
+        self.info: DatasetInfo = None
+
+        self.dataset: Dataset = None  # PTG dataset
+
+        # Train/test mask config
+        self.percent_test_class = None  # FIXME misha do we need it here? it is in manager_config
+        self.percent_train_class = None
+
+        self.train_mask = None
+        self.val_mask = None
+        self.test_mask = None
+
+        # To be inferred
+        self._labels = None
+
+    @property
+    def root_dir(
+            self
+    ) -> Path:
+        """ Dataset root directory with folders 'raw' and 'prepared'. """
+        # FIXME Misha, dataset_prepared_dir return path and files_paths not only path
+        return Declare.dataset_root_dir(self.dataset_config)[0]
+
+    @property
+    def results_dir(
+            self
+    ) -> Path:
+        """ Path to 'prepared/../' folder where tensor data is stored. """
+        # FIXME Misha, dataset_prepared_dir return path and files_paths not only path
+        return Path(Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)[0])
+
+    @property
+    def raw_dir(
+            self
+    ) -> Path:
+        """ Path to 'raw/' folder where raw data is stored. """
+        return self.root_dir / 'raw'
+
+    @property
+    def api_path(
+            self
+    ) -> Path:
+        """ Path to '.api' file. Could be not present. """
+        return self.root_dir / '.api'
+
+    @property
+    def info_path(
+            self
+    ) -> Path:
+        """ Path to '.info' file. """
+        return self.root_dir / 'raw' / '.info'
+
+    @property
+    def data(
+            self
+    ) -> Data:
+        return self.dataset._data
+
+    @property
+    def num_classes(
+            self
+    ) -> int:
+        return self.dataset.num_classes
+
+    @property
+    def num_node_features(
+            self
+    ) -> int:
+        return self.dataset.num_node_features
+
+    @property
+    def labels(
+            self
+    ) -> torch.Tensor:
+        if self._labels is None:
+            # NOTE: this is a copy from torch_geometric.data.dataset v=2.3.1
+            from torch_geometric.data.dataset import _get_flattened_data_list
+            data_list = _get_flattened_data_list([data for data in self.dataset])
+            self._labels = torch.cat([data.y for data in data_list if 'y' in data], dim=0)
+        return self._labels
+
+    def __len__(
+            self
+    ) -> int:
+        return self.info.count
+
+    def domain(
+            self
+    ) -> str:
+        return self.dataset_config.domain
+
+    def is_multi(
+            self
+    ) -> bool:
+        """ Return whether this dataset is multiple-graphs or single-graph. """
+        return self.info.count > 1
+
+    def build(
+            self,
+            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
+    ) -> None:
+        """ Create node feature tensors from attributes based on dataset_var_config.
+        """
+        raise NotImplementedError()
+
+    def get_dataset_data(
+            self,
+            part: Union[dict, None] = None
+    ) -> dict:
+        """ Get DatasetData for specified graphs or nodes
+        """
+        edges_list = []
+        node_attributes = {}
+        res = {
+            'edges': edges_list,
+            'node_attributes': node_attributes,
+        }
+
+        visible_part = self.visible_part if part is None else VisiblePart(self, **part)
+
+        res.update(visible_part.as_dict())
+
+        # Get needed part of self.dataset_data
+        ixes = visible_part.ixes()
+        if self.is_multi():
+            for a, vals_list in self.dataset_data['node_attributes'].items():
+                node_attributes[a] = {ix: vals_list[ix] for ix in ixes}
+
+        else:
+            if isinstance(visible_part.nodes, list):  # neighborhood
+                for a, vals_list in self.dataset_data['node_attributes'].items():
+                    node_attributes[a] = [{
+                        n: (vals_list[0][n] if n in vals_list[0] else None) for n in ixes}]
+
+            else:  # whole graph
+                res['node_attributes'] = self.dataset_data['node_attributes']
+
+        return res
+
+    def _compute_dataset_data(
+            self
+    ) -> None:
+        num = len(self.dataset)
+        data_list = [self.dataset.get(ix) for ix in range(num)]
+        is_directed = self.info.directed
+        # node_attributes exist for custom datasets.
+        # We can treat them as PTG features but it's not good.
+        node_attributes = {}
+        # name_type = self.dataset_var_config.features['attr']
+        #
+        # if self.is_multi():
+        #     edges_list = []
+        #     self.nodes = []
+        #     for data in data_list:
+        #         edges_list.append(data.edge_index.T.tolist())
+        #         self.nodes.append(len(data.x))
+        #
+        #     node_attributes = {
+        #         list(name_type.keys())[0]: [data.x.tolist() for data in data_list]
+        #     }
+        #
+        # else:
+        #     assert len(data_list) == 1
+        #     data = data_list[0]
+        #
+        #     self.nodes = [len(data.x)]
+        #     node_attributes = {
+        #         list(name_type.keys())[0]: [data.x.tolist()]
+        #     }
+
+        edges_list = []
+        for data in data_list:
+            edges = []
+            dataset_edge_index = data.edge_index.tolist()
+            for i in range(len(dataset_edge_index[0])):
+                if not is_directed:
+                    if dataset_edge_index[0][i] <= dataset_edge_index[1][i]:
+                        edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+                else:
+                    edges.append([dataset_edge_index[0][i], dataset_edge_index[1][i]])
+
+            edges_list.append(edges)
+
+        self.dataset_data = {
+            'edges': edges_list,
+            'node_attributes': node_attributes,
+            # 'info': self.info.to_dict()
+        }
+        # if self.info.name == "":
+        #     self.dataset_data['info']['name'] = '/'.join(self.dataset_config.full_name())
+
+    def set_visible_part(
+            self,
+            part: dict
+    ) -> None:
+        if self.dataset_data is None:
+            self._compute_dataset_data()
+
+        self.visible_part = VisiblePart(self, **part)
+
+    def get_dataset_var_data(
+            self,
+            part: Union[dict, None] = None
+    ) -> dict:
+        """ Get DatasetVarData for specified graphs or nodes
+        """
+        if self.dataset_var_data is None:
+            self._compute_dataset_var_data()
+
+        # Get needed part of self.dataset_var_data
+        features = {}
+        labels = {}
+        dataset_var_data = {
+            "features": features,
+            "labels": labels,
+        }
+
+        visible_part = self.visible_part if part is None else VisiblePart(self, **part)
+
+        for ix in visible_part.ixes():
+            # FIXME replace with getting data from tensors instead of keeping the whole data
+            features[ix] = self.dataset_var_data['features'][ix]
+            labels[ix] = self.dataset_var_data['labels'][ix]
+
+        return dataset_var_data
+
+    def _compute_dataset_var_data(
+            self
+    ) -> None:
+        """ Prepare dataset_var_data for frontend on demand.
+        """
+        # FIXME version fail in torch-geom 2.3.1
+        # self.dataset.num_classes = int(self.dataset_data["info"]["labelings"][self.dataset_var_config.labeling])
+
+        labels = []
+        node_features = []
+        for ix in range(len(self.dataset)):
+            data = self.dataset.get(ix)
+            labels.append(data.y.tolist())
+            node_features.append(data.x.tolist())
+
+        if self.is_multi():
+            self.dataset_var_data = {
+                "features": node_features,
+                "labels": labels,
+            }
+            # self.dataset_var_data = {
+            #     i: {
+            #         "features": node_features[i],
+            #         "labels": labels[i],
+            #     } for i in range(len(self.dataset))
+            # }
+        else:
+            self.dataset_var_data = {
+                "features": node_features if self.is_multi() else node_features[0],
+                "labels": labels if self.is_multi() else labels[0],
+            }
+
+    def get_stat(
+            self,
+            stat: str
+    ) -> Union[int, float, dict, str]:
+        """ Get statistics.
+        """
+        return self.stats.get(stat)
+
+    def _compute_stat(
+            self,
+            stat: str
+    ) -> None:
+        """ Compute a non-standard statistics.
+        """
+        # Should be defined in a subclass
+        raise NotImplementedError()
+
+    def is_one_hot_able(
+            self
+    ) -> bool:
+        """ Return whether features are 1-hot encodings. If yes, nodes can be colored.
+        """
+        assert self.dataset_var_config
+
+        if not self.is_multi():
+            return True
+
+        res = False
+        features = self.dataset_var_config.features
+        if len(features.keys()) == 1:
+            # 1-hot over nodes and no attributes is OK
+            if 'str_g' in features:
+                if features['str_g'] == 'one_hot':
+                    res = True
+
+            # Only 1 categorical attr is OK
+            elif 'attr' in features:
+                if len(features['attr']) == 1:
+                    attr = list(features['attr'].keys())[0]
+                    if features['attr'][attr] == 'categorical':
+                        res = True
+                    elif features['attr'][attr] == 'other':
+                        # Check honestly each feature vector
+                        feats = self.dataset_var_data['features']
+                        res = all(all(all(x == 1 or x == 0 for x in f) for f in feat) for feat in feats) and \
+                              all(all(sum(f) == 1 for f in feat) for feat in feats)
+
+        return res
+
+    def train_test_split(
+            self,
+            percent_train_class: float = 0.8,
+            percent_test_class: float = 0.2
+    ) -> None:
+        """ Compute train-validation-test split of graphs/nodes. """
+        self.percent_train_class = percent_train_class
+        self.percent_test_class = percent_test_class
+        percent_val_class = 1 - percent_train_class - percent_test_class  # - 1.1e-15
+
+        if percent_val_class < -1.1e-15:
+            raise RuntimeError("percent_train_class + percent_test_class > 1")
+        train_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
+        val_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
+        test_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
+
+        labeled_nodes_numbers = [n for n, y in enumerate(self.labels) if y != -1]
+        num_train = int(percent_train_class * len(labeled_nodes_numbers))
+        num_test = int(percent_test_class * len(labeled_nodes_numbers))
+        num_eval = len(labeled_nodes_numbers) - num_train - num_test
+        if percent_val_class <= 0 and num_eval > 0:
+            num_test += num_eval
+            num_eval = 0
+        split = randperm(num_train + num_eval + num_test, generator=default_generator).tolist()
+
+        for elem in split[:num_train]:
+            train_mask[labeled_nodes_numbers[elem]] = True
+        for elem in split[num_train: num_train + num_eval]:
+            val_mask[labeled_nodes_numbers[elem]] = True
+        for elem in split[num_train + num_eval:]:
+            test_mask[labeled_nodes_numbers[elem]] = True
+
+        # labeled_nodes_numbers = [n for n, y in enumerate(self.dataset_var_data["labels"]) if y != -1]
+        # for i in labeled_nodes_numbers:
+        #     test_mask[i] = True
+        # t = int(percent_train_class * len(labeled_nodes_numbers))
+        # for i in np.random.choice(labeled_nodes_numbers, t, replace=False):
+        #     train_mask[i] = True
+        #     test_mask[i] = False
+        self.train_mask = train_mask
+        self.test_mask = test_mask
+        self.val_mask = val_mask
+        self.dataset.data.train_mask = train_mask
+        self.dataset.data.test_mask = test_mask
+        self.dataset.data.val_mask = val_mask
+
+    def save_train_test_mask(
+            self,
+            path: Union[str, Path]
+    ) -> None:
+        """ Save current train/test mask to a given path (together with the model). """
+        if path is not None:
+            path /= 'train_test_split'
+            path.parent.mkdir(exist_ok=True, parents=True)
+            torch.save([self.train_mask, self.val_mask, self.test_mask,
+                        (self.percent_train_class, self.percent_test_class)], path)
+        else:
+            assert Exception("Path for save file is None")
+
+    def apply_modification(
+            self,
+            artifact: 'GraphModificationArtifact'
+    ) -> 'GeneralDataset':
+        """
+        Applies graph structure and feature modifications described in a GraphModificationArtifact
+        to the current GeneralDataset object and returns the modified version.
+
+        This includes:
+          - Removing and adding edges
+          - Adding new nodes and their features
+          - Removing nodes and updating the feature matrix with index remapping
+          - Modifying individual node features
+          - Reindexing nodes to maintain consistent connectivity
+
+        :param artifact: GraphModificationArtifact containing node and edge changes
+        :return: self (GeneralDataset)
+        """
+        data: Data = self.data
+        device = data.x.device if hasattr(data, 'x') else 'cpu'
+        from data_structures.graph_modification_artifacts import GraphModificationArtifact
+        assert isinstance(artifact, GraphModificationArtifact), (
+            f"Invalid type: expected GraphModificationArtifact, got {type(artifact).__name__}"
+        )
+        # === Handle node operations ===
+        y = data.y
+        edge_index = data.edge_index
+        x = data.x
+        num_nodes = x.size(0)
+        feature_dim = x.size(1)
+
+        # Validate node removals
+        removed_node_ids = set(int(n) for n in artifact.nodes['remove'])
+        assert all(0 <= n < num_nodes for n in removed_node_ids), (
+            f"Invalid node IDs in 'remove': {removed_node_ids} (max index {num_nodes - 1})"
+        )
+
+        # Validate node additions
+        existing_ids = set(range(num_nodes))
+        add_node_items = artifact.nodes['add'].items()
+        added_node_ids = set(int(n) for n in artifact.nodes['add'].keys())
+        assert not (added_node_ids & existing_ids), (
+            f"Cannot add nodes with existing IDs: {added_node_ids & existing_ids}"
+        )
+
+        # Validate node feature changes
+        change_features = artifact.nodes['change_f']
+        for node_id, feats in change_features.items():
+            nid = int(node_id)
+            assert 0 <= nid < num_nodes or nid in added_node_ids, (
+                f"Invalid node id {nid} in change_f: not in current or added nodes"
+            )
+            for feat_idx in feats:
+                fid = int(feat_idx)
+                assert 0 <= fid < feature_dim, (
+                    f"Invalid feature index {fid} for node {nid}"
+                )
+
+        # Build initial mapping and mask for nodes to keep
+        if removed_node_ids:
+            keep_mask = torch.tensor([
+                i not in removed_node_ids for i in range(num_nodes)
+            ], dtype=torch.bool, device=device)
+            remap = {}
+            new_index = 0
+            for old_index in range(num_nodes):
+                if old_index not in removed_node_ids:
+                    remap[old_index] = new_index
+                    new_index += 1
+
+            x = data.x[keep_mask]
+
+            if hasattr(data, 'y') and data.y is not None:
+                y = data.y[keep_mask]
+        else:
+            remap = {i: i for i in range(num_nodes)}
+
+        # Add new nodes (after reindexing existing ones)
+        if add_node_items:
+            new_node_start = len(remap)
+            for i, (node_id, _) in enumerate(add_node_items):
+                remap[int(node_id)] = new_node_start + i
+
+            new_features = torch.stack([
+                feat.to(device) for _, feat in add_node_items
+            ])
+            x = torch.cat([data.x, new_features], dim=0)
+
+            if hasattr(data, 'y') and data.y is not None:
+                new_labels = torch.full(
+                    (new_features.size(0),),
+                    -1,
+                    dtype=data.y.dtype,
+                    device=device
+                )
+                y = torch.cat([data.y, new_labels], dim=0)
+
+        # Modify node features
+        for node_id, feature_changes in change_features.items():
+            true_node_id = int(node_id)
+            if true_node_id in removed_node_ids:
+                continue  # Skip modifications to removed nodes
+
+            mapped_id = remap.get(true_node_id, None)
+            if mapped_id is None:
+                continue
+
+            for feat_idx, new_val in feature_changes.items():
+                feat_idx = int(feat_idx)
+                assert 0 <= feat_idx < feature_dim, (
+                    f"Feature index {feat_idx} out of bounds for node {true_node_id}"
+                )
+                data.x[mapped_id, feat_idx] = new_val
+
+        # === Edge processing ===
+        edge_index_cpu = data.edge_index.cpu()
+        edge_attr = getattr(data, 'edge_attr', None)
+        has_edge_attr = edge_attr is not None
+
+        edge_list = edge_index_cpu.t().tolist()
+        edge_attr_list = (
+            edge_attr.cpu().tolist() if has_edge_attr else [None] * len(edge_list)
+        )
+        current_edge_set = set((u, v) for u, v in edge_list)
+
+        # Validate edge removals
+        removed_edges_set = set((int(u), int(v)) for u, v in artifact.edges['remove'])
+        assert removed_edges_set <= current_edge_set, (
+            f"Some edges to remove do not exist: {removed_edges_set - current_edge_set}"
+        )
+
+        # Validate edge additions
+        added_edges_set = set((int(u), int(v)) for u, v, _ in artifact.edges['add'])
+        assert not (added_edges_set & current_edge_set), (
+            f"Some added edges already exist: {added_edges_set & current_edge_set}"
+        )
+
+        filtered_edges = []
+        filtered_attrs = []
+
+        for idx, (u, v) in enumerate(edge_list):
+            if u in removed_node_ids or v in removed_node_ids:
+                continue
+            if (u, v) in removed_edges_set:
+                continue
+            filtered_edges.append([remap[u], remap[v]])
+            if has_edge_attr:
+                filtered_attrs.append(edge_attr_list[idx])
+
+        for edge in artifact.edges['add']:
+            u, v, attr = edge
+            u = int(u)
+            v = int(v)
+            if u in removed_node_ids or v in removed_node_ids:
+                continue
+            filtered_edges.append([remap.get(u, u), remap.get(v, v)])
+            if has_edge_attr:
+                filtered_attrs.append(attr.tolist() if attr is not None else [0.0])
+
+        edge_index_tensor = torch.tensor(filtered_edges, dtype=torch.long).t().contiguous()
+        edge_index = edge_index_tensor.to(device)
+
+        if has_edge_attr:
+            edge_attr_tensor = torch.tensor(
+                filtered_attrs, dtype=edge_attr.dtype
+            ).to(device)
+            edge_attr = edge_attr_tensor
+
+        # === Update GeneralDataset properties ===
+        self.dataset.data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
+        # self.dataset.num_classes = int(data.y.max().item()) + 1 if hasattr(data, 'y') and data.y is not None else 0
+        # self.dataset.num_node_features = data.x.size(1)
+        self._labels = data.y if hasattr(data, 'y') else None
+
+        return self
 
 
 class DatasetManager:
@@ -94,7 +951,7 @@ class DatasetManager:
         """
         from base.ptg_datasets import PTGDataset
         dataset = DatasetManager.get_by_config(DatasetConfig(full_name))
-        cfg = PTGDataset.dataset_var_config.to_saveable_dict()
+        cfg = PTGDataset.dataset_var_config.to_savable_dict()
         cfg.update(**kwargs)
         dataset_var_config = DatasetVarConfig(**cfg)
         dataset.build(dataset_var_config=dataset_var_config)
@@ -256,7 +1113,7 @@ class DatasetManager:
         )
 
         # Check if exists
-        root_dir, files_paths = Declare.dataset_root_dir(dataset_config)
+        root_dir, _ = Declare.dataset_root_dir(dataset_config)
         if root_dir.exists():
             if exists_ok:
                 shutil.rmtree(root_dir)

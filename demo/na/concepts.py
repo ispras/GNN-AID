@@ -4,7 +4,7 @@ import torch
 import torch_scatter
 from collections import defaultdict
 
-from explainers.NeuralAnalysis.orig.graph_utils import edge_index_to_adj_list, edge_index_to_tuples
+from explainers.neural_analysis.orig.graph_utils import edge_index_to_adj_list, edge_index_to_tuples
 
 BEAM_WIDTH = 10
 

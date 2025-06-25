@@ -3,8 +3,7 @@ import os
 from pathlib import Path
 from typing import Union
 
-from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, ExplainerRunConfig, \
-    ConfigPattern
+from data_structures.configs import ExplainerModificationConfig, ConfigPattern
 from aux.data_info import DataInfo
 from aux.declaration import Declare
 from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
@@ -61,11 +60,11 @@ class ExplainerLoadBlock(Block):
     def _init(
             self,
             gen_dataset: GeneralDataset,
-            gmm: GNNModelManager
+            gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
-        self.gmm = gmm
+        self.gmm, _ = gmm_and_metrics
         return [gen_dataset.dataset.num_node_features, gen_dataset.is_multi(), self.get_index()]
         # return self.get_index()
 
@@ -148,11 +147,11 @@ class ExplainerInitBlock(Block):
     def _init(
             self,
             gen_dataset: GeneralDataset,
-            gmm: GNNModelManager
+            gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
         self.gen_dataset = gen_dataset
-        self.gmm = gmm
+        self.gmm, _ = gmm_and_metrics
         return FrameworkExplainersManager.available_explainers(self.gen_dataset, self.gmm)
 
     def _finalize(
@@ -214,7 +213,8 @@ class ExplainerRunBlock(Block):
             )
 
             print(f"explainer_run_config: {self.explainer_run_config.to_json()}")
-            self._run_explainer()
+            from threading import Thread
+            Thread(target=self._run_explainer, args=()).start()
             return ''
 
         # elif do == "save":

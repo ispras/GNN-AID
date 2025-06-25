@@ -2,7 +2,8 @@
  * Create selectors for parameters according to their types, default values and constraints.
  */
 class ParamsBuilder {
-    static allowed_types = Array('F', 'FW', 'M', 'EI', 'ELR', 'EGR', 'O')
+    static allowed_types = Array('F', 'FW', 'M', 'EI', 'ELR', 'EGR', 'O',
+        'AD-pa', 'AD-pd', 'AD-ea', 'AD-ed', 'AD-ma', 'AD-md')
     static cachedParams = {} // type -> parameters
 
     // Get parameters information of the given type
@@ -11,7 +12,7 @@ class ParamsBuilder {
         if (type in ParamsBuilder.cachedParams)
             return ParamsBuilder.cachedParams[type]
 
-        let params = await Controller.ajaxRequest('/ask', {
+        let params = await controller.ajaxRequest('/ask', {
                 ask: "parameters",
                 type: type,
             })
@@ -37,7 +38,7 @@ class ParamsBuilder {
         this.types = [].concat(type)
         this.idPrefix = idPrefix ? idPrefix : timeBasedId() + '-'
 
-        this.parameters = null // json of selectors parameters
+        this.nameParameters = null // json of selectors parameters, dict {name -> params}
         this.selectors = {} // dict of {argument -> selector jquery object}
         this.kwArgs = {} // dict of {argument -> value}
     }
@@ -50,7 +51,8 @@ class ParamsBuilder {
     // Remove all selectors
     drop() {
         this.$element.empty()
-        this.kwArgs = {}
+        // Clear dict without creating a new object
+        Object.keys(this.kwArgs).forEach(key => {delete this.kwArgs[key]})
     }
 
     // Manually set the value of a selector
@@ -90,20 +92,20 @@ class ParamsBuilder {
         $label.text(name)
     }
 
-    // Build selectors according to the case of key=value
+    // Build selectors according to the given value of the key
     async build(key, postFunction) {
-        this.parameters = {}
+        this.nameParameters = {}
         for (const type of this.types) {
             for (const [k, v] of Object.entries(await ParamsBuilder.getParams(type))) {
-                if (!(k in this.parameters))
-                    this.parameters[k] = {}
-                Object.assign(this.parameters[k], v)
+                if (!(k in this.nameParameters))
+                    this.nameParameters[k] = {}
+                Object.assign(this.nameParameters[k], v)
             }
         }
 
         let $div = this.$element
         // $div.append($("<label></label>").html("<b>Parameters</b>"))
-        let parameters = this.parameters[key]
+        let parameters = this.nameParameters[key]
         if (!parameters) return
 
         for (const [name, params] of Object.entries(parameters)) {
@@ -181,13 +183,55 @@ class ParamsBuilder {
                 }
                 $input.change(() => this.kwArgs[name] = $input.val())
             }
+
+            else if (type === "dynamic") {
+                $input = $("<select></select>")
+                $input.attr("type", "range")
+                let params_type = possible["params_type"]
+
+                // Insert inner ParamsBuilder
+                let $innerParamsDiv = $("<div></div>")
+                $div.append($("<div></div>").attr("class", "menu-separator"))
+                $div.append($innerParamsDiv)
+                let paramsBuilder = new ParamsBuilder($innerParamsDiv,
+                    params_type, this.idPrefix + "-inner-" + params_type + '-')
+
+                // Result of inner ParamsBuilder is assigned to a specified field
+                let resultName = possible["result_to"]
+                this.kwArgs[name] = null // will be induced at Backend
+                this.kwArgs[resultName] = {
+                    _class_name: null,  // to be set on $input.change()
+                    _config_kwargs: paramsBuilder.kwArgs,
+                    params_type: params_type, // helpful for Backend to put it back
+                }
+
+                let self = this
+                $input.change(async function () {
+                    paramsBuilder.drop()
+                    // self.$acceptDiv.hide() // todo need $acceptDiv of parent
+                    await paramsBuilder.build(this.value)
+                    // self.$acceptDiv.show()
+                    self.kwArgs[resultName]["_class_name"] = this.value
+                })
+
+                // Add possible values
+                let possibleValues = []
+                if ("possible" in possible)
+                    possibleValues = possible["possible"]
+                else // All possible values
+                    possibleValues = Object.keys(await ParamsBuilder.getParams(params_type))
+
+                for (const option of possibleValues) {
+                    $input.append($("<option></option>").text(option)
+                        .attr("selected", option === def))
+                }
+                $input.change()
+            }
             else
                 console.error("Type not supported", type)
 
-            // TODO use tip
-            // $input.attr("id", id)
-            this.kwArgs[name] = def
-            // $input.change(() => this.kwArgs[name] = $input.val()) // TODO parse int ot bool?
+            if (type !== "dynamic")
+                this.kwArgs[name] = def
             $cb.append($input)
         }
 

@@ -4,11 +4,8 @@ import warnings
 
 from torch import device
 
-from src.aux.utils import OPTIMIZERS_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH
-from src.explainers.explainers_manager import FrameworkExplainersManager
 from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelManagerConfig, ModelModificationConfig, ExplainerInitConfig, ExplainerRunConfig, \
-    ConfigPattern, ExplainerModificationConfig
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 

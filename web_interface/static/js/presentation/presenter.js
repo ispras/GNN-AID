@@ -31,8 +31,14 @@ class Presenter {
         this.modelManagerView = new MenuModelManagerView(
             $("#menu-model-manager-view"), "mmc", [])
 
+        this.beforeTrainView = new MenuBeforeTrainView(
+            $("#menu-model-beforetrain-view"), "bt", [])
+
         this.modelTrainerView = new MenuModelTrainerView(
             $("#menu-model-trainer-view"), "mt", [])
+
+        this.afterTrainView = new MenuAfterTrainView(
+            $("#menu-model-aftertrain-view"), "at", [])
 
         this.menuExplainerView = new MenuExplainerView(
             $("#menu-explainer-view"), "e", [])
@@ -50,7 +56,7 @@ class Presenter {
             $("#panel-explanation-view"), "e", ["ei", "er"])
     }
 
-    // View listen to its requestBlock and listenBlocks
+    // A View listens to its requestBlock and listenBlocks
     addListener(view) {
         for (const block of view.listenBlocks) {
             if (!(block in this.blockListeners))
@@ -73,7 +79,9 @@ class Presenter {
 class View {
     constructor($div, requestBlock, listenBlocks=[]) {
         this.$div = $div
+        // Name of backend block this View sends requests to
         this.requestBlock = requestBlock
+        // Names of backend blocks this View listens to and receives data from
         this.listenBlocks = listenBlocks
         controller.presenter.addListener(this)
 

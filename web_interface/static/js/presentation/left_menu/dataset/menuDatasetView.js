@@ -9,7 +9,7 @@ class MenuDatasetView extends MenuView {
         super.init()
 
         // Start with dataset config
-        let [ps, info] = await Controller.ajaxRequest('/dataset', {get: "index"})
+        let [ps, info] = await controller.ajaxRequest('/dataset', {get: "index"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
 
         this.$mainDiv.append($("<h3></h3>").text("Choose raw data"))
@@ -31,6 +31,6 @@ class MenuDatasetView extends MenuView {
 
     async _accept() {
         let dc = this.prefixStorage.getConfig()
-        await Controller.blockRequest(this.requestBlock, 'modify', dc)
+        await controller.blockRequest(this.requestBlock, 'modify', dc)
     }
 }

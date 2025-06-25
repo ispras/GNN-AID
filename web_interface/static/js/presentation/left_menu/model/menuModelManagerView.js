@@ -30,7 +30,7 @@ class MenuModelManagerView extends MenuView {
     async _accept() {
         let mmc = this.constructManagerConfig()
         // console.log("MM config", mmc)
-        await Controller.blockRequest(this.requestBlock, 'modify', mmc)
+        await controller.blockRequest(this.requestBlock, 'modify', mmc)
     }
 
     // Model manager parameters

@@ -54,6 +54,10 @@
         {
           "format": ".json",
           "file_name": "origin"
+        },
+        {
+          "format": ".json",
+          "file_name": "attack_diff"
         }
       ]
     },
@@ -63,6 +67,10 @@
         {
           "format": ".json",
           "file_name": "origin"
+        },
+        {
+          "format": ".json",
+          "file_name": "defense_diff"
         }
       ]
     },

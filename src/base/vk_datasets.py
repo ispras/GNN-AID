@@ -11,7 +11,7 @@ import numpy as np
 
 from aux.utils import GRAPHS_DIR
 from base.custom_datasets import CustomDataset
-from aux.configs import DatasetConfig, ConfigPattern
+from data_structures.configs import DatasetConfig
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
 
@@ -149,6 +149,10 @@ class AttrInfo:
             return res  # all zeros here
 
 
+class ConfigPatter:
+    pass
+
+
 class VKDataset(
     CustomDataset
 ):
@@ -157,7 +161,7 @@ class VKDataset(
     """
     def __init__(
             self,
-            dataset_config: Union[ConfigPattern, DatasetConfig],
+            dataset_config: Union[ConfigPatter, DatasetConfig],
             add_none: bool = False
     ):
         """
@@ -178,7 +182,7 @@ class VKDataset(
 
         # TODO Misha do we want add node attributes to send to front? See attr name
         #  Problem is that attr names are diff in attrs folder and in .info
-        self.dataset_data['node_attributes'] = {}
+        self.dataset_data["node_attributes"] = {}
 
         # # Add node labelings present in folder
         # labelings = {}
@@ -213,7 +217,7 @@ class VKDataset(
                     attr_dict = json.load(f)
                     for i, node in self._iter_nodes():
                         # print(node)
-                        one_hot = list(AttrInfo.one_hot(full_name=self.dataset_config.full_name,
+                        one_hot = list(AttrInfo.one_hot(full_name=self.dataset_config.full_name(),
                                                         attribute=key_loc,
                                                         value=attr_dict[node],
                                                         add_none=self.add_none))

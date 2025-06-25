@@ -33,7 +33,7 @@ class MenuExplainerInitView extends MenuView {
         // }
         // Object.assign(explainerInitConfig, this.paramsInitBuilder.kwArgs)
         console.log("explainerInitConfig", explainerInitConfig)
-        await Controller.blockRequest(this.requestBlock, 'modify', explainerInitConfig)
+        await controller.blockRequest(this.requestBlock, 'modify', explainerInitConfig)
     }
 
     // Recreate menu for explainer constructor

@@ -3,7 +3,6 @@ from time import sleep
 from abc import ABC, abstractmethod
 from typing import Union, Callable, Any, Type
 
-from flask_socketio import SocketIO
 from tqdm import tqdm
 
 from base.gen_dataset import GeneralDataset
@@ -12,7 +11,7 @@ from base.gen_dataset import GeneralDataset
 class ProgressBar(tqdm):
     def __init__(
             self,
-            socket: SocketIO,
+            socket: SocketConnect,
             dst,
             *args,
             **kwargs
@@ -86,7 +85,7 @@ class Explainer(
     @staticmethod
     def check_availability(
             gen_dataset: GeneralDataset,
-            model_manager: Type
+            model_manager: GNNModelManager
     ) -> bool:
         """ Availability check for the given dataset and model manager. """
         return False
@@ -223,12 +222,12 @@ class DummyExplainer(
         if mode == "local":
             assert self._global_explanation is not None
 
-            from explainers.explanation import AttributionExplanation
+            from data_structures.explanation import AttributionExplanation
             self.explanation = AttributionExplanation(local=True, nodes="binary")
             self.explanation.add_nodes({ix: 1 for ix in self._local_explanation})
         else:
             data = f"result: {self._global_explanation}"
-            from explainers.explanation import Explanation
+            from data_structures.explanation import Explanation
             self.explanation = Explanation(type='string', local=False, data=data)
 
         # Remove unpickable attributes

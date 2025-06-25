@@ -9,14 +9,18 @@ class Graph extends VisibleGraph {
 
         // Constants
         this.edgeColor = '#ffffff'
-        this.backgroundColor = "#404040"
     }
 
     async _build() {
+        // Set graph data from dataset
+        this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
+
+        // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes
         this.edges = this.datasetData.edges[0]
 
         await super._build()
+        $(this.svgElement).css("background-color", "#404040")
     }
 
     // Variable part of drop - to be overridden

@@ -1,6 +1,6 @@
 from base.gen_dataset import GeneralDataset
 from models_builder.gnn_constructor import FrameworkGNNConstructor
-from aux.configs import ModelConfig, ModelStructureConfig
+from data_structures.configs import ModelConfig, ModelStructureConfig
 
 
 def model_configs_zoo(

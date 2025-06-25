@@ -1,7 +1,7 @@
 import json
-from typing import Union, Type
+from typing import Union
 
-from aux.configs import DatasetConfig, DatasetVarConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
     SAVE_DIR_STRUCTURE_PATH
 import os
@@ -17,7 +17,7 @@ class Declare:
     def obj_info_to_path(
             what_save: str = None,
             previous_path: Union[str, Path] = None,
-            obj_info: Union[None, list, tuple, dict] = None
+            obj_info: Union[None, list, tuple, dict, Path] = None
     ) -> [Path, list]:
         """
         :param what_save: the path for which object is being built.
@@ -108,8 +108,8 @@ class Declare:
 
     @staticmethod
     def dataset_prepared_dir(
-            dataset_config: DatasetConfig,
-            dataset_var_config: DatasetVarConfig
+            dataset_config: Union[ConfigPattern, DatasetConfig],
+            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
     ) -> [Path, list]:
         """
         :param dataset_config: DatasetConfig
@@ -127,7 +127,7 @@ class Declare:
             while True:
                 dataset_var_config["dataset_ver_ind"] = ix
                 loc_path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                                 obj_info=dataset_var_config.to_saveable_dict(
+                                                                 obj_info=dataset_var_config.to_savable_dict(
                                                                      compact=True))
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
@@ -135,12 +135,12 @@ class Declare:
             path = loc_path
         else:
             path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                         obj_info=dataset_var_config.to_saveable_dict(compact=True))
+                                                         obj_info=dataset_var_config.to_savable_dict(compact=True))
         return path, files_paths
 
     @staticmethod
     def models_path(
-            class_obj: Type
+            class_obj: 'GNNModelManager'
     ) -> [Path, list]:
         """
         :param class_obj: class base on GNNModelManager
@@ -168,7 +168,7 @@ class Declare:
             poison_attack_kwargs_hash, poison_defense_kwargs_hash,
             mi_defense_kwargs_hash, evasion_defense_kwargs_hash,
             evasion_attack_kwargs_hash, mi_attack_kwargs_hash,
-            *class_obj.modification.to_saveable_dict(compact=True, need_full=False).values()
+            *class_obj.modification.to_savable_dict(compact=True, need_full=False).values()
         ]
         # print(class_obj.modification.to_saveable_dict(compact=True, need_full=False))
 
@@ -247,7 +247,8 @@ class Declare:
             explainer_name: str,
             explainer_ver_ind: int = None,
             explainer_run_kwargs: dict = None,
-            explainer_init_kwargs: dict = None
+            explainer_init_kwargs: dict = None,
+            create_dir_flag: bool = True,
     ) -> [Path, list]:
         """
         :param explainer_init_kwargs: dict with kwargs for explainer class
@@ -255,6 +256,7 @@ class Declare:
         :param models_path: model path
         :param explainer_name: explainer name. Example: Zorro
         :param explainer_ver_ind: index of explain version
+        :param create_dir_flag:
         :return: path for explanations result file and list with technical files
         """
         explainer_init_kwargs = explainer_init_kwargs.copy()
@@ -281,22 +283,30 @@ class Declare:
             ix = 0
             while True:
                 obj_info["explainer_ver_ind"] = str(ix)
-                loc_path, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                                 obj_info=obj_info)
+                loc_path, files_paths = Declare.obj_info_to_path(
+                    what_save=what_save,
+                    previous_path=path,
+                    obj_info=obj_info
+                )
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
                 ix += 1
             path = loc_path
         else:
-            path, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                         obj_info=obj_info)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        path = path / Path('explanation.json')
-        with open(files_paths[0], "w") as f:
-            json.dump(explainer_init_kwargs, f, indent=2)
-        with open(files_paths[1], "w") as f:
-            json.dump(explainer_run_kwargs, f, indent=2)
+            path, files_paths = Declare.obj_info_to_path(
+                what_save=what_save,
+                previous_path=path,
+                obj_info=obj_info
+            )
+
+        if create_dir_flag:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            path = path / Path('explanation.json')
+            with open(files_paths[0], "w") as f:
+                json.dump(explainer_init_kwargs, f, indent=2)
+            with open(files_paths[1], "w") as f:
+                json.dump(explainer_run_kwargs, f, indent=2)
 
         return path, files_paths
 
@@ -315,7 +325,10 @@ class Declare:
         # BUG Misha, check is correct next line, because in def obj_info_to_path can't be Path or str
         obj_info = explainer_path
 
-        _, files_paths = Declare.obj_info_to_path(what_save=what_save, previous_path=path,
-                                                  obj_info=obj_info)
+        _, files_paths = Declare.obj_info_to_path(
+            what_save=what_save,
+            previous_path=path,
+            obj_info=obj_info
+        )
 
         return files_paths

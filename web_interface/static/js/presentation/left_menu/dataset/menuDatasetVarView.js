@@ -216,7 +216,7 @@ class MenuDatasetVarView extends MenuView {
 //            dataset_attack_type: this.$attackTypeSelect.val(),
             dataset_ver_ind: 0, // TODO check
         }
-        await Controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)
+        await controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)
     }
 
 }

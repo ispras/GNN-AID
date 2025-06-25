@@ -2,16 +2,16 @@ import collections
 import importlib.util
 import json
 import logging
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict, Mapping
 
 # from pydantic.utils import deep_update
 # from pydantic.v1.utils import deep_update
 
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DATA_INFO_DIR, \
-    USER_MODELS_DIR, METAINFO_DIR, SAVE_DIR_STRUCTURE_PATH
+    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH
 import os
 from pathlib import Path
-from aux.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import PrefixStorage
 
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor
@@ -146,8 +146,8 @@ class DataInfo:
     @staticmethod
     def values_list_and_technical_files_by_path_and_prefix(
             path: Union[str, Path],
-            prefix: Tuple
-    ) -> [List, dict]:
+            prefix: Tuple[str, ...]
+    ) -> Tuple[List[str], Dict[str, dict]]:
         """
 
         :param path: path of the saved object
@@ -159,33 +159,38 @@ class DataInfo:
             save_dir_structure = json.loads(f.read())
         parts_val = []
         description_info = {}
-        path = Path(path).parts
+        path = Path(path)
+        if isinstance(path, bytes):
+            path = path.decode()
+        path = path.parts
         parts_parse = 0
         for prefix_part in prefix[:-1]:
             for key, val in save_dir_structure[prefix_part].items():
-                if val["add_key_name_flag"] is not None:
+                if val.get("add_key_name_flag") is not None:
                     if not val["add_key_name_flag"]:
                         parts_val.append(path[parts_parse].strip())
                     else:
                         parts_val.append(path[parts_parse].strip().split(f'{key}=', 1)[1])
                 parts_parse += 1
         if len(prefix) > 0:
-            for key, val in save_dir_structure[prefix[-1]].items():
-                if val["add_key_name_flag"] is not None:
-                    if not val["add_key_name_flag"]:
-                        parts_val.append(path[parts_parse].strip())
-                    else:
-                        parts_val.append(path[parts_parse].strip().split(f'{key}=', 1)[1])
-                if val["files_info"] is not None:
-                    for file_info_dict in val["files_info"]:
-                        if file_info_dict["file_name"] == "origin":
-                            file_name = path[parts_parse].strip()
+            last_prefix_part = prefix[-1]
+            if last_prefix_part in save_dir_structure:
+                for key, val in save_dir_structure[last_prefix_part].items():
+                    if val.get("add_key_name_flag") is not None:
+                        if not val["add_key_name_flag"]:
+                            parts_val.append(path[parts_parse].strip())
                         else:
-                            file_name = file_info_dict["file_name"]
-                        file_name += file_info_dict["format"]
-                        description_info.update(
-                            {key: {parts_val[-1]: os.path.join(os.path.join(*path[:parts_parse]), file_name)}})
-                parts_parse += 1
+                            parts_val.append(path[parts_parse].strip().split(f'{key}=', 1)[1])
+                    if val.get("files_info") is not None:
+                        for file_info_dict in val["files_info"]:
+                            if file_info_dict["file_name"] == "origin":
+                                file_name = path[parts_parse].strip()
+                            else:
+                                file_name = file_info_dict["file_name"]
+                            file_name += file_info_dict["format"]
+                            description_info.update(
+                                {key: {parts_val[-1]: os.path.join(*path[:parts_parse], file_name)}})
+                    parts_parse += 1
         return parts_val, description_info
 
     @staticmethod
@@ -222,7 +227,7 @@ class DataInfo:
     @staticmethod
     def deep_update(
             d: dict,
-            u: dict
+            u: Union[Mapping, Dict]
     ) -> dict:
         for k, v in u.items():
             if isinstance(v, collections.abc.Mapping):

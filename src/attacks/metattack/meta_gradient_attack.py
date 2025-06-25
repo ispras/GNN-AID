@@ -7,9 +7,11 @@ from torch.nn import functional as F
 from torch.nn.parameter import Parameter
 from torch import optim
 from tqdm import tqdm
-from models_builder.gnn_models import FrameworkGNNModelManager
+
+from base.datasets_processing import GeneralDataset
+from models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
 from models_builder.models_zoo import model_configs_zoo
-from aux.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern
 from aux.utils import OPTIMIZERS_PARAMETERS_PATH
 from torch_geometric.utils import dense_to_sparse
 
@@ -17,8 +19,6 @@ from attacks.poison_attacks import PoisonAttacker
 
 
 class BaseMeta(PoisonAttacker):
-    name = "BaseMeta"
-
     """
     Super class for Metattack on GNNs
     Parameters
@@ -46,12 +46,20 @@ class BaseMeta(PoisonAttacker):
     device: str
         'cpu' or 'cuda'
     """
+    name = "BaseMeta (aux)"
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        return False  # BaseMeta is a helper class, not a method
 
     def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
                  attack_structure=True, attack_features=False, undirected=False, device='cpu'):
         super().__init__()
         self.model = None
-        self.num_nodes = num_nodes
+        self.num_nodes = num_nodes  # will be set from dataset in attack()
         self.feature_shape = feature_shape
         self.lambda_ = lambda_
         self.train_iters = train_iters
@@ -66,18 +74,22 @@ class BaseMeta(PoisonAttacker):
         self.modified_adj = None
         self.modified_features = None
 
-        if attack_structure:
-            self.undirected = undirected
-            assert num_nodes is not None, 'Num_nodes should be given'
-            self.adj_changes = Parameter(torch.FloatTensor(num_nodes, num_nodes))
+        self.undirected = undirected
+
+    def _init(self, gen_dataset: GeneralDataset):
+        """ Init extra parameters when dataset is known.
+        """
+        self.num_nodes = gen_dataset.data.x.shape[0]
+        if self.attack_structure:
+            self.adj_changes = Parameter(torch.FloatTensor(self.num_nodes, self.num_nodes))
             self.adj_changes.data.fill_(0)
 
-        if attack_features:
-            assert feature_shape is not None, 'Feature_shape should be given'
-            self.feature_changes = Parameter(torch.FloatTensor(feature_shape))
+        self.feature_shape = tuple(gen_dataset.data.x.shape)
+        if self.attack_features:
+            self.feature_changes = Parameter(torch.zeros(self.feature_shape, dtype=torch.float32))
             self.feature_changes.data.fill_(0)
 
-    def attack(self, gen_dataset):
+    def attack(self, gen_dataset: GeneralDataset):
         # TODO model choice by user to be implemented.
         #  note: kind of sophisticated task
 
@@ -85,6 +97,8 @@ class BaseMeta(PoisonAttacker):
 
         # from torch_geometric.data import Data
         # Data().get('adj_t')
+        self._init(gen_dataset)
+
         self.model = model_configs_zoo(gen_dataset, 'gcn_gcn_linearized')
         default_config = ModelModificationConfig(
             model_ver_ind=0,
@@ -112,7 +126,6 @@ class BaseMeta(PoisonAttacker):
         gnn_model_manager_surrogate.train_model(gen_dataset=gen_dataset, steps=self.train_iters)
 
         self.pred_labels = gnn_model_manager_surrogate.run_model(gen_dataset=gen_dataset, mask='all', out='answers')
-
 
     def get_modified_adj(self, ori_adj):
         adj_changes_square = self.adj_changes - torch.diag(torch.diag(self.adj_changes, 0))
@@ -195,11 +208,19 @@ class BaseMeta(PoisonAttacker):
     def reset_parameters(self):
         pass
 
+
 class MetaAttackFull(BaseMeta):
     """
     Attack GNNs with meta gradients
     """
     name = "MetaAttackFull"
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        return True  # TODO
 
     def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
                  momentum=0.9, attack_structure=True, attack_features=False, undirected=False, device='cpu',
@@ -299,7 +320,10 @@ class MetaAttackFull(BaseMeta):
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
 
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_structure:
+            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_features:
+            gen_dataset.dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):
@@ -398,6 +422,13 @@ class MetaAttackApprox(BaseMeta):
     """
     name = "MetaAttackApprox"
 
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        return True  # TODO
+
     def __init__(self, num_nodes=None, feature_shape=None, attack_structure=True, attack_features=False,
                  undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200, attack_iters=10,
                  lr=0.01, with_relu=False):
@@ -410,16 +441,19 @@ class MetaAttackApprox(BaseMeta):
         self.attack_iters = attack_iters
         self.adj_meta_grad = None
         self.features_meta_grad = None
-        if self.attack_structure:
-            self.adj_grad_sum = torch.zeros(num_nodes, num_nodes).to(device)
-        if self.attack_features:
-            self.feature_grad_sum = torch.zeros(feature_shape).to(device)
 
         self.with_bias = with_bias
         self.with_relu = with_relu
 
         self.weights = []
         self.biases = []
+
+    def _init(self, gen_dataset: GeneralDataset):
+        super()._init(gen_dataset)
+        if self.attack_structure:
+            self.adj_grad_sum = torch.zeros(self.num_nodes, self.num_nodes).to(self.device)
+        if self.attack_features:
+            self.feature_grad_sum = torch.zeros(self.feature_shape).to(self.device)
 
     def attack(self, gen_dataset, attack_budget=500, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
@@ -493,7 +527,10 @@ class MetaAttackApprox(BaseMeta):
         if self.attack_features:
             self.modified_features = self.get_modified_features(ori_features).detach()
 
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_structure:
+            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+        if self.attack_features:
+            gen_dataset.dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):

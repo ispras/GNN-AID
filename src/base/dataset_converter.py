@@ -279,7 +279,7 @@ def example_single():
     g.add_edge(16, 17, weight=5, type='small')
     g.add_edge(17, 18, weight=3, type='medium')
 
-    from aux.configs import DatasetConfig
+    from data_structures.configs import DatasetConfig
     from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 
@@ -358,7 +358,7 @@ def example_multi():
     g3.add_edge(4, 5, type='hybrid')
     g3.add_edge(1, 5, weight=3.2)
 
-    from aux.configs import DatasetConfig
+    from data_structures.configs import DatasetConfig
     from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 

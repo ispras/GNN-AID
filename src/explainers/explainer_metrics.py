@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch_geometric.utils import subgraph, k_hop_subgraph
 
-from aux.configs import ConfigPattern, ExplainerRunConfig
+from data_structures.configs import ConfigPattern, ExplainerRunConfig
 from aux.custom_decorators import timing_decorator
 from base.gen_dataset import GeneralDataset
 

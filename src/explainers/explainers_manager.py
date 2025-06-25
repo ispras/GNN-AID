@@ -2,31 +2,16 @@ import json
 from socket import SocketIO
 from typing import Union, Type
 
-from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
+from data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from aux.declaration import Declare
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH
-from base.gen_dataset import GeneralDataset
+from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, import_all_from_package
+from base.datasets_processing import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
 from explainers.explainer_metrics import NodesExplainerMetric
+from models_builder.gnn_models import GNNModelManager
 
-# TODO misha can we do it not manually?
-# Need to import all modules with subclasses of Explainer, otherwise python can't see them
-
-for pack in [
-    'explainers.GNNExplainer.torch_geom_our',
-    'explainers.GNNExplainer.dig_our',
-    'explainers.PGExplainer.dig',
-    'explainers.PGMExplainer',
-    'explainers.SubgraphX',
-    'explainers.Zorro',
-    'explainers.graphmask',
-    'explainers.ProtGNN',
-    'explainers.NeuralAnalysis.our'
-]:
-    try:
-        __import__(pack + '.out')
-    except ImportError:
-        print(f"Couldn't import Explainer from {pack}")
+import explainers
+import_all_from_package(explainers)  # to import all subclasses properly
 
 
 class FrameworkExplainersManager:
@@ -35,7 +20,7 @@ class FrameworkExplainersManager:
     interpretation methods built into the framework
     Currently supports 6 explainers
     """
-    supported_explainers = [e.name for e in Explainer.__subclasses__()]
+    supported_explainers = [e.name for e in all_subclasses(Explainer)]
 
     def __init__(
             self,
@@ -66,7 +51,7 @@ class FrameworkExplainersManager:
                 _class_name=explainer_name,
                 _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
                 _config_class="ExplainerInitConfig",
-                _config_kwargs=init_config.to_saveable_dict(),
+                _config_kwargs=init_config.to_savable_dict(),
             )
         self.init_config = init_config
         if modification_config is None:
@@ -77,7 +62,7 @@ class FrameworkExplainersManager:
         elif isinstance(modification_config, ExplainerModificationConfig):
             modification_config = ConfigPattern(
                 _config_class="ExplainerModificationConfig",
-                _config_kwargs=modification_config.to_saveable_dict(),
+                _config_kwargs=modification_config.to_savable_dict(),
             )
         self.modification_config = modification_config
 
@@ -106,7 +91,7 @@ class FrameworkExplainersManager:
                 f"{FrameworkExplainersManager.supported_explainers}")
 
         print("Creating explainer")
-        name_klass = {e.name: e for e in Explainer.__subclasses__()}
+        name_klass = {e.name: e for e in all_subclasses(Explainer)}
         klass = name_klass[self.explainer_name]
         self.explainer = klass(
             self.gen_dataset, model=self.gnn,
@@ -147,15 +132,17 @@ class FrameworkExplainersManager:
 
     def explanation_result_path(
             self,
-            run_config: Union[ConfigPattern, ExplainerRunConfig]
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            create_dir_flag: bool = True,
     ) -> None:
         # TODO pass configs
         self.explainer_result_file_path, self.files_paths = Declare.explanation_file_path(
             models_path=self.gnn_model_path,
             explainer_name=self.explainer_name,
             explainer_ver_ind=self.modification_config.explainer_ver_ind,
-            explainer_init_kwargs=self.init_config.to_saveable_dict(),
-            explainer_run_kwargs=run_config.to_saveable_dict(),
+            explainer_init_kwargs=self.init_config.to_savable_dict(),
+            explainer_run_kwargs=run_config.to_savable_dict(),
+            create_dir_flag=create_dir_flag,
         )
 
     def conduct_experiment(
@@ -209,7 +196,7 @@ class FrameworkExplainersManager:
                 f"Explainer {self.explainer_name} is not supported. Choose one of "
                 f"{FrameworkExplainersManager.supported_explainers}")
         print("Creating explainer")
-        name_klass = {e.name: e for e in Explainer.__subclasses__()}
+        name_klass = {e.name: e for e in all_subclasses(Explainer)}
         klass = name_klass[self.explainer_name]
         self.explainer = klass(
             dataset, model=self.gnn,
@@ -269,11 +256,11 @@ class FrameworkExplainersManager:
     @staticmethod
     def available_explainers(
             gen_dataset: GeneralDataset,
-            model_manager: Type
+            model_manager: GNNModelManager
     ) -> list:
         """ Get a list of explainers applicable for current model and dataset.
         """
         return [
-            e.name for e in Explainer.__subclasses__()
+            e.name for e in all_subclasses(Explainer)
             if e.check_availability(gen_dataset, model_manager)
         ]
