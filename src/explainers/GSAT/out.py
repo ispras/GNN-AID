@@ -1,4 +1,5 @@
 from typing import Any, Literal
+from math import sqrt
 
 import torch
 from torch import Tensor
@@ -23,7 +24,7 @@ class GSATExplainer(Explainer):
             model,
             device,
             expl_type: Literal['binary', 'continuous'] = 'continuous',
-            thrsh: float = 0.5
+            thrsh: float = -1.0
     ):
         Explainer.__init__(self, gen_dataset, model)
 
@@ -87,7 +88,9 @@ class GSATExplainer(Explainer):
                     continue
                 edge = (edge_index[0, i].item(), edge_index[1, i].item())
                 att = edge_att[i].item()
-                edge_dict[edge] = att
+                if  att > self.thrsh:  # Only include edges above threshold
+                    edge_dict[edge] = att
+
             raw_explanation = {'edge_dict': edge_dict, 'node_att': node_att[subset]}  # no self-loops
 
         return raw_explanation
@@ -135,7 +138,11 @@ class GSATExplainer(Explainer):
 
             # Nodes
             nodes_values = {}
-            for i, val in enumerate(node_att.squeeze().tolist()):
-                nodes_values[i] = val
+            if node_att.shape[0] == 1:
+                nodes_values[0] = node_att.item()
+            else:
+                for i, val in enumerate(node_att.squeeze().tolist()):
+                    if val ** 0.5 > self.thrsh:
+                        nodes_values[i] = val
 
             self.explanation.add_nodes(nodes_values)
