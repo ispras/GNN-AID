@@ -1,7 +1,7 @@
 import numpy as np
 
-from base.gen_dataset import GeneralDataset
-from defense.defense_base import Defender
+from datasets.gen_dataset import GeneralDataset
+from defenses.defense_base import Defender
 
 
 class PoisonDefender(

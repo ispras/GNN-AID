@@ -5,7 +5,9 @@ from typing import Union, Callable, Any, Type
 
 from tqdm import tqdm
 
-from base.gen_dataset import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
+from models_builder.gnn_models import GNNModelManager
+from web_interface.back_front.utils import SocketConnect
 
 
 class ProgressBar(tqdm):

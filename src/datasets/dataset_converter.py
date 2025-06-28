@@ -6,7 +6,7 @@ import networkx as nx
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from base.gen_dataset import DatasetInfo
+from datasets.dataset_info import DatasetInfo
 
 
 class DatasetConverter:
@@ -280,20 +280,19 @@ def example_single():
     g.add_edge(17, 18, weight=3, type='medium')
 
     from data_structures.configs import DatasetConfig
-    from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 
     name = 'example_gml'
-    dc = DatasetConfig('single-graph', 'custom', name)
+    dc = DatasetConfig(('single-graph', 'custom', name))
 
     # Create directory
     root, files_paths = Declare.dataset_root_dir(dc)
     raw = root / 'raw'
-    raw.mkdir(parents=True)
+    raw.mkdir(parents=True, exist_ok=True)
 
     # Write info and labels
     nx.write_gml(g, raw / 'graph.gml')
-    with open('metainfo', 'w') as f:
+    with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 1,
@@ -313,11 +312,12 @@ def example_single():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir()
+    (raw / f'{name}.labels').mkdir(exist_ok=True)
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"11": 1, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0}, f)
 
-    custom_dataset = DatasetManager.register_custom(
+    from datasets.custom_datasets import KnownFormatDataset
+    custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': -1, 'b': -1},
         default_edge_attr_value={'weight': -1, 'type': -1})
@@ -359,22 +359,21 @@ def example_multi():
     g3.add_edge(1, 5, weight=3.2)
 
     from data_structures.configs import DatasetConfig
-    from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 
     name = 'example_gml'
-    dc = DatasetConfig('multiple-graphs', 'custom', name)
+    dc = DatasetConfig(('multiple-graphs', 'custom', name))
 
     # Create directory
     root, files_paths = Declare.dataset_root_dir(dc)
     raw = root / 'raw'
-    raw.mkdir(parents=True)
+    raw.mkdir(parents=True, exist_ok=True)
 
     # Write info and labels
     nx.write_gml(g1, raw / 'graph1.gml')
     nx.write_gml(g2, raw / 'graph2.gml')
     nx.write_gml(g3, raw / 'graph3.gml')
-    with open('metainfo', 'w') as f:
+    with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 3,
@@ -394,11 +393,12 @@ def example_multi():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir()
+    (raw / f'{name}.labels').mkdir(exist_ok=True)
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"0":1,"1":0,"2":0}, f)
 
-    custom_dataset = DatasetManager.register_custom(
+    from datasets.custom_datasets import KnownFormatDataset
+    custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': 0, 'b': 'alpha'},
         default_edge_attr_value={'weight': 1, 'type': 'mixed'})
@@ -406,5 +406,5 @@ def example_multi():
 
 
 if __name__ == '__main__':
-    # example_single()
-    example_multi()
+    example_single()
+    # example_multi()

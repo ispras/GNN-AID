@@ -2,7 +2,8 @@ import json
 
 from aux.data_info import DataInfo
 from aux.utils import TORCH_GEOM_GRAPHS_PATH
-from base.datasets_processing import DatasetManager, GeneralDataset
+from datasets.datasets_manager import DatasetManager
+from datasets.gen_dataset import GeneralDataset
 from data_structures.configs import DatasetConfig, DatasetVarConfig
 from web_interface.back_front.block import Block
 from web_interface.back_front.utils import json_dumps, get_config_keys
@@ -52,13 +53,13 @@ class DatasetBlock(Block):
         # Add torch_geom FIXME tmp
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             configuration = json.load(f)
-            assert len(index.keys) == 3
+            # assert len(index.keys) == 3
             for i in configuration['content']:
                 for j in configuration['content'][i]:
                     for k in configuration['content'][i][j]:
                         try:
-                            index.add((i, j, k))
-                        except ValueError: pass
+                            index.add(("pytorch-geometric", i, j, k), "Not loaded yet")
+                        except KeyError: pass
 
         return json_dumps([index.to_json(), json_dumps('')])
 

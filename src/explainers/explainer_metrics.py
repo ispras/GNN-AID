@@ -10,7 +10,7 @@ from torch_geometric.utils import subgraph, k_hop_subgraph
 
 from data_structures.configs import ConfigPattern, ExplainerRunConfig
 from aux.custom_decorators import timing_decorator
-from base.gen_dataset import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 
 
 class NodesExplainerMetric:

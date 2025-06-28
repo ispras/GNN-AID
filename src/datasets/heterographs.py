@@ -9,9 +9,11 @@ from torch_geometric.data import Data, HeteroData, InMemoryDataset
 
 from aux.utils import GRAPHS_DIR
 from aux.declaration import Declare
-from base.custom_datasets import CustomDataset
-from base.datasets_processing import DatasetManager
-from base.gen_dataset import DatasetInfo, VisiblePart, GeneralDataset
+from datasets.custom_datasets import CustomDataset
+from datasets.datasets_manager import DatasetManager
+from datasets.gen_dataset import GeneralDataset
+from datasets.visible_part import VisiblePart
+from datasets.dataset_info import DatasetInfo
 from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
@@ -187,7 +189,7 @@ class CustomHeteroDataset(
             # assert node_index == self.info.nodes[0]
             # Original ids in the order of appearance
             self.node_map = {nt: list(node_map[nt].keys()) for nt in self.node_types}
-            self.info.node_info = {"id": self.node_map}
+            # self.info.node_info = {"id": self.node_map}
 
         # Read attributes
         self.dataset_data['node_attributes'] = {nt: {} for nt in self.node_types}

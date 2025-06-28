@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from attacks.attack_base import Attacker
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 
 POISON_ATTACKS_DIR = Path(__file__).parent.resolve() / 'poison_attacks_collection'
 

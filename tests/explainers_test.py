@@ -16,7 +16,7 @@ from time import time
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern

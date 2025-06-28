@@ -8,7 +8,7 @@ import networkx as nx
 from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
-from base.gen_dataset import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 
 
 class DatasetStats:

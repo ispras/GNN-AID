@@ -10,7 +10,7 @@ from aux import utils
 tmp_dir = utils.MODELS_DIR / (utils.MODELS_DIR.name + str(time()))
 utils.MODELS_DIR = tmp_dir
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo

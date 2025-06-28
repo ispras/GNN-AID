@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Union
 
@@ -8,8 +9,11 @@ import torch
 from torch_geometric.data import Data, InMemoryDataset
 
 from aux.declaration import Declare
-from aux.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from base.gen_dataset import LocalDataset, DatasetInfo, GeneralDataset
+from aux.utils import tmp_dir
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from datasets.dataset_converter import DatasetConverter
+from datasets.gen_dataset import LocalDataset, GeneralDataset
+from datasets.dataset_info import DatasetInfo
 
 
 class KnownFormatDataset(
@@ -20,12 +24,24 @@ class KnownFormatDataset(
     """
     def __init__(
             self,
-            dataset_config: Union[ConfigPattern, DatasetConfig]
+            dataset_config: Union[ConfigPattern, DatasetConfig],
+            format: str = 'ij',
+            default_node_attr_value: dict = None,
+            default_edge_attr_value: dict = None,
     ):
         """
         Args:
             dataset_config: DatasetConfig dict from frontend
+            format: one of known formats: ij, xml,
+            default_node_attr_value: dict with default node attributes values to apply where
+             missing.
+            default_edge_attr_value: dict with default edge attributes values to apply where
+             missing.
         """
+        assert format == 'ij' or format in DatasetConverter.supported_formats
+        self._format = format
+        self._default_node_attr_value = default_node_attr_value
+        self._default_edge_attr_value = default_edge_attr_value
         self.node_map = None  # Optional nodes mapping: node_map[i] = original id of node i
 
         super(KnownFormatDataset, self).__init__(dataset_config)
@@ -145,12 +161,61 @@ class KnownFormatDataset(
             else:  # nodes labels
                 assert all_nodes[0] == set(map(int, labels.keys()))
 
+    def _convert_to_ij(
+            self
+    ) -> None:
+        # Check if ij files exist
+        if self.edges_path.exists():
+            return
+
+        # Look for obligate files: .info, graph(s), a dir with labels
+        # info_file = None
+        label_dir = None
+        graph_files = []
+        path = Declare.dataset_root_dir(self.dataset_config)[0] / 'raw'
+        for p in path.iterdir():
+            # if p.is_file() and p.name == '.info':
+            #     info_file = p
+            if p.is_file() and p.name.endswith(f'.{self._format}'):
+                graph_files.append(p)
+            if p.is_dir() and p.name.endswith('.labels'):
+                label_dir = p
+        # if info_file is None:
+        #     raise RuntimeError(f"No .info file was found at {path}")
+        if len(graph_files) == 0:
+            raise RuntimeError(f"No files with extension '.{self._format}' found at {path}. "
+                               f"If your graph is heterograph, use 'register_custom_hetero()'")
+        if label_dir is None:
+            raise RuntimeError(f"No file with extension '.label' found at {path}")
+
+        # Order of files is important, should be consistent with .info, we suppose they are sorted
+        graph_files = sorted(graph_files)
+
+        # Create a temporary dir to store converted data
+        with tmp_dir(path) as tmp:
+            # Convert the data if necessary, write it to an empty directory
+            if self._format != 'ij':
+                from datasets.dataset_converter import DatasetConverter
+                DatasetConverter.format_to_ij(self.info, graph_files, self._format, tmp,
+                                              self._default_node_attr_value, self._default_edge_attr_value)
+
+            # Move or copy original contents to a temporary dir
+            merge_directories(path, tmp, True)
+
+            # Rename the newly created dir to the original one
+            tmp.rename(path)
+
+        self.check_validity()
+
     def _compute_dataset_data(
             self
     ) -> None:
         """
         """
         self.info = DatasetInfo.read(self.info_path)
+        if self._format != 'ij':
+            self._convert_to_ij()
+
         self.dataset_data = {}
 
         # Read edges and attributes
@@ -169,6 +234,7 @@ class KnownFormatDataset(
                 ptg_edge_index = [[], []]  # Over each graph
                 node_map = {}
                 node_maps.append(node_map)
+                self.dataset_data['edges'] = []
                 for l, line in enumerate(f.readlines()):
                     i, j = map(int, line.split())
                     if i not in node_map:
@@ -214,7 +280,7 @@ class KnownFormatDataset(
                 self.node_map = []
                 for node_map in node_maps:
                     self.node_map.append(list(node_map.keys()))
-                self.info.node_info = {"id": self.node_map}
+                # self.info.node_info = {"id": self.node_map}
 
             assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
             assert len(self.dataset_data['edges']) == self.info.count
@@ -262,7 +328,7 @@ class KnownFormatDataset(
                     # assert node_index == self.info.nodes[0]
                     # Original ids in the order of appearance
                     self.node_map = list(node_map.keys())
-                    self.info.node_info = {"id": self.node_map}
+                    # self.info.node_info = {"id": self.node_map}
 
             assert node_index == self.info.nodes[0]
             assert len(self.dataset_data['edges']) == self.info.count
@@ -499,3 +565,33 @@ class KnownFormatDataset(
         if len(node_features[0]) == 0:
             raise RuntimeError("Feature vector size must be > 0")
         return node_features
+
+
+def merge_directories(
+        source_dir: Union[Path, str],
+        destination_dir: Union[Path, str],
+        remove_source: bool = False
+) -> None:
+    """
+    Merge source directory into destination directory, replacing existing files.
+
+    :param source_dir: Path to the source directory to be merged
+    :param destination_dir: Path to the destination directory
+    :param remove_source: if True, remove source directory (empty folders)
+    """
+    for root, _, files in os.walk(source_dir):
+        # Calculate relative path
+        relative_path = os.path.relpath(root, source_dir)
+
+        # Create destination path
+        dest_path = os.path.join(destination_dir, relative_path)
+        os.makedirs(dest_path, exist_ok=True)
+
+        # Move files
+        for file in files:
+            src_file = os.path.join(root, file)
+            dest_file = os.path.join(dest_path, file)
+            shutil.move(src_file, dest_file)
+
+    if remove_source:
+        shutil.rmtree(source_dir)

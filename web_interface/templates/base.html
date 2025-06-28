@@ -28,7 +28,7 @@
         </button>
         <div id="dropdown-menu-main" class="dropdown-menu" style="top: 50px">
           <div class="dropdownmenuitem has-submenu">New instance
-            <div class="dropdown-submenu" id="dropdown-menu-newinstance" style="min-width: 180px">
+            <div class="submenu" id="dropdown-menu-newinstance" style="min-width: 180px">
               <div class="dropdownmenuitem" onclick="newInstance('analysis')"><b>A</b>nalysis</div>
               <div class="dropdownmenuitem" onclick="newInstance('interpretation')"><b>I</b>nterpretation</div>
               <div class="dropdownmenuitem" onclick="newInstance('defense')">Attack/<b>D</b>efense</div>
@@ -131,6 +131,7 @@
   <script src="static/js/libs/chart-3.7.1.min.js"></script>
   <script src="static/js/libs/datatables-1.13.2.min.js"></script>
   <script src="static/js/libs/js-colormaps.js"></script>
+  <script src="static/js/libs/popper-2.11.8.js"></script>
 
   <script src="static/js/utils.js"></script>
   <script src="static/js/prefixStorage.js"></script>
@@ -246,18 +247,18 @@
     // Dropdown menu handling
     // When mouse is over a menu item, all the others hide
     $(".dropdownmenuitem").mouseover(function () {
-        $(".dropdown-submenu").hide()
+        $(".submenu").hide()
     })
 
     // Any menu item with a submenu should show it when mouse is over
     $(".has-submenu").mouseover(function () {
-        $(this).children(".dropdown-submenu").show()
+        $(this).children(".submenu").show()
     })
 
     // Hide menus when clicking anywhere outside
     document.addEventListener('click', () => {
         $(".dropdown-menu").hide()
-        $(".dropdown-submenu").hide()
+        $(".submenu").hide()
     })
 
     // Prevent menu from closing when clicking inside it or button

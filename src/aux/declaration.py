@@ -107,6 +107,16 @@ class Declare:
         return path, files_paths
 
     @staticmethod
+    def dataset_info_path(
+            dataset_config: DatasetConfig
+    ) -> [Path, list]:
+        """
+        :param dataset_config: DatasetConfig
+        :return: path to metainfo file for a specific dataset
+        """
+        return Declare.dataset_root_dir(dataset_config)[0] / 'metainfo'
+
+    @staticmethod
     def dataset_prepared_dir(
             dataset_config: Union[ConfigPattern, DatasetConfig],
             dataset_var_config: Union[ConfigPattern, DatasetVarConfig]

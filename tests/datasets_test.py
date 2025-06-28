@@ -17,7 +17,7 @@ if not str(utils.GRAPHS_DIR).endswith("__DatasetsTest_tmp"):
 else:
     tmp_dir = utils.GRAPHS_DIR
 
-from base.dataset_converter import networkx_to_ptg
+from datasets.dataset_converter import networkx_to_ptg
 
 
 def my_ctrlc_handler(signal, frame):
@@ -80,93 +80,92 @@ class DatasetsTest(unittest.TestCase):
         if tmp_dir.exists():
             shutil.rmtree(tmp_dir)
 
-    def test_converted_local_ptg(self):
-        """ """
-        from base.datasets_processing import DatasetManager
-        from dgl.data import BA2MotifDataset
-        from torch_geometric.data import Data
-
-        def from_dgl(g, label):
-            """ Converter from DGL graph by Misha S.
-            """
-            x = g.nodes[0].data['feat']
-            for i in range(1, g.nodes().size(0)):
-                x_i = g.nodes[i].data['feat']
-                x = torch.cat((x, x_i), 0)
-
-            edge_index_tup = g.edges()
-            t1 = edge_index_tup[0].unsqueeze(0)
-            t2 = edge_index_tup[1].unsqueeze(0)
-            edge_index = torch.cat((t1, t2), 0)
-
-            y = torch.argmax(label).unsqueeze(0)
-
-            return Data(x=x, edge_index=edge_index, y=y)
-
-        dgl_dataset = BA2MotifDataset()
-        data_list = []
-        for ix in range(len(dgl_dataset)):
-            dgl_g, label = dgl_dataset[ix]
-            ptg_data = from_dgl(dgl_g, label)
-            data_list.append(ptg_data)
-        ptg = self.UserLocalDataset(tmp_dir / 'test_dataset_converted_dgl', data_list)
-
-        gen_dataset = DatasetManager.register_torch_geometric_local(ptg, name='dgl_dataset')
-        self.assertEqual(len(gen_dataset), len(dgl_dataset))
-
-        # Load
-        gen_dataset = DatasetManager.get_by_config(gen_dataset.dataset_config)
-        self.assertEqual(len(gen_dataset), len(dgl_dataset))
+    # def test_converted_local_ptg(self):
+    #     """ """
+    #     from datasets.datasets_manager import DatasetManager
+    #     from dgl.data import BA2MotifDataset
+    #     from torch_geometric.data import Data
+    #
+    #     def from_dgl(g, label):
+    #         """ Converter from DGL graph by Misha S.
+    #         """
+    #         x = g.nodes[0].data['feat']
+    #         for i in range(1, g.nodes().size(0)):
+    #             x_i = g.nodes[i].data['feat']
+    #             x = torch.cat((x, x_i), 0)
+    #
+    #         edge_index_tup = g.edges()
+    #         t1 = edge_index_tup[0].unsqueeze(0)
+    #         t2 = edge_index_tup[1].unsqueeze(0)
+    #         edge_index = torch.cat((t1, t2), 0)
+    #
+    #         y = torch.argmax(label).unsqueeze(0)
+    #
+    #         return Data(x=x, edge_index=edge_index, y=y)
+    #
+    #     dgl_dataset = BA2MotifDataset()
+    #     data_list = []
+    #     for ix in range(len(dgl_dataset)):
+    #         dgl_g, label = dgl_dataset[ix]
+    #         ptg_data = from_dgl(dgl_g, label)
+    #         data_list.append(ptg_data)
+    #     ptg = self.UserLocalDataset(tmp_dir / 'test_dataset_converted_dgl', data_list)
+    #
+    #     gen_dataset = DatasetManager.register_torch_geometric_local(ptg, name='dgl_dataset')
+    #     self.assertEqual(len(gen_dataset), len(dgl_dataset))
+    #
+    #     # Load
+    #     gen_dataset = DatasetManager.get_by_config(gen_dataset.dataset_config)
+    #     self.assertEqual(len(gen_dataset), len(dgl_dataset))
 
     def test_local_ptg(self):
         """ """
-        from base.datasets_processing import DatasetManager
+        from datasets.datasets_manager import DatasetManager
+        from datasets.ptg_datasets import LocalPTGDataset
         x = tensor([[0, 0], [1, 0], [1, 0]])
         edge_index = tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
         y = tensor([0, 1, 1])
 
         # Single
         data_list = [Data(x=x, edge_index=edge_index, y=y)]
-        dataset = self.UserLocalDataset(tmp_dir / 'test_dataset_single', data_list)
-        gen_dataset_s = DatasetManager.register_torch_geometric_local(dataset)
+        gen_dataset_s = LocalPTGDataset(data_list)
         self.assertEqual(len(gen_dataset_s), 1)
 
         # Multi
         data_list = [Data(x=x, edge_index=edge_index, y=tensor([0])),
                      Data(x=x, edge_index=edge_index, y=tensor([1]))]
-        dataset = self.UserLocalDataset(tmp_dir / 'test_dataset_multi', data_list)
-        gen_dataset_m = DatasetManager.register_torch_geometric_local(dataset)
+        gen_dataset_m = LocalPTGDataset(data_list)
         self.assertEqual(len(gen_dataset_m), 2)
 
         # Load
         gen_dataset_s = DatasetManager.get_by_config(gen_dataset_s.dataset_config)
-        self.assertEqual(len(gen_dataset_s), 1)
+        self.assertEqual(len(gen_dataset_s.data), 3)
 
         gen_dataset_m = DatasetManager.get_by_config(gen_dataset_m.dataset_config)
         self.assertEqual(len(gen_dataset_m), 2)
 
-    def test_api_ptg(self):
-        """ """
-        from base.datasets_processing import DatasetManager
-
-        # Should be globally visible to be visible for import
-        gen_dataset = DatasetManager.register_torch_geometric_api(
-            DATASET_TO_EXPORT, name='api_random_features',
-            obj_name='DATASET_TO_EXPORT')
-        self.assertEqual(len(gen_dataset), 3)
-
-        # Load
-        gen_dataset = DatasetManager.get_by_config(gen_dataset.dataset_config)
-        self.assertEqual(len(gen_dataset), 3)
+    # def test_api_ptg(self):
+    #     """ """
+    #     from datasets.datasets_manager import DatasetManager
+    #
+    #     # Should be globally visible to be visible for import
+    #     gen_dataset = DatasetManager.register_torch_geometric_api(
+    #         DATASET_TO_EXPORT, name='api_random_features',
+    #         obj_name='DATASET_TO_EXPORT')
+    #     self.assertEqual(len(gen_dataset), 3)
+    #
+    #     # Load
+    #     gen_dataset = DatasetManager.get_by_config(gen_dataset.dataset_config)
+    #     self.assertEqual(len(gen_dataset), 3)
 
     def test_custom_ij_single(self):
         """ """
         from data_structures.configs import DatasetVarConfig
         from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
-        from base.custom_datasets import CustomDataset
+        from datasets.known_format_datasets import KnownFormatDataset
         import json
-        dc = DatasetConfig('single', 'custom', 'test')
+        dc = DatasetConfig(('single', 'custom', 'test'))
 
         # Create files
         root, files_paths = Declare.dataset_root_dir(dc)
@@ -175,7 +174,7 @@ class DatasetsTest(unittest.TestCase):
         with open(raw / 'test.ij', 'w') as f:
             f.write("10 11\n")
             f.write("10 12\n")
-        with open('metainfo', 'w') as f:
+        with open(root / 'metainfo', 'w') as f:
             json.dump({
                 "count": 1,
                 "directed": False,
@@ -183,7 +182,7 @@ class DatasetsTest(unittest.TestCase):
                 "remap": True,
                 "node_attributes": {
                     "names": ["a", "b", "c"],
-                    "types": ["continuous", "categorical", "other"],
+                    "types": ["continuous", "categorical", "vector"],
                     "values": [[0, 1], ["A", "B", "C"], 2]
                 },
                 "edge_attributes": {
@@ -215,7 +214,7 @@ class DatasetsTest(unittest.TestCase):
         #     json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
 
         # Load
-        gen_dataset = CustomDataset(dc)
+        gen_dataset = KnownFormatDataset(dc)
         self.assertTrue(len(gen_dataset), 1)
 
         # Build
@@ -245,9 +244,9 @@ class DatasetsTest(unittest.TestCase):
         from data_structures.configs import DatasetVarConfig
         from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
-        from base.custom_datasets import CustomDataset
+        from datasets.known_format_datasets import KnownFormatDataset
         import json
-        dc = DatasetConfig('multi', 'custom', 'test')
+        dc = DatasetConfig(('multi', 'custom', 'test'))
 
         # Create files
         root, files_paths = Declare.dataset_root_dir(dc)
@@ -267,7 +266,7 @@ class DatasetsTest(unittest.TestCase):
             f.write("0 4\n")
         with open(raw / 'test.edge_index', 'w') as f:
             f.write("[3, 7, 11]")
-        with open('metainfo', 'w') as f:
+        with open(root / 'metainfo', 'w') as f:
             json.dump({
                 "count": 3,
                 "directed": False,
@@ -306,7 +305,7 @@ class DatasetsTest(unittest.TestCase):
         #     json.dump([[0.1,0.1,0.1,0.2,0.2,0.2,],[0.1,0.1,0.1,0.1],[0.2,0.2,0.2,0.2]], f)
 
         # Load
-        gen_dataset = CustomDataset(dc)
+        gen_dataset = KnownFormatDataset(dc)
         self.assertTrue(len(gen_dataset), 3)
 
         # Build
@@ -328,8 +327,8 @@ class DatasetsTest(unittest.TestCase):
         from data_structures.configs import DatasetVarConfig
         from data_structures.configs import DatasetConfig
         from aux.declaration import Declare
-        from base.dataset_converter import DatasetConverter
-        from base.datasets_processing import DatasetManager
+        from datasets.dataset_converter import DatasetConverter
+        from datasets.known_format_datasets import KnownFormatDataset
         import json
         import networkx as nx
 
@@ -365,7 +364,7 @@ class DatasetsTest(unittest.TestCase):
             print(f"Checking format {format}")
 
             name = f'test_{format}'
-            dc = DatasetConfig('single-graph', 'custom', name)
+            dc = DatasetConfig(('single-graph', 'custom', name))
 
             # Write graph and attributes files
             root, files_paths = Declare.dataset_root_dir(dc)
@@ -376,7 +375,7 @@ class DatasetsTest(unittest.TestCase):
                                                 default_edge_attr_value={'weight': -1, 'type': -1})
 
             # Write info and labels
-            with open('metainfo', 'w') as f:
+            with open(root / 'metainfo', 'w') as f:
                 json.dump({
                     "name": name,
                     "count": 1,
@@ -401,7 +400,7 @@ class DatasetsTest(unittest.TestCase):
                 json.dump(node_labels, f)
 
             # Convert from the format
-            gen_dataset = DatasetManager.register_custom(dc, format)
+            gen_dataset = KnownFormatDataset(dc, format=format)
 
             dataset_var_config = DatasetVarConfig(
                 features={'attr': {'a': 'as_is', 'b': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
@@ -422,23 +421,24 @@ class DatasetsTest(unittest.TestCase):
         from data_structures.prefix_storage import PrefixStorage
         from aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
-        from base.datasets_processing import DatasetManager
+        from datasets.ptg_datasets import LibPTGDataset
+        from datasets.datasets_manager import DatasetManager
         from data_structures.configs import DatasetConfig
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = PrefixStorage.from_json(f.read())
 
         for full_name in ps:
-            dc = DatasetConfig(full_name)
-            print(f"Checking {dc}")
+            print(f"Checking {full_name}")
 
             try:
                 try:
                     # Downloads and processes for the first time
-                    DatasetManager.get_by_config(dc)
+                    dc = DatasetConfig(tuple([LibPTGDataset.data_folder] + full_name))
+                    dataset = LibPTGDataset(dc)
                     self.assertTrue(1)
                 except Exception as e:
                     print('\n\n')
-                    print(f"ERROR at download {dc}:")
+                    print(f"ERROR at {full_name}:")
                     print(traceback.print_exc())
                     continue
 

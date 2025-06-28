@@ -1,6 +1,6 @@
 import warnings
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig
 from models_builder.models_zoo import model_configs_zoo

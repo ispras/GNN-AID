@@ -4,7 +4,7 @@ import numpy as np
 from skopt import Optimizer
 
 from attacks.attack_base import Attacker
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports

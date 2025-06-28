@@ -10,7 +10,7 @@ from typing import Union
 import numpy as np
 
 from aux.utils import GRAPHS_DIR
-from base.custom_datasets import CustomDataset
+from datasets.known_format_datasets import KnownFormatDataset
 from data_structures.configs import DatasetConfig
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
@@ -154,7 +154,7 @@ class ConfigPatter:
 
 
 class VKDataset(
-    CustomDataset
+    KnownFormatDataset
 ):
     """
     Custom dataset of VK samples with specific attributes processing and features creation.
@@ -280,6 +280,7 @@ def make_vk_labeling(
 
 
 if __name__ == '__main__':
+    # TODO misha VK
     # Print VK attributes and their values
     names, values = list(zip(*sorted(AttrInfo.vk_attr().items(), key=itemgetter(0))))
     print(list(map(str, names)))

@@ -12,7 +12,7 @@ from attacks.evasion_attacks import EvasionAttacker
 from attacks.mi_attacks import MIAttacker
 from attacks.poison_attacks import PoisonAttacker
 from aux.utils import import_all_from_package, all_subclasses
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from defenses.evasion_defense import EvasionDefender
 from defenses.mi_defense import MIDefender
 from defenses.poison_defense import PoisonDefender

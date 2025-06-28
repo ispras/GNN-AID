@@ -21,7 +21,7 @@ from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_P
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \

@@ -11,7 +11,7 @@ from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DA
     USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH
 import os
 from pathlib import Path
-from data_structures.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import PrefixStorage, TuplePrefixStorage
 
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor
@@ -45,11 +45,17 @@ class DataInfo:
         with open(DATA_INFO_DIR_data, 'w', encoding='utf-8') as f:
             # IMP suggest create a constant for "dataset_ver_ind" and such strings, same for next 2 functions
             prev_path = ''
-            for path in Path(GRAPHS_DIR).glob('**/.info'):
-                path = path.parts[root_dir_len + 1:-1]
-                path = str(Path(*path)) + '\n'
-                if prev_path != path:
-                    f.write(path)
+            # for path in Path(GRAPHS_DIR).glob('**/.info'):
+            #     path = path.parts[root_dir_len + 1:-1]
+            #     path = str(Path(*path)) + '\n'
+            #     if prev_path != path:
+            #         f.write(path)
+            #         prev_path = path
+
+            for path in Path(GRAPHS_DIR).glob('**/metainfo'):
+                path = path.parent
+                if prev_path != path and (path / 'raw').exists():
+                    f.write(os.path.relpath(path, GRAPHS_DIR) + '\n')
                     prev_path = path
 
     @staticmethod
@@ -279,15 +285,36 @@ class DataInfo:
 
     @staticmethod
     def data_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [TuplePrefixStorage, dict]:
         """
         Parses the path to raw datasets from a technical file with the paths of all saved raw datasets.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_dir_structure'
-        ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root",),
-            file_with_paths=DATA_INFO_DIR_results)
+
+        # keys_list, full_keys_list, dir_structure, empty_dir_shift = \
+        #     DataInfo.take_keys_etc_by_prefix(prefix=("data_root",))
+        ps = TuplePrefixStorage()
+        with open(DATA_INFO_DIR_results, 'r', encoding='utf-8') as f:
+            for line in f:
+                description_info = "Info not available"
+                path = Path(line.strip())
+                try:
+                    with open(GRAPHS_DIR / path / 'metainfo', 'r') as f:
+                        metainfo = json.load(f)
+                        description_info = f'Graphs {metainfo["count"]}\nNodes: {metainfo["nodes"]}\nDirected: {metainfo["directed"]}\nHetero: {metainfo.get("hetero", False)}'
+                except FileNotFoundError: pass
+                ps.add(path.parts, description_info)
+                # loc_parts_values, description_info_loc = DataInfo.values_list_and_technical_files_by_path_and_prefix(
+                #     path=line, prefix=prefix,
+                # )
+                # ps.add(loc_parts_values)
+                # description_info = DataInfo.deep_update(description_info, description_info_loc)
         return ps
+
+        # ps, description_info = DataInfo.fill_prefix_storage(
+        #     prefix=("data_root",),
+        #     file_with_paths=DATA_INFO_DIR_results)
+        # return ps
 
     @staticmethod
     def data_var_parse(
@@ -445,6 +472,9 @@ class UserCodeInfo:
 
 
 if __name__ == '__main__':
+    DataInfo.refresh_data_dir_structure()
+
+
     DataInfo.refresh_all_data_info()
     ps, info = DataInfo.models_parse()
     print(ps.to_json())

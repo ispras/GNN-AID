@@ -1,4 +1,4 @@
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from explainers.explainers_manager import FrameworkExplainersManager

@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from attacks.attack_base import Attacker
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from data_structures.configs import ModelConfig
 from data_structures.mi_results import MIResultsStore
 from models_builder.models_zoo import model_configs_zoo

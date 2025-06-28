@@ -476,9 +476,6 @@ class DatasetConfig(
     Contains a set of distinguishing characteristics to identify the dataset or family of datasets.
     Determines the path to the file with raw data in the inner storage.
     """
-    domain: str
-    group: str
-    graph: str
 
     def __init__(
             self,
