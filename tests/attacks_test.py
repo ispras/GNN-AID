@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import torch
+import os
 
 from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
@@ -18,6 +19,8 @@ import_all_from_package(attacks)  # to import all subclasses properly
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
+        # os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Monkey for home coding
+
         print('setup')
         self.my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -666,40 +669,6 @@ class AttacksTest(unittest.TestCase):
                                                                           Metric("Accuracy", mask='test')])
         print(metric_loc)
 
-    def test_mi_shadow(self):
-        mi_attack_config = ConfigPattern(
-            _class_name="ShadowModelMIAttacker",
-            _import_path=MI_ATTACK_PARAMETERS_PATH,
-            _config_class="MIAttackConfig",
-            _config_kwargs={
-            }
-        )
-
-        gcn_gcn_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
-
-        gnn_model_manager_sg_example = FrameworkGNNModelManager(
-            gnn=gcn_gcn_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
-            modification=self.default_config,
-            manager_config=self.manager_config,
-        )
-
-        gnn_model_manager_sg_example.set_mi_attacker(mi_attack_config=mi_attack_config)
-
-        attack_cnt = 2
-        # seed = 42
-        seed = None
-        if seed is not None:
-            np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt, replace=False)
-
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
-        mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_example.labels, target_list=target_list)
-        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
-                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
-                                                                          Metric("Accuracy", mask=mask_loc)])
-        print(metric_loc)
-
     def test_mi_shadow_cora(self):
         mi_attack_config = ConfigPattern(
             _class_name="ShadowModelMIAttacker",
@@ -720,7 +689,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora.set_mi_attacker(mi_attack_config=mi_attack_config)
 
-        attack_cnt = 100
+        attack_cnt = 500
         # seed = 42
         seed = None
         if seed is not None:

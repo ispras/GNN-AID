@@ -79,7 +79,7 @@
   },
   "DummyLayer": {
    "valid_label": ["n", "g"],
-   "strong_restrictions": [],
+   "strong_restrictions": ["first_model"],
    "model_manager_restrictions": []
   }
  }
