@@ -1229,7 +1229,7 @@ def test_pgd_structure():
 
 def test_fgsm():
     # ______________________ Attack on node ______________________
-    my_device = device('cpu')
+    my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
     full_name = ("single-graph", "Planetoid", 'Cora')
@@ -1237,6 +1237,7 @@ def test_fgsm():
         full_name=full_name,
         dataset_ver_ind=0
     )
+    data.to(my_device)
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
@@ -1326,6 +1327,7 @@ def test_fgsm():
         full_name=full_name,
         dataset_ver_ind=0
     )
+    data.to(my_device)
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
 
@@ -1418,7 +1420,7 @@ def test_fgsm():
 
 def test_rewatt():
     # ______________________ Attack on node ______________________
-    my_device = device('cpu')
+    my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
     full_name = ("single-graph", "Planetoid", 'Cora')
@@ -1426,6 +1428,7 @@ def test_rewatt():
         full_name=full_name,
         dataset_ver_ind=0
     )
+    data.to(my_device)
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
@@ -1494,18 +1497,18 @@ def test_rewatt():
                                          metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
 
     # Model prediction on a node after ReWatt attack on it
-    with torch.no_grad():
-        probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
-                                                        gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
-
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
-
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
-                                     "predicted_class": predicted_class,
-                                     "predicted_probability": predicted_probability,
-                                     "real_class": real_class}
+    # with torch.no_grad():
+    #     probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
+    #                                                     gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
+    #
+    # predicted_class = probabilities[node_idx].argmax().item()
+    # predicted_probability = probabilities[node_idx][predicted_class].item()
+    # real_class = dataset.data.y[node_idx].item()
+    #
+    # info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    #                                  "predicted_class": predicted_class,
+    #                                  "predicted_probability": predicted_probability,
+    #                                  "real_class": real_class}
     # ____________________________________________________________
 
     # ______________________ Attack on graph _____________________
@@ -1515,6 +1518,7 @@ def test_rewatt():
         full_name=full_name,
         dataset_ver_ind=0
     )
+    data.to(my_device)
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin')
 
@@ -1599,21 +1603,21 @@ def test_rewatt():
                                       "real_class": real_class}
 
     # ____________________________________________________________
-    print(f"Before ReWatt attack on node (Cora dataset): {info_before_pgd_attack_on_node}")
-    print(f"After ReWatt attack on node (Cora dataset): {info_after_pgd_attack_on_node}")
-    print(f"Before ReWatt attack on graph (MUTAG dataset): {info_before_pgd_attack_on_graph}")
-    print(f"After ReWatt attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
+    # print(f"Before ReWatt attack on node (Cora dataset): {info_before_pgd_attack_on_node}")
+    # print(f"After ReWatt attack on node (Cora dataset): {info_after_pgd_attack_on_node}")
+    # print(f"Before ReWatt attack on graph (MUTAG dataset): {info_before_pgd_attack_on_graph}")
+    # print(f"After ReWatt attack on graph (MUTAG dataset): {info_after_pgd_attack_on_graph}")
 
 
 if __name__ == '__main__':
     import random
 
     random.seed(10)
-    test_attack_defense()
+    # test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
-    # test_rewatt()
+    test_rewatt()
