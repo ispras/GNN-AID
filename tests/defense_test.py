@@ -1,6 +1,10 @@
 import unittest
 import numpy as np
 
+import collections
+
+collections.Callable = collections.abc.Callable
+
 from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
@@ -12,6 +16,7 @@ from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
     import_all_from_package
 
 import defenses
+
 import_all_from_package(defenses)  # to import all subclasses properly
 
 
@@ -40,7 +45,7 @@ class DefenseTest(unittest.TestCase):
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
 
-        #Single-graph - Cora
+        # Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
             full_name=("single-graph", "Planetoid", "Cora"),
             dataset_ver_ind=0
@@ -95,8 +100,10 @@ class DefenseTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_poison_defender(poison_defense_config=poison_defense_config)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
-        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
     def test_noise_mi_defender_cora(self):
@@ -137,16 +144,18 @@ class DefenseTest(unittest.TestCase):
             np.random.seed(seed)
         target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
 
-        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
+                                              metrics=[Metric("Accuracy", mask='test')])
         mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_cora.labels, target_list=target_list)
         metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
-                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
-                                                                          Metric("Accuracy", mask=mask_loc)])
+                                                              metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                       Metric("Accuracy", mask=mask_loc)])
         print(metric_loc)
 
         for mask, res in gnn_model_manager_sg_cora.mi_attacker.results.items():
             print(f"MI Attack accuracy:"
                   f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,7 +9,6 @@ from models_builder.models_zoo import model_configs_zoo
 from data_structures.configs import ModelModificationConfig, ConfigPattern
 from aux.utils import import_by_name, TECHNICAL_PARAMETER_KEY, OPTIMIZERS_PARAMETERS_PATH
 
-
 import warnings
 import types
 # from torch_sparse import coalesce, SparseTensor, matmul
@@ -23,84 +22,13 @@ import scipy.sparse as sp
 import numpy as np
 
 
-# class BaseGCN(BaseModel):
-
-#     def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, lr=0.01,
-#                 with_bn=False, weight_decay=5e-4, with_bias=True, device=None):
-
-#         super(BaseGCN, self).__init__()
-
-#         assert device is not None, "Please specify 'device'!"
-#         self.device = device
-
-#         self.layers = nn.ModuleList([])
-#         if with_bn:
-#             self.bns = nn.ModuleList()
-
-#         if nlayers == 1:
-#             self.layers.append(GCNConv(nfeat, nclass, bias=with_bias))
-#         else:
-#             self.layers.append(GCNConv(nfeat, nhid, bias=with_bias))
-#             if with_bn:
-#                 self.bns.append(nn.BatchNorm1d(nhid))
-#             for i in range(nlayers-2):
-#                 self.layers.append(GCNConv(nhid, nhid, bias=with_bias))
-#                 if with_bn:
-#                     self.bns.append(nn.BatchNorm1d(nhid))
-#             self.layers.append(GCNConv(nhid, nclass, bias=with_bias))
-
-#         self.dropout = dropout
-#         self.weight_decay = weight_decay
-#         self.lr = lr
-#         self.output = None
-#         self.best_model = None
-#         self.best_output = None
-#         self.with_bn = with_bn
-#         self.name = 'GCN'
-
-#     def forward(self, x, edge_index, edge_weight=None):
-#         x, edge_index, edge_weight = self._ensure_contiguousness(x, edge_index, edge_weight)
-#         for ii, layer in enumerate(self.layers):
-#             if edge_weight is not None:
-#                 adj = SparseTensor.from_edge_index(edge_index, edge_weight, sparse_sizes=2 * x.shape[:1]).t()
-#                 x = layer(x, adj)
-#             else:
-#                 x = layer(x, edge_index)
-#             if ii != len(self.layers) - 1:
-#                 if self.with_bn:
-#                     x = self.bns[ii](x)
-#                 x = F.relu(x)
-#                 x = F.dropout(x, p=self.dropout, training=self.training)
-#         return F.log_softmax(x, dim=1)
-
-#     def get_embed(self, x, edge_index, edge_weight=None):
-#         x, edge_index, edge_weight = self._ensure_contiguousness(x, edge_index, edge_weight)
-#         for ii, layer in enumerate(self.layers):
-#             if ii == len(self.layers) - 1:
-#                 return x
-#             if edge_weight is not None:
-#                 adj = SparseTensor.from_edge_index(edge_index, edge_weight, sparse_sizes=2 * x.shape[:1]).t()
-#                 x = layer(x, adj)
-#             else:
-#                 x = layer(x, edge_index)
-#             if ii != len(self.layers) - 1:
-#                 if self.with_bn:
-#                     x = self.bns[ii](x)
-#                 x = F.relu(x)
-#         return x
-
-#     def initialize(self):
-#         for m in self.layers:
-#             m.reset_parameters()
-#         if self.with_bn:
-#             for bn in self.bns:
-#                 bn.reset_parameters()
-
 class GNNGuard(PoisonDefender):
     name = 'GNNGuard'
 
     def __init__(self, model=None, lr=0.01, train_iters=100, attention=False, drop=False, device='cpu'):
         super().__init__()
+        self.embeddings = None
+        self.gnn = None
         assert device is not None, "Please specify 'device'!"
         self.model = model
         self.attention = attention
@@ -144,7 +72,6 @@ class GNNGuard(PoisonDefender):
             self.gnn = self.model
         # self.embeddings = self.gnn.get_all_layer_embeddings()
 
-
         edge_weights_mem = None
         # print(self.model.forward)
         # print(gen_dataset.data, flush=True)
@@ -159,7 +86,7 @@ class GNNGuard(PoisonDefender):
         # print(self.embeddings.keys())
         embeddings_count = len(self.embeddings)
 
-        for k in range(-1, embeddings_count-1):
+        for k in range(-1, embeddings_count - 1):
             adj_index, adj_value = self.att_coef(gen_dataset, k=k)
 
             if edge_weights_mem is None:
@@ -181,12 +108,12 @@ class GNNGuard(PoisonDefender):
 
         fea = self.embeddings[k]
 
-        row, col = edge_index[0].cpu().data.numpy()[:], edge_index[1].cpu().data.numpy()[:]
+        row, col = edge_index[0].detach().cpu().data.numpy()[:], edge_index[1].detach().cpu().data.numpy()[:]
 
-        fea_copy = fea.cpu().data.numpy()
+        fea_copy = fea.detach().cpu().data.numpy()
         sim_matrix = cosine_similarity(X=fea_copy, Y=fea_copy)  # try cosine similarity
         sim = sim_matrix[row, col]
-        sim[sim<0.1] = 0
+        sim[sim < 0.1] = 0
         """build a attention matrix"""
         att_dense = lil_matrix((n_node, n_node), dtype=np.float32)
         att_dense[row, col] = sim
@@ -199,7 +126,7 @@ class GNNGuard(PoisonDefender):
         """add learnable dropout, make character vector"""
         if self.drop:
             character = np.vstack((att_dense_norm[row, col].A1,
-                                    att_dense_norm[col, row].A1))
+                                   att_dense_norm[col, row].A1))
             character = torch.from_numpy(character.T)
             drop_score = self.droplearn(character)
             drop_score = torch.sigmoid(drop_score)
@@ -210,24 +137,24 @@ class GNNGuard(PoisonDefender):
 
             drop_mask = lil_matrix((n_node, n_node), dtype=np.float32)
             # print(drop_mask)
-            drop_mask[row, col] = drop_decision.cpu().data.numpy().squeeze(-1)
+            drop_mask[row, col] = drop_decision.detach().cpu().data.numpy().squeeze(-1)
             drop_mask = drop_mask.tocsr()
 
             att_dense_norm = att_dense_norm.multiply(drop_mask)  # update, remove the 0 edges
 
         if att_dense_norm[0, 0] == 0:  # add the weights of self-loop only add self-loop at the first layer
             degree = (att_dense_norm != 0).sum(1).A1
-            lam = 1 / (degree + 1) # degree +1 is to add itself
+            lam = 1 / (degree + 1)  # degree +1 is to add itself
             self_weight = sp.diags(np.array(lam), offsets=0, format="lil")
             att = att_dense_norm + self_weight  # add the self loop
         else:
             att = att_dense_norm
         att_adj = np.vstack((row, col))
         att_edge_weight = att[row, col]
-        att_edge_weight = np.exp(att_edge_weight)   # exponent, kind of softmax
+        att_edge_weight = np.exp(att_edge_weight)  # exponent, kind of softmax
         # print(np.array(att_edge_weight)[0])
-        att_edge_weight = torch.tensor(np.array(att_edge_weight)[0], dtype=torch.float32)#.cuda()
-        att_adj = torch.tensor(att_adj, dtype=torch.int64)#.cuda()
+        att_edge_weight = torch.tensor(np.array(att_edge_weight)[0], dtype=torch.float32)  # .cuda()
+        att_adj = torch.tensor(att_adj, dtype=torch.int64)  # .cuda()
 
         shape = (n_node, n_node)
         new_adj = torch.sparse.FloatTensor(att_adj, att_edge_weight, shape)
@@ -278,7 +205,7 @@ class GuardWrapper(nn.Module):
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
             layer_name, curr_layer_ind = elem[0].split('_')
-            if layer_name=="droplearn":
+            if layer_name == "droplearn":
                 continue
             curr_layer_ind = int(curr_layer_ind)
             inp = torch.clone(x)
@@ -302,20 +229,20 @@ class GuardWrapper(nn.Module):
                             if self.embedding_levels_by_layers[key[1]] == 'n' and \
                                     self.embedding_levels_by_layers[key[0]] == 'n':
                                 connection_tensor = torch.cat((connection_tensor,
-                                                            tensor_storage[key[0]]), 1)
+                                                               tensor_storage[key[0]]), 1)
                                 dim_cat = 1
                             elif self.embedding_levels_by_layers[key[1]] == 'g' and \
                                     self.embedding_levels_by_layers[key[0]] == 'g':
                                 connection_tensor = torch.cat((connection_tensor,
-                                                            tensor_storage[key[0]]), 0)
+                                                               tensor_storage[key[0]]), 0)
                                 dim_cat = 0
                             elif self.embedding_levels_by_layers[key[1]] == 'g' and \
                                     self.embedding_levels_by_layers[key[0]] == 'n':
                                 con_pool = import_by_name(con['pool']['pool_type'],
-                                                        ["torch_geometric.nn"])
+                                                          ["torch_geometric.nn"])
                                 tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
                                 connection_tensor = torch.cat((connection_tensor,
-                                                            tensor_after_pool), 1)
+                                                               tensor_after_pool), 1)
                                 dim_cat = 1
                             else:
                                 raise Exception(
@@ -324,17 +251,15 @@ class GuardWrapper(nn.Module):
                                     f" layer type {self.embedding_levels_by_layers[curr_layer_ind]}"
                                     "is not supported now")
 
-
                 if zeroing_x_flag:
                     x = connection_tensor
                 else:
                     x = torch.cat((x_copy, connection_tensor), dim_cat)
 
-
                 if self.attention:
                     if layer_name == 'GINConv':
                         if adj_memory is None:
-                            adj = self.att_coef(x, adj, is_lil=False,i=layer_ind)
+                            adj = self.att_coef(x, adj, is_lil=False, i=layer_ind)
                             edge_index = adj._indices()
                             edge_weight = adj._values()
                             adj_memory = adj
@@ -350,7 +275,7 @@ class GuardWrapper(nn.Module):
                             adj_memory = adj
                         elif adj_memory is not None:
                             adj = self.att_coef(x, adj_memory, i=layer_ind).to_dense()
-                            row, col = adj.nonzero()[:,0], adj.nonzero()[:,1]
+                            row, col = adj.nonzero()[:, 0], adj.nonzero()[:, 1]
                             edge_index = torch.stack((row, col), dim=0)
                             edge_weight = adj[row, col]
                             adj_memory = adj
@@ -358,15 +283,14 @@ class GuardWrapper(nn.Module):
                     edge_index = adj._indices()
                     edge_weight = adj._values()
 
-
             # QUE Kirill, maybe we should not off UserWarning
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
                 # mid = x
                 if layer_name in self.modules_info:
                     code_str = f"getattr(self, elem[0])" \
-                                f"({self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY]['forward_parameters']}," \
-                                f" edge_weight=edge_weight)"
+                               f"({self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY]['forward_parameters']}," \
+                               f" edge_weight=edge_weight)"
                     x = eval(f"{code_str}")
                 else:
                     x = getattr(self, elem[0])(x)
@@ -379,18 +303,18 @@ class GuardWrapper(nn.Module):
 
     def att_coef(self, fea, edge_index, is_lil=False, i=0):
         print(edge_index)
-        if is_lil == False:
+        if not is_lil:
             edge_index = edge_index._indices()
         else:
             edge_index = edge_index.tocoo()
 
         n_node = fea.shape[0]
-        row, col = edge_index[0].cpu().data.numpy()[:], edge_index[1].cpu().data.numpy()[:]
+        row, col = edge_index[0].detach().cpu().data.numpy()[:], edge_index[1].detach().cpu().data.numpy()[:]
 
-        fea_copy = fea.cpu().data.numpy()
+        fea_copy = fea.detach().cpu().data.numpy()
         sim_matrix = cosine_similarity(X=fea_copy, Y=fea_copy)  # try cosine similarity
         sim = sim_matrix[row, col]
-        sim[sim<0.1] = 0
+        sim[sim < 0.1] = 0
 
         """build a attention matrix"""
         att_dense = lil_matrix((n_node, n_node), dtype=np.float32)
@@ -399,7 +323,6 @@ class GuardWrapper(nn.Module):
             att_dense = att_dense - sp.diags(att_dense.diagonal(), offsets=0, format="lil")
         # normalization, make the sum of each row is 1
         att_dense_norm = normalize(att_dense, axis=1, norm='l1')
-
 
 # if __name__ == "__main__":
 #     from deeprobust.graph.data import Dataset, Dpr2Pyg
