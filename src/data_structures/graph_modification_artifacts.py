@@ -318,3 +318,28 @@ class GraphModificationArtifact:
             "edges_removed": len(self.edges["remove"]),
             "edges_added": len(self.edges["add"])
         }
+
+
+class GlobalNodeIndexer:
+    def __init__(self, dataset):
+        self.offsets = []
+        self.global_to_local = {}
+        self.local_to_global = {}
+
+        offset = 0
+        for graph_idx, data in enumerate(dataset):
+            self.offsets.append(offset)
+            for local_id in range(data.num_nodes):
+                global_id = offset + local_id
+                self.local_to_global[(graph_idx, local_id)] = global_id
+                self.global_to_local[global_id] = (graph_idx, local_id)
+            offset += data.num_nodes
+
+    def to_global(self, graph_idx, local_id):
+        return self.local_to_global[(graph_idx, local_id)]
+
+    def to_local(self, global_id):
+        return self.global_to_local[global_id]
+
+    def graph_offset(self, graph_idx):
+        return self.offsets[graph_idx]

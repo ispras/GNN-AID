@@ -13,7 +13,7 @@ from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, N
 # PGD imports
 from torch_geometric.utils import k_hop_subgraph
 from torch_geometric.nn import MessagePassing
-from data_structures.graph_modification_artifacts import GraphModificationArtifact
+from data_structures.graph_modification_artifacts import GraphModificationArtifact, GlobalNodeIndexer
 from tqdm import tqdm
 
 # FGSM imports
@@ -91,24 +91,33 @@ class FGSMAttacker(
         else:
             task_type = False
         if self.is_feature_attack:
-            gen_dataset.data.x.requires_grad = True
             model = model_manager.gnn
             model.eval()
-            output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
             if task_type:
-                loss = model_manager.loss_function(output, gen_dataset.dataset[self.element_idx].y)
+                graph_idx = self.element_idx
+                x = gen_dataset.dataset[graph_idx].x
+                x.requires_grad = True
+                edge_index = gen_dataset.dataset[graph_idx].edge_index
+                y = gen_dataset.dataset[graph_idx].y
             else:
-                loss = model_manager.loss_function(output[self.element_idx], gen_dataset.data.y[self.element_idx])
+                # node_idx = self.element_idx
+                x = gen_dataset.data.x
+                x.requires_grad = True
+                edge_index = gen_dataset.data.edge_index
+                y = gen_dataset.data.y
+            output = model(x, edge_index)
+            loss = model_manager.loss_function(output, y)
             model.zero_grad()
             loss.backward()
-            sign_data_grad = gen_dataset.data.x.grad.sign()
-            perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
+            sign_data_grad = x.grad.sign()
+            perturbed_data_x = x + self.epsilon * sign_data_grad
             perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
             # gen_dataset.data.x = perturbed_data_x.detach()
             if task_type:
-                # TODO multigraph for features
-                self.attack_diff = self.attack_diff
-                pass
+                gni = GlobalNodeIndexer(gen_dataset.dataset)
+                for node_idx in range(perturbed_data_x.size(0)):
+                    for feature_idx in range(perturbed_data_x.size(1)):
+                        self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[gni.to_global(graph_idx, node_idx)][feature_idx].detach().cpu().item())
             else:
                 for node_idx in range(gen_dataset.data.x.size(0)):
                     for feature_idx in range(gen_dataset.data.x.size(1)):
@@ -155,8 +164,18 @@ class FGSMAttacker(
                     perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
                                                 dim=1)
                 # self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
-                # TODO multigraph for edges
-                self.attack_diff = self.attack_diff
+                set_a = set(map(tuple, edge_index.T.tolist()))
+                set_b = set(map(tuple, perturbed_edges.T.tolist()))
+
+                diff_a = list(set_a - set_b)
+                diff_b = list(set_b - set_a)
+
+                gni = GlobalNodeIndexer(gen_dataset.dataset)
+                diff_a = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_a]
+                diff_b = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_b]
+
+                self.attack_diff.remove_edges(diff_a)
+                self.attack_diff.add_edges(diff_b)
             else:
                 node_idx = self.element_idx
 
@@ -446,9 +465,10 @@ class PGDAttacker(
                     x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
             gen_dataset.dataset[graph_idx].x.copy_(x.detach())
             # self.attack_diff = gen_dataset
-
-            # TODO multigraph for features
-            self.attack_diff = self.attack_diff
+            gni = GlobalNodeIndexer(gen_dataset.dataset)
+            for node_idx in range(x.size(0)):
+                for feature_idx in range(x.size(1)):
+                    self.attack_diff.change_node_feature(node_idx, feature_idx, x[node_idx][feature_idx].detach().cpu().item())
         else:  # structure attack
             budget = int(self.epsilon * edge_index.size(1))
             perturbed_edges = edge_index.clone()
@@ -502,9 +522,18 @@ class PGDAttacker(
             best_mask = torch.tensor(best_mask, dtype=torch.bool)
             perturbed_edges = edge_index[:, best_mask]
 
-            # self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
-            # TODO multigraph for edges
-            self.attack_diff = self.attack_diff
+            set_a = set(map(tuple, edge_index.T.tolist()))
+            set_b = set(map(tuple, perturbed_edges.T.tolist()))
+
+            diff_a = list(set_a - set_b)
+            diff_b = list(set_b - set_a)
+
+            gni = GlobalNodeIndexer(gen_dataset.dataset)
+            diff_a = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_a]
+            diff_b = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_b]
+
+            self.attack_diff.remove_edges(diff_a)
+            self.attack_diff.add_edges(diff_b)
 
     def dataset_diff(
             self
@@ -745,13 +774,15 @@ class ReWattAttacker(
         diff_b = list(set_b - set_a)
 
         if gen_dataset.is_multi():
-            # TODO
-            pass
-        else:
-            self.attack_diff.remove_edges(diff_a)
-            self.attack_diff.add_edges(diff_b)
+            gni = GlobalNodeIndexer(gen_dataset.dataset)
+            diff_a = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_a]
+            diff_b = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_b]
+
+        self.attack_diff.remove_edges(diff_a)
+        self.attack_diff.add_edges(diff_b)
 
     def dataset_diff(
             self
     ) -> GraphModificationArtifact:
         return self.attack_diff
+
