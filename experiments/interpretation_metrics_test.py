@@ -906,11 +906,11 @@ if __name__ == '__main__':
     ]
 
     datasets = [
-        ("single-graph", "Planetoid", 'Cora'),
-        ("single-graph", "Planetoid", 'CiteSeer'),
-        ("single-graph", "Planetoid", 'PubMed'),
+        # ("single-graph", "Planetoid", 'Cora'),
+        # ("single-graph", "Planetoid", 'CiteSeer'),
+        # ("single-graph", "Planetoid", 'PubMed'),
         ("single-graph", "Amazon", 'Computers'),
-        ("single-graph", "Amazon", 'Photo'),
+        # ("single-graph", "Amazon", 'Photo'),
     ]
     for dataset_full_name in datasets:
         for i in range(3, 13):

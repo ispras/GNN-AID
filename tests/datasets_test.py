@@ -11,6 +11,7 @@ from torch_geometric.data import InMemoryDataset, Data, Dataset
 
 # Monkey patch GRAPHS_DIR - before other imports
 from aux import utils
+
 if not str(utils.GRAPHS_DIR).endswith("__DatasetsTest_tmp"):
     tmp_dir = utils.GRAPHS_DIR.parent / (utils.GRAPHS_DIR.name + "__DatasetsTest_tmp")
     utils.GRAPHS_DIR = tmp_dir

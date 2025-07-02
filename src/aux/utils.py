@@ -6,6 +6,7 @@ from pydoc import locate
 from typing import Union, Type, Any
 
 import numpy as np
+import torch
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -184,6 +185,22 @@ def all_subclasses(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
+def move_to_same_device(
+        *tensors,
+        device: torch.device = None
+):
+    def is_movable_tensor(x):
+        return isinstance(x, torch.Tensor) and hasattr(x, 'to')
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    moved_args = tuple(
+        t.to(device) if is_movable_tensor(t) else t
+        for t in tensors
+    )
+    return moved_args
+
+
 def import_all_from_package(package) -> None:
     """ Import all modules recursively from a given python package, within the project.
     All subpackages must contain '__init__.py' to be imported properly.
@@ -209,6 +226,7 @@ class tmp_dir():
     """
     Temporary create a directory near the given path. Remove it on exit.
     """
+
     def __init__(
             self,
             path: Path
@@ -233,4 +251,4 @@ class tmp_dir():
         try:
             shutil.rmtree(self.tmp_dir)
         except FileNotFoundError:
-             pass
+            pass

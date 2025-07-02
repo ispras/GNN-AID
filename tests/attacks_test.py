@@ -14,7 +14,6 @@ from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_P
     OPTIMIZERS_PARAMETERS_PATH, import_all_from_package, MI_ATTACK_PARAMETERS_PATH
 
 import attacks
-from testing.soloviov_test.attacks.attack_nettack.train import my_metric
 
 import_all_from_package(attacks)  # to import all subclasses properly
 
@@ -71,7 +70,6 @@ class AttacksTest(unittest.TestCase):
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
         self.gen_dataset_sg_example.data.to(self.my_device)
 
-
         # Single-graph - Cora
         self.dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
             full_name=("single-graph", "Planetoid", "Cora",),
@@ -100,7 +98,7 @@ class AttacksTest(unittest.TestCase):
             }
         )
 
-        #Single-graph - Cora
+        # Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
             full_name=("single-graph", "Planetoid", "Cora"),
             dataset_ver_ind=0
@@ -138,8 +136,10 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
-        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
     def test_metattack_bug(self):
@@ -165,8 +165,10 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
-        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
+        metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                                                 metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
     def test_metattack_approx(self):
@@ -192,7 +194,8 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_poison_attacker(poison_attack_config=poison_attack_config)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
                                                                  metrics=[Metric("F1", mask='test', average='macro'),
                                                                           Metric("Accuracy", mask='test')])
@@ -210,7 +213,6 @@ class AttacksTest(unittest.TestCase):
             manager_config=self.manager_config,
         )
 
-
         evasion_attack_config = ConfigPattern(
             _class_name="QAttack",
             _import_path=EVASION_ATTACK_PARAMETERS_PATH,
@@ -221,10 +223,11 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
 
-        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
+                                              metrics=[Metric("Accuracy", mask='test')])
         metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
-                                                                 metrics=[Metric("F1", mask='test', average='macro'),
-                                                                          Metric("Accuracy", mask='test')])
+                                                              metrics=[Metric("F1", mask='test', average='macro'),
+                                                                       Metric("Accuracy", mask='test')])
         print(metric_loc)
 
     def test_qattack_example(self):
@@ -248,7 +251,8 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
                                                                  metrics=[Metric("F1", mask='test', average='macro'),
                                                                           Metric("Accuracy", mask='test')])
@@ -280,9 +284,11 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt,
+                                       replace=False)
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
+                                                 metrics=[Metric("Accuracy", mask='test')])
         mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_example.labels, target_list=target_list)
         metric_loc = gnn_model_manager_sg_example.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
                                                                  metrics=[Metric("F1", mask=mask_loc, average='macro'),
@@ -321,11 +327,12 @@ class AttacksTest(unittest.TestCase):
             np.random.seed(seed)
         target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
 
-        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
+                                              metrics=[Metric("Accuracy", mask='test')])
         mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_cora.labels, target_list=target_list)
         metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
-                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
-                                                                          Metric("Accuracy", mask=mask_loc)])
+                                                              metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                       Metric("Accuracy", mask=mask_loc)])
         print(metric_loc)
 
         for mask, res in gnn_model_manager_sg_cora.mi_attacker.results.items():
@@ -707,16 +714,18 @@ class AttacksTest(unittest.TestCase):
             np.random.seed(seed)
         target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
 
-        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
+                                              metrics=[Metric("Accuracy", mask='test')])
         mask_loc = Metric.create_mask_by_target_list(y_true=self.gen_dataset_sg_cora.labels, target_list=target_list)
         metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
-                                                                 metrics=[Metric("F1", mask=mask_loc, average='macro'),
-                                                                          Metric("Accuracy", mask=mask_loc)])
+                                                              metrics=[Metric("F1", mask=mask_loc, average='macro'),
+                                                                       Metric("Accuracy", mask=mask_loc)])
         print(metric_loc)
 
         for mask, res in gnn_model_manager_sg_cora.mi_attacker.results.items():
             print(f"MI Attack accuracy:"
                   f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
+
 
 if __name__ == '__main__':
     unittest.main()
