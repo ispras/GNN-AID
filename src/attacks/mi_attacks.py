@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from attacks.attack_base import Attacker
+from aux.utils import move_to_same_device
 from base.datasets_processing import GeneralDataset
 from data_structures.configs import ModelConfig
 from data_structures.mi_results import MIResultsStore
@@ -98,7 +99,12 @@ class EmptyMIAttacker(
         pass
 
 
-class NaiveMIAttacker(MIAttacker):
+class NaiveMIAttacker(
+    MIAttacker
+):
+    """
+    Naive MI Attack: marks as train the data on which the model is most confident
+    """
     name = "NaiveMIAttacker"
 
     def __init__(self, threshold: float = 0.75, **kwargs):
@@ -125,7 +131,13 @@ class NaiveMIAttacker(MIAttacker):
         return self.results
 
 
-class ShadowModelMIAttacker(MIAttacker):
+class ShadowModelMIAttacker(
+    MIAttacker
+):
+    """
+    The surrogate model is trained on a part of the initial dataset.
+    The classifier learns from its responses to determine whether the input is from train or test
+    """
     name = "ShadowModelMIAttacker"
 
     def __init__(
@@ -165,7 +177,7 @@ class ShadowModelMIAttacker(MIAttacker):
             outputs = shadow_model(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
 
             # Compute loss only on shadow training nodes
-            loss = criterion(outputs[shadow_train_mask], gen_dataset.dataset.data.y[shadow_train_mask])
+            loss = criterion(*move_to_same_device(outputs[shadow_train_mask], gen_dataset.dataset.data.y[shadow_train_mask]))
             print(f"Shadow loss: {loss}")
 
             # Backward pass
@@ -190,8 +202,8 @@ class ShadowModelMIAttacker(MIAttacker):
             # max_probs = torch.max(probs, dim=1).values.cpu().numpy()
         # Prepare features and labels for attack classifier
         # X = max_probs.reshape(-1, 1)  # Using prediction confidence as feature
-        X = probs[shadow_train_mask].cpu().numpy()
-        y = original_train_mask[shadow_train_mask].cpu().numpy().astype(int)  # Membership labels
+        X = probs[shadow_train_mask].detach().cpu().numpy()
+        y = original_train_mask[shadow_train_mask].detach().cpu().numpy().astype(int)  # Membership labels
 
         if self.classifier_type == 'svc':
             self.classifier = SVC(kernel='rbf', probability=False)
@@ -240,7 +252,7 @@ class ShadowModelMIAttacker(MIAttacker):
         with torch.no_grad():
             outputs = shadow_model(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
             probs = torch.softmax(outputs, dim=1)
-            max_probs = torch.max(probs, dim=1).values.cpu().numpy()
+            max_probs = torch.max(probs, dim=1).values.detach().cpu().numpy()
         # Predict membership using attack classifier
         # X_target = max_probs.reshape(-1, 1)
         X_target = probs

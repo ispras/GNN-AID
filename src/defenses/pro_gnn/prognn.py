@@ -9,6 +9,7 @@ from torch.optim.optimizer import required
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from defenses.poison_defense import PoisonDefender
 from src.base.datasets_processing import GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
@@ -36,6 +37,9 @@ def feature_smoothing(
 
 
 class ProGNNDefender(PoisonDefender):
+    """
+    Poison defense based on optimization of adjacency matrix for better graph statistics
+    """
     name = 'ProGNNDefender'
 
     # TODO re-write with support of sparse matrix
@@ -56,6 +60,15 @@ class ProGNNDefender(PoisonDefender):
                  **kw
                  ) -> None:
         super().__init__()
+        self.add_edge_index = None
+        self.remove_edge_index = None
+        self.optimizer_nuclear = None
+        self.optimizer_adj = None
+        self.estimator = None
+        self.optimizer = None
+        self.model = None
+        self.device = None
+        self.optimizer_l1 = None
         self.symmetric = symmetric
         self.lr_adj = lr_adj
         self.alpha = alpha
@@ -107,8 +120,75 @@ class ProGNNDefender(PoisonDefender):
             for i in range(self.model_steps):
                 self.train_gcn_one_epoch(features, labels, idx_train)
 
+        new_edge_index = dense_to_sparse(adj)[0]
+        self.remove_edge_index = ProGNNDefender.get_unique_in_first(gen_dataset.dataset.data.edge_index, new_edge_index)
+        self.add_edge_index = ProGNNDefender.get_unique_in_first(new_edge_index, gen_dataset.dataset.data.edge_index)
         gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
         return gen_dataset
+
+    def dataset_diff(
+            self
+    ) -> GraphModificationArtifact:
+        diff = GraphModificationArtifact()
+
+        try:
+            if hasattr(self, 'remove_edge_index') and self.remove_edge_index is not None:
+                src_nodes = self.remove_edge_index[0]
+                dst_nodes = self.remove_edge_index[1]
+
+                assert len(src_nodes) == len(dst_nodes), (
+                    "Mismatch in source and target edge lengths for removal: "
+                    f"{len(src_nodes)} vs {len(dst_nodes)}"
+                )
+
+                edges_to_remove = [
+                    [int(src), int(dst)] for src, dst in zip(src_nodes, dst_nodes)
+                ]
+                diff.remove_edges(edges_to_remove)
+
+            if hasattr(self, 'add_edge_index') and self.add_edge_index is not None:
+                src_nodes = self.add_edge_index[0]
+                dst_nodes = self.add_edge_index[1]
+
+                assert len(src_nodes) == len(dst_nodes), (
+                    "Mismatch in source and target edge lengths for addition: "
+                    f"{len(src_nodes)} vs {len(dst_nodes)}"
+                )
+
+                edges_to_add = [
+                    [int(src), int(dst)] for src, dst in zip(src_nodes, dst_nodes)
+                ]
+                diff.add_edges(edges_to_add)
+
+            self.defense_diff = diff
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to build dataset diff from edge indices: {e}"
+            ) from e
+
+        return self.defense_diff
+
+    @staticmethod
+    def get_unique_in_first(
+            a: torch.Tensor,
+            b: torch.Tensor
+    ) -> torch.Tensor:
+        """
+
+        :param a: input tensor - edge index in COO format
+        :param b: input tensor - edge index in COO format
+        :return: difference tensor
+        """
+        a_pairs = set((a[0, i].item(), a[1, i].item()) for i in range(a.size(1)))
+        b_pairs = set((b[0, i].item(), b[1, i].item()) for i in range(b.size(1)))
+
+        unique_pairs = a_pairs - b_pairs
+
+        if not unique_pairs:
+            return torch.empty((2, 0), dtype=a.dtype)
+
+        return torch.tensor(list(zip(*unique_pairs)), dtype=a.dtype)
 
     def train_gcn_one_epoch(
             self,
