@@ -28,6 +28,7 @@ class EvasionAttacker(
 ):
     """ Base class for all poison attack methods.
     """
+
     def __init__(
             self,
             **kwargs
@@ -189,7 +190,8 @@ class FGSMAttacker(
                         grad = grad[:-self_loops_part_size]
 
                     max_index = torch.argmax(grad)
-                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]), dim=1)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
+                                                dim=1)
 
                 # Update dataset
                 edges_to_keep = edge_index[:, ~edge_mask]
@@ -634,7 +636,7 @@ class ReWattAttacker(
 
         if gen_dataset.is_multi():
             graph_idx = self.element_idx
-            node_idx=None
+            node_idx = None
             edge_index = gen_dataset.dataset[graph_idx].edge_index
             y = gen_dataset.dataset[graph_idx].y.squeeze()
             x = gen_dataset.dataset[graph_idx].x
@@ -658,14 +660,16 @@ class ReWattAttacker(
         initial_graph_state = GraphState(x, edge_index, y, y_prob)
         env = GraphEnvironment(model, initial_graph_state, eps=self.eps, node_idx=node_idx)
 
-        policy = ReWattPolicyNet(gnn_model=model,
-                                 penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
-                                 penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
-                                 node_idx=node_idx,
-                                 mlp_hidden=self.mlp_hidden,
-                                 h_method=self.h_method,
-                                 pooling_method=self.pooling_method,
-                                 device=self.my_device)
+        policy = ReWattPolicyNet(
+            gnn_model=model,
+            penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
+            penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
+            node_idx=node_idx,
+            mlp_hidden=self.mlp_hidden,
+            h_method=self.h_method,
+            pooling_method=self.pooling_method,
+            device=self.my_device
+        )
 
         agent = ReWattAgent(policy, env, lr=1e-3, gamma=0.99)
         attacked_graph = agent.train(epochs=self.epochs)

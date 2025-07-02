@@ -16,7 +16,7 @@ from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
 from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, move_to_same_device
 from aux.declaration import Declare
 from base.datasets_processing import GeneralDataset
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
@@ -1034,7 +1034,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, weight)
             # Take only predictions and labels of seed nodes
-            loss = self.loss_function(logits[:batch.batch_size], batch.y[:batch.batch_size])
+
+            loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
@@ -1043,7 +1044,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         elif task_type == "multiple-graphs":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
-            loss = self.loss_function(logits, batch.y)
+            loss = self.loss_function(move_to_same_device(logits, batch.y))
             # loss.backward()
             # self.optimizer.step()
         # TODO Kirill, remove False when release edge recommendation task
@@ -1057,8 +1058,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             neg_out = self.gnn(batch.x, neg_edge_index, weight)
 
             # TODO check if we need to take out[:batch.batch_size]
-            pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
-            neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
+            pos_loss = self.loss_function(move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
             loss = pos_loss + neg_loss
             # loss.backward()

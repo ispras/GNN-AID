@@ -484,7 +484,14 @@ class FrameworkGNNConstructor(
         save_emb_flag = self._save_emb_flag
 
         x, edge_index, batch, edge_weight = self.arguments_read(*args, **kwargs)
-        x, edge_index, batch, edge_weight = self.move_to_device(x, edge_index, batch, edge_weight)
+        device = next(self.parameters()).device
+        x, edge_index, batch, edge_weight = self.move_to_device(
+            x=x,
+            edge_index=edge_index,
+            batch=batch,
+            edge_weight=edge_weight,
+            device=device
+        )
         feat = x
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
@@ -641,9 +648,11 @@ class FrameworkGNNConstructor(
             x: torch.Tensor = None,
             edge_index: torch.Tensor = None,
             batch: Type = None,
-            edge_weight: torch.Tensor = None
+            edge_weight: torch.Tensor = None,
+            device: torch.device = None
     ) -> [torch.Tensor, torch.Tensor, Type, torch.Tensor]:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         def to_device(tensor):
             return tensor.to(device) if tensor is not None else None
