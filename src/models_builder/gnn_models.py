@@ -1044,7 +1044,7 @@ class FrameworkGNNModelManager(GNNModelManager):
         elif task_type == "multiple-graphs":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
-            loss = self.loss_function(move_to_same_device(logits, batch.y))
+            loss = self.loss_function(*move_to_same_device(logits, batch.y))
             # loss.backward()
             # self.optimizer.step()
         # TODO Kirill, remove False when release edge recommendation task
@@ -1058,8 +1058,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             neg_out = self.gnn(batch.x, neg_edge_index, weight)
 
             # TODO check if we need to take out[:batch.batch_size]
-            pos_loss = self.loss_function(move_to_same_device(pos_out, torch.ones_like(pos_out)))
-            neg_loss = self.loss_function(move_to_same_device(neg_out, torch.zeros_like(neg_out)))
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
             loss = pos_loss + neg_loss
             # loss.backward()
