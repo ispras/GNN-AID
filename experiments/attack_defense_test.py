@@ -1613,11 +1613,11 @@ if __name__ == '__main__':
     import random
 
     random.seed(10)
-    # test_attack_defense()
+    test_attack_defense()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
     # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
-    test_rewatt()
+    # test_rewatt()
