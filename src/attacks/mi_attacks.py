@@ -62,6 +62,8 @@ class MIAttacker(
         true_labels = mask_true[attacked_indices]
         pred_labels = inferred_labels[attacked_indices]
 
+        true_labels, pred_labels = move_to_same_device(true_labels, pred_labels)
+
         # Calculate overall accuracy
         correct = (true_labels == pred_labels).sum().item()
         metrics['accuracy'] = correct / len(attacked_indices)

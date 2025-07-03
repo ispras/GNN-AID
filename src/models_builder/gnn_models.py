@@ -1233,7 +1233,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # logits_batch = self.gnn(data.x, data.edge_index, data.batch)
                     # pred_batch = logits_batch.argmax(dim=1)
                     out = run_func(data.x, data.edge_index, data.batch)
-                    full_out = torch.cat((full_out, out))
+                    full_out = torch.cat((move_to_same_device(full_out, out)))
                     # y_true = torch.cat((y_true, data.y))
             else:  # single-graph
                 data = gen_dataset.dataset._data  # FIXME what if no data? use .get(0) ?
@@ -1272,7 +1272,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # logits_batch = self.gnn(data_x_copy, data.edge_index)
                     # pred_batch = logits_batch.argmax(dim=1)
                     out = run_func(data_x_copy, data.edge_index)
-                    full_out = torch.cat((full_out, out[mask_copy]))
+                    full_out = torch.cat((move_to_same_device(full_out, out[mask_copy])))
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
 
         return full_out
@@ -1653,7 +1653,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             #     matrix2 = torch.zeros(matrix1.shape)
             #     ld += torch.sum(torch.where(matrix1 > 0, matrix1, matrix2))
 
-            loss = self.loss_function(logits, batch.y)
+            loss = self.loss_function(*move_to_same_device(logits, batch.y))
             loss += self.clst * cluster_cost + self.sep * separation_cost + 5e-4 * l1 + 0.00 * ld
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
@@ -1661,7 +1661,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         elif task_type == "signle-graph":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
-            loss = self.loss_function(logits[:batch.batch_size], batch.y[:batch.batch_size])
+            loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
         # TODO Kirill, remove False when release edge recommendation task
         elif task_type == "edge" and False:
             self.optimizer.zero_grad()
@@ -1673,8 +1673,8 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             neg_out = self.gnn(batch.x, neg_edge_index)
 
             # TODO check if we need to take out[:batch.batch_size]
-            pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
-            neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
             loss = pos_loss + neg_loss
         else:
@@ -1809,7 +1809,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             att = self.gsat_layer.att
-            loss = self.gsat_loss(att, clf_logits, batch.y, self.modification.epochs)
+            loss = self.gsat_loss(*move_to_same_device(att, clf_logits, batch.y, self.modification.epochs))
             # loss = self.loss_function(clf_logits, batch.y)
             self.optimizer.zero_grad()
             # del self.gsat_layer.att
@@ -1819,7 +1819,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             att = self.gsat_layer.edge_att
             # att = torch.zeros_like(clf_logits)
             # Take only predictions and labels of seed nodes
-            loss = self.gsat_loss(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs)
+            loss = self.gsat_loss(*move_to_same_device(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs))
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
@@ -1833,8 +1833,8 @@ class GSATModelManager(FrameworkGNNModelManager):
             neg_out = self.gnn(batch.x, neg_edge_index)
 
             # TODO check if we need to take out[:batch.batch_size]
-            pos_loss = self.loss_function(pos_out, torch.ones_like(pos_out))
-            neg_loss = self.loss_function(neg_out, torch.zeros_like(neg_out))
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
             loss = pos_loss + neg_loss
         else:

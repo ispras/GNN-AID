@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import torch
 import os
+import collections.abc
+collections.Callable = collections.abc.Callable
 
 from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
