@@ -4,6 +4,7 @@ import numpy as np
 from skopt import Optimizer
 
 from attacks.attack_base import Attacker
+from aux.utils import move_to_same_device
 from base.datasets_processing import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
@@ -591,7 +592,7 @@ class NettackAttacker(
             mask_tensor: torch.Tensor
     ):
         data = gen_dataset.data
-        x, edge_index, y = data.x, data.edge_index, data.y
+        x, edge_index, y = move_to_same_device(data.x, data.edge_index, data.y, device=torch.device('cpu'))
 
         num_classes = y.max().item() + 1
         surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
