@@ -695,6 +695,8 @@ class AttacksTest(unittest.TestCase):
             _import_path=MI_ATTACK_PARAMETERS_PATH,
             _config_class="MIAttackConfig",
             _config_kwargs={
+                "shadow_epochs": 200,
+                "shadow_data_ratio": 0.1
             }
         )
 

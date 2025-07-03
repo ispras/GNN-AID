@@ -120,7 +120,7 @@ def setting_class_default_parameters(
             warnings.warn(f"WARNING: Parameter {key} cannot be set for {class_name} "
                           f"in def setting_class_default_parameters")
             continue
-        elif val is None or class_kwargs_default[key][1] == 'string' or np.isinf(val):
+        elif val is None or class_kwargs_default[key][1] == 'string' or (class_kwargs_default[key][1] == 'dynamic' and isinstance(val, str)) or np.isinf(val):
             class_kwargs[key] = val
         else:
             class_kwargs[key] = locate(class_kwargs_default[key][1])(val)
