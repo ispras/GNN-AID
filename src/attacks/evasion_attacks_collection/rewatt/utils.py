@@ -88,7 +88,7 @@ def vc_representation(
     - edge_repr: Representation of an edge in the context of nodes v_fir and v_sec.
     - vc_emb: The embedding of v_c node.
     """
-    return torch.cat((v_et1, vc_emb), dim=-1)
+    return torch.cat((v_et1, vc_emb), dim=-1).to(v_et1.device)
 
 
 class GraphState:
@@ -109,11 +109,12 @@ class GraphState:
             x: torch.Tensor,
             edge_index: torch.Tensor,
             y: torch.Tensor,
-            y_prob: float
+            y_prob: float,
+            device: torch.device = torch.device("cpu")
     ):
-        self.x = x
-        self.edge_index = edge_index
-        self.y = y
+        self.x = x.to(device)
+        self.edge_index = edge_index.to(device)
+        self.y = y.to(device)
         self.y_prob = y_prob
 
 
@@ -216,7 +217,7 @@ class GraphEnvironment:
         # remove edge (v_sec, v_fir) and add (v_thi, v_fir) !!!
         edge_index_new = torch.cat([
             edge_index_new[:, ~mask],  # leave only those edges that are not deleted
-            torch.tensor([[v_thi], [v_fir]], dtype=torch.long)  # add a new edge
+            torch.tensor([[v_thi], [v_fir]], dtype=torch.long, device=edge_index_new.device)  # add a new edge
         ], dim=1)
 
         if self.graph_classification_task:
@@ -226,7 +227,7 @@ class GraphEnvironment:
         y = probs.argmax()
         y_prob = probs.max().item()
 
-        return GraphState(state.x, edge_index_new, y, y_prob)
+        return GraphState(state.x, edge_index_new, y, y_prob, device=state.x.device)
 
     def calculate_reward(
             self,
@@ -340,7 +341,7 @@ class ReWattPolicyNet(nn.Module):
             v1, v2 = v_fir_candidate_edges[:, i]
             edge_representation = self.edge_representer(embeddings[v1], embeddings[v2], graph_representation)
             E_s_t.append(edge_representation)
-        E_s_t = torch.stack(E_s_t)
+        E_s_t = torch.stack(E_s_t).to(self.device)
 
         edge_scores = self.edge_fc(E_s_t)
         edge_probs = torch.softmax(edge_scores.squeeze(), dim=0)
@@ -379,7 +380,7 @@ class ReWattPolicyNet(nn.Module):
         for i in range(len(S)):
             v_c = S[i]
             V_s_t.append(vc_representation(embeddings[v_c], v_et1))
-        V_s_t = torch.stack(V_s_t)
+        V_s_t = torch.stack(V_s_t).to(self.device)
 
         third_node_scores = self.third_node_fc(V_s_t)
         third_node_probs = torch.softmax(third_node_scores.squeeze(), dim=0)

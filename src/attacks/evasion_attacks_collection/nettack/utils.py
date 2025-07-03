@@ -89,7 +89,7 @@ def estimate_powerlaw_alpha(degrees, d_min=2):
 
 
 class NettackAttack:
-    def __init__(self, real_class, gnn_model, model, x, edge_index, num_classes, target_node, direct=True, depth=None, delta_cutoff=0.004):
+    def __init__(self, real_class, gnn_model, model, x, edge_index, num_classes, target_node, attack_diff, direct=True, depth=None, delta_cutoff=0.004):
         self.real_class = real_class
         self.gnn_model = gnn_model
         self.model = model
@@ -102,6 +102,7 @@ class NettackAttack:
         self.device = x.device
         self.original_logits = model.get_logits_for_node(x, edge_index, target_node)
         self.true_label = self.original_logits.argmax().item()
+        self.attack_diff = attack_diff
 
         self.degree = torch.bincount(edge_index[1], minlength=x.size(0))
         self.delta_cutoff = delta_cutoff
@@ -223,6 +224,7 @@ class NettackAttack:
             if best_node is not None and (feature_score <= edge_score or mode == "feature"):
                 print(f"Feature perturbation: flipped feature {best_feature.item()} on node {best_node}")
                 self.x[best_node, best_feature] = 1 - self.x[best_node, best_feature]
+                self.attack_diff.change_node_feature(best_node, best_feature, self.x[best_node, best_feature].cpu().item())
                 applied += 1
                 attempt = 0
             elif best_edge is not None:
@@ -232,6 +234,7 @@ class NettackAttack:
                 mask = ~((self.edge_index[0] == u) & (self.edge_index[1] == v))
                 self.edge_index = self.edge_index[:, mask]
                 self.degree[v] -= 1
+                self.attack_diff.remove_edge(u, v)
                 applied += 1
                 attempt = 0
             else:

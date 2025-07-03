@@ -1,11 +1,8 @@
-import collections
 import unittest
 
 import numpy as np
 import torch
 import os
-
-collections.Callable = collections.abc.Callable
 
 from attacks.mi_attacks import MIAttacker
 from base.datasets_processing import DatasetManager
@@ -49,6 +46,8 @@ class AttacksTest(unittest.TestCase):
 
         self.gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_mg_small = self.gen_dataset_mg_small.results_dir
+        self.gen_dataset_mg_small.data.to(self.my_device)
+
 
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
@@ -69,6 +68,7 @@ class AttacksTest(unittest.TestCase):
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+        self.gen_dataset_sg_example.data.to(self.my_device)
 
         # Single-graph - Cora
         self.dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
@@ -113,6 +113,7 @@ class AttacksTest(unittest.TestCase):
         # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+        self.gen_dataset_sg_cora.data.to(self.my_device)
 
     def test_metattack_full(self):
         poison_attack_config = ConfigPattern(
@@ -257,68 +258,6 @@ class AttacksTest(unittest.TestCase):
                                                                           Metric("Accuracy", mask='test')])
         print(metric_loc)
 
-    def test_fgsm_SG(self):
-        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
-
-        manager_config = ConfigPattern(
-            _config_class="ModelManagerConfig",
-            _config_kwargs={
-                "mask_features": [],
-                "optimizer": {
-                    "_class_name": "Adam",
-                    "_config_kwargs": {},
-                }
-            }
-        )
-
-        gnn_model_manager = FrameworkGNNModelManager(
-            gnn=gcn_gcn,
-            dataset_path=self.results_dataset_path_sg_example,
-            manager_config=manager_config,
-            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
-        )
-
-        gnn_model_manager.gnn.to(self.my_device)
-        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_sg_example, steps=200, save_model_flag=False)
-
-        # ---------- Attack on structure ----------
-        evasion_attack_config = ConfigPattern(
-            _class_name="FGSM",
-            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-            _config_class="EvasionAttackConfig",
-            _config_kwargs={
-                "is_feature_attack": False,
-                "element_idx": 0,
-                "epsilon": 0.5,
-            }
-        )
-
-        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
-
-        # Attack
-        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
-                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
-        # ---------- ------------------- ----------
-
-        # ---------- Attack on feature ----------
-        evasion_attack_config = ConfigPattern(
-            _class_name="FGSM",
-            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
-            _config_class="EvasionAttackConfig",
-            _config_kwargs={
-                "is_feature_attack": True,
-                "element_idx": 0,
-                "epsilon": 0.5,
-            }
-        )
-
-        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
-
-        # Attack
-        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
-                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
-        # ---------- ----------------- ----------
-
     def test_mi_naive(self):
         mi_attack_config = ConfigPattern(
             _class_name="NaiveMIAttacker",
@@ -399,6 +338,68 @@ class AttacksTest(unittest.TestCase):
         for mask, res in gnn_model_manager_sg_cora.mi_attacker.results.items():
             print(f"MI Attack accuracy:"
                   f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
+
+    def test_fgsm_SG(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gcn_gcn')
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                }
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            dataset_path=self.results_dataset_path_sg_example,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_sg_example, steps=200, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": 0,
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
 
     def test_fgsm_MG(self):
         gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin_con')
@@ -601,8 +602,9 @@ class AttacksTest(unittest.TestCase):
             manager_config=self.manager_config,
         )
 
-        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
-                                                 metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_example.gnn.to(self.my_device)
+
+        gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[Metric("Accuracy", mask='test')])
 
         # Attack config
         evasion_attack_config = ConfigPattern(
@@ -632,8 +634,10 @@ class AttacksTest(unittest.TestCase):
             manager_config=self.manager_config,
         )
 
+        gnn_model_manager_mg_small.gnn.to(self.my_device)
+
         gnn_model_manager_mg_small.train_model(gen_dataset=self.gen_dataset_mg_small, steps=100,
-                                               metrics=[Metric("Accuracy", mask='test')])
+                                                 metrics=[Metric("Accuracy", mask='test')])
 
         # Attack config
         evasion_attack_config = ConfigPattern(
@@ -649,8 +653,8 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_mg_small.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
         metric_loc = gnn_model_manager_mg_small.evaluate_model(gen_dataset=self.gen_dataset_mg_small,
-                                                               metrics=[Metric("F1", mask='test', average='macro'),
-                                                                        Metric("Accuracy", mask='test')])
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
         print(metric_loc)
 
     def test_nettack(self):
@@ -663,8 +667,9 @@ class AttacksTest(unittest.TestCase):
             manager_config=self.manager_config,
         )
 
-        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
-                                              metrics=[Metric("Accuracy", mask='test')])
+        gnn_model_manager_sg_cora.gnn.to(self.my_device)
+
+        gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100, metrics=[Metric("Accuracy", mask='test')])
 
         # Attack config
         evasion_attack_config = ConfigPattern(
@@ -678,8 +683,8 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
         metric_loc = gnn_model_manager_sg_cora.evaluate_model(gen_dataset=self.gen_dataset_sg_cora,
-                                                              metrics=[Metric("F1", mask='test', average='macro'),
-                                                                       Metric("Accuracy", mask='test')])
+                                                                 metrics=[Metric("F1", mask='test', average='macro'),
+                                                                          Metric("Accuracy", mask='test')])
         print(metric_loc)
 
     def test_mi_shadow_cora(self):
