@@ -1,10 +1,11 @@
 import torch.nn as nn
 import torch
 
+from base.datasets_processing import GeneralDataset
 # from defenses.GNNGuard.base_model import BaseModel
 from defenses.poison_defense import PoisonDefender
 
-from models_builder.gnn_models import FrameworkGNNModelManager
+from models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
 from models_builder.models_zoo import model_configs_zoo
 from data_structures.configs import ModelModificationConfig, ConfigPattern
 from aux.utils import import_by_name, TECHNICAL_PARAMETER_KEY, OPTIMIZERS_PARAMETERS_PATH
@@ -165,6 +166,16 @@ class GNNGuard(PoisonDefender):
         self.embeddings = self.gnn.get_all_layer_embeddings(x, edge_index, batch)
         self.embeddings[-1] = x
         return self.embeddings
+
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        if gen_dataset.dataset.data.edge_weight is None:
+            return False
+        else:
+            return True
 
 
 class GuardWrapper(nn.Module):
