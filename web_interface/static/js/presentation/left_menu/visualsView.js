@@ -433,10 +433,10 @@ class VisualsView extends View {
 
             // Set initial config - TODO extend
             let initConfig = [
-                [this.showModeId, 'whole-graph'],
-                // [this.showModeId, 'neighborhood'],
+                // [this.showModeId, 'whole-graph'],
+                [this.showModeId, 'neighborhood'],
                 [this.singleGraphLayoutId, 'random'],
-                [this.singleNeighLayoutId, 'random'],
+                [this.singleNeighLayoutId, 'force'],
                 [this.singleNeighNodeId, 0],
                 [this.singleNeighDepthId, 1],
                 [this.singleClassAsColorId, true],

@@ -12,7 +12,7 @@ from aux.declaration import Declare
 from data_structures.prefix_storage import PrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
-    IMPORT_INFO_KEY
+    IMPORT_INFO_KEY, DATASETS_DIR
 from datasets.gen_dataset import GeneralDataset
 from datasets.visible_part import VisiblePart
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
@@ -101,9 +101,9 @@ class ModelLoadBlock(Block):
             self.gen_dataset.dataset_config,
             self.gen_dataset.dataset_var_config
         )
-        path = os.path.relpath(path, GRAPHS_DIR)
+        path = os.path.relpath(path, DATASETS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
-            prefix=("data_root", "data_prepared")
+            prefix=("datasets",)
         )
         values_info = DataInfo.values_list_by_path_and_keys(
             path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
@@ -291,20 +291,19 @@ class ModelManagerBlock(Block):
     def get_satellites(
             self,
             part: dict = None
-    ) -> dict:
-        """ Resend model dependent satellites data: train-test mask, embeds, preds
+    ) -> str:
+        """ Get model dependent satellites data: train-test mask, embeds, preds
         """
         visible_part = self.gen_dataset.visible_part if part is None else\
             VisiblePart(self.gen_dataset, **part)
 
         res = {}
         res.update(send_train_test_mask(self.gen_dataset, None, visible_part))
-        # TODO duplicste code
         if self._object.stats_data is not None:
             stats_data = {k: visible_part.filter(v)
                           for k, v in self._object.stats_data.items()}
             res.update(stats_data)
-        return res
+        return json.dumps(res)
 
 
 def send_train_test_mask(

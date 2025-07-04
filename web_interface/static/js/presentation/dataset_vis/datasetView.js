@@ -251,12 +251,13 @@ class DatasetView extends View {
 
         // Ask for model satellites: masks, preds and embeds
         data = await controller.ajaxRequest('/model', {get: "satellites"})
+        if (data !== '') {
             for (const satellite of VisibleGraph.SATELLITES) {
-                if (data !== '')
-                    if (satellite in data) {
-                        this.datasetVar[satellite] = data[satellite]
-                    }
+                if (satellite in data) {
+                    this.datasetVar[satellite] = data[satellite]
+                }
             }
+        }
 
         if (this.explanation)
             this.visibleGraph.setExplanation(this.explanation)

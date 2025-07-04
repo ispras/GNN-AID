@@ -42,7 +42,7 @@ class SvgNode extends SvgElement {
         predictions.placeX = (ix, r, count) => this.x + 0.8 * r*(-count/2 + 1/2 + ix)
         predictions.placeY = (ix, r, count) => this.y + 1.6 * r
 
-        let features = this.satellites['features'] = new Satellite("rect", this.r)
+        let features = this.satellites['node_features'] = new Satellite("rect", this.r)
         features.placeX = (ix, r, count) => this.x - 2*r
         features.placeY = (ix, r, count) => this.y - r + ix * 0.8 * r
 
@@ -61,7 +61,7 @@ class SvgNode extends SvgElement {
         //     console.error('null')
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
-        let features = this.satellites['features']
+        let features = this.satellites['node_features']
         features.blocks = []
         let tipText = "Feature:"
         if (feats.length > MAX_FEATURES_SHOWN) {

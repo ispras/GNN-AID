@@ -12,6 +12,7 @@ root_dir_len = len(root_dir.parts)
 
 SOURCE_DIR = root_dir / 'src'
 GRAPHS_DIR = root_dir / 'data'
+DATASETS_DIR = root_dir / 'datasets'
 MODELS_DIR = root_dir / 'models'
 EXPLANATIONS_DIR = root_dir / 'explanations'
 DATA_INFO_DIR = root_dir / 'data_info'
@@ -234,3 +235,10 @@ class tmp_dir():
             shutil.rmtree(self.tmp_dir)
         except FileNotFoundError:
              pass
+
+
+def short_str(obj, max_len=120):
+    res = str(obj)
+    if len(res) > max_len:
+        res = res[:max_len - 5] + "..." + res[-2:]
+    return res

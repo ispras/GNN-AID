@@ -21,6 +21,7 @@ class DatasetInfo:
         self.import_from: str = None
 
         self.name: str = None
+        self.format: str = None
         self.count: int = None
         self.directed: bool = None
         self.hetero: bool = False
@@ -39,6 +40,9 @@ class DatasetInfo:
             self
     ) -> None:
         """ Check existing fields have allowed values. """
+        if self.format:
+            from datasets.dataset_converter import DatasetConverter
+            assert self.format == 'ij' or self.format in DatasetConverter.supported_formats
         assert self.count > 0
         assert len(self.node_attributes) > 0
 
@@ -68,7 +72,7 @@ class DatasetInfo:
             elif type == "vector":
                 assert isinstance(value, int) and value > 0
             elif type == "other":
-                assert value in ["str", None]
+                assert isinstance(value, int) or value in ["str", None]
         assert len(self.labelings) > 0
         if self.hetero:
             labelings = []

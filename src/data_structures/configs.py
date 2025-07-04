@@ -507,12 +507,12 @@ class DatasetVarConfig(Config):
             self,
             features: dict = None,
             labeling: Union[str, dict] = None,
-            task: str = None,
+            # task: str = None,
             dataset_ver_ind: int = None
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling, task=task, dataset_ver_ind=dataset_ver_ind)
+            features=features, labeling=labeling, dataset_ver_ind=dataset_ver_ind)
 
 
 class ModelStructureConfig(

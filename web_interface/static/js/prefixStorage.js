@@ -294,8 +294,8 @@ class TuplePrefixStorage {
                     $item.attr("title", v[0]);
                     $item.click((e) => {
                         if (dropFunc) dropFunc();
-                        if (setFunc) setFunc(newPath);
                         this.selects = newPath
+                        if (setFunc) setFunc(newPath);
                         // e.stopPropagation();
                     });
                 } else {

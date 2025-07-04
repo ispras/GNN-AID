@@ -5,30 +5,26 @@
       "files_info": null
     }
   },
-
-  "data_prepared": {
-    "prepared": {
-      "add_key_name_flag": null,
-      "files_info": null
-    },
-    "features": {
+  "datasets": {
+    "full_name": {
       "add_key_name_flag": true,
-      "files_info": null
+      "files_info": [
+        {
+          "format": ".json",
+          "file_name": "dataset_config"
+        }
+      ]
     },
-    "labeling": {
+    "var": {
       "add_key_name_flag": true,
-      "files_info": null
-    },
-    "task": {
-      "add_key_name_flag": true,
-      "files_info": null
-    },
-    "dataset_ver_ind": {
-      "add_key_name_flag": true,
-      "files_info": null
+      "files_info": [
+        {
+          "format": ".json",
+          "file_name": "dataset_var_config"
+        }
+      ]
     }
   },
-
   "models": {
     "gnn": {
       "add_key_name_flag": true,

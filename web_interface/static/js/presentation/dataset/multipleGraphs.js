@@ -179,14 +179,18 @@ class MultipleGraphs extends VisibleGraph {
 
         // Check for feature color coding possibility
         if (this.oneHotableFeature) {
+            let key = Object.keys(this.datasetVar['node_features'])[0]
             this.coloredNodes = createSetOfColors(
-                this.datasetVar['features'][0][0].length, this.svgPanel.$svg)
+                this.datasetVar['node_features'][key][0].length, this.svgPanel.$svg)
             this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, true)
         }
         else {
             this.coloredNodes = null
             this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, false)
         }
+
+        for (const graph of Object.values(this.graphs))
+            graph.ready = true
 
         super._buildVar()
     }
@@ -328,12 +332,15 @@ class MultipleGraphs extends VisibleGraph {
 
     // Assign/remove SVG primitives for node satellites: labels, features, predictions, etc
     setSatellite(satellite, on=true) {
+        if (!this.ready)
+            // Could happen when we reinit graph while satellites data is being received
+            return
         let $g = this.svgPanel.get("graphs-" + satellite)
         if (!on) {
             // Remove SVGs
-            if (satellite === 'features') {
+            if (satellite === "node_features") {
                 for (const graph of Object.values(this.graphs))
-                    graph.setSatellite('features', null)
+                    graph.setSatellite("node_features", null)
                     this.showClassAsColor(false)
             }
 
@@ -344,9 +351,9 @@ class MultipleGraphs extends VisibleGraph {
             }
         }
         else { // Draw or update SVGs
-            if (satellite === 'features') { // Draw feature for each node
+            if (satellite === "node_features") { // Draw feature for each node
                 for (const [n, graph] of Object.entries(this.graphs))
-                    graph.setSatellite('features')
+                    graph.setSatellite("node_features")
 
                 if (this.coloredNodes)
                     this.showClassAsColor(true)
@@ -513,7 +520,7 @@ class MultipleGraphs extends VisibleGraph {
             if (this.coloredNodes)
                 for (const [g, graph] of Object.entries(this.graphs))
                     for (const [n, node] of Object.entries(graph.nodePrimitives))
-                        node.setFillColorIdx(un1hot(this.datasetVar['features'][g][n]))
+                        node.setFillColorIdx(un1hot(this.datasetVar['node_features'][g][n]))
         }
         else {
             for (const graph of Object.values(this.graphs))
@@ -524,8 +531,8 @@ class MultipleGraphs extends VisibleGraph {
 
     // Turn on/off visibility of labels, features, predictions, etc
     showSatellite(satellite, show) {
-        console.log('multi.showSatellite', satellite, show)
-        if (satellite === 'features') {
+        // console.log('multi.showSatellite', satellite, show)
+        if (satellite === "node_features") {
             for (const graph of Object.values(this.graphs))
                 graph.showSatellite(satellite, show)
         }

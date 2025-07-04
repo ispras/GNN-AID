@@ -3,7 +3,7 @@ import os
 import shutil
 from pathlib import Path
 from time import time
-from typing import Union, List
+from typing import Union, List, Dict
 
 import torch
 from torch_geometric.data import Data
@@ -13,6 +13,8 @@ from datasets.gen_dataset import GeneralDataset, LocalDataset
 from datasets.dataset_info import DatasetInfo
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
+PTG_FEATURE_NAME = "unknown"
+
 
 class PTGDataset(GeneralDataset):
     """
@@ -21,7 +23,7 @@ class PTGDataset(GeneralDataset):
     You should extend from this class.
     """
     default_dataset_var_config = DatasetVarConfig(
-        features={'attr': {'unknown': 'vector'}},
+        features={'attr': {PTG_FEATURE_NAME: 'vector'}},
         labeling="origin",
         dataset_ver_ind=0
     )
@@ -46,6 +48,21 @@ class PTGDataset(GeneralDataset):
             self
     ) -> None:
         raise RuntimeError(f"{self.__class__.__name__} does not compute var data.")
+
+    def node_attributes(
+            self,
+            attrs: List[str] = None
+    ) -> Dict[str, Union[list, torch.Tensor]]:
+        """ Get node attributes as a dict {name -> list}"""
+        assert attrs is None or attrs == [PTG_FEATURE_NAME]
+        return {PTG_FEATURE_NAME: [data.x.tolist() for data in self.dataset]}
+
+    def edge_attributes(
+            self,
+            attrs: List[str] = None
+    ) -> Dict[str, Union[list, torch.Tensor]]:
+        """ Get edge attributes as a dict {name -> list}"""
+        raise NotImplementedError()
 
 
 class LocalPTGDataset(PTGDataset):
@@ -76,7 +93,8 @@ class LocalPTGDataset(PTGDataset):
             group = 'single-graph' if len(data_list) == 1 else 'multiple-graphs'
             # TODO misha Add hetero info
             name = name or 'graph_' + str(time())
-            dataset_config = DatasetConfig((self.data_folder, group, name), {'data_list': data_list})
+            dataset_config = DatasetConfig((self.data_folder, group, name))
+            # dataset_config = DatasetConfig((self.data_folder, group, name), {'data_list': data_list})
 
         super(LocalPTGDataset, self).__init__(dataset_config)
 
@@ -96,27 +114,10 @@ class LocalPTGDataset(PTGDataset):
             self.info = DatasetInfo.induce(self.dataset)
             self.info.save(self.info_path)
 
-            # Define auxiliary fields
-            self.dataset_data = {}
-            if self.is_hetero():
-                raise NotImplementedError
-
-            else:
-                self.dataset_data['edges'] = [data.edge_index for data in self.data_list]
-                self.dataset_data['node_attributes'] = [data.x for data in self.data_list]
-
     def _compute_dataset_var_data(
             self
     ) -> None:
-        # Define auxiliary fields
-        self.dataset_var_data = {}
-        if self.is_hetero():
-            raise NotImplementedError
-
-        else:
-            self.dataset_var_data['node_features'] = [data.x for data in self.data_list]
-            # self.dataset_var_data['edge_features'] = self.dataset_data['edge_attributes'] = []
-            self.dataset_var_data['labels'] = [data.y for data in self.data_list]
+        pass  # Nothing to compute
 
 
 class LibPTGDataset(PTGDataset):
@@ -215,31 +216,10 @@ class LibPTGDataset(PTGDataset):
         else:
             raise RuntimeError()
 
-        # Define auxiliary fields
-        self.dataset_data = {}
-        if self.is_hetero():
-            raise NotImplementedError
-
-        else:
-            self.dataset_data['edges'] = [data.edge_index for data in self.dataset]
-            self.dataset_data['node_attributes'] = [data.x for data in self.dataset]
-
     def _compute_dataset_var_data(
             self
     ) -> None:
-        # Define auxiliary fields
-        self.dataset_var_data = {}
-        if self.is_hetero():
-            raise NotImplementedError
-
-        else:
-            self.dataset_var_data['node_features'] = [data.x for data in self.dataset]
-            # self.dataset_var_data['edge_features'] = self.dataset_data['edge_attributes'] = []
-            self.dataset_var_data['labels'] = [data.y for data in self.dataset]
-        if not self.is_multi():
-            self.dataset_var_data['node_features'] = self.dataset_var_data['node_features'][0]
-            # self.dataset_var_data['edge_features'] = []
-            self.dataset_var_data['labels'] = self.dataset_var_data['labels'][0]
+        pass  # Nothing to compute
 
 
 def is_in_torch_geometric_datasets(

@@ -51,12 +51,25 @@ class DatasetManager:
         """ Get GeneralDataset by dataset config. Convenient to use from the frontend.
         """
         path = Declare.dataset_info_path(dataset_config)
-        info = DatasetInfo.read(path)
-        class_name = info.class_name
-        import_from = info.import_from
-        if class_name is None or import_from is None:
-            raise RuntimeError(f"Metainfo file does not contain field 'class_name' or 'import_from'."
-                               f" They must be specified in metainfo file, check it {path}")
+
+        # Check special cases when there is no metainfo file but we know where to get class
+        if not path.exists():
+            from datasets.ptg_datasets import LibPTGDataset
+            if dataset_config.full_name[0] == LibPTGDataset.data_folder:
+                class_name = LibPTGDataset.__name__
+                import_from = LibPTGDataset.__module__
+            else:
+                raise RuntimeError(f"No metainfo file found for dataset with config {dataset_config}")
+
+        else:
+            # Read metainfo
+            info = DatasetInfo.read(path)
+            class_name = info.class_name
+            import_from = info.import_from
+            if class_name is None or import_from is None:
+                raise RuntimeError(f"Metainfo file does not contain field 'class_name' or 'import_from'."
+                                   f" They must be specified in metainfo file, check it {path}")
+
         klass = import_by_name(class_name, [import_from])
         return klass(dataset_config=dataset_config, **params)
 

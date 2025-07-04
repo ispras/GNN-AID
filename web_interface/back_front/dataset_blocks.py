@@ -50,7 +50,8 @@ class DatasetBlock(Block):
         DataInfo.refresh_data_dir_structure()
         index = DataInfo.data_parse()
 
-        # Add torch_geom FIXME tmp
+        # Add torch_geom
+        from datasets.ptg_datasets import LibPTGDataset
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             configuration = json.load(f)
             # assert len(index.keys) == 3
@@ -58,7 +59,7 @@ class DatasetBlock(Block):
                 for j in configuration['content'][i]:
                     for k in configuration['content'][i][j]:
                         try:
-                            index.add(("pytorch-geometric", i, j, k), "Not loaded yet")
+                            index.add((LibPTGDataset.data_folder, i, j, k), "Not loaded yet")
                         except KeyError: pass
 
         return json_dumps([index.to_json(), json_dumps('')])
@@ -74,7 +75,7 @@ class DatasetBlock(Block):
             self,
             part: dict = None
     ) -> dict:
-        return self._object.get_dataset_data(part=part)
+        return self._object.visible_part.get_dataset_data(part=part)
 
 
 class DatasetVarBlock(Block):
@@ -99,8 +100,8 @@ class DatasetVarBlock(Block):
     def _finalize(
             self
     ) -> bool:
-        if set(get_config_keys("data_prepared")) != set(self._config.keys()):
-            return False
+        # if set(get_config_keys("data_prepared")) != set(self._config.keys()):
+        #     return False
 
         self.dataset_var_config = DatasetVarConfig(**self._config)
         return True
@@ -111,11 +112,11 @@ class DatasetVarBlock(Block):
         self.gen_dataset.build(self.dataset_var_config)
         self._object = self.gen_dataset
         # NOTE: we need to compute var_data to be able to get is_one_hot_able()
-        self.gen_dataset.get_dataset_var_data()
+        self.gen_dataset.visible_part.get_dataset_var_data()
         self._result = [self.dataset_var_config.labeling, self.gen_dataset.is_one_hot_able()]
 
     def get_dataset_var_data(
             self,
             part: dict = None
     ) -> dict:
-        return self._object.get_dataset_var_data(part=part)
+        return self._object.visible_part.get_dataset_var_data(part=part)

@@ -3,7 +3,7 @@ from typing import Union
 
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
-    SAVE_DIR_STRUCTURE_PATH
+    SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 import os
 from pathlib import Path
 
@@ -97,8 +97,10 @@ class Declare:
             dataset_config: DatasetConfig
     ) -> [Path, list]:
         """
+        Directory where dataset raw files and metainfo are stored.
+
         :param dataset_config: DatasetConfig
-        :return: forms the path to the data folder and adds to it the path to a specific dataset
+        :return: path to the data folder, path to a specific dataset
         """
         path = GRAPHS_DIR
         dataset_config_val = [dataset_config.path()]
@@ -111,6 +113,7 @@ class Declare:
             dataset_config: DatasetConfig
     ) -> [Path, list]:
         """
+        Path to metainfo file for a dataset.
         :param dataset_config: DatasetConfig
         :return: path to metainfo file for a specific dataset
         """
@@ -122,30 +125,34 @@ class Declare:
             dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
     ) -> [Path, list]:
         """
+        Directory where the var part of a dataset is stored.
         :param dataset_config: DatasetConfig
         :param dataset_var_config: DatasetVarConfig
-        :return: The path where the data with the described structure will be saved
+        :return: path to the data folder, extra paths
         """
         assert dataset_var_config.features is not None
 
-        path, files_paths = Declare.dataset_root_dir(dataset_config)
+        path = DATASETS_DIR
+
+        obj_info = [
+            dataset_config.hash_for_config(),
+            dataset_var_config.hash_for_config(),
+        ]
 
         # Find minimal free version if not specified
-        # QUE Kirill, maybe we can make it better
         if dataset_var_config["dataset_ver_ind"] is None:
             ix = 0
             while True:
-                dataset_var_config["dataset_ver_ind"] = ix
-                loc_path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                                 obj_info=dataset_var_config.to_savable_dict(
-                                                                     compact=True))
+                dataset_var_config["dataset_ver_ind"] = ix  # FIXME 'DatasetVarConfig' object does not support item assignment
+                loc_path, files_paths = Declare.obj_info_to_path(what_save="datasets", previous_path=path,
+                                                                 obj_info=obj_info)
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
                 ix += 1
             path = loc_path
         else:
-            path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                         obj_info=dataset_var_config.to_savable_dict(compact=True))
+            path, files_paths = Declare.obj_info_to_path(what_save="datasets", previous_path=path,
+                                                         obj_info=obj_info)
         return path, files_paths
 
     @staticmethod
@@ -163,7 +170,7 @@ class Declare:
         model_ver_ind_none_flag = \
             class_obj.modification.model_ver_ind is None or \
             class_obj.modification.data_change_flag()
-        path = Path(str(class_obj.dataset_path).replace(str(GRAPHS_DIR), str(MODELS_DIR)))
+        path = Path(str(class_obj.dataset_path).replace(str(DATASETS_DIR), str(MODELS_DIR)))
         what_save = "models"
 
         mi_defense_kwargs_hash = class_obj.mi_defense_config.hash_for_config()
@@ -232,7 +239,7 @@ class Declare:
         """
         if not isinstance(model_ver_ind, int) or model_ver_ind < 0:
             raise Exception("model_ver_ind must be int type and has value >= 0")
-        path = Path(str(dataset_path).replace(str(GRAPHS_DIR), str(MODELS_DIR)))
+        path = Path(str(dataset_path).replace(str(DATASETS_DIR), str(MODELS_DIR)))
         what_save = "models"
         obj_info = {
             "gnn": gnn_name,

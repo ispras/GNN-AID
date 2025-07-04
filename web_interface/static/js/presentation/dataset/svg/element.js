@@ -71,7 +71,7 @@ class SvgElement {
                 return this.setEmbeddings.apply(this, args)
             case 'train-test-mask':
                 return this.setTrainMask.apply(this, args)
-            case 'features':
+            case 'node_features':
                 return this.setFeatures.apply(this, args)
             case 'scores':
                 return this.setScores.apply(this, args)

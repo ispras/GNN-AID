@@ -9,7 +9,7 @@ from torch_geometric.data import Data, HeteroData, InMemoryDataset
 
 from aux.utils import GRAPHS_DIR
 from aux.declaration import Declare
-from datasets.custom_datasets import CustomDataset
+from datasets.known_format_datasets import CustomDataset
 from datasets.datasets_manager import DatasetManager
 from datasets.gen_dataset import GeneralDataset
 from datasets.visible_part import VisiblePart
@@ -137,6 +137,7 @@ class CustomHeteroDataset(
         """
         Structure according to https://docs.google.com/spreadsheets/d/1fNI3sneeGoOFyIZP_spEjjD-7JX2jNl_P8CQrA4HZiI/edit#gid=1096434224
         """
+        # FIXME update
         self.dataset_data = {
             "edges": [],
         }
@@ -443,7 +444,7 @@ if __name__ == '__main__':
     # gen_dataset.build(dataset_var_config)
     # # print(gen_dataset.dataset.data)
     # gen_dataset.set_visible_part({})
-    # gen_dataset.get_dataset_var_data()
+    # gen_dataset.visible_part.get_dataset_var_data()
     # print(json.dumps(gen_dataset.dataset_var_data, indent=1))
 
     # # Example of local user PTG dataset

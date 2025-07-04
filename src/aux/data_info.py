@@ -8,7 +8,7 @@ from typing import List, Tuple, Union, Dict, Mapping
 # from pydantic.v1.utils import deep_update
 
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DATA_INFO_DIR, \
-    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH
+    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 import os
 from pathlib import Path
 from data_structures.prefix_storage import PrefixStorage, TuplePrefixStorage
@@ -90,7 +90,7 @@ class DataInfo:
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         with open(DATA_INFO_DIR_results, 'w', encoding='utf-8') as f:
-            for path in Path(GRAPHS_DIR).glob('**/data.pt'):
+            for path in Path(DATASETS_DIR).glob('**/data.pt'):
                 path = path.parts[root_dir_len + 1:-1]
                 f.write(str(Path(*path)) + '\n')
 
@@ -101,7 +101,7 @@ class DataInfo:
         """
 
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :return: keys_list witch should use specific info about object,
          full_keys_list take all keys (with technical keys),
          dir_structure dict base on save_dir_structure.json without modes keys,
@@ -158,7 +158,7 @@ class DataInfo:
 
         :param path: path of the saved object
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :return: object values based on object path and dict with technical files
         """
         with open(SAVE_DIR_STRUCTURE_PATH) as f:
@@ -208,7 +208,7 @@ class DataInfo:
         Fill prefix storage by file with paths
 
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :param file_with_paths: file with paths of saved objects
         :return: fill prefix storage and dict with description_info about objects use hash
         """
@@ -261,7 +261,7 @@ class DataInfo:
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'explanations_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared", "models", "explanations"),
+            prefix=("datasets", "models", "explanations"),
             file_with_paths=DATA_INFO_DIR_results)
         description_info = DataInfo.description_info_with_paths_to_description_info_with_files_values(
             description_info=description_info, root_path=EXPLANATIONS_DIR,
@@ -276,7 +276,7 @@ class DataInfo:
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'models_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared", "models"),
+            prefix=("datasets", "models"),
             file_with_paths=DATA_INFO_DIR_results)
         description_info = DataInfo.description_info_with_paths_to_description_info_with_files_values(
             description_info=description_info, root_path=MODELS_DIR,
@@ -324,7 +324,7 @@ class DataInfo:
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared"),
+            prefix=("datasets"),
             file_with_paths=DATA_INFO_DIR_results)
         return ps
 
@@ -336,7 +336,7 @@ class DataInfo:
         Remove all prepared data for all datasets.
         """
         import shutil
-        for path in Path(GRAPHS_DIR).glob('**/prepared'):
+        for path in Path(DATASETS_DIR).glob('**/prepared'):
             print(path)
             if not dry_run:
                 shutil.rmtree(path)
@@ -478,7 +478,7 @@ if __name__ == '__main__':
     DataInfo.refresh_all_data_info()
     ps, info = DataInfo.models_parse()
     print(ps.to_json())
-    # ps, info = DataInfo.fill_prefix_storage(modes=("data_root", "data_prepared", "models"),
+    # ps, info = DataInfo.fill_prefix_storage(modes=("datasets", "models"),
     #                                         file_with_paths=DATA_INFO_DIR / 'models_dir_structure')
     # print(info)
     # DataInfo.clean_prepared_data()

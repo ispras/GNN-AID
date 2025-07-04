@@ -2,6 +2,7 @@ import collections.abc
 
 collections.Callable = collections.abc.Callable
 
+import json
 import signal
 import unittest
 import shutil
@@ -17,7 +18,12 @@ if not str(utils.GRAPHS_DIR).endswith("__DatasetsTest_tmp"):
 else:
     tmp_dir = utils.GRAPHS_DIR
 
+from aux.declaration import Declare
 from datasets.dataset_converter import networkx_to_ptg
+from data_structures.configs import DatasetConfig, DatasetVarConfig
+from datasets.datasets_manager import DatasetManager
+from datasets.known_format_datasets import KnownFormatDataset
+from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
 
 
 def my_ctrlc_handler(signal, frame):
@@ -28,6 +34,165 @@ def my_ctrlc_handler(signal, frame):
 
 
 signal.signal(signal.SIGINT, my_ctrlc_handler)
+
+
+def _create_single_ij(dc: DatasetConfig):
+    """ Single graph in ij format """
+    root, files_paths = Declare.dataset_root_dir(dc)
+    raw = root / 'raw'
+    raw.mkdir(parents=True)
+    with open(raw / 'edges.ij', 'w') as f:
+        f.write("10 11\n")
+        f.write("10 12\n")
+    with open(root / 'metainfo', 'w') as f:
+        json.dump({
+            "count": 1,
+            "directed": False,
+            "nodes": [3],
+            "remap": True,
+            "node_attributes": {
+                "names": ["a", "b", "c"],
+                "types": ["continuous", "categorical", "vector"],
+                "values": [[0, 1], ["A", "B", "C"], 2]
+            },
+            "edge_attributes": {
+                "names": ["weight"],
+                "types": ["continuous"],
+                "values": [[0, 1]]
+            },
+            "labelings": {
+                "binary": 2,
+                "threeClasses": 3
+            }
+        }, f)
+    (raw / 'labels').mkdir()
+    with open(raw / 'labels' / 'binary', 'w') as f:
+        json.dump({"10": 0, "11": 1, "12": 1}, f)
+    with open(raw / 'labels' / 'threeClasses', 'w') as f:
+        json.dump({"10": 0, "11": 1, "12": 2}, f)
+
+    (raw / 'node_attributes').mkdir()
+    with open(raw / 'node_attributes' / 'a', 'w') as f:
+        json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
+    with open(raw / 'node_attributes' / 'b', 'w') as f:
+        json.dump({"10": "A", "11": "B", "12": "C"}, f)
+    with open(raw / 'node_attributes' / 'c', 'w') as f:
+        json.dump({"10": [0.3, -0.2], "11": [0, 0], "12": [1e5, 0]}, f)
+
+    # (raw / 'edge_attributes').mkdir()
+    # with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+    #     json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
+
+
+def _create_single2_ij(dc: DatasetConfig):
+    """ Single graph in ij format, equals single-graph/example """
+    root, files_paths = Declare.dataset_root_dir(dc)
+    raw = root / 'raw'
+    raw.mkdir(parents=True)
+    with open(raw / 'edges.ij', 'w') as f:
+        f.write("10 11\n")
+        f.write("11 12\n")
+        f.write("11 13\n")
+        f.write("11 15\n")
+        f.write("12 13\n")
+        f.write("12 17\n")
+        f.write("15 14\n")
+        f.write("15 16\n")
+    with open(root / 'metainfo', 'w') as f:
+        json.dump({
+            "class_name": "KnownFormatDataset",
+            "import_from": "datasets.known_format_datasets",
+            "name": "example",
+            "count": 1,
+            "directed": False,
+            "nodes": [8],
+            "remap": True,
+            "node_attributes": {
+                "names": ["a", "b"],
+                "types": ["continuous", "categorical"],
+                "values": [[0, 1], ["A", "B", "C"]]
+            },
+            "edge_attributes": {
+                "names": ["weight"],
+                "types": ["continuous"],
+                "values": [[0, 1]]
+            },
+            "labelings": {
+                "binary": 2,
+                "threeClasses": 3
+            }
+        }, f)
+    (raw / 'labels').mkdir()
+    with open(raw / 'labels' / 'binary', 'w') as f:
+        json.dump({"10": 1, "11": 1, "12": 1, "13": 1, "14": 0, "15": 0, "16": 0, "17": 0}, f)
+
+    (raw / 'node_attributes').mkdir()
+    with open(raw / 'node_attributes' / 'a', 'w') as f:
+        json.dump({"10": 1, "11": 1, "12": 0.6, "13": 0.7, "14": 0.5, "15": 0.5, "16": 0.5, "17": 0.7},
+                  f)
+    with open(raw / 'node_attributes' / 'b', 'w') as f:
+        json.dump(
+            {"10": "A", "11": "A", "12": "B", "13": "C", "14": "B", "15": "A", "16": "A", "17": "C"}, f)
+
+
+def _create_multi_ij(dc: DatasetConfig):
+    """ Multi graph in ij format, equals multiple-graphs/custom/example """
+    root, files_paths = Declare.dataset_root_dir(dc)
+    raw = root / 'raw'
+    raw.mkdir(parents=True)
+    with open(raw / 'edges.ij', 'w') as f:
+        f.write("0 1\n")
+        f.write("1 0\n")
+        f.write("1 2\n")
+        f.write("0 1\n")
+        f.write("1 2\n")
+        f.write("2 3\n")
+        f.write("3 0\n")
+        f.write("0 1\n")
+        f.write("0 2\n")
+        f.write("0 3\n")
+        f.write("0 4\n")
+    with open(raw / 'edge_index', 'w') as f:
+        f.write("[3, 7, 11]")
+    with open(root / 'metainfo', 'w') as f:
+        json.dump({
+            "class_name": "KnownFormatDataset",
+            "import_from": "datasets.known_format_datasets",
+            "count": 3,
+            "directed": False,
+            "nodes": [3, 4, 5],
+            "remap": True,
+            "node_attributes": {
+                "names": ["type"],
+                "types": ["categorical"],
+                "values": [["alpha", "beta", "gamma"]]
+            },
+            "edge_attributes": {
+                "names": ["weight"],
+                "types": ["continuous"],
+                "values": [[0, 1]]
+            },
+            "labelings": {
+                "binary": 2,
+                "threeClasses": 3
+            }
+        }, f)
+    (raw / 'labels').mkdir()
+    with open(raw / 'labels' / 'binary', 'w') as f:
+        json.dump({"0": 1, "1": 0, "2": 0}, f)
+    with open(raw / 'labels' / 'threeClasses', 'w') as f:
+        json.dump({"0": 0, "1": 1, "2": 2}, f)
+
+    (raw / 'node_attributes').mkdir()
+    with open(raw / 'node_attributes' / 'type', 'w') as f:
+        json.dump([
+            {"0": "alpha", "1": "beta", "2": "alpha"},
+            {"0": "gamma", "1": "beta", "2": "gamma", "3": "gamma"},
+            {"0": "beta", "1": "gamma", "2": "gamma", "3": "alpha", "4": "beta"}], f)
+
+    # (raw / 'edge_attributes').mkdir()
+    # with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+    #     json.dump([[0.1,0.1,0.1,0.2,0.2,0.2,],[0.1,0.1,0.1,0.1],[0.2,0.2,0.2,0.2]], f)
 
 
 class DatasetsTest(unittest.TestCase):
@@ -120,8 +285,6 @@ class DatasetsTest(unittest.TestCase):
 
     def test_local_ptg(self):
         """ """
-        from datasets.datasets_manager import DatasetManager
-        from datasets.ptg_datasets import LocalPTGDataset
         x = tensor([[0, 0], [1, 0], [1, 0]])
         edge_index = tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
         y = tensor([0, 1, 1])
@@ -160,58 +323,8 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_ij_single(self):
         """ """
-        from data_structures.configs import DatasetVarConfig
-        from data_structures.configs import DatasetConfig
-        from aux.declaration import Declare
-        from datasets.known_format_datasets import KnownFormatDataset
-        import json
         dc = DatasetConfig(('single', 'custom', 'test'))
-
-        # Create files
-        root, files_paths = Declare.dataset_root_dir(dc)
-        raw = root / 'raw'
-        raw.mkdir(parents=True)
-        with open(raw / 'test.ij', 'w') as f:
-            f.write("10 11\n")
-            f.write("10 12\n")
-        with open(root / 'metainfo', 'w') as f:
-            json.dump({
-                "count": 1,
-                "directed": False,
-                "nodes": [3],
-                "remap": True,
-                "node_attributes": {
-                    "names": ["a", "b", "c"],
-                    "types": ["continuous", "categorical", "vector"],
-                    "values": [[0, 1], ["A", "B", "C"], 2]
-                },
-                "edge_attributes": {
-                    "names": ["weight"],
-                    "types": ["continuous"],
-                    "values": [[0, 1]]
-                },
-                "labelings": {
-                    "binary": 2,
-                    "threeClasses": 3
-                }
-            }, f)
-        (raw / 'test.labels').mkdir()
-        with open(raw / 'test.labels' / 'binary', 'w') as f:
-            json.dump({"10": 0, "11": 1, "12": 1}, f)
-        with open(raw / 'test.labels' / 'threeClasses', 'w') as f:
-            json.dump({"10": 0, "11": 1, "12": 2}, f)
-
-        (raw / 'test.node_attributes').mkdir()
-        with open(raw / 'test.node_attributes' / 'a', 'w') as f:
-            json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
-        with open(raw / 'test.node_attributes' / 'b', 'w') as f:
-            json.dump({"10": "A", "11": "B", "12": "C"}, f)
-        with open(raw / 'test.node_attributes' / 'c', 'w') as f:
-            json.dump({"10": [0.3, -0.2], "11": [0, 0], "12": [1e5, 0]}, f)
-
-        # (raw / 'test.edge_attributes').mkdir()
-        # with open(raw / 'test.edge_attributes' / 'weight', 'w') as f:
-        #     json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
+        _create_single_ij(dc)
 
         # Load
         gen_dataset = KnownFormatDataset(dc)
@@ -241,68 +354,8 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_ij_multi(self):
         """ """
-        from data_structures.configs import DatasetVarConfig
-        from data_structures.configs import DatasetConfig
-        from aux.declaration import Declare
-        from datasets.known_format_datasets import KnownFormatDataset
-        import json
         dc = DatasetConfig(('multi', 'custom', 'test'))
-
-        # Create files
-        root, files_paths = Declare.dataset_root_dir(dc)
-        raw = root / 'raw'
-        raw.mkdir(parents=True)
-        with open(raw / 'test.ij', 'w') as f:
-            f.write("0 1\n")
-            f.write("1 0\n")
-            f.write("1 2\n")
-            f.write("0 1\n")
-            f.write("1 2\n")
-            f.write("2 3\n")
-            f.write("3 0\n")
-            f.write("0 1\n")
-            f.write("0 2\n")
-            f.write("0 3\n")
-            f.write("0 4\n")
-        with open(raw / 'test.edge_index', 'w') as f:
-            f.write("[3, 7, 11]")
-        with open(root / 'metainfo', 'w') as f:
-            json.dump({
-                "count": 3,
-                "directed": False,
-                "nodes": [3, 4, 5],
-                "remap": True,
-                "node_attributes": {
-                    "names": ["type"],
-                    "types": ["categorical"],
-                    "values": [["alpha", "beta", "gamma"]]
-                },
-                "edge_attributes": {
-                    "names": ["weight"],
-                    "types": ["continuous"],
-                    "values": [[0, 1]]
-                },
-                "labelings": {
-                    "binary": 2,
-                    "threeClasses": 3
-                }
-            }, f)
-        (raw / 'test.labels').mkdir()
-        with open(raw / 'test.labels' / 'binary', 'w') as f:
-            json.dump({"0": 1, "1": 0, "2": 0}, f)
-        with open(raw / 'test.labels' / 'threeClasses', 'w') as f:
-            json.dump({"0": 0, "1": 1, "2": 2}, f)
-
-        (raw / 'test.node_attributes').mkdir()
-        with open(raw / 'test.node_attributes' / 'type', 'w') as f:
-            json.dump([
-                {"0": "alpha", "1": "beta", "2": "alpha"},
-                {"0": "gamma", "1": "beta", "2": "gamma", "3": "gamma"},
-                {"0": "beta", "1": "gamma", "2": "gamma", "3": "alpha", "4": "beta"}], f)
-
-        # (raw / 'test.edge_attributes').mkdir()
-        # with open(raw / 'test.edge_attributes' / 'weight', 'w') as f:
-        #     json.dump([[0.1,0.1,0.1,0.2,0.2,0.2,],[0.1,0.1,0.1,0.1],[0.2,0.2,0.2,0.2]], f)
+        _create_multi_ij(dc)
 
         # Load
         gen_dataset = KnownFormatDataset(dc)
@@ -324,12 +377,7 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_other_single(self):
         """ """
-        from data_structures.configs import DatasetVarConfig
-        from data_structures.configs import DatasetConfig
-        from aux.declaration import Declare
         from datasets.dataset_converter import DatasetConverter
-        from datasets.known_format_datasets import KnownFormatDataset
-        import json
         import networkx as nx
 
         g = nx.Graph()
@@ -378,6 +426,7 @@ class DatasetsTest(unittest.TestCase):
             with open(root / 'metainfo', 'w') as f:
                 json.dump({
                     "name": name,
+                    "format": format,
                     "count": 1,
                     "directed": False,
                     "nodes": [g.number_of_nodes()],
@@ -395,12 +444,12 @@ class DatasetsTest(unittest.TestCase):
                     "labelings": {"binary": 2}
                 }, f)
 
-            (raw / f'{name}.labels').mkdir()
-            with open(raw / f'{name}.labels' / 'binary', 'w') as f:
+            (raw / 'labels').mkdir()
+            with open(raw / 'labels' / 'binary', 'w') as f:
                 json.dump(node_labels, f)
 
             # Convert from the format
-            gen_dataset = KnownFormatDataset(dc, format=format)
+            gen_dataset = KnownFormatDataset(dc)
 
             dataset_var_config = DatasetVarConfig(
                 features={'attr': {'a': 'as_is', 'b': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
@@ -415,15 +464,52 @@ class DatasetsTest(unittest.TestCase):
             # FIXME add it later when edge features are ready
             # self.assertTrue(torch.equal(true_ptg_data.edge_attr, ptg_data.edge_attr))
 
+    def test_visible_part(self):
+        # Create files
+        dc = DatasetConfig(('single-graph', 'example'))
+        dvc = DatasetVarConfig(
+            features={'attr': {'a': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+        _create_single2_ij(dc)
+        single = DatasetManager.get_by_config(dc)
+        single.build(dvc)
+
+        dc = DatasetConfig(('multi-graph', 'test'))
+        dvc = DatasetVarConfig(
+            features={'attr': {'type': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+        _create_multi_ij(dc)
+        multi = DatasetManager.get_by_config(dc)
+        multi.build(dvc)
+
+        # TODO misha add hetero
+
+        # Test that getting functions work
+        for dataset in [single, multi]:
+            dataset.set_visible_part({})
+            dataset.set_visible_part({'center': 0})
+            dataset.set_visible_part({'center': 0, 'depth': 2})
+            dataset.visible_part.get_dataset_data()
+            dataset.visible_part.get_dataset_var_data()
+
+        # Test correctness
+        single.set_visible_part({'center': 1, 'depth': 2})
+        dd = single.visible_part.get_dataset_data()
+        self.assertEqual(dd.edges, [
+            [],
+            [(0, 1), (2, 1), (4, 1), (3, 1)],
+            [(6, 4), (2, 3), (3, 2), (5, 2), (7, 4)]])
+        self.assertEqual(dd.nodes, [[1], [0, 2, 3, 4], [5, 6, 7]])
+        self.assertEqual(dd.graphs, None)
+
+        dvd = single.visible_part.get_dataset_var_data()
+        self.assertEqual(dvd.labels, {1: 1, 0: 1, 2: 1, 3: 1, 4: 0, 5: 0, 6: 0, 7: 0})
+        self.assertEqual(set(dvd.node_features.keys()), set(range(8)))
+
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
         from data_structures.prefix_storage import PrefixStorage
         from aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
-        from datasets.ptg_datasets import LibPTGDataset
-        from datasets.datasets_manager import DatasetManager
-        from data_structures.configs import DatasetConfig
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = PrefixStorage.from_json(f.read())
 

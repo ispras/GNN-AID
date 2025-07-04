@@ -60,7 +60,7 @@ function createSetOfColors(numColors, $svg) {
 // Representation of a visible part of dataset - whole graph or a neighborhood.
 // Responsible for drawing and interaction with user.
 class VisibleGraph {
-    static SATELLITES = ["features", "labels", "predictions", "embeddings", "train-test-mask"]
+    static SATELLITES = ["node_features", "labels", "predictions", "embeddings", "train-test-mask"]
 
     constructor(datasetInfo, svgPanel) {
         this.datasetInfo = datasetInfo
@@ -104,6 +104,7 @@ class VisibleGraph {
         this.onNodeClick = null // callback when node is clicked
         this.beforeInit = null // callback when reinit() is called
         this.afterInit = null // callback when reinit() is called
+        this.ready = false // flag whether structures are ready to be updated, e.g. for setSatellites()
         this.alive = null // needed to break draw cycle when destroying
         this.nodesVisible = true // flag whether to show nodes
         this.nodeGrabbed = null // node which is currently dragged (SVG element)
@@ -281,6 +282,7 @@ class VisibleGraph {
 
     // Variable part of initVar - to be overridden
     _buildVar() {
+        this.ready = true
         for (const satellite of VisibleGraph.SATELLITES)
             this.setSatellite(satellite)
 
@@ -301,6 +303,7 @@ class VisibleGraph {
 
     // Drops and builds with other parameters, handling Var part properly, keeping listeners
     async _reinit() {
+        this.ready = false
         this._dropVar()
         this._drop()
 
@@ -426,6 +429,9 @@ class VisibleGraph {
 
     // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
     setSatellite(satellite, on=true) {
+        if (!this.ready)
+            // Could happen when we reinit graph while satellites data is being received
+            return
         // Replace satellite elements
         let $g = this.svgPanel.get("nodes-" + satellite)
         if (!on) {

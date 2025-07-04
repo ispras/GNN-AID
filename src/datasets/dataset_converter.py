@@ -52,7 +52,7 @@ class DatasetConverter:
             all_edge_attributes.append(edge_attributes)
 
         # Write graphs and attributes to output dir
-        with open(output_dir / f'{info.name}.ij', 'w') as f:
+        with open(output_dir / 'edges.ij', 'w') as f:
             for graph in graphs:
                 for i, j in graph.edges:
                     f.write(f'{i} {j}\n')
@@ -62,12 +62,12 @@ class DatasetConverter:
             for graph in graphs:
                 edges += graph.number_of_edges()
                 edge_index.append(edges)
-            with open(output_dir / f'{info.name}.edge_index', 'w') as f:
+            with open(output_dir / 'edge_index', 'w') as f:
                 json.dump(edge_index, f)
 
-        node_attr_dir = output_dir / f'{info.name}.node_attributes'
+        node_attr_dir = output_dir / 'node_attributes'
         node_attr_dir.mkdir()
-        edge_attr_dir = output_dir / f'{info.name}.edge_attributes'
+        edge_attr_dir = output_dir / 'edge_attributes'
         edge_attr_dir.mkdir()
         if len(graphs) == 1:
             all_node_attributes = all_node_attributes[0]
@@ -139,8 +139,8 @@ class DatasetConverter:
         else:
             raise NotImplementedError
 
-        node_attributes_dir = output_dir / f'{name}.node_attributes'
-        edge_attributes_dir = output_dir / f'{name}.edge_attributes'
+        node_attributes_dir = output_dir / 'node_attributes'
+        edge_attributes_dir = output_dir / 'edge_attributes'
 
         if not node_attrs_ok:
             node_attributes_dir.mkdir()
@@ -176,11 +176,22 @@ def extract_attributes(
     #     edge_attributes[attr] = nx.get_edge_attributes(graph, attr, default_edge_attr_value[attr])
     for n, data in graph.nodes(data=True):
         for attr in all_node_attributes_names:
-            node_attributes[attr][n] = data[attr] if attr in data else default_node_attr_value[attr]
+            if attr in data:
+                node_attributes[attr][n] = data[attr]
+            elif default_node_attr_value and attr in default_node_attr_value:
+                node_attributes[attr][n] = default_node_attr_value[attr]
+            else:
+                raise KeyError(f"Unknown attribute '{attr}' for node {n}."
+                               f" Add it in graph data or specify default value in default_node_attr_value")
     for i, j, data in graph.edges(data=True):
         for attr in all_edge_attributes_names:
-            edge_attributes[attr][f"{i},{j}"] = data[attr] if attr in data else default_edge_attr_value[attr]
-            # edge_attributes[attr][f"{i},{j}"] = data.get(attr, default_edge_attr_value[attr])
+            if attr in data:
+                edge_attributes[attr][f"{i},{j}"] = data[attr]
+            elif default_edge_attr_value and attr in default_edge_attr_value:
+                edge_attributes[attr][f"{i},{j}"] = default_edge_attr_value[attr]
+            else:
+                raise KeyError(f"Unknown value for attribute '{attr}' for edge ({i},{j})."
+                               f" Add it in graph data or specify default value in default_edge_attr_value")
     return node_attributes, edge_attributes
 
 
@@ -316,7 +327,7 @@ def example_single():
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"11": 1, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0}, f)
 
-    from datasets.custom_datasets import KnownFormatDataset
+    from datasets.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': -1, 'b': -1},
@@ -397,7 +408,7 @@ def example_multi():
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"0":1,"1":0,"2":0}, f)
 
-    from datasets.custom_datasets import KnownFormatDataset
+    from datasets.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': 0, 'b': 'alpha'},

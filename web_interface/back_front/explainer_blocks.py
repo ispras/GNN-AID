@@ -106,7 +106,7 @@ class ExplainerLoadBlock(Block):
         """
         path = os.path.relpath(self.gmm.model_path_info(), MODELS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
-            prefix=("data_root", "data_prepared", "models")
+            prefix=("datasets", "models")
         )
         values_info = DataInfo.values_list_by_path_and_keys(path=path,
                                                             full_keys_list=full_keys_list,
