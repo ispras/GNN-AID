@@ -113,7 +113,10 @@ class FGSMAttacker(
             sign_data_grad = x.grad.sign()
             perturbed_data_x = x + self.epsilon * sign_data_grad
             perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-            gen_dataset.data.x = perturbed_data_x.detach()
+            if task_type:
+                gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
+            else:
+                gen_dataset.data.x = perturbed_data_x.detach()
             # if task_type:
             #     gni = GlobalNodeIndexer(gen_dataset.dataset)
             #     for node_idx in tqdm(range(perturbed_data_x.size(0))):
