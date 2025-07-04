@@ -12,7 +12,7 @@ from base.datasets_processing import GeneralDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
 from models_builder.models_zoo import model_configs_zoo
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from aux.utils import OPTIMIZERS_PARAMETERS_PATH
+from aux.utils import OPTIMIZERS_PARAMETERS_PATH, move_to_same_device
 from torch_geometric.utils import dense_to_sparse
 
 from attacks.poison_attacks import PoisonAttacker
@@ -118,12 +118,12 @@ class BaseMeta(PoisonAttacker):
         )
         gnn_model_manager_surrogate = FrameworkGNNModelManager(
             gnn=self.model,
-            dataset_path=gen_dataset,
+            dataset_path=None,
             modification=default_config,
             manager_config=manager_config,
         )
 
-        gnn_model_manager_surrogate.train_model(gen_dataset=gen_dataset, steps=self.train_iters)
+        gnn_model_manager_surrogate.train_model(gen_dataset=gen_dataset, steps=self.train_iters, save_model_flag=False)
 
         self.pred_labels = gnn_model_manager_surrogate.run_model(gen_dataset=gen_dataset, mask='all', out='answers')
 
@@ -158,9 +158,12 @@ class BaseMeta(PoisonAttacker):
         output = self.pred_labels
         # labels_self_training = output.argmax(1)
         labels_self_training = self.pred_labels.long().clone().detach()
+        labels_self_training, labels = move_to_same_device(
+            labels_self_training, labels,
+            device=torch.device(self.device)
+        )
         labels_self_training[idx_train] = labels[idx_train]
         return labels_self_training
-
 
     def log_likelihood_constraint(self, modified_adj, ori_adj, ll_cutoff):
         """
@@ -173,7 +176,8 @@ class BaseMeta(PoisonAttacker):
         if self.undirected:
             t_possible_edges = np.array(np.triu(np.ones((self.num_nodes, self.num_nodes)), k=1).nonzero()).T
         else:
-            t_possible_edges = np.array((np.ones((self.num_nodes, self.num_nodes)) - np.eye(self.num_nodes)).nonzero()).T
+            t_possible_edges = np.array(
+                (np.ones((self.num_nodes, self.num_nodes)) - np.eye(self.num_nodes)).nonzero()).T
         allowed_mask, current_ratio = utils.likelihood_ratio_filter(t_possible_edges,
                                                                     modified_adj,
                                                                     ori_adj, t_d_min,
@@ -188,7 +192,7 @@ class BaseMeta(PoisonAttacker):
         adj_meta_grad = adj_meta_grad - torch.diag(torch.diag(adj_meta_grad, 0))
         # # Set entries to 0 that could lead to singleton nodes.
         singleton_mask = self.filter_potential_singletons(modified_adj)
-        adj_meta_grad = adj_meta_grad *  singleton_mask
+        adj_meta_grad = adj_meta_grad * singleton_mask
 
         if ll_constraint:
             allowed_mask, self.ll_ratio = self.log_likelihood_constraint(modified_adj, ori_adj, ll_cutoff)
@@ -240,7 +244,7 @@ class MetaAttackFull(BaseMeta):
     def attack(self, gen_dataset, attack_budget=10, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
-        self.hidden_sizes = [16]   # FIXME get from model architecture
+        self.hidden_sizes = [16]  # FIXME get from model architecture
         self.nfeat = gen_dataset.num_node_features
         self.nclass = gen_dataset.num_classes
 
@@ -295,7 +299,8 @@ class MetaAttackFull(BaseMeta):
             adj_norm = utils.normalize_adj_tensor(modified_adj)
             self.inner_train(modified_features, adj_norm, idx_train, idx_unlabeled, labels)
 
-            adj_grad, feature_grad = self.get_meta_grad(modified_features, adj_norm, idx_train, idx_unlabeled, labels, labels_self_training)
+            adj_grad, feature_grad = self.get_meta_grad(modified_features, adj_norm, idx_train, idx_unlabeled, labels,
+                                                        labels_self_training)
 
             adj_meta_score = torch.tensor(0.0).to(self.device)
             feature_meta_score = torch.tensor(0.0).to(self.device)
@@ -458,7 +463,7 @@ class MetaAttackApprox(BaseMeta):
     def attack(self, gen_dataset, attack_budget=500, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
-        self.hidden_sizes = [16]   # FIXME get from model architecture
+        self.hidden_sizes = [16]  # FIXME get from model architecture
         self.nfeat = gen_dataset.num_node_features
         self.nclass = gen_dataset.num_classes
 
@@ -587,7 +592,6 @@ class MetaAttackApprox(BaseMeta):
                 self.feature_grad_sum += torch.autograd.grad(attack_loss, self.feature_changes, retain_graph=True)[0]
 
             self.optimizer.step()
-
 
         loss_test_val = F.nll_loss(output[idx_unlabeled], labels[idx_unlabeled])
         print('GCN loss on unlabled data: {}'.format(loss_test_val.item()))

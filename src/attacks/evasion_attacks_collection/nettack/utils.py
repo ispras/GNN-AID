@@ -205,6 +205,8 @@ class NettackAttack:
     def attack(self, budget, mode="both", num_attempts=10):
         applied = 0
         attempt = 0
+        if self.gnn_model(self.x, self.edge_index)[self.target_node].argmax().item() != self.real_class:
+            self.real_class = self.gnn_model(self.x, self.edge_index)[self.target_node].argmax().item()
         while applied < budget:
             if self.gnn_model(self.x, self.edge_index)[self.target_node].argmax().item() != self.real_class:
                 break
@@ -219,7 +221,7 @@ class NettackAttack:
                 best_edge, edge_score = self.perturb_edge()
 
             if best_node is None and best_edge is None:
-                break
+                pass
 
             if best_node is not None and (feature_score <= edge_score or mode == "feature"):
                 print(f"Feature perturbation: flipped feature {best_feature.item()} on node {best_node}")

@@ -4,7 +4,7 @@ import torch
 
 from defenses.defense_base import Defender
 from data_structures.configs import ConfigPattern, EvasionAttackConfig
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, move_to_same_device
 from attacks.evasion_attacks import FGSMAttacker
 from attacks.qattack import qattack
 from torch_geometric import data
@@ -79,7 +79,7 @@ class GradientRegularizationDefender(
     ) -> dict:
         batch.x.requires_grad = True
         outputs = model_manager.gnn(batch.x, batch.edge_index)
-        loss_loc = model_manager.loss_function(outputs, batch.y)
+        loss_loc = model_manager.loss_function(*move_to_same_device(outputs, batch.y))
         gradients = torch.autograd.grad(outputs=loss_loc, inputs=batch.x,
                                         grad_outputs=torch.ones_like(loss_loc),
                                         create_graph=True, retain_graph=True, only_inputs=True)[0]
@@ -239,7 +239,7 @@ class AdvTraining(
         self.perturbed_gen_dataset.dataset = self.perturbed_gen_dataset.data
         self.perturbed_gen_dataset.dataset.data = self.perturbed_gen_dataset.data
         if self.attack_type == "EVASION":
-            self.perturbed_gen_dataset = self.attacker.attack(
+            self.attacker.attack(
                 model_manager=model_manager,
                 gen_dataset=self.perturbed_gen_dataset,
                 mask_tensor=self.perturbed_gen_dataset.data.train_mask,

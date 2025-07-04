@@ -107,22 +107,25 @@ class FGSMAttacker(
                 edge_index = gen_dataset.data.edge_index
                 y = gen_dataset.data.y
             output = model(x, edge_index)
-            loss = model_manager.loss_function(output, y)
+            loss = model_manager.loss_function(*move_to_same_device(output, y))
             model.zero_grad()
             loss.backward()
             sign_data_grad = x.grad.sign()
             perturbed_data_x = x + self.epsilon * sign_data_grad
             perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-            # gen_dataset.data.x = perturbed_data_x.detach()
             if task_type:
-                gni = GlobalNodeIndexer(gen_dataset.dataset)
-                for node_idx in range(perturbed_data_x.size(0)):
-                    for feature_idx in range(perturbed_data_x.size(1)):
-                        self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[gni.to_global(graph_idx, node_idx)][feature_idx].detach().cpu().item())
+                gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
             else:
-                for node_idx in range(gen_dataset.data.x.size(0)):
-                    for feature_idx in range(gen_dataset.data.x.size(1)):
-                        self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[node_idx][feature_idx].detach().cpu().item())
+                gen_dataset.data.x = perturbed_data_x.detach()
+            # if task_type:
+            #     gni = GlobalNodeIndexer(gen_dataset.dataset)
+            #     for node_idx in tqdm(range(perturbed_data_x.size(0))):
+            #         for feature_idx in range(perturbed_data_x.size(1)):
+            #             self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[gni.to_global(graph_idx, node_idx)][feature_idx].detach().cpu().item())
+            # else:
+            #     for node_idx in tqdm(range(gen_dataset.data.x.size(0))):
+            #         for feature_idx in range(gen_dataset.data.x.size(1)):
+            #             self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[node_idx][feature_idx].detach().cpu().item())
         else:
             if task_type:
                 graph_idx = self.element_idx
@@ -149,7 +152,7 @@ class FGSMAttacker(
 
                 for _ in tqdm(range(budget)):
                     out = model(x, perturbed_edges)
-                    loss = -model_manager.loss_function(out, y)
+                    loss = -model_manager.loss_function(*move_to_same_device(out, y))
                     loss.backward()
 
                     grad = layer.message_gradients[first_layer_name]
@@ -215,7 +218,7 @@ class FGSMAttacker(
 
                 for _ in tqdm(range(budget)):
                     out = model(x, perturbed_edges)
-                    loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                    loss = -model_manager.loss_function(*move_to_same_device(out[node_idx_remap], y[node_idx_remap]))
                     loss.backward()
 
                     grad = layer.message_gradients[first_layer_name]
@@ -234,7 +237,7 @@ class FGSMAttacker(
                 # Update dataset
                 edges_to_keep = edge_index[:, ~edge_mask]
                 updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
-                # gen_dataset.data.edge_index = updated_edge_index
+                gen_dataset.data.edge_index = updated_edge_index
                 # self.attack_diff = gen_dataset
 
                 set_a = set(map(tuple, edge_index.T.tolist()))
@@ -343,7 +346,7 @@ class PGDAttacker(
 
             for t in tqdm(range(self.num_iterations)):
                 out = model(x, edge_index_subset)
-                loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                loss = -model_manager.loss_function(*move_to_same_device(out[node_idx_remap], y[node_idx_remap]))
                 # print(loss)
                 model.zero_grad()
                 loss.backward()
@@ -353,11 +356,11 @@ class PGDAttacker(
                     x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
                     x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
             # return the modified lines back to the original tensor x
-            # gen_dataset.data.x[subset] = x.detach()
+            gen_dataset.data.x[subset] = x.detach()
             # self.attack_diff = gen_dataset
-            for node_idx in subset.detach().cpu():
+            for ind, node_idx in enumerate(subset.detach().cpu().tolist()):
                 for feature_idx in range(x.size(1)):
-                    self.attack_diff.change_node_feature(node_idx, feature_idx, x[node_idx][feature_idx].detach().cpu().item())
+                    self.attack_diff.change_node_feature(node_idx, feature_idx, x[ind][feature_idx].detach().cpu().item())
         else:  # structure attack
             node_idx_remap = torch.where(subset == node_idx)[0].item()
             y = y.clone()
@@ -396,7 +399,7 @@ class PGDAttacker(
 
                         perturbed_edges = edge_index_subset[:, temp_mask]
                         out = model(x, perturbed_edges)
-                        loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                        loss = -model_manager.loss_function(*move_to_same_device(out[node_idx_remap], y[node_idx_remap]))
 
                         perturbed_masks.append(temp_mask)
                         losses.append(loss.item())
@@ -411,7 +414,7 @@ class PGDAttacker(
 
                 perturbed_edges = edge_index_subset[:, mask]  # apply mask to edges
                 out = model(x, perturbed_edges)
-                loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                loss = -model_manager.loss_function(*move_to_same_device(out[node_idx_remap], y[node_idx_remap]))
                 opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
             best_mask = opt.Xi[np.argmin(opt.yi)]
             best_mask = torch.tensor(best_mask, dtype=torch.bool)
@@ -421,7 +424,7 @@ class PGDAttacker(
             perturbed_edges = edge_index_subset[:, best_mask]
             updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
 
-            # gen_dataset.data.edge_index = updated_edge_index
+            gen_dataset.data.edge_index = updated_edge_index
             # self.attack_diff = gen_dataset
 
             set_a = set(map(tuple, edge_index.T.tolist()))
@@ -455,7 +458,7 @@ class PGDAttacker(
 
             for t in tqdm(range(self.num_iterations)):
                 out = model(x, edge_index)
-                loss = -model_manager.loss_function(out, y)
+                loss = -model_manager.loss_function(*move_to_same_device(out, y))
                 # print(loss)
                 model.zero_grad()
                 loss.backward()
@@ -502,7 +505,7 @@ class PGDAttacker(
 
                         perturbed_edges = edge_index[:, temp_mask]
                         out = model(x, perturbed_edges)
-                        loss = -model_manager.loss_function(out, y)
+                        loss = -model_manager.loss_function(*move_to_same_device(out, y))
 
                         perturbed_masks.append(temp_mask)
                         losses.append(loss.item())
@@ -517,7 +520,7 @@ class PGDAttacker(
 
                 perturbed_edges = edge_index[:, mask]  # apply mask to edges
                 out = model(x, perturbed_edges)
-                loss = -model_manager.loss_function(out, y)
+                loss = -model_manager.loss_function(*move_to_same_device(out, y))
                 opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
             best_mask = opt.Xi[np.argmin(opt.yi)]
             best_mask = torch.tensor(best_mask, dtype=torch.bool)
@@ -591,7 +594,7 @@ class NettackAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        data = gen_dataset.data
+        data = gen_dataset.dataset.data
         x, edge_index, y = move_to_same_device(data.x, data.edge_index, data.y, device=torch.device('cpu'))
 
         num_classes = y.max().item() + 1
