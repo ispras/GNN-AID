@@ -112,7 +112,7 @@ class DefenseTest(unittest.TestCase):
             _import_path=MI_ATTACK_PARAMETERS_PATH,
             _config_class="MIAttackConfig",
             _config_kwargs={
-                'threshold': 0.2
+                'threshold': 0.3
             }
         )
 

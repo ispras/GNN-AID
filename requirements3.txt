@@ -15,5 +15,6 @@ dive-into-graphs==1.1.0
 # PGMExplainer
 pgmpy==0.1.24
 
-# For synthetic datasets
+# For synthetic and dgl datasets
 matplotlib
+dgl==1.1.0
