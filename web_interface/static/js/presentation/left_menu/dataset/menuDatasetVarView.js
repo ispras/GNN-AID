@@ -197,16 +197,16 @@ class MenuDatasetVarView extends MenuView {
         }
 
         // Fill features according to format
-        let features = {"attr": {}}
+        let features = {"node_struct": [], "node_attr": []}
         // if (this.$nodeClusteringInput.is(":checked"))
-        //     features["str_f"] = "c"
+        //     features["node_struct"].push("clustering")
         // if (this.$nodeDegreeInput.is(":checked"))
-        //     features["str_f"] = "d"
+        //     features["node_struct"].push("degree")
         if (this.$oneHotNodeInput && this.$oneHotNodeInput.is(":checked"))
-            features["str_g"] = "one_hot"
+            features["node_struct"].push("one_hot")
         for (let i = 0; i < attrs.length; i++) {
             if (attrsChecked[i])
-                features["attr"][attrs[i]] = this.datasetInfo["node_attributes"]["types"][i]
+                features["node_attr"].push(attrs[i])
         }
         this.labeling = $("input[name='dataset-variable-labelings']:checked").val()
 

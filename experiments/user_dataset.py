@@ -95,10 +95,6 @@ class UserApiDataset(Dataset):
         return Data(x=x, edge_index=edge_index, y=y)
 
 
-# Should be global to be visible for import
-DATASET_TO_EXPORT = UserApiDataset('test_dataset_api')
-
-
 def api():
     gen_dataset = DatasetManager.register_torch_geometric_api(
         DATASET_TO_EXPORT, name='api_random_features', obj_name='DATASET_TO_EXPORT')

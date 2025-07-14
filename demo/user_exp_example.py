@@ -14,15 +14,15 @@ def test_Konst_model():
 
     # full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    # full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
-    full_name = ("single-graph", "custom", "example",)
+    full_name = ("example", "single-graph", "example",)
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
-        features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+        features=FeatureConfig(node_attr=['a', 'b']),
         labeling='threeClasses',
         dataset_ver_ind=0
     )

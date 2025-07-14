@@ -10,15 +10,10 @@ from torch.optim.optimizer import required
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
-from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH
-from src.models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager
 from datasets.gen_dataset import GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
 
-from defense.poison_defense import PoisonDefender
+from defenses.poison_defense import PoisonDefender
 
 
 def feature_smoothing(

@@ -479,7 +479,7 @@ class DatasetConfig(
 
     def __init__(
             self,
-            full_name: tuple = None,
+            full_name: Tuple[str, ...] = None,
             init_kwargs: Union[dict, None] = None
     ):
         """
@@ -489,12 +489,82 @@ class DatasetConfig(
             init_kwargs = {}
         super().__init__(full_name=full_name, init_kwargs=init_kwargs)
 
+    @property
+    def full_name(self):
+        return self["full_name"]
+
+    @property
+    def init_kwargs(self):
+        return self["init_kwargs"]
+
     def path(
             self
     ) -> str:
         """ Return all fields as a path part. """
         import os
         return os.sep.join(self.full_name)
+
+
+class FeatureConfig(Config):
+    """
+    Instructions how to form features for nodes, edges and graph based on attributes and structure.
+    """
+    one_hot = "one_hot"
+    degree = "degree"
+    clustering = "clustering"
+    ten_ones = "10-ones"
+
+    def __init__(
+            self,
+            node_struct: Union[str, list, dict] = None,
+            node_attr: Union[str, list, dict] = None,
+            edge_attr: Union[str, list, dict] = None,
+            graph_attr: Union[str, list, dict] = None,
+            **kwargs
+    ):
+        super().__init__(node_struct=node_struct,
+                         node_attr=node_attr, edge_attr=edge_attr, graph_attr=graph_attr, **kwargs)
+
+    @property
+    def node_struct(
+            self
+    ) -> Union[str, list, dict]:
+        return self["node_struct"]
+
+    @property
+    def node_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["node_attr"]
+
+    @property
+    def edge_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["edge_attr"]
+
+    @property
+    def graph_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["graph_attr"]
+
+    def __len__(
+            self
+    ) -> int:
+        """ Sum of feature elements. NOTE, it is not the length of result feature vector.
+        """
+        res = 0
+        for item in self.__dict__.values():
+            if item is None:
+                continue
+            if isinstance(item, str):
+                res += 1
+            elif isinstance(item, list):
+                res += len(item)
+            else:
+                res += len(item)
+        return res
 
 
 class DatasetVarConfig(Config):
@@ -505,14 +575,33 @@ class DatasetVarConfig(Config):
 
     def __init__(
             self,
-            features: dict = None,
+            features: FeatureConfig = None,
             labeling: Union[str, dict] = None,
             # task: str = None,
-            dataset_ver_ind: int = None
+            dataset_ver_ind: int = None,
+            **kwargs
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling, dataset_ver_ind=dataset_ver_ind)
+            features=features, labeling=labeling, dataset_ver_ind=dataset_ver_ind, **kwargs)
+
+    @property
+    def features(
+            self
+    ) -> FeatureConfig:
+        return self["features"]
+
+    @property
+    def labeling(
+            self
+    ) -> Union[str, dict]:
+        return self["labeling"]
+
+    @property
+    def dataset_ver_ind(
+            self
+    ) -> int:
+        return self["dataset_ver_ind"]
 
 
 class ModelStructureConfig(

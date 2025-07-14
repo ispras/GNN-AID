@@ -11,7 +11,7 @@
       "files_info": [
         {
           "format": ".json",
-          "file_name": "dataset_config"
+          "file_name": "origin"
         }
       ]
     },
@@ -20,7 +20,7 @@
       "files_info": [
         {
           "format": ".json",
-          "file_name": "dataset_var_config"
+          "file_name": "origin"
         }
       ]
     }

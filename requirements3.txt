@@ -17,3 +17,7 @@ pgmpy==0.1.24
 
 # For synthetic datasets
 matplotlib
+
+# For other datasets
+dgl
+mat73

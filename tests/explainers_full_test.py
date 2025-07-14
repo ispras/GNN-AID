@@ -57,18 +57,15 @@ class ExplainersTest(unittest.TestCase):
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "single-graph", "example",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(("example", "single-graph", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -78,18 +75,15 @@ class ExplainersTest(unittest.TestCase):
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "custom", "small",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "multiple-graphs", "small",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="multiple-graphs",
-                group="custom",
-                graph="small"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )

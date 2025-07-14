@@ -44,6 +44,54 @@ IMPORT_INFO_KEY = "import_info"
 TECHNICAL_PARAMETER_KEY = "_technical_parameter"
 
 
+def monkey_patch_directories(include_graphs_dir=False):
+    """ Replace main working directories (datasets, models, explanations) with temporary names.
+    Call this function before other imports to make effect - it is useful for tests.
+    When program ends, all the temporary dirs are removed.
+    """
+    global GRAPHS_DIR
+    global DATASETS_DIR
+    global MODELS_DIR
+    global EXPLANATIONS_DIR
+
+    import signal
+    import atexit
+    import shutil
+    from time import time
+    tmp_suffix = "__tmp_dir_" + str(time())
+
+    tmp_dirs = []
+    if include_graphs_dir:
+        tmp = GRAPHS_DIR.parent / (GRAPHS_DIR.name + tmp_suffix)
+        GRAPHS_DIR = tmp
+        tmp_dirs.append(tmp)
+    tmp = DATASETS_DIR.parent / (DATASETS_DIR.name + tmp_suffix)
+    DATASETS_DIR = tmp
+    tmp_dirs.append(tmp)
+    tmp = MODELS_DIR.parent / (MODELS_DIR.name + tmp_suffix)
+    MODELS_DIR = tmp
+    tmp_dirs.append(tmp)
+    tmp = EXPLANATIONS_DIR.parent / (EXPLANATIONS_DIR.name + tmp_suffix)
+    EXPLANATIONS_DIR = tmp
+    tmp_dirs.append(tmp)
+
+    def cleanup():
+        for tmp in tmp_dirs:
+            if tmp.exists():
+                print(f'removing tmp directory {tmp}')
+                shutil.rmtree(tmp)
+
+    def my_ctrlc_handler(signal, frame):
+        cleanup()
+        raise KeyboardInterrupt
+
+    # Cleanup on Ctrl+C
+    signal.signal(signal.SIGINT, my_ctrlc_handler)
+
+    # Cleanup on exit
+    atexit.register(cleanup)
+
+
 def hash_data_sha256(
         data
 ) -> str:
@@ -68,8 +116,8 @@ def import_by_name(
             klass = locate(f"{pack}.{name}")
             if klass is not None:
                 return klass
-            raise ImportError(f"Unknown {pack} model '{name}', couldn't import.")
-    raise ImportError(f"Unknown {packs} model '{name}', couldn't import.")
+            raise ImportError(f"Cannot import class '{name}' from module {pack}.")
+    raise ImportError(f"Cannot import class '{name}' from modules {packs}.")
 
 
 def model_managers_info_by_names_list(

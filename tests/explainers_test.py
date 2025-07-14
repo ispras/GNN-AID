@@ -17,9 +17,10 @@ from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 import explainers
 import_all_from_package(explainers)  # to import all subclasses properly
@@ -49,18 +50,15 @@ class ExplainersTest(unittest.TestCase):
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "single-graph", "example",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(("example", "single-graph", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -70,18 +68,15 @@ class ExplainersTest(unittest.TestCase):
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "custom", "small",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "multiple-graphs", "small",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="multiple-graphs",
-                group="custom",
-                graph="small"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -91,7 +86,7 @@ class ExplainersTest(unittest.TestCase):
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "TUDataset", "MUTAG",),
+            full_name=(LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG"),
             dataset_ver_ind=0
         )
 

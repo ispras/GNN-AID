@@ -518,7 +518,7 @@ if __name__ == '__main__':
         # 'sage_sage',
     ]
     datasets = [
-        ("single-graph", "Planetoid", 'Cora'),
+        (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora"),
         # ("single-graph", "Amazon", 'Photo'),
     ]
     for explainer in explainers:

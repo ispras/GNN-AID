@@ -424,7 +424,7 @@ def edge_type_from_str(
 
 if __name__ == '__main__':
     # from torch_geometric.datasets import OGB_MAG
-    # dataset_config = DatasetConfig("single-graph", "custom", "example")
+    # dataset_config = DatasetConfig("example", "single-graph", "example")
     dataset_config = DatasetConfig("single-graph", "hetero", "example")
     # gen_dataset = DatasetManager.register_custom_hetero(dataset_config)
     # dataset_config = DatasetConfig("single-graph", "local", "СКЗИ")

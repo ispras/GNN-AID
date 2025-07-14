@@ -18,7 +18,7 @@ def geom_GNNExplainer_test():
     my_device = device('cpu')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "Planetoid", 'Cora'),
+        full_name=(LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora"),
         dataset_ver_ind=0)
 
     gcn2 = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')

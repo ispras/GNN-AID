@@ -4,6 +4,7 @@ from typing import Union, List, Tuple
 from torch import tensor, cat
 from torch_geometric.data.dataset import _get_flattened_data_list
 
+from aux.custom_decorators import timing_decorator
 from aux.utils import short_str
 
 
@@ -19,7 +20,7 @@ class DatasetData:
         self.nodes: list = None  # list of nodes
         self.graphs: list = None  # list of graph indices
         self.node_attributes: dict = None  # dict {name -> list of attr dict for each graph}
-        self.edge_attributes: dict = None  # dict {name -> list of attr dict for each graph}
+        # self.edge_attributes: dict = None  # dict {name -> list of attr dict for each graph}
 
     def __str__(
             self
@@ -29,7 +30,7 @@ class DatasetData:
         res += f" nodes: {short_str(self.nodes)}\n"
         res += f" graphs: {short_str(self.graphs)}\n"
         res += f" node_attributes: {short_str(self.node_attributes)}\n"
-        res += f" edge_attributes: {short_str(self.edge_attributes)}\n"
+        # res += f" edge_attributes: {short_str(self.edge_attributes)}\n"
         res += "]"
         return res
 
@@ -43,7 +44,7 @@ class DatasetData:
             "nodes": self.nodes,
             "graphs": self.graphs,
             "node_attributes": self.node_attributes,
-            "edge_attributes": self.edge_attributes,
+            # "edge_attributes": self.edge_attributes,
         }, **dump_args)
 
 
@@ -57,7 +58,7 @@ class DatasetVarData:
     ):
         self.labels: dict = None  # list of labels over graphs or nodes
         self.node_features: dict = None  # dict {name -> list of attr dict for each graph}
-        self.edge_features: dict = None  # dict {name -> list of attr dict for each graph}
+        # self.edge_features: dict = None  # dict {name -> list of attr dict for each graph}
 
     def __str__(
             self
@@ -65,7 +66,7 @@ class DatasetVarData:
         res = f"DatasetVarData[\n"
         res += f" labels: {short_str(self.labels)}\n"
         res += f" node_features: {short_str(self.node_features)}\n"
-        res += f" edge_features: {short_str(self.edge_features)}\n"
+        # res += f" edge_features: {short_str(self.edge_features)}\n"
         res += "]"
         return res
 
@@ -77,7 +78,7 @@ class DatasetVarData:
         return json.dumps({
             "labels": self.labels,
             "node_features": self.node_features,
-            "edge_features": self.edge_features,
+            # "edge_features": self.edge_features,
         }, **dump_args)
 
 
@@ -122,8 +123,9 @@ class DatasetIndex:
 
             self.graphs = list(self.ixes)
             self.nodes = [gen_dataset.info.nodes[ix] for ix in self.ixes]
+            edges = gen_dataset.edges
             self.edges = [edge_index_to_edge_list(
-                gen_dataset.edges[ix], gen_dataset.is_directed) for ix in self.ixes]
+                edges[ix], gen_dataset.is_directed) for ix in self.ixes]
 
         else:  # single
             assert gen_dataset.info.count == 1
@@ -267,6 +269,7 @@ class VisiblePart:
         """
         return {ix: array[ix] for ix in self.ixes()}
 
+    @timing_decorator
     def get_dataset_data(
             self,
             part: Union[dict, None] = None
@@ -307,6 +310,7 @@ class VisiblePart:
 
         return dataset_data
 
+    @timing_decorator
     def get_dataset_var_data(
             self,
             part: Union[dict, None] = None

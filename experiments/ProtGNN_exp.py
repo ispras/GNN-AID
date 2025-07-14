@@ -46,7 +46,7 @@ def test_prot(i=None, conv=None, batch_size=24, seed=5,
     #     raise NotImplementedError
 
     # my_device = device('cuda' if is_available() else 'cpu')
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0

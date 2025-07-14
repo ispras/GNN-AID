@@ -8,10 +8,7 @@ import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
 
-from aux.declaration import Declare
-from aux.utils import tmp_dir
-from data_structures.configs import DatasetConfig, ConfigPattern
-from datasets.dataset_converter import DatasetConverter
+from data_structures.configs import DatasetConfig, ConfigPattern, FeatureConfig
 from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import LocalDataset, GeneralDataset
 
@@ -20,8 +17,10 @@ class KnownFormatDataset(
     GeneralDataset
 ):
     """
-    Fully custom dataset: with building graph from raw files and custom feature creation.
+    Custom dataset in 'ij' format or one of popular formats (see DatasetConverter.supported_formats).
+    User defines functions for building graph from raw files and feature creation.
     """
+
     def __init__(
             self,
             dataset_config: Union[ConfigPattern, DatasetConfig],
@@ -31,7 +30,6 @@ class KnownFormatDataset(
         """
         Args:
             dataset_config: DatasetConfig dict from frontend
-            format: one of known formats: ij, gml, etc. By default, gets from metainfo
             default_node_attr_value: dict as {attr -> value} with default node attributes values to
              apply where missing.
             default_edge_attr_value: dict as {attr -> value} with default edge attributes values to
@@ -41,33 +39,11 @@ class KnownFormatDataset(
         self._default_edge_attr_value = default_edge_attr_value
         self.node_map = None  # Optional nodes mapping: node_map[i] = original id of node i
 
-        self._ptg_edge_index: list = None  # tensors
-        self._node_attributes: dict = None
+        self._ptg_edge_index: list = None  # ptg tensors
+        self._node_attributes: dict = None  # python lists
         # self._edge_attributes: dict = None
 
         super(KnownFormatDataset, self).__init__(dataset_config)
-
-    @property
-    def edges(
-            self
-    ) -> List[torch.Tensor]:
-        return self._ptg_edge_index
-
-    def node_attributes(
-            self,
-            attrs: List[str] = None
-    ) -> Dict[str, Union[list, torch.Tensor]]:
-        """ Get node attributes as a dict {name -> list}"""
-        if attrs is None:
-            attrs = sorted(self._node_attributes.keys())
-        return {a: self._node_attributes[a] for a in attrs}
-
-    def edge_attributes(
-            self,
-            attrs: List[str] = None
-    ) -> Dict[str, Union[list, torch.Tensor]]:
-        """ Get node attributes as a dict {name -> list}"""
-        raise NotImplementedError()
 
     @property
     def raw_dir(
@@ -114,6 +90,28 @@ class KnownFormatDataset(
         """ Path to file with edge indices, for multiple graphs. """
         return self.raw_dir / 'edge_index'
 
+    @property
+    def edges(
+            self
+    ) -> List[torch.Tensor]:
+        return self._ptg_edge_index
+
+    def node_attributes(
+            self,
+            attrs: List[str] = None
+    ) -> Dict[str, Union[list, torch.Tensor]]:
+        """ Get node attributes as a dict {name -> list}"""
+        if attrs is None:
+            attrs = sorted(self._node_attributes.keys())
+        return {a: self._node_attributes[a] for a in attrs}
+
+    def edge_attributes(
+            self,
+            attrs: List[str] = None
+    ) -> Dict[str, Union[list, torch.Tensor]]:
+        """ Get edge attributes as a dict {name -> list}"""
+        raise NotImplementedError()
+
     def check_validity(
             self
     ) -> None:
@@ -137,7 +135,7 @@ class KnownFormatDataset(
             with open(self.edges_path, 'r') as f:
                 start = 0
                 for ix, end in enumerate(edge_index):
-                    for _ in range(end-start):
+                    for _ in range(end - start):
                         all_nodes[ix].update(map(int, f.readline().split()))
                     if self.info.remap:
                         assert len(all_nodes[ix]) == self.info.nodes[ix]
@@ -169,7 +167,7 @@ class KnownFormatDataset(
                 elif self.info.node_attributes["types"][ix] == "categorical":
                     real = set(attributes.values())
                     gold = set(self.info.node_attributes["values"][ix])
-                    assert real.issubset(gold),\
+                    assert real.issubset(gold), \
                         f"Real node attributes ({real}) differ from ones specified in metainfo ({gold})"
 
         # Check edge attributes
@@ -186,7 +184,8 @@ class KnownFormatDataset(
                     assert min(attributes.values()) >= v_min
                     assert max(attributes.values()) <= v_max
                 elif self.info.edge_attributes["types"][ix] == "categorical":
-                    assert set(attributes.values()).issubset(set(self.info.edge_attributes["values"][ix]))
+                    assert set(attributes.values()).issubset(
+                        set(self.info.edge_attributes["values"][ix]))
 
         # Check labels
         for labelling, _ in self.info.labelings.items():
@@ -204,44 +203,12 @@ class KnownFormatDataset(
         if self.edges_path.exists():
             return
 
-        # Look for obligate files: .info, graph(s), a dir with labels
-        # info_file = None
-        label_dir = None
-        graph_files = []
-        orig_raw_dir = self.root_dir / 'raw'
-        for p in orig_raw_dir.iterdir():
-            # if p.is_file() and p.name == '.info':
-            #     info_file = p
-            if p.is_file() and p.name.endswith(f'.{self._format}'):
-                graph_files.append(p)
-            if p.is_dir() and p.name == 'labels':
-                label_dir = p
-        # if info_file is None:
-        #     raise RuntimeError(f"No .info file was found at {path}")
-        if len(graph_files) == 0:
-            raise RuntimeError(f"No files with extension '.{self._format}' found at {orig_raw_dir}. "
-                               f"If your graph is heterograph, use 'register_custom_hetero()'")
-        if label_dir is None:
-            raise RuntimeError(f"No folder with name 'labels' found at {orig_raw_dir}")
-
-        # Order of files is important, should be consistent with .info, we suppose they are sorted
-        graph_files = sorted(graph_files)
-
-        self.raw_dir.mkdir(exist_ok=False)
         # Convert the data if necessary, write it to 'converted/' directory
-        if self._format != 'ij':
-            from datasets.dataset_converter import DatasetConverter
-            DatasetConverter.format_to_ij(self.info, graph_files, self._format, self.raw_dir,
-                                          self._default_node_attr_value, self._default_edge_attr_value)
-
-        # # Move or copy original contents to a temporary dir
-        # merge_directories(path, self.raw_dir, True)
-        #
-        # # Rename the newly created dir to the original one
-        # tmp.rename(self.raw_dir)
-
-        # Copy labels to converted/
-        shutil.copytree(label_dir, self.labels_dir)
+        self.raw_dir.mkdir(exist_ok=False)
+        from datasets.dataset_converter import DatasetConverter
+        DatasetConverter.format_to_ij(
+            self.info, self.root_dir / 'raw', self.raw_dir,
+            self._default_node_attr_value, self._default_edge_attr_value)
 
         try:
             self.check_validity()
@@ -269,98 +236,100 @@ class KnownFormatDataset(
 
         # Read edges and attributes
         if self.is_multi():
-            # FIXME misha format
-            count = self.info.count
-            node_maps = []  # list of node_maps
-
-            # Read edges
-            with open(self.edge_index_path, 'r') as f:
-                edge_index = json.load(f)
-
-            with open(self.edges_path, 'r') as f:
-                g_ix = 0
-                node_index = 0
-                ptg_edge_index = [[], []]  # Over each graph
-                node_map = {}
-                node_maps.append(node_map)
-                for l, line in enumerate(f.readlines()):
-                    node_index = self._read_edge(line, node_index, node_map, ptg_edge_index)
-
-                    if l == edge_index[g_ix] - 1:
-                        if self.info.remap:
-                            if len(node_maps[g_ix]) < self.info.nodes[g_ix]:
-                                # Get the full nodes list from 1st labeling
-                                labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
-                                with open(labeling_path, 'r') as f:
-                                    labeling_dict = json.load(f)
-                                for node in labeling_dict.keys():
-                                    node = int(node)
-                                    if node not in node_maps[g_ix]:
-                                        node_maps[g_ix][node] = node_index
-                                        node_index += 1
-                        self._ptg_edge_index.append(torch.tensor(np.asarray(ptg_edge_index)))
-                        g_ix += 1
-                        if g_ix == count:
-                            break
-                        node_index = 0
-                        ptg_edge_index = [[], []]
-                        node_map = {}
-                        node_maps.append(node_map)
-
-            if self.info.remap:
-                # Original ids in the order of appearance
-                self.node_map = []
-                for node_map in node_maps:
-                    self.node_map.append(list(node_map.keys()))
-                # self.info.node_info = {"id": self.node_map}
-
-            assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
-            assert len(self._ptg_edge_index) == self.info.count
-
-            # Read attributes
-            self._node_attributes = {}  # {attr -> [{node -> value} for each graph]}
-            for a in self.info.node_attributes["names"]:
-                self._node_attributes[a] = []
-                with open(self.node_attributes_dir / a, 'r') as f:
-                    for g, n_v in enumerate(json.load(f)):
-                        self._node_attributes[a].append({
-                            node_maps[g][int(n)]: v
-                            for n, v in n_v.items() if int(n) in node_maps[g]})
-
+            node_maps = self._read_multi()
+            self._read_attributes_multi(node_maps)
         else:
-            node_map = {}
-            ptg_edge_index = [[], []]
+            node_map = self._read_single()
+            self._read_attributes_single(node_map)
+
+    def _read_single(
+            self
+    ) -> dict:
+        """ Read edges, remap node, create feature tensors - for single graph case.
+        Returns node mapping as dict of {orig -> new} (it is not stored).
+        """
+        node_map = {}
+        ptg_edge_index = [[], []]
+        node_index = 0
+        with open(self.edges_path, 'r') as f:
+            for line in f.readlines():
+                node_index = self._read_edge(line, node_index, node_map, ptg_edge_index)
+
+        self._ptg_edge_index = [torch.tensor(np.asarray(ptg_edge_index))]
+        if self.info.remap:
+            if len(node_map) < self.info.nodes[0]:
+                labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
+                with open(labeling_path, 'r') as f:
+                    labeling_dict = json.load(f)
+                for node in labeling_dict.keys():
+                    node = int(node)
+                    if node not in node_map:
+                        node_map[node] = node_index
+                        node_index += 1
+            # assert node_index == self.info.nodes[0]
+            # Original ids in the order of appearance
+            self.node_map = list(node_map.keys())
+            # self.info.node_info = {"id": self.node_map}
+
+        assert node_index == self.info.nodes[0]
+        assert len(self._ptg_edge_index) == self.info.count
+
+        return node_map
+
+    def _read_multi(
+            self
+    ) -> List[dict]:
+        """ Read edges, remap node, create feature tensors - for multi graph case.
+        Returns node mapping as a list of dicts of {orig -> new} (it is not stored).
+        """
+        count = self.info.count
+        node_maps = []  # list of node_maps
+
+        # Read edges
+        with open(self.edge_index_path, 'r') as f:
+            edge_index = json.load(f)
+
+        with open(self.edges_path, 'r') as f:
+            g_ix = 0
             node_index = 0
-            with open(self.edges_path, 'r') as f:
-                for line in f.readlines():
-                    node_index = self._read_edge(line, node_index, node_map, ptg_edge_index)
+            ptg_edge_index = [[], []]  # Over each graph
+            node_map = {}
+            node_maps.append(node_map)
+            for l, line in enumerate(f.readlines()):
+                node_index = self._read_edge(line, node_index, node_map, ptg_edge_index)
 
-            self._ptg_edge_index = [torch.tensor(np.asarray(ptg_edge_index))]
-            if self.info.remap:
-                if len(node_map) < self.info.nodes[0]:
-                    labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
-                    with open(labeling_path, 'r') as f:
-                        labeling_dict = json.load(f)
-                    for node in labeling_dict.keys():
-                        node = int(node)
-                        if node not in node_map:
-                            node_map[node] = node_index
-                            node_index += 1
-                # assert node_index == self.info.nodes[0]
-                # Original ids in the order of appearance
-                self.node_map = list(node_map.keys())
-                # self.info.node_info = {"id": self.node_map}
+                if l == edge_index[g_ix] - 1:
+                    if self.info.remap:
+                        if len(node_maps[g_ix]) < self.info.nodes[g_ix]:
+                            # Get the full nodes list from 1st labeling
+                            labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
+                            with open(labeling_path, 'r') as f:
+                                labeling_dict = json.load(f)
+                            for node in labeling_dict.keys():
+                                node = int(node)
+                                if node not in node_maps[g_ix]:
+                                    node_maps[g_ix][node] = node_index
+                                    node_index += 1
+                    self._ptg_edge_index.append(torch.tensor(np.asarray(ptg_edge_index)))
+                    g_ix += 1
+                    if g_ix == count:
+                        break
+                    node_index = 0
+                    ptg_edge_index = [[], []]
+                    node_map = {}
+                    node_maps.append(node_map)
 
-            assert node_index == self.info.nodes[0]
-            assert len(self._ptg_edge_index) == self.info.count
+        if self.info.remap:
+            # Original ids in the order of appearance
+            self.node_map = []
+            for node_map in node_maps:
+                self.node_map.append(list(node_map.keys()))
+            # self.info.node_info = {"id": self.node_map}
 
-            # Read attributes
-            self._node_attributes = {}
-            for a in self.info.node_attributes["names"]:
-                with open(self.node_attributes_dir / a, 'r') as f:
-                    self._node_attributes[a] = [{
-                        node_map[int(n)]: v for n, v in json.load(f).items()
-                        if int(n) in node_map}]
+        assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
+        assert len(self._ptg_edge_index) == self.info.count
+
+        return node_maps
 
     def _read_edge(
             self,
@@ -386,10 +355,38 @@ class KnownFormatDataset(
             ptg_edge_index[1].append(i)
         return node_index
 
+    def _read_attributes_single(
+            self,
+            node_map: dict
+    ) -> None:
+        """ Read node attributes and remap them - for single graph case.
+        """
+        self._node_attributes = {}
+        for a in self.info.node_attributes["names"]:
+            with open(self.node_attributes_dir / a, 'r') as f:
+                self._node_attributes[a] = [{
+                    node_map[int(n)]: v for n, v in json.load(f).items()
+                    if int(n) in node_map}]
+
+    def _read_attributes_multi(
+            self,
+            node_maps: List[dict]
+    ) -> None:
+        """ Read node attributes and remap them - for multi graph case.
+        """
+        self._node_attributes = {}  # {attr -> [{node -> value} for each graph]}
+        for a in self.info.node_attributes["names"]:
+            self._node_attributes[a] = []
+            with open(self.node_attributes_dir / a, 'r') as f:
+                for g, n_v in enumerate(json.load(f)):
+                    self._node_attributes[a].append({
+                        node_maps[g][int(n)]: v
+                        for n, v in n_v.items() if int(n) in node_maps[g]})
+
     def _compute_dataset_var_data(
             self
     ) -> None:
-        """ Build ptg dataset based on dataset_var_config and create DatasetVarData.
+        """ Build PTG Dataset based on dataset_var_config.
         """
         self.dataset = LocalDataset(None, self.results_dir, process_func=self._create_ptg)
 
@@ -427,9 +424,11 @@ class KnownFormatDataset(
                         outs.append(node_attrs[node_map(i)])
                         ins.append(node_attrs[node_map(j)])
                     in_attr_mean[a] = np.mean(ins)
-                    in_attr_denom[a] = (np.sum(np.array(ins)**2) - len(edges)*in_attr_mean[a]**2)**0.5
+                    in_attr_denom[a] = (np.sum(np.array(ins) ** 2) - len(edges) * in_attr_mean[
+                        a] ** 2) ** 0.5
                     out_attr_mean[a] = np.mean(outs)
-                    out_attr_denom[a] = (np.sum(np.array(outs)**2) - len(edges)*out_attr_mean[a]**2)**0.5
+                    out_attr_denom[a] = (np.sum(np.array(outs) ** 2) - len(edges) * out_attr_mean[
+                        a] ** 2) ** 0.5
 
                 # Compute corr
                 attrs = list(attr_node_attrs.keys())
@@ -482,7 +481,7 @@ class KnownFormatDataset(
     def _iter_nodes(
             self,
             graph: int = None
-    ) -> None:
+    ) -> [int, str]:
         """ Iterate over nodes according to mapping. Yields pairs of (node_index, original_id)
         """
         # offset = sum(self.info.nodes[:graph]) if self.is_multi() else 0
@@ -490,10 +489,10 @@ class KnownFormatDataset(
         if self.node_map is not None:
             node_map = self.node_map[graph] if self.is_multi() else self.node_map
             for ix, orig in enumerate(node_map):
-                yield offset+ix, str(orig)
+                yield offset + ix, str(orig)
         else:
             for n in range(self.info.nodes[graph or 0]):
-                yield offset+n, str(n)
+                yield offset + n, str(n)
 
     def _labeling_tensor(
             self,
@@ -526,10 +525,51 @@ class KnownFormatDataset(
     ) -> list:
         """ Returns list of features (not tensors) for graph g_ix.
         """
-        features = self.dataset_var_config.features  # dict about attributes construction
-        nodes_onehot = "str_g" in features and features["str_g"] == "one_hot"
+        feature_config: FeatureConfig = self.dataset_var_config.features
+        node_struct = feature_config.node_struct or []
+        node_attr = feature_config.node_attr or []
+        edge_attr = feature_config.edge_attr or []
+        graph_attr = feature_config.graph_attr or []
 
-        # Read attributes
+        if len(feature_config) == 0:
+            raise RuntimeError(f"{FeatureConfig.__name__} must not be empty")
+
+        for fc in [node_struct, node_attr, edge_attr, graph_attr]:
+            if not isinstance(fc, list):
+                raise TypeError(f"{self.__class__.__name__} expects lists as feature configs,"
+                                f" but {type(fc)} is given")
+
+        if self.is_multi():
+            nodes = self.info.nodes[g_ix]
+        else:  # single
+            nodes = self.info.nodes[0]
+
+        node_features = [[] for _ in range(nodes)]  # List of vectors
+
+        # Transform structure to node features
+        for elem in node_struct:
+            if elem == FeatureConfig.one_hot:
+                # 1-hot encoding of all nodes
+                for n in range(nodes):
+                    vec = [0] * nodes
+                    vec[n] = 1
+                    node_features[n].extend(vec)
+
+            elif elem == FeatureConfig.ten_ones:
+                # add 10 ones to all nodes
+                for n in range(nodes):
+                    node_features[n].extend([1] * 10)
+
+            elif elem == FeatureConfig.degree:
+                raise NotImplementedError
+
+            elif elem == FeatureConfig.clustering:
+                raise NotImplementedError
+
+            else:
+                raise RuntimeError(f"Unknown feature config for node_struct: '{elem}'")
+
+        # Transform attributes for nodes, edges, graph
         def one_hot(
                 x: int,
                 values: list
@@ -541,48 +581,33 @@ class KnownFormatDataset(
                     break
             return res
 
-        def as_is(
-                x
-        ) -> list:
-            return x if isinstance(x, list) else [x]
+        def assign_feats(attrs, func):
+            # for n, orig in self._iter_nodes(g_ix):
+            for n in range(len(attrs)):
+                value = attrs[n]
+                node_features[n].extend(func(value))
 
-        # TODO other encoding types from Kirill
+        for attr in node_attr:
+            node_attributes_info = self.info.node_attributes
+            ix = node_attributes_info["names"].index(attr)
+            _type = node_attributes_info["types"][ix]
 
-        if self.is_multi():
-            nodes = self.info.nodes[g_ix]
-        else:  # single
-            nodes = self.info.nodes[0]
+            if _type == "categorical":
+                def func(x): return one_hot(x, node_attributes_info["values"][ix])
+            elif _type == "continuous" or _type == "vector":
+                def func(x): return x if isinstance(x, list) else [x]
+            else:
+                raise RuntimeError(f"{self.__class__.__name__} cannot convert attribute of type"
+                                   f" '{_type}' to feature.")
 
-        node_features = [[] for _ in range(nodes)]  # List of vectors
+            node_attributes = self.node_attributes([attr])[attr]
+            if self.is_multi():
+                node_attributes = node_attributes[g_ix]
+            else:
+                node_attributes = node_attributes[0]
+            assign_feats(node_attributes, func)
 
-        # 1-hot encoding of all nodes
-        if nodes_onehot:
-            for n in range(nodes):
-                vec = [0] * nodes
-                vec[n] = 1
-                node_features[n].extend(vec)
-
-        def assign_feats(feat):
-            for n, orig in self._iter_nodes(g_ix):
-                value = feat[orig]
-                assert value is not None  # FIXME misha what to do?
-                node_features[n].extend(vec(value))
-
-        # TODO misha - can optimize? read the whole files for each graph
-        node_attributes = self.info.node_attributes
-        assert set(features["attr"]).issubset(node_attributes["names"])
-        if self.node_attributes_dir.exists():
-            for ix, a in enumerate(node_attributes["names"]):
-                if a not in features["attr"]: continue
-                if node_attributes["types"][ix] == "categorical":
-                    vec = lambda x: one_hot(x, node_attributes["values"][ix])
-                else:  # "continuous", "other"
-                    vec = as_is
-                with open(self.node_attributes_dir / a, 'r') as f:
-                    feats = json.load(f)
-                    if self.is_multi():
-                        feats = feats[g_ix]
-                    assign_feats(feats)
+        # TODO in future, same for edge and graph attributes
 
         if len(node_features[0]) == 0:
             raise RuntimeError("Feature vector size must be > 0")

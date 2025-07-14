@@ -9,7 +9,7 @@ from torch_geometric.data import Dataset
 from data_structures.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
 from aux.data_info import UserCodeInfo, DataInfo
 from aux.declaration import Declare
-from data_structures.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import FixedKeysPrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
     IMPORT_INFO_KEY, DATASETS_DIR
@@ -72,6 +72,7 @@ class ModelLoadBlock(Block):
     def _finalize(
             self
     ) -> bool:
+        # fixme
         if set(get_config_keys("models")) != set(self._config.keys()):
             return False
 
@@ -107,7 +108,8 @@ class ModelLoadBlock(Block):
         )
         values_info = DataInfo.values_list_by_path_and_keys(
             path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
-        ps = index.filter(dict(zip(keys_list, values_info)))
+        ps = index.filter(values_info)
+        # ps = index.filter(dict(zip(keys_list, values_info)))
         return [ps.to_json(), json_dumps(info)]
 
     def _load_train_test_mask(
@@ -206,7 +208,7 @@ class ModelCustomBlock(Block):
         """ Get all available models with respect to current dataset
         """
         user_models_obj_dict_info = UserCodeInfo.user_models_list_ref()
-        ps = PrefixStorage(["class", "model"])
+        ps = FixedKeysPrefixStorage(["class", "model"])
         for key, content in user_models_obj_dict_info.items():
             for value in content["obj_names"]:
                 ps.add([key, value])

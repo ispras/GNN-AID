@@ -118,7 +118,7 @@ class BaseMeta(PoisonAttacker):
         )
         gnn_model_manager_surrogate = FrameworkGNNModelManager(
             gnn=self.model,
-            dataset_path=gen_dataset,
+            dataset_path=gen_dataset.results_dir,
             modification=default_config,
             manager_config=manager_config,
         )

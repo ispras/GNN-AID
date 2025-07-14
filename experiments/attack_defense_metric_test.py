@@ -20,9 +20,9 @@ def attack_defense_metrics():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     # full_name = ("single-graph", "Amazon", 'Photo')
     # full_name = ("single-graph", "Planetoid", 'CiteSeer')
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')

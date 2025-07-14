@@ -3,37 +3,22 @@ import collections.abc
 collections.Callable = collections.abc.Callable
 
 import json
-import signal
 import unittest
 import shutil
 import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-# Monkey patch GRAPHS_DIR - before other imports
-from aux import utils
-if not str(utils.GRAPHS_DIR).endswith("__DatasetsTest_tmp"):
-    tmp_dir = utils.GRAPHS_DIR.parent / (utils.GRAPHS_DIR.name + "__DatasetsTest_tmp")
-    utils.GRAPHS_DIR = tmp_dir
-else:
-    tmp_dir = utils.GRAPHS_DIR
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories(include_graphs_dir=True)
 
 from aux.declaration import Declare
 from datasets.dataset_converter import networkx_to_ptg
-from data_structures.configs import DatasetConfig, DatasetVarConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from datasets.datasets_manager import DatasetManager
 from datasets.known_format_datasets import KnownFormatDataset
 from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
-
-
-def my_ctrlc_handler(signal, frame):
-    print('my_ctrlc_handler', tmp_dir, tmp_dir.exists())
-    if tmp_dir.exists():
-        shutil.rmtree(tmp_dir)
-    raise KeyboardInterrupt
-
-
-signal.signal(signal.SIGINT, my_ctrlc_handler)
 
 
 def _create_single_ij(dc: DatasetConfig):
@@ -240,11 +225,6 @@ class DatasetsTest(unittest.TestCase):
 
         # DatasetsTest.UserApiDataset = UserApiDataset
 
-    @classmethod
-    def tearDownClass(cls) -> None:
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
-
     # def test_converted_local_ptg(self):
     #     """ """
     #     from datasets.datasets_manager import DatasetManager
@@ -307,20 +287,6 @@ class DatasetsTest(unittest.TestCase):
         gen_dataset_m = DatasetManager.get_by_config(gen_dataset_m.dataset_config)
         self.assertEqual(len(gen_dataset_m), 2)
 
-    # def test_api_ptg(self):
-    #     """ """
-    #     from datasets.datasets_manager import DatasetManager
-    #
-    #     # Should be globally visible to be visible for import
-    #     gen_dataset = DatasetManager.register_torch_geometric_api(
-    #         DATASET_TO_EXPORT, name='api_random_features',
-    #         obj_name='DATASET_TO_EXPORT')
-    #     self.assertEqual(len(gen_dataset), 3)
-    #
-    #     # Load
-    #     gen_dataset = DatasetManager.get_by_config(gen_dataset.dataset_config)
-    #     self.assertEqual(len(gen_dataset), 3)
-
     def test_custom_ij_single(self):
         """ """
         dc = DatasetConfig(('single', 'custom', 'test'))
@@ -332,7 +298,7 @@ class DatasetsTest(unittest.TestCase):
 
         # Build
         dvc1 = DatasetVarConfig(
-            features={'attr': {'a': 'as_is', 'b': 'one_hot', 'c': 'as_is'}},
+            features=FeatureConfig(node_attr=['a', 'b', 'c']),
             labeling='binary',
             dataset_ver_ind=0)
         gen_dataset.build(dvc1)
@@ -345,7 +311,8 @@ class DatasetsTest(unittest.TestCase):
 
         # Build another way
         dvc2 = DatasetVarConfig(
-            features={'str_g': 'one_hot', 'attr': {'a': 'as_is'}},
+            features=FeatureConfig(node_struct=[FeatureConfig.one_hot],
+                                   node_attr=['a', 'b', 'c']),
             labeling='threeClasses',
             dataset_ver_ind=0)
         gen_dataset.build(dvc2)
@@ -363,7 +330,7 @@ class DatasetsTest(unittest.TestCase):
 
         # Build
         dvc1 = DatasetVarConfig(
-            features={'attr': {'type': 'as_is'}},
+            features=FeatureConfig(node_attr=['type']),
             labeling='binary',
             dataset_ver_ind=0)
         gen_dataset.build(dvc1)
@@ -452,7 +419,8 @@ class DatasetsTest(unittest.TestCase):
             gen_dataset = KnownFormatDataset(dc)
 
             dataset_var_config = DatasetVarConfig(
-                features={'attr': {'a': 'as_is', 'b': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+                features=FeatureConfig(node_attr=['a', 'b']),
+                labeling='binary', dataset_ver_ind=0)
             gen_dataset.build(dataset_var_config)
             ptg_data = gen_dataset.data
 
@@ -468,14 +436,14 @@ class DatasetsTest(unittest.TestCase):
         # Create files
         dc = DatasetConfig(('single-graph', 'example'))
         dvc = DatasetVarConfig(
-            features={'attr': {'a': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+            features=FeatureConfig(node_attr=['a']), labeling='binary', dataset_ver_ind=0)
         _create_single2_ij(dc)
         single = DatasetManager.get_by_config(dc)
         single.build(dvc)
 
         dc = DatasetConfig(('multi-graph', 'test'))
         dvc = DatasetVarConfig(
-            features={'attr': {'type': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+            features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
         _create_multi_ij(dc)
         multi = DatasetManager.get_by_config(dc)
         multi.build(dvc)
@@ -507,11 +475,11 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from data_structures.prefix_storage import PrefixStorage
+        from data_structures.prefix_storage import FixedKeysPrefixStorage
         from aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
-            ps = PrefixStorage.from_json(f.read())
+            ps = FixedKeysPrefixStorage.from_json(f.read(), )
 
         for full_name in ps:
             print(f"Checking {full_name}")
@@ -544,8 +512,6 @@ class DatasetsTest(unittest.TestCase):
                 if root_dir.exists():
                     shutil.rmtree(root_dir)
 
-
-DATASET_TO_EXPORT = DatasetsTest.UserApiDataset(tmp_dir / 'test_dataset_api')
 
 if __name__ == '__main__':
     unittest.main()

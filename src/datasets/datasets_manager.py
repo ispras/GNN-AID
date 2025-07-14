@@ -1,21 +1,17 @@
 import json
-import shutil
-import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 import torch
 import torch_geometric
-from torch import default_generator, randperm
-from torch_geometric.data import Dataset, InMemoryDataset, Data
-from torch_geometric.datasets import BAShapes
+from torch_geometric.data import InMemoryDataset, Data
 
-from datasets.dataset_info import DatasetInfo
-from datasets.gen_dataset import GeneralDataset
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
-from aux.utils import TORCH_GEOM_GRAPHS_PATH, tmp_dir, import_by_name, SOURCE_DIR
+from aux.utils import tmp_dir, import_by_name
+from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
+from datasets.dataset_info import DatasetInfo
+from datasets.gen_dataset import GeneralDataset
 
 
 class DatasetManager:
@@ -25,30 +21,18 @@ class DatasetManager:
     processing of all datasets from torch_geometric.datasets
     """
 
-    # @staticmethod
-    # def register_torch_geometric_local(
-    #         dataset: InMemoryDataset,
-    #         name: str = None
-    # ) -> GeneralDataset:
-    #     """
-    #     Save a given PTG dataset locally.
-    #     Dataset is then always available for use by its config.
-    #
-    #     :param dataset: torch_geometric.data.Dataset object.
-    #     :param name: user defined dataset name. If not specified, a timestamp will be used.
-    #     :return: GeneralDataset
-    #     """
-    #     gen_dataset = DatasetManager._register_torch_geometric(
-    #         dataset, name=name, group='local', exists_ok=False, copy_data=True)
-    #
-    #     return gen_dataset
-
     @staticmethod
     def get_by_config(
             dataset_config: DatasetConfig,
+            dataset_var_config: DatasetVarConfig = None,
             **params
     ) -> GeneralDataset:
-        """ Get GeneralDataset by dataset config. Convenient to use from the frontend.
+        """
+        Get GeneralDataset by dataset config. Convenient to use from the frontend.
+
+        :param dataset_config:
+        :param dataset_var_config:
+        :param params: additional parameters to init dataset class
         """
         path = Declare.dataset_info_path(dataset_config)
 
@@ -71,140 +55,60 @@ class DatasetManager:
                                    f" They must be specified in metainfo file, check it {path}")
 
         klass = import_by_name(class_name, [import_from])
-        return klass(dataset_config=dataset_config, **params)
+        dataset = klass(dataset_config=dataset_config, **params)
 
-    # @staticmethod
-    # def get_by_config_and_var_config(
-    #         dataset_config: DatasetConfig,
-    # ) -> GeneralDataset:
-    #     """ Get GeneralDataset by dataset config and var config. Convenient for test in backend
-    #     """
-    #     info = DatasetInfo.read(Declare.dataset_info_path(dataset_config))
-    #     klass = import_by_name(info.class_name, [info.import_from])
-    #     return klass(**dataset_config.init_kwargs)
+        # Build dataset
+        if dataset_var_config:
+            dataset.build(dataset_var_config)
+
+        return dataset
 
     @staticmethod
     @timing_decorator
     def get_by_full_name(
-            full_name=None,
-            **kwargs
+            full_name: Tuple[str, ...] = None,
+            init_kwargs: Union[dict, None] = None,
+            **dvc_kwargs
     ) -> [GeneralDataset, torch_geometric.data.Data, Path]:
         """
-        Get PTG dataset by its full name tuple.
+        Get built `PTGDataset` by its full name and additional kwargs for dataset var config.
         Starts the creation of an object from raw data or takes already saved datasets in prepared
-        form.
+        form. NOTE: works only for `PTGDataset`.
 
         Args:
-            full_name: full name of graph data
-            **kwargs: other arguments required to create datasets (dataset_var_config)
+            full_name: full name of graph data as a tuple of strings
+            init_kwargs: init kwargs for `DatasetConfig`
+            **dvc_kwargs: kwargs for `DatasetVarConfig`, optional.
+             If given, try to create var config and call dataset.build()
 
         Returns: GeneralDataset, a list of tensors with data, and
         the path where the dataset is saved.
 
         """
         from datasets.ptg_datasets import PTGDataset
-        dataset = DatasetManager.get_by_config(DatasetConfig(full_name))
+        dc = DatasetConfig(full_name=full_name, init_kwargs=init_kwargs)
+        dataset = DatasetManager.get_by_config(dc)
+        # if not isinstance(dataset, PTGDataset):
+        #     raise RuntimeError(f"get_by_full_name suits only for {PTGDataset.__name__} datasets."
+        #                        f" You are trying to get {dataset.__class__.__name__}."
+        #                        f" Use get_by_config() instead.")
+
+        if dvc_kwargs:
+            features = dvc_kwargs.get('features', FeatureConfig())
+            # features = FeatureConfig(**dvc_kwargs.get('features', {}))
+            dvc_kwargs['features'] = features
+
         cfg = PTGDataset.default_dataset_var_config.to_savable_dict()
-        cfg.update(**kwargs)
+        cfg.update(**dvc_kwargs)
         dataset_var_config = DatasetVarConfig(**cfg)
+
         dataset.build(dataset_var_config=dataset_var_config)
-        dataset.train_test_split(percent_train_class=kwargs.get("percent_train_class", 0.8),
-                                 percent_test_class=kwargs.get("percent_test_class", 0.2))
+
+        dataset.train_test_split(percent_train_class=dvc_kwargs.get("percent_train_class", 0.8),
+                                 percent_test_class=dvc_kwargs.get("percent_test_class", 0.2))
+
         # IMP Kirill suggest to return only dataset, else is its parts
         return dataset, dataset.data, dataset.results_dir
-
-    # @staticmethod
-    # def register_torch_geometric_api(
-    #         dataset: Dataset,
-    #         name: str = None,
-    #         obj_name: str = 'DATASET_TO_EXPORT'
-    # ) -> GeneralDataset:
-    #     """
-    #     Register a user defined code implementing a PTG dataset.
-    #     This function should be called at each framework run to make the dataset available for use.
-    #
-    #     :param dataset: torch_geometric.data.Dataset object.
-    #     :param name: user defined dataset name. If not specified, a timestamp will be used.
-    #     :param obj_name: variable name to locate when import. DATASET_TO_EXPORT is default
-    #     :return: GeneralDataset
-    #     """
-    #     gen_dataset = DatasetManager._register_torch_geometric(
-    #         dataset, name=name, group='api', exists_ok=False, copy_data=False)
-    #
-    #     # Save api info
-    #     import inspect
-    #     import_path = Path(inspect.getfile(dataset.__class__))
-    #     api = {
-    #         'import_path': str(import_path),
-    #         'obj_name': obj_name,
-    #     }
-    #     with gen_dataset.api_path.open('w') as f:
-    #         json.dump(api, f, indent=1)
-    #
-    #     return gen_dataset
-    #
-    # @staticmethod
-    # def _register_torch_geometric(
-    #         dataset: Dataset,
-    #         name: Union[str, None] = None,
-    #         group: str = None,
-    #         exists_ok: bool = False,
-    #         copy_data: bool = False
-    # ) -> GeneralDataset:
-    #     """
-    #     Create GeneralDataset from an externally specified torch geometric dataset.
-    #
-    #     :param dataset: torch_geometric.data.Dataset object.
-    #     :param name: dataset name.
-    #     :param group: group name, preferred options are: 'local', 'exported', etc.
-    #     :param exists_ok: if True raise Exception if graph with same name exists, otherwise the data
-    #      will be overwritten.
-    #     :param copy_data: if True processed data will be copied, otherwise a symbolic link is
-    #      created.
-    #     :return: GeneralDataset
-    #     """
-    #     info = DatasetInfo.induce(dataset)
-    #     if name is None:
-    #         import time
-    #         info.name = 'graph_' + str(time.time())
-    #     else:
-    #         assert isinstance(name, str) and os.sep not in name
-    #         info.name = name
-    #
-    #     # Define graph configuration
-    #     dataset_config = DatasetConfig(
-    #         domain="single-graph" if info.count == 1 else "multiple-graphs",
-    #         group=group or 'exported', graph=info.name
-    #     )
-    #
-    #     # Check if exists
-    #     root_dir, _ = Declare.dataset_root_dir(dataset_config)
-    #     if root_dir.exists():
-    #         if exists_ok:
-    #             shutil.rmtree(root_dir)
-    #         else:
-    #             raise FileExistsError(
-    #                 f"Graph with config {dataset_config.full_name} already exists!")
-    #
-    #     from datasets.ptg_datasets import PTGDataset
-    #     gen_dataset = PTGDataset(dataset_config=dataset_config)
-    #     info.save(gen_dataset.info_path)
-    #
-    #     # Link or copy original contents to our path
-    #     results_dir = gen_dataset.results_dir
-    #     results_dir.parent.mkdir(parents=True, exist_ok=True)
-    #     if copy_data:
-    #         shutil.copytree(os.path.abspath(dataset.processed_dir), results_dir,
-    #                         dirs_exist_ok=True)
-    #     else:  # Create symlink
-    #         # FIXME what will happen if we modify graph and its data.pt ?
-    #         results_dir.symlink_to(os.path.abspath(dataset.processed_dir),
-    #                                target_is_directory=True)
-    #
-    #     gen_dataset.dataset = dataset
-    #     gen_dataset.info = info
-    #     print(f"Registered graph '{info.name}' as {dataset_config.full_name}")
-    #     return gen_dataset
 
 
 if __name__ == '__main__':

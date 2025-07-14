@@ -11,7 +11,7 @@ class MenuDatasetView extends MenuView {
         // Start with dataset config
         let [ps, info] = await controller.ajaxRequest('/dataset', {get: "index"})
         // this.prefixStorage = PrefixStorage.fromJSON(ps)
-        this.tuplePrefixStorage = TuplePrefixStorage.fromJSON(ps)
+        this.tuplePrefixStorage = PrefixStorage.fromJSON(ps)
 
         this.$mainDiv.append($("<h3></h3>").text("Choose raw data"))
 
@@ -40,7 +40,7 @@ class MenuDatasetView extends MenuView {
             this.$acceptDiv.show()
             // await this.accept()
         }
-        this.tuplePrefixStorage.buildCascadeMenu(this.$optionsDiv, drop, set)
+        this.tuplePrefixStorage.buildPopupMenu(this.$optionsDiv, drop, set)
 
         this.appendAcceptBreakButtons()
         this.$acceptDiv.hide()

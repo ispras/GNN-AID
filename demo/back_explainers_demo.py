@@ -14,15 +14,15 @@ def explainers_test():
 
     # Init datasets
     dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-        full_name=("multiple-graphs", "custom", "small",),
-        features={'attr': {'a': 'as_is'}},
+        full_name=("example", "multiple-graphs", "small",),
+        features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0
     )
 
     dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "custom", "example",),
-        features={'attr': {'a': 'as_is'}},
+        full_name=("example", "single-graph", "example",),
+        features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0
     )
@@ -32,7 +32,7 @@ def explainers_test():
             domain="multiple-graphs",
             group="custom",
             graph="small"),
-        DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )
@@ -41,7 +41,7 @@ def explainers_test():
             domain="single-graph",
             group="custom",
             graph="example"),
-        DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )

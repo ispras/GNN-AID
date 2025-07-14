@@ -11,7 +11,7 @@ from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DA
     USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 import os
 from pathlib import Path
-from data_structures.prefix_storage import PrefixStorage, TuplePrefixStorage
+from data_structures.prefix_storage import FixedKeysPrefixStorage, TuplePrefixStorage
 
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor
@@ -203,7 +203,7 @@ class DataInfo:
     def fill_prefix_storage(
             prefix: Tuple,
             file_with_paths: Union[str, Path]
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Fill prefix storage by file with paths
 
@@ -214,7 +214,7 @@ class DataInfo:
         """
         keys_list, full_keys_list, dir_structure, empty_dir_shift = \
             DataInfo.take_keys_etc_by_prefix(prefix=prefix)
-        ps = PrefixStorage(keys_list)
+        ps = FixedKeysPrefixStorage(keys_list)
         with open(file_with_paths, 'r', encoding='utf-8') as f:
             description_info = {
             }
@@ -226,7 +226,7 @@ class DataInfo:
                 loc_parts_values, description_info_loc = DataInfo.values_list_and_technical_files_by_path_and_prefix(
                     path=line, prefix=prefix,
                 )
-                ps.add(loc_parts_values)
+                ps.add(loc_parts_values, None)
                 description_info = DataInfo.deep_update(description_info, description_info_loc)
         return ps, description_info
 
@@ -255,7 +255,7 @@ class DataInfo:
 
     @staticmethod
     def explainers_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to explainers from a technical file with the paths of all saved explainers.
         """
@@ -270,7 +270,7 @@ class DataInfo:
 
     @staticmethod
     def models_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to models from a technical file with the paths of all saved models.
         """
@@ -318,13 +318,13 @@ class DataInfo:
 
     @staticmethod
     def data_var_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to prepared datasets from a technical file with the paths of all saved prepared datasets.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("datasets"),
+            prefix=("datasets",),
             file_with_paths=DATA_INFO_DIR_results)
         return ps
 
@@ -472,12 +472,11 @@ class UserCodeInfo:
 
 
 if __name__ == '__main__':
-    DataInfo.refresh_data_dir_structure()
 
-
-    DataInfo.refresh_all_data_info()
+    # DataInfo.refresh_all_data_info()
     ps, info = DataInfo.models_parse()
-    print(ps.to_json())
+    # print(ps.to_json(indent=2))
+    print(ps)
     # ps, info = DataInfo.fill_prefix_storage(modes=("datasets", "models"),
     #                                         file_with_paths=DATA_INFO_DIR / 'models_dir_structure')
     # print(info)

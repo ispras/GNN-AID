@@ -143,7 +143,7 @@ class Declare:
         if dataset_var_config["dataset_ver_ind"] is None:
             ix = 0
             while True:
-                dataset_var_config["dataset_ver_ind"] = ix  # FIXME 'DatasetVarConfig' object does not support item assignment
+                dataset_var_config["dataset_ver_ind"] = ix  # FIXME Kirill 'DatasetVarConfig' object does not support item assignment
                 loc_path, files_paths = Declare.obj_info_to_path(what_save="datasets", previous_path=path,
                                                                  obj_info=obj_info)
                 if not loc_path.exists():  # if name exists, adding number to it

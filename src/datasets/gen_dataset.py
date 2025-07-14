@@ -1,21 +1,25 @@
+from abc import ABC, abstractmethod
+import json
 from pathlib import Path
 from typing import Union, List, Callable, Dict
-import json
 
 import torch
-from torch import default_generator, randperm, tensor, cat
+from torch import default_generator, randperm, tensor
 # from torch._C import default_generator
 # from torch._C._VariableFunctions import randperm
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 
+from aux.declaration import Declare
+from aux.utils import root_dir
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
 from datasets.dataset_info import DatasetInfo
 from datasets.visible_part import VisiblePart
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from aux.declaration import Declare
 
 
-class GeneralDataset:
-    """ Generalisation of Pytorch-geometric and user-defined datasets: custom, VK, etc.
+class GeneralDataset(ABC):
+    """
+    # TODO upd docs
+    Generalisation of Pytorch-geometric and user-defined datasets: custom, VK, etc.
     """
 
     def __init__(
@@ -26,6 +30,8 @@ class GeneralDataset:
         Args:
             dataset_config: DatasetConfig dict from frontend
         """
+        # TODO check that dataset_config is allowed
+
         # = Configs
         self.dataset_config = dataset_config
         self.dataset_var_config: DatasetVarConfig = None
@@ -107,25 +113,26 @@ class GeneralDataset:
     ) -> int:
         return self.dataset.num_node_features
 
+    @abstractmethod
     def node_attributes(
             self,
             attrs: List[str] = None
     ) -> Dict[str, Union[list, torch.Tensor]]:
         """ Get node attributes as a dict {name -> list}"""
-        raise RuntimeError("This should be implemented in subclass")
 
+    @abstractmethod
     def edge_attributes(
             self,
             attrs: List[str] = None
     ) -> Dict[str, Union[list, torch.Tensor]]:
         """ Get node attributes as a dict {name -> list}"""
-        raise RuntimeError("This should be implemented in subclass")
 
     @property
     def edges(
             self
     ) -> List[torch.Tensor]:
         """ Edge index as a list of tensors """
+        # NOTE for the first time this makes shallow copy of all data
         return [data.edge_index for data in self.dataset]
 
     @property
@@ -136,12 +143,6 @@ class GeneralDataset:
             return tensor([data.y for data in self.dataset])
         else:
             return self.dataset[0].y
-
-        # # fixme why do we need it? maybe other field make also
-        # # NOTE: this is a copy from torch_geometric.data.dataset v=2.3.1
-        # from torch_geometric.data.dataset import _get_flattened_data_list
-        # data_list = _get_flattened_data_list([data for data in self.dataset])
-        # return torch.cat([data.y for data in data_list if 'y' in data], dim=0)
 
     @property
     def node_features(
@@ -195,13 +196,13 @@ class GeneralDataset:
         with open(dvc, 'w') as f:
             json.dump(self.dataset_var_config.to_json(), f, indent=2)
 
+    @abstractmethod
     def _compute_dataset_data(
             self
     ) -> None:
         """ Build graph(s) structure - edge index
         Structure according to https://docs.google.com/spreadsheets/d/1fNI3sneeGoOFyIZP_spEjjD-7JX2jNl_P8CQrA4HZiI/edit#gid=1096434224
         """
-        raise RuntimeError("This should be implemented in subclass")
 
     def set_visible_part(
             self,
@@ -215,16 +216,22 @@ class GeneralDataset:
         """ Add info about class to metainfo and save to file.
         """
         if self.info.class_name is None:
+            import inspect
             self.info.class_name = self.__class__.__name__
-            self.info.import_from = self.__class__.__module__
+            file_path = Path(inspect.getfile(self.__class__))
+            parts = list(file_path.relative_to(root_dir).parts)
+            # remove extension
+            parts[-1] = parts[-1].removesuffix(file_path.suffix)
+            self.info.import_from = '.'.join(parts)
+            print(f"Registered graph with class_name={self.info.class_name}")
             self.info.save(self.info_path)
 
+    @abstractmethod
     def _compute_dataset_var_data(
             self
     ) -> None:
         """ Build graph(s) tensors - features and labels
         """
-        raise RuntimeError("This should be implemented in subclass")
 
     def get_stat(
             self,
@@ -234,45 +241,13 @@ class GeneralDataset:
         """
         return self.stats.get(stat)
 
+    @abstractmethod
     def _compute_stat(
             self,
             stat: str
     ) -> None:
         """ Compute a non-standard statistics.
         """
-        raise RuntimeError("This should be implemented in subclass")
-
-    def is_one_hot_able(
-            self
-    ) -> bool:
-        """ Return whether features are 1-hot encodings. If yes, nodes can be colored.
-        """
-        assert self.dataset_var_config
-
-        if not self.is_multi():
-            return True
-
-        res = False
-        features = self.dataset_var_config.features
-        if len(features.keys()) == 1:
-            # 1-hot over nodes and no attributes is OK
-            if 'str_g' in features:
-                if features['str_g'] == 'one_hot':
-                    res = True
-
-            # Only 1 categorical attr is OK
-            elif 'attr' in features:
-                if len(features['attr']) == 1:
-                    attr = list(features['attr'].keys())[0]
-                    if features['attr'][attr] == 'categorical':
-                        res = True
-                    elif features['attr'][attr] == 'vector':
-                        # Check honestly each feature vector
-                        feats = self.node_features
-                        res = all(all(all(x == 1 or x == 0 for x in f) for f in feat) for feat in feats) and \
-                              all(all(sum(f) == 1 for f in feat) for feat in feats)
-
-        return res
 
     def train_test_split(
             self,
@@ -506,7 +481,7 @@ class GeneralDataset:
 class LocalDataset(
     InMemoryDataset
 ):
-    """ Locally saved PTG Dataset.
+    """ Locally saved PTG Dataset. Does not write anything to data/ folder
     """
 
     def __init__(
@@ -514,22 +489,21 @@ class LocalDataset(
             data_list: List[Data],
             results_dir: Union[str, Path],
             process_func: Union[Callable, None] = None,
-            save: bool = True
     ):
         """
         :param data_list: optionally, list of ready torch_geometric.data.Data objects
         :param results_dir: directory where tensors are stored
         :param process_func: optionally, custom process() function, which converts raw files into tensors
-        :param save: if True (which is default), save tensors
         """
         self.data_list = data_list
         self.results_dir = results_dir
         if process_func:
             self.process = process_func
+
         # Init and process
         super().__init__(None)
 
-        # Load
+        # Load, (even if data_list is given, to correctly define self._data, self._data_list)
         self.data, *rest_data = torch.load(self.processed_paths[0])
         self.slices = None
         try:
@@ -556,112 +530,17 @@ class LocalDataset(
         return self.results_dir
 
 
-class ExampleGenDataset(GeneralDataset):
-    """ Example of user defined GeneralDataset
-    """
-    def __init__(self, dataset_config: Union[DatasetConfig, ConfigPattern]):
-        super().__init__(dataset_config)
-
-    def _compute_dataset_data(
-            self
-    ) -> None:
-        """
-        """
-        import os
-        import json
-        import numpy as np
-        self.info = DatasetInfo.read(self.info_path)
-        self.dataset_data = {}
-
-        node_map = {}
-        ptg_edge_index = [[], []]
-        node_index = 0
-        with open(self.root_dir / 'raw' / 'edges.ij', 'r') as f:
-            for line in f.readlines():
-                i, j = map(int, line.split())
-                if i not in node_map:
-                    node_map[i] = node_index
-                    node_index += 1
-                if j not in node_map:
-                    node_map[j] = node_index
-                    node_index += 1
-                if self.info.remap:
-                    i = node_map[i]
-                    j = node_map[j]
-                # TODO misha can we reuse one of them?
-                ptg_edge_index[0].append(i)
-                ptg_edge_index[1].append(j)
-                if not self.info.directed:
-                    ptg_edge_index[0].append(j)
-                    ptg_edge_index[1].append(i)
-
-            self.dataset_data['edges'] = [torch.tensor(np.asarray(ptg_edge_index))]
-            if self.info.remap:
-                if len(node_map) < self.info.nodes[0]:
-                    labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
-                    with open(labeling_path, 'r') as f:
-                        labeling_dict = json.load(f)
-                    for node in labeling_dict.keys():
-                        node = int(node)
-                        if node not in node_map:
-                            node_map[node] = node_index
-                            node_index += 1
-                # assert node_index == self.info.nodes[0]
-                # Original ids in the order of appearance
-                self.node_map = list(node_map.keys())
-                # self.info.node_info = {"id": self.node_map}
-
-        assert node_index == self.info.nodes[0]
-        assert len(self.dataset_data['edges']) == self.info.count
-
-        # Read attributes
-        self.node_attributes_dir = self.root_dir / 'raw' / (self.name + '.node_attributes')
-        self.dataset_data['node_attributes'] = {}
-        if self.node_attributes_dir.exists():
-            for a in os.listdir(self.node_attributes_dir):
-                with open(self.node_attributes_dir / a, 'r') as f:
-                    self.dataset_data['node_attributes'][a] = [{
-                        node_map[int(n)]: v for n, v in json.load(f).items()
-                        if int(n) in node_map}]
-
-        # Check for obligate parameters
-        assert len(self.dataset_data['edges']) > 0
-        # assert len(info["labelings"]) > 0  # for VK we generate based on files
-
-    def _compute_dataset_var_data(
-            self
-    ) -> None:
-        """ Build ptg dataset based on dataset_var_config and create DatasetVarData.
-        """
-        x = tensor([[0, 0], [1, 0], [1, 0]])
-        edge_index = tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
-        y = tensor([0, 1, 1])
-
-        data_list = [Data(x=x, edge_index=edge_index, y=y)]
-        self.dataset = LocalDataset(data_list, self.results_dir)
-
-        # Define auxiliary fields
-        self.dataset_var_data = {}
-
-        self.dataset_var_data['node_features'] = [data.x for data in self.dataset]
-        # self.dataset_var_data['edge_features'] = []
-        self.dataset_var_data['labels'] = [data.y for data in self.dataset]
-
-        self.dataset_var_data['node_features'] = self.dataset_var_data['node_features'][0]
-        # self.dataset_var_data['edge_features'] = []
-        self.dataset_var_data['labels'] = self.dataset_var_data['labels'][0]
-
-
 if __name__ == '__main__':
     print("test dataset")
-    from datasets.ptg_datasets import LocalPTGDataset, PTGDataset, LibPTGDataset
-    from datasets.known_format_datasets import KnownFormatDataset
     from datasets.datasets_manager import DatasetManager
 
-    # dc = DatasetConfig(('example', 'single-graph', 'example'))
-    dc = DatasetConfig(('example', 'multiple-graphs', 'example_gml'))
+    dc = DatasetConfig(('example', 'single-graph', 'example'))
+    # dc = DatasetConfig(('example', 'multiple-graphs', 'example_gml'))
     # dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
     # dc = DatasetConfig(('ptg-library-graphs', 'multiple-graphs', 'TUDataset', 'MUTAG'))
+
+    # d = GeneralDataset(dc)
+
     root = Declare.dataset_root_dir(dc)[0]
     print(root)
     dataset = DatasetManager.get_by_config(
@@ -669,11 +548,12 @@ if __name__ == '__main__':
         default_edge_attr_value={'type': "mixed", 'weight': 0},
         default_node_attr_value={'b': "alpha"})
 
-    dataset.set_visible_part({'center': 0, 'depth': 0})
+    dataset.set_visible_part({'center': 0, 'depth': 1})
     # dataset.set_visible_part({})
     print(dataset.visible_part.get_dataset_data())
 
-    dvc = DatasetVarConfig(features={'attr': {'a': 'as_is'}}, labeling='binary', dataset_ver_ind=0)
+    dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a', 'b']),
+                           labeling='binary', dataset_ver_ind=0)
 
     dataset.build(dvc)
     # print(dataset.dataset_var_data)

@@ -16,9 +16,9 @@ def test_SubgraphX():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
@@ -27,25 +27,25 @@ def test_SubgraphX():
     )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+    #     full_name=("example", "single-graph", "example",),
+    #     features=FeatureConfig(node_attr=['a', 'b']),
     #     labeling='threeClasses',
     #     dataset_ver_ind=0
     # )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
+    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
     #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
+    #     features={'attr': {
     #         # "('personal', 'political')": 'one_hot',
     #         # "('occupation', 'type')": 'one_hot', # Don't work now
     #         # "('relation',)": 'one_hot',
     #         # "('age',)": 'one_hot',
     #         "('sex',)": 'one_hot',
     #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
+    #     # features=FeatureConfig(node_attr=['sex']),
     #     labeling='sex1',
     #     dataset_ver_ind=0
     # )

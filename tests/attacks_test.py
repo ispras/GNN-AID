@@ -3,10 +3,16 @@ import unittest
 import numpy as np
 import torch
 
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories()
+
 from attacks.mi_attacks import MIAttacker
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+    ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
@@ -24,18 +30,15 @@ class AttacksTest(unittest.TestCase):
         # Init datasets
         # Multi-Graphs - Example
         self.dataset_mg_small, _, results_dataset_path_sg_small = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "custom", "small",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "multiple-graphs", "small",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="multiple-graphs",
-                group="custom",
-                graph="small"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -46,18 +49,15 @@ class AttacksTest(unittest.TestCase):
 
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
+            full_name=("example", "single-graph", "example",),
+            features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(("example", "single-graph", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -67,7 +67,7 @@ class AttacksTest(unittest.TestCase):
 
         # Single-graph - Cora
         self.dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora",),
+            full_name=(LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora",),
             dataset_ver_ind=0
         )
 
@@ -95,7 +95,7 @@ class AttacksTest(unittest.TestCase):
 
         #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora"),
+            full_name=(LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 

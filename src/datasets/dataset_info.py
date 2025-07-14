@@ -165,57 +165,6 @@ class DatasetInfo:
             json.dump(not_nones, f, indent=1, ensure_ascii=False)
 
     @staticmethod
-    def induce(
-            dataset: Dataset
-    ) -> object:
-        """ Induce metainfo from a given PTG dataset.
-        """
-        # FIXME misha move to LocalPTGDataset
-        res = DatasetInfo()
-        res.count = len(dataset)
-        # from datasets.ptg_datasets import is_graph_directed
-        # res.directed = is_graph_directed(dataset.get(0))
-        data = dataset.get(0)
-        res.directed = data.is_directed()  # FIXME misha check correct
-        if isinstance(data, HeteroData):
-            res.hetero = True
-            node_types = data.node_types
-            res.nodes = [{nt: data[nt].num_nodes for nt in node_types}]
-            res.node_attributes = {
-                nt: {
-                    "names": ["unknown"],
-                    "types": ["vector"],
-                    "values": [len(data[nt].x[0])]
-                } for nt in node_types
-            }
-            edge_types = [','.join([f'"{x}"' for x in et]) for et in data.edge_types]
-            res.edge_attributes = {
-                et: {
-                    "names": [],
-                    "types": [],
-                    "values": []
-                } for et in edge_types
-            }
-            # TODO add edge attributes
-            res.labelings = {}
-            for nt in node_types:
-                if hasattr(data[nt], 'y'):
-                    res.labelings[nt] = {"origin": int(max(data[nt].y)) + 1}
-        else:
-            res.hetero = False
-            res.nodes = [len(dataset.get(ix).x) for ix in range(len(dataset))]
-            res.node_attributes = {
-                "names": ["unknown"],
-                "types": ["vector"],
-                "values": [len(dataset.get(0).x[0])]
-            }
-            res.labelings = {"origin": dataset.num_classes}
-            res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
-
-        res.check()
-        return res
-
-    @staticmethod
     def read(
             path: Union[str, Path]
     ) -> 'DatasetInfo':
@@ -235,7 +184,8 @@ class DatasetInfo:
             node_attributes: dict,
             edge_attributes: dict,
     ) -> (dict, dict):
-        if isinstance(next(iter(node_attributes.values())), dict):
+        if len(node_attributes) > 0 and\
+                isinstance(next(iter(node_attributes.values())), dict):
             # TODO misha hetero
             return None, None
 
