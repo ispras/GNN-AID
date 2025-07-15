@@ -55,8 +55,8 @@ class BaseMeta(PoisonAttacker):
     ):
         return False  # BaseMeta is a helper class, not a method
 
-    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
-                 attack_structure=True, attack_features=False, undirected=False, device='cpu'):
+    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100,
+                 attack_budget=10, lr=0.1, attack_structure=True, attack_features=False, undirected=False, device='cpu'):
         super().__init__()
         self.model = None
         self.num_nodes = num_nodes  # will be set from dataset in attack()
@@ -64,6 +64,7 @@ class BaseMeta(PoisonAttacker):
         self.lambda_ = lambda_
         self.train_iters = train_iters
         self.attack_iters = attack_iters
+        self.attack_budget = attack_budget
         self.lr = lr
         self.device = device
 
@@ -226,11 +227,11 @@ class MetaAttackFull(BaseMeta):
     ):
         return True  # TODO
 
-    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
-                 momentum=0.9, attack_structure=True, attack_features=False, undirected=False, device='cpu',
-                 with_bias=False, with_relu=False):
+    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100,
+                 attack_budget=10, lr=0.1,momentum=0.9, attack_structure=True, attack_features=False,
+                 undirected=False, device='cpu', with_bias=False, with_relu=False):
         super().__init__(num_nodes=num_nodes, feature_shape=feature_shape, lambda_=lambda_, train_iters=train_iters,
-                         attack_iters=attack_iters, lr=lr, attack_features=attack_features,
+                         attack_iters=attack_iters, attack_budget=attack_budget, lr=lr, attack_features=attack_features,
                          attack_structure=attack_structure, undirected=undirected, device=device)
         self.with_bias = with_bias
         self.with_relu = with_relu
@@ -241,7 +242,7 @@ class MetaAttackFull(BaseMeta):
         self.b_velocities = []
         self.momentum = momentum
 
-    def attack(self, gen_dataset, attack_budget=10, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
         self.hidden_sizes = [16]  # FIXME get from model architecture
@@ -289,7 +290,7 @@ class MetaAttackFull(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
-        for i in tqdm(range(attack_budget), desc="Perturbing graph"):
+        for i in tqdm(range(self.attack_budget), desc="Perturbing graph"):
             if self.attack_structure:
                 modified_adj = self.get_modified_adj(ori_adj)
 
@@ -435,11 +436,12 @@ class MetaAttackApprox(BaseMeta):
         return True  # TODO
 
     def __init__(self, num_nodes=None, feature_shape=None, attack_structure=True, attack_features=False,
-                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200, attack_iters=10,
-                 lr=0.01, with_relu=False):
+                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200,
+                 attack_iters=10, attack_budget=10, lr=0.01, with_relu=False):
         super().__init__(num_nodes=num_nodes, feature_shape=feature_shape, lambda_=lambda_, train_iters=train_iters,
                          attack_iters=attack_iters, lr=lr, attack_features=attack_features,
-                         attack_structure=attack_structure, undirected=undirected, device=device)
+                         attack_structure=attack_structure, attack_budget=attack_budget,
+                         undirected=undirected, device=device)
 
         self.lr = lr
         self.train_iters = train_iters
@@ -460,7 +462,7 @@ class MetaAttackApprox(BaseMeta):
         if self.attack_features:
             self.feature_grad_sum = torch.zeros(self.feature_shape).to(self.device)
 
-    def attack(self, gen_dataset, attack_budget=500, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
         self.hidden_sizes = [16]  # FIXME get from model architecture
@@ -496,7 +498,7 @@ class MetaAttackApprox(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
-        for i in tqdm(range(attack_budget), desc="Perturbing graph"):
+        for i in tqdm(range(self.attack_budget), desc="Perturbing graph"):
             self._initialize()
 
             if self.attack_structure:
