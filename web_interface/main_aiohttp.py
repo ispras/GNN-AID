@@ -273,9 +273,9 @@ def worker_process(
                 if do == 'index':
                     type = args.get('type')
                     if type == "saved":
-                        result = client.mloadBlock.get_index()
+                        result = json_dumps(client.mloadBlock.get_index())
                     elif type == "custom":
-                        result = client.mcustomBlock.get_index()
+                        result = json_dumps(client.mcustomBlock.get_index())
                 elif do in ['train', 'reset', 'run', 'save']:
                     result = client.mtBlock.do(do, args)
                 elif do in ['run with attacks']:

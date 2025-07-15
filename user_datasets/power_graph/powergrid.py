@@ -10,9 +10,13 @@ General file to load the Inmemory datasets (UK, IEEE24, IEEE39)
 
 import os
 import os.path as osp
+import shutil
+from pathlib import Path
 
 import mat73
 import numpy as np
+import requests
+import zipfile
 import torch
 from torch_geometric.data import Data
 from torch_geometric.data import InMemoryDataset
@@ -78,9 +82,29 @@ class PowerGrid(InMemoryDataset):
     def download(self):
         # Download the file specified in self.url and store
         # it in self.raw_dir
-        # URL is https://figshare.com/ndownloader/files/46619158
-        # todo misha add wget
-        path = self.raw_path
+        zip_path = Path(self.root) / "downloaded.zip"
+        url = "https://figshare.com/ndownloader/files/46619158"
+
+        # Download zip file
+        print(f"Downloading from {url}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        with open(zip_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        # Extract zip
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(zip_path.parent / 'dataset_cascades')
+        zip_path.unlink()
+
+        # Move raw files, e.g. dataset_cascades/uk/uk/raw -> uk/raw
+        base = Path(self.root) / 'dataset_cascades'
+        for name in self.names.keys():
+            dst = Path(self.root) / name / 'raw'
+            dst.mkdir(parents=True, exist_ok=True)
+            (base / name / name / 'raw').rename(dst)
+        shutil.rmtree(base)
 
     def process(self):
         # function that deletes row
@@ -184,4 +208,3 @@ class PowerGrid(InMemoryDataset):
 
         # data_list = padded_datalist(data_list, adj_list, max_num_nodes)
         torch.save(self.collate(data_list), self.processed_paths[0])
-

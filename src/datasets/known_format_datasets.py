@@ -236,17 +236,15 @@ class KnownFormatDataset(
 
         # Read edges and attributes
         if self.is_multi():
-            node_maps = self._read_multi()
-            self._read_attributes_multi(node_maps)
+            self._read_multi()
         else:
-            node_map = self._read_single()
-            self._read_attributes_single(node_map)
+            self._read_single()
+        self._read_attributes()
 
     def _read_single(
             self
-    ) -> dict:
+    ) -> None:
         """ Read edges, remap node, create feature tensors - for single graph case.
-        Returns node mapping as dict of {orig -> new} (it is not stored).
         """
         node_map = {}
         ptg_edge_index = [[], []]
@@ -274,13 +272,10 @@ class KnownFormatDataset(
         assert node_index == self.info.nodes[0]
         assert len(self._ptg_edge_index) == self.info.count
 
-        return node_map
-
     def _read_multi(
             self
-    ) -> List[dict]:
+    ) -> None:
         """ Read edges, remap node, create feature tensors - for multi graph case.
-        Returns node mapping as a list of dicts of {orig -> new} (it is not stored).
         """
         count = self.info.count
         node_maps = []  # list of node_maps
@@ -329,8 +324,6 @@ class KnownFormatDataset(
         assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
         assert len(self._ptg_edge_index) == self.info.count
 
-        return node_maps
-
     def _read_edge(
             self,
             line: str,
@@ -355,33 +348,24 @@ class KnownFormatDataset(
             ptg_edge_index[1].append(i)
         return node_index
 
-    def _read_attributes_single(
-            self,
-            node_map: dict
+    def _read_attributes(
+            self
     ) -> None:
-        """ Read node attributes and remap them - for single graph case.
-        """
-        self._node_attributes = {}
-        for a in self.info.node_attributes["names"]:
-            with open(self.node_attributes_dir / a, 'r') as f:
-                self._node_attributes[a] = [{
-                    node_map[int(n)]: v for n, v in json.load(f).items()
-                    if int(n) in node_map}]
-
-    def _read_attributes_multi(
-            self,
-            node_maps: List[dict]
-    ) -> None:
-        """ Read node attributes and remap them - for multi graph case.
+        """ Read node attributes and remap them.
         """
         self._node_attributes = {}  # {attr -> [{node -> value} for each graph]}
         for a in self.info.node_attributes["names"]:
             self._node_attributes[a] = []
             with open(self.node_attributes_dir / a, 'r') as f:
-                for g, n_v in enumerate(json.load(f)):
-                    self._node_attributes[a].append({
-                        node_maps[g][int(n)]: v
-                        for n, v in n_v.items() if int(n) in node_maps[g]})
+                self._node_attributes[a] = []
+                orig_node_attributes = json.load(f)
+                if not self.is_multi():
+                    orig_node_attributes = [orig_node_attributes]
+                for g in range(self.info.count):
+                    node_attributes = {}
+                    for ix, orig in self._iter_nodes(g):
+                        node_attributes[ix] = orig_node_attributes[g][orig]
+                    self._node_attributes[a].append(node_attributes)
 
     def _compute_dataset_var_data(
             self
@@ -389,73 +373,6 @@ class KnownFormatDataset(
         """ Build PTG Dataset based on dataset_var_config.
         """
         self.dataset = LocalDataset(None, self.results_dir, process_func=self._create_ptg)
-
-    def _compute_stat(
-            self,
-            stat: str
-    ) -> dict:
-        """ Compute some additional stats
-        """
-        if stat == "attr_corr":
-            if self.node_attributes_dir.exists():
-                # Read all continuous attrs
-                node_attributes = self.info.node_attributes
-                attr_node_attrs = {}  # {attr -> {node -> attr value}}
-                for ix, a in enumerate(node_attributes["names"]):
-                    if node_attributes["types"][ix] != "continuous": continue
-                    with open(self.node_attributes_dir / a, 'r') as f:
-                        attr_node_attrs[a] = json.load(f)
-
-                # FIXME misha - for single graph [0]
-                edges = self.edge_index
-                node_map = (lambda i: str(self.node_map[i])) if self.node_map else lambda i: str(i)
-
-                # Compute mean and std over edges
-                in_attr_mean = {}
-                in_attr_denom = {}
-                out_attr_mean = {}
-                out_attr_denom = {}
-                for a, node_attrs in attr_node_attrs.items():
-                    ins = []
-                    outs = []
-                    for i, j in zip(*edges):
-                        i = int(i)
-                        j = int(j)
-                        outs.append(node_attrs[node_map(i)])
-                        ins.append(node_attrs[node_map(j)])
-                    in_attr_mean[a] = np.mean(ins)
-                    in_attr_denom[a] = (np.sum(np.array(ins) ** 2) - len(edges) * in_attr_mean[
-                        a] ** 2) ** 0.5
-                    out_attr_mean[a] = np.mean(outs)
-                    out_attr_denom[a] = (np.sum(np.array(outs) ** 2) - len(edges) * out_attr_mean[
-                        a] ** 2) ** 0.5
-
-                # Compute corr
-                attrs = list(attr_node_attrs.keys())
-                # Matrix of corr numerators
-                pearson_corr = np.zeros((len(attrs), len(attrs)), dtype=float)
-                for i, out_a in enumerate(attrs):
-                    out_node_attrs = attr_node_attrs[out_a]
-                    for j, in_a in enumerate(attrs):
-                        in_node_attrs = attr_node_attrs[in_a]
-                        corr = 0
-                        for x, y in zip(*edges):
-                            x = int(x)
-                            y = int(y)
-                            corr += (out_node_attrs[node_map(x)] - out_attr_mean[out_a]) * (
-                                    in_node_attrs[node_map(y)] - in_attr_mean[in_a])
-                        pearson_corr[i][j] = corr
-
-                # Normalize on stds
-                for i, out_a in enumerate(attrs):
-                    for j, in_a in enumerate(attrs):
-                        denom = out_attr_denom[out_a] * in_attr_denom[in_a]
-                        pc = pearson_corr[i][j] / denom if denom != 0 else 1
-                        pearson_corr[i][j] = min(1, max(-1, pc))
-
-                return {'attributes': attrs, 'correlations': pearson_corr.tolist()}
-
-        raise NotImplementedError()
 
     def _create_ptg(
             self
@@ -484,15 +401,13 @@ class KnownFormatDataset(
     ) -> [int, str]:
         """ Iterate over nodes according to mapping. Yields pairs of (node_index, original_id)
         """
-        # offset = sum(self.info.nodes[:graph]) if self.is_multi() else 0
-        offset = 0
         if self.node_map is not None:
             node_map = self.node_map[graph] if self.is_multi() else self.node_map
             for ix, orig in enumerate(node_map):
-                yield offset + ix, str(orig)
+                yield ix, str(orig)
         else:
             for n in range(self.info.nodes[graph or 0]):
-                yield offset + n, str(n)
+                yield n, str(n)
 
     def _labeling_tensor(
             self,
@@ -613,32 +528,69 @@ class KnownFormatDataset(
             raise RuntimeError("Feature vector size must be > 0")
         return node_features
 
+    def _compute_stat(
+            self,
+            stat: str
+    ) -> dict:
+        """ Compute some additional stats
+        """
+        if stat == "attr_corr":
+            if self.node_attributes_dir.exists():
+                # Read all continuous attrs
+                node_attributes = self.info.node_attributes
+                attr_node_attrs = {}  # {attr -> {node -> attr value}}
+                for ix, a in enumerate(node_attributes["names"]):
+                    if node_attributes["types"][ix] != "continuous": continue
+                    with open(self.node_attributes_dir / a, 'r') as f:
+                        attr_node_attrs[a] = json.load(f)
 
-def merge_directories(
-        source_dir: Union[Path, str],
-        destination_dir: Union[Path, str],
-        remove_source: bool = False
-) -> None:
-    """
-    Merge source directory into destination directory, replacing existing files.
+                # FIXME misha - for single graph [0]
+                edges = self.edge_index
+                node_map = (lambda i: str(self.node_map[i])) if self.node_map else lambda i: str(i)
 
-    :param source_dir: Path to the source directory to be merged
-    :param destination_dir: Path to the destination directory
-    :param remove_source: if True, remove source directory (empty folders)
-    """
-    for root, _, files in os.walk(source_dir):
-        # Calculate relative path
-        relative_path = os.path.relpath(root, source_dir)
+                # Compute mean and std over edges
+                in_attr_mean = {}
+                in_attr_denom = {}
+                out_attr_mean = {}
+                out_attr_denom = {}
+                for a, node_attrs in attr_node_attrs.items():
+                    ins = []
+                    outs = []
+                    for i, j in zip(*edges):
+                        i = int(i)
+                        j = int(j)
+                        outs.append(node_attrs[node_map(i)])
+                        ins.append(node_attrs[node_map(j)])
+                    in_attr_mean[a] = np.mean(ins)
+                    in_attr_denom[a] = (np.sum(np.array(ins) ** 2) - len(edges) * in_attr_mean[
+                        a] ** 2) ** 0.5
+                    out_attr_mean[a] = np.mean(outs)
+                    out_attr_denom[a] = (np.sum(np.array(outs) ** 2) - len(edges) * out_attr_mean[
+                        a] ** 2) ** 0.5
 
-        # Create destination path
-        dest_path = os.path.join(destination_dir, relative_path)
-        os.makedirs(dest_path, exist_ok=True)
+                # Compute corr
+                attrs = list(attr_node_attrs.keys())
+                # Matrix of corr numerators
+                pearson_corr = np.zeros((len(attrs), len(attrs)), dtype=float)
+                for i, out_a in enumerate(attrs):
+                    out_node_attrs = attr_node_attrs[out_a]
+                    for j, in_a in enumerate(attrs):
+                        in_node_attrs = attr_node_attrs[in_a]
+                        corr = 0
+                        for x, y in zip(*edges):
+                            x = int(x)
+                            y = int(y)
+                            corr += (out_node_attrs[node_map(x)] - out_attr_mean[out_a]) * (
+                                    in_node_attrs[node_map(y)] - in_attr_mean[in_a])
+                        pearson_corr[i][j] = corr
 
-        # Move files
-        for file in files:
-            src_file = os.path.join(root, file)
-            dest_file = os.path.join(dest_path, file)
-            shutil.move(src_file, dest_file)
+                # Normalize on stds
+                for i, out_a in enumerate(attrs):
+                    for j, in_a in enumerate(attrs):
+                        denom = out_attr_denom[out_a] * in_attr_denom[in_a]
+                        pc = pearson_corr[i][j] / denom if denom != 0 else 1
+                        pearson_corr[i][j] = min(1, max(-1, pc))
 
-    if remove_source:
-        shutil.rmtree(source_dir)
+                return {'attributes': attrs, 'correlations': pearson_corr.tolist()}
+
+        raise NotImplementedError()

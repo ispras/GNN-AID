@@ -9,6 +9,7 @@ from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
 from datasets.gen_dataset import GeneralDataset
+from aux.utils import edge_index_to_edge_list
 
 
 class DatasetStats:
@@ -164,7 +165,7 @@ class DatasetStats:
         """
         # assert self.info.count == 1
         # data: Data = self.dataset.get(0)
-        edges = self.gen_dataset.edges[0]
+        edges = edge_index_to_edge_list(self.gen_dataset.edges[0])
         num_nodes = self.gen_dataset.info.nodes[0]
 
         # Simple stats

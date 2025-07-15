@@ -6,6 +6,7 @@ from pydoc import locate
 from typing import Union, Type, Any
 
 import numpy as np
+from torch import tensor
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -290,3 +291,22 @@ def short_str(obj, max_len=120):
     if len(res) > max_len:
         res = res[:max_len - 5] + "..." + res[-2:]
     return res
+
+
+def edge_index_to_edge_list(
+        edge_index: Union[list, tensor],
+        directed: bool = True
+) -> list:
+    if isinstance(edge_index, list):
+        return [edge_index_to_edge_list(x) for x in edge_index]
+
+    assert edge_index.shape[0] == 2
+    edges = list(zip(edge_index[0].tolist(), edge_index[1].tolist()))
+    if directed:
+        return edges
+    else:
+        # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
+        edge_set = set()
+        for i, j in edges:
+            edge_set.add(tuple(sorted((i, j))))
+        return list(edge_set)

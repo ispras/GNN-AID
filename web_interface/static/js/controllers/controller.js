@@ -145,7 +145,7 @@ class Controller {
                 console.error('Response:', xhr.responseText);
             }
         })
-        if (result && '{['.includes(result[0]) && !result.includes("'")) {
+        if (result && '{['.includes(result[0])) {
             return JSON_parse(result)
         }
         return result

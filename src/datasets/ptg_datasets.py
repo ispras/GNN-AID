@@ -23,8 +23,8 @@ class PTGDataset(GeneralDataset):
     You should extend from this class.
     """
     default_dataset_var_config = DatasetVarConfig(
-        # features=FeatureConfig(node_attr=[PTG_FEATURE_NAME]),
-        features=FeatureConfig(),
+        features=FeatureConfig(node_attr=[PTG_FEATURE_NAME]),
+        # features=FeatureConfig(),
         labeling="origin",
         dataset_ver_ind=0
     )
@@ -54,9 +54,10 @@ class PTGDataset(GeneralDataset):
 
         else:  # first time
             self.results_dir.parent.mkdir(parents=True, exist_ok=True)
-            if self.results_dir != self.dataset.processed_dir:
+            if self.results_dir != self.dataset.processed_dir\
+                    and Path(self.dataset.processed_dir).is_dir():
                 # Create link to original processed files
-                # (they are needed to avoid ptg graph calling process() each time
+                # (we do not move them to avoid torch graph calling process() each time)
                 self.results_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
 
             # Define and save DatasetInfo
@@ -80,9 +81,9 @@ class PTGDataset(GeneralDataset):
             attrs: List[str] = None
     ) -> Dict[str, Union[list, torch.Tensor]]:
         """ Get node attributes as a dict {name -> list}"""
-        return {}  # features are not attributes
-        # assert attrs is None or attrs == [PTG_FEATURE_NAME]
-        # return {PTG_FEATURE_NAME: [data.x.tolist() for data in self.dataset]}
+        # return {}  # features are not attributes
+        assert attrs is None or attrs == [PTG_FEATURE_NAME]
+        return {PTG_FEATURE_NAME: [data.x.tolist() for data in self.dataset]}
 
     def edge_attributes(
             self,
@@ -108,12 +109,12 @@ class PTGDataset(GeneralDataset):
             res.nodes = [{nt: data[nt].num_nodes for nt in node_types}]
             res.node_attributes = {
                 nt: {
-                    "names": [],
-                    "types": [],
-                    "values": []
-                #     "names": [PTG_FEATURE_NAME],
-                #     "types": ["vector"],
-                #     "values": [len(data[nt].x[0])]
+                    # "names": [],
+                    # "types": [],
+                    # "values": []
+                    "names": [PTG_FEATURE_NAME],
+                    "types": ["vector"],
+                    "values": [len(data[nt].x[0])]
                 } for nt in node_types
             }
             edge_types = [','.join([f'"{x}"' for x in et]) for et in data.edge_types]
@@ -133,12 +134,12 @@ class PTGDataset(GeneralDataset):
             res.hetero = False
             res.nodes = [len(self.dataset.get(ix).x) for ix in range(len(self.dataset))]
             res.node_attributes = {
-                "names": [],
-                "types": [],
-                "values": []
-                # "names": [PTG_FEATURE_NAME],
-                # "types": ["vector"],
-                # "values": [len(self.dataset.get(0).x[0])]
+                # "names": [],
+                # "types": [],
+                # "values": []
+                "names": [PTG_FEATURE_NAME],
+                "types": ["vector"],
+                "values": [len(self.dataset.get(0).x[0])]
             }
             res.labelings = {"origin": self.dataset.num_classes}
             res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)

@@ -182,7 +182,8 @@ class PrefixStorage {
 
         let add = ($aDiv, content, level = 0, path=[]) => {
             if (!levelMap.has(level)) levelMap.set(level, []);
-            for (const [k, v] of Object.entries(content)) {
+            for (const [k, v] of Object.entries(content).toSorted((a, b) => {
+                    return a[0].toLowerCase().localeCompare(b[0].toLowerCase())})) {
                 let $item = $("<div></div>")//.attr("style", "width: 150px");
                 $aDiv.append($item);
                 $item.addClass("dropdownmenuitem");
@@ -205,7 +206,8 @@ class PrefixStorage {
                     $item.append(k);
                     $item.addClass("has-submenu");
 
-                    $subDiv = $("<div></div>").attr("class", "submenu").css("position", "absolute").hide();
+                    $subDiv = $("<div></div>").attr("class", "submenu")
+                        .css("position", "absolute").hide();
                     $("body").append($subDiv);
                     add($subDiv, v, level + 1, newPath);
 
@@ -253,45 +255,8 @@ class PrefixStorage {
             return res
         }
         else {
-            console.log('selected', this.selects)
+            // console.log('selected', this.selects)
             return this.selects
         }
     }
-
-    // dropCascadeMenu(menuPrefix) { // FIXME do we use it?
-    //     let keysNoSpaces = []
-    //
-    //     // Create selectors according to the keys
-    //     for (let d = 0; d<this.keys.length; ++d)
-    //         keysNoSpaces.push(nameToId(this.keys[d]))
-    //
-    //     let g = $(`#${menuPrefix(0)}-${keysNoSpaces[0]}`)
-    //     g.empty()
-    //     g.append($("<option></option>").attr("selected", "true")
-    //         .attr("value", "").attr("disabled", "")
-    //         .text(`<select ${keysNoSpaces[0]}>`))
-    //     let options = this.depth > 1 ? Object.keys(this.content) : this.content
-    //     for (const key of options) {
-    //         g.append($("<option></option>").attr("value", key).text(key))
-    //     }
-    //
-    //     // Drop selected values from descendant selectors
-    //     for (let j=1; j<this.depth; ++j) {
-    //         $(`#${menuPrefix(j)}-${keysNoSpaces[j]}`).empty()
-    //     }
-    // }
-
-}
-
-///
-// Index of data elements present on backend.
-// Each data element is identified by a list of keys and object.
-class TuplePrefixStorage {
-    constructor() {
-        this.content = {} // {K1 -> {K2 -> ... -> {K(d-1) -> [obj]}...}
-
-        this.selects = null // selected object as a list
-    }
-
-
 }

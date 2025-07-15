@@ -486,7 +486,7 @@ class LocalDataset(
 
     def __init__(
             self,
-            data_list: List[Data],
+            data_list: Union[List[Data], None],
             results_dir: Union[str, Path],
             process_func: Union[Callable, None] = None,
     ):

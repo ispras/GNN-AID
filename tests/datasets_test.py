@@ -472,6 +472,31 @@ class DatasetsTest(unittest.TestCase):
         self.assertEqual(dvd.labels, {1: 1, 0: 1, 2: 1, 3: 1, 4: 0, 5: 0, 6: 0, 7: 0})
         self.assertEqual(set(dvd.node_features.keys()), set(range(8)))
 
+    def test_stats(self):
+        """ Statistics
+        """
+        from datasets.dataset_stats import DatasetStats
+
+        dc = DatasetConfig(('single-graph', 'example'))
+        dvc = DatasetVarConfig(
+            features=FeatureConfig(node_attr=['a']), labeling='binary', dataset_ver_ind=0)
+        _create_single2_ij(dc)
+        single = DatasetManager.get_by_config(dc)
+        single.build(dvc)
+
+        dc = DatasetConfig(('multi-graph', 'test'))
+        dvc = DatasetVarConfig(
+            features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
+        _create_multi_ij(dc)
+        multi = DatasetManager.get_by_config(dc)
+        multi.build(dvc)
+
+        single = DatasetStats(single)
+        multi = DatasetStats(multi)
+        for stat in DatasetStats.all_stats:
+            res = single.get(stat)
+            print(stat, res)
+
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """

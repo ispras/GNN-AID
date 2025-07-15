@@ -153,8 +153,8 @@ class TuplePrefixStorage:
                 obj_or_key = content[k]
                 if isinstance(obj_or_key, tuple):
                     if len(a_key) == 1:
-                        # Return one obejct
-                        res.add(key, obj_or_key)
+                        # Return one object
+                        res.add(a_key, obj_or_key)
                         return res
                     else:
                         # Key is too long, empty
@@ -162,11 +162,7 @@ class TuplePrefixStorage:
                 if isinstance(obj_or_key, dict):
                     if len(a_key) == 1:
                         # Return subtree
-                        node = res.content
-                        for _k in key[:-len(a_key)]:
-                            node[_k] = {}
-                            node = node[_k]
-                        node[k] = content[k]
+                        res.content = content[k]
                         return res
                     else:
                         # Go deeper
@@ -528,7 +524,7 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         Build a new FixedKeysPrefixStorage containing a subtree starting with a given key.
         """
         tps = super().filter(key)
-        ps = FixedKeysPrefixStorage(self._keys)
+        ps = FixedKeysPrefixStorage(self._keys[len(key):])
         ps.content = tps.content
         return ps
 
@@ -581,8 +577,7 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         return res
 
 
-
-def test_tuple_storage():
+if __name__ == '__main__':
     d = TuplePrefixStorage()
 
     # Adding items
@@ -612,10 +607,10 @@ def test_tuple_storage():
     print(d.check(("example", "single-graph", "example")))  # False
 
     # Merging
-    d1 = TuplePrefixStorage()
+    d1 = FixedKeysPrefixStorage(("domain", "group", "graph"))
     d1.add(("example", "single-graph", "example3"), "OBJ11")
     d1.add(("single-graph", "Planetoid", "Citeseer"), "OBJ12")
-    d1.add(("single-graph", "test"), "OBJ13")
+    d1.add(("single-graph", "Planetoid", "X"), "OBJ13")
     print(d1.size())
     d.merge(d1)
     print(d)
@@ -646,75 +641,3 @@ def test_tuple_storage():
     # # Remapping
     # r = d.remap([2, [0, 1, 3]])
     # print(r.to_json(indent=2))
-
-
-def test_prefix_storage():
-    print("PrefixStorage demo")
-    d = FixedKeysPrefixStorage(("group", "graph", "attribute", "value"))
-
-    # Adding items
-    d.add(("VK", "10K", "sex", 1))
-    d.add(("VK", "10K", "sex", 2))
-    d.add(("VK", "10K", "age", 2))
-    d.add(("VK", "100K", "sex", 1))
-    d.add(("VK", "100K", "sex", 2))
-    d.add(("VK", "100K", "sex", 3))
-
-    # Removing items
-    d.remove(("VK", "100K", "sex", 2))
-    d.remove(("VK", "100K", "sex", 5))  # no effect
-
-    # Checking items
-    print(d.check(("VK", "100K", "sex", 1)))  # True
-    print(d.check(("VK", "100K", "sex", 2)))  # False
-
-    # Merging
-    d1 = FixedKeysPrefixStorage(("group", "graph", "attribute", "value"))
-    d1.add(("VK", "10K", "sex", 2))
-    d1.add(("VK", "10K", "sex", 3))
-    print(d.size())
-    d.merge(d1, ignore_conflicts=True)
-    print(d.size())
-
-    # Iterating items
-    for ps_item in d:
-        print(ps_item)
-
-    # Filtering by key-values
-    f = d.filter({"graph": "10K", "value": 2})
-
-    # Get as JSON
-    print(f.to_json(indent=2))
-
-    # Parse from a folder
-    from aux.utils import root_dir
-    ps_test = FixedKeysPrefixStorage(("folder", "name"))
-    ps_test.fill_from_folder(root_dir / 'src', file_pattern=r".*\.py")
-    print(ps_test.to_json(indent=2))
-
-    # Remapping
-    r = d.remap([2, [0, 1, 3]])
-    print(r.to_json(indent=2))
-
-
-if __name__ == '__main__':
-    test_tuple_storage()
-    # test_prefix_storage()
-
-    d = TuplePrefixStorage()
-
-    # Adding items
-    d.add(("single", "test"), lambda x: x + 1)
-    d.add(("multiple-graphs", "custom", "example_gml"), "OBJ2")
-    d.add(("example", "multiple-graphs", "small"), "OBJ3")
-    d.add(("multiple-graphs", "custom", "example"), "OBJ4")
-    d.add(("single-graph", "Planetoid", "Cora"), "OBJ5")
-    d.add(("single-graph", "example"), "OBJ6")
-    d.add(("single-graph", "custom", "examples1"), "OBJ7")
-    d.add(("single-graph", "custom", "examples", "test1"), "OBJ7")
-    d.add(("single-graph", "custom", "examples", "test2"), "OBJ7")
-    d.add(("single-graph", "custom", "examples", "tests", "test3"), "OBJ7")
-    d.add(("example", "single-graph", "example"), "OBJ8")
-
-    print(d)
-    print(d.to_json(indent=2, default=lambda x: "unserializable"))

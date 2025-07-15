@@ -1,11 +1,8 @@
 import json
 from typing import Union, List, Tuple
 
-from torch import tensor, cat
-from torch_geometric.data.dataset import _get_flattened_data_list
-
 from aux.custom_decorators import timing_decorator
-from aux.utils import short_str
+from aux.utils import short_str, edge_index_to_edge_list
 
 
 class DatasetData:
@@ -334,22 +331,3 @@ class VisiblePart:
             dataset_var_data.labels[ix] = labels[ix]
 
         return dataset_var_data
-
-
-def edge_index_to_edge_list(
-        edge_index: Union[list, tensor],
-        directed: bool = True
-) -> list:
-    if isinstance(edge_index, list):
-        return [edge_index_to_edge_list(x) for x in edge_index]
-
-    assert edge_index.shape[0] == 2
-    edges = list(zip(edge_index[0].tolist(), edge_index[1].tolist()))
-    if directed:
-        return edges
-    else:
-        # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
-        edge_set = set()
-        for i, j in edges:
-            edge_set.add(tuple(sorted((i, j))))
-        return list(edge_set)
