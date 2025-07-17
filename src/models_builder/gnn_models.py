@@ -946,7 +946,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
-        task_type = gen_dataset.domain()
+        # TODO misha it is not task type, change to getting dvc field
+        task_type = "multiple-graphs" if gen_dataset.is_multi() else "single-graph"
         if task_type == "single-graph":
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
@@ -1443,15 +1444,19 @@ class FrameworkGNNModelManager(GNNModelManager):
         :return: dict with model weights. Also function can add in dict model predictions
          and logits
         """
-        self.stats_data = {}
+        stats_data = {}
 
         # Stats: weights, logits, predictions
         if predictions:  # and hasattr(self.gnn, 'get_predictions'):
             predictions = self.run_model(gen_dataset, mask='all', out='predictions')
-            self.stats_data["predictions"] = predictions.detach().cpu().tolist()
+            stats_data["predictions"] = predictions.detach().cpu().tolist()
         if logits:  # and hasattr(self.gnn, 'forward'):
             logits = self.run_model(gen_dataset, mask='all', out='logits')
-            self.stats_data["embeddings"] = logits.detach().cpu().tolist()
+            stats_data["embeddings"] = logits.detach().cpu().tolist()
+
+        # Note: we update all stats data at once because it can be requested from frontend during
+        # the update
+        self.stats_data = stats_data
 
     def send_data(
             self,

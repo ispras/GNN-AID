@@ -8,15 +8,13 @@ from typing import List, Tuple, Union, Dict, Mapping
 # from pydantic.v1.utils import deep_update
 
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DATA_INFO_DIR, \
-    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH
+    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 import os
 from pathlib import Path
-from data_structures.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import FixedKeysPrefixStorage, TuplePrefixStorage
 
 # Hierarchy of dataset naming
 from models_builder.gnn_constructor import GNNConstructor
-
-DATASET_KEYS = ("domain", "group", "graph")
 
 
 class DataInfo:
@@ -47,11 +45,17 @@ class DataInfo:
         with open(DATA_INFO_DIR_data, 'w', encoding='utf-8') as f:
             # IMP suggest create a constant for "dataset_ver_ind" and such strings, same for next 2 functions
             prev_path = ''
-            for path in Path(GRAPHS_DIR).glob('**/raw/.info'):
-                path = path.parts[root_dir_len + 1:-2]
-                path = str(Path(*path)) + '\n'
-                if prev_path != path:
-                    f.write(path)
+            # for path in Path(GRAPHS_DIR).glob('**/.info'):
+            #     path = path.parts[root_dir_len + 1:-1]
+            #     path = str(Path(*path)) + '\n'
+            #     if prev_path != path:
+            #         f.write(path)
+            #         prev_path = path
+
+            for path in Path(GRAPHS_DIR).glob('**/metainfo'):
+                path = path.parent
+                if prev_path != path and (path / 'raw').exists():
+                    f.write(os.path.relpath(path, GRAPHS_DIR) + '\n')
                     prev_path = path
 
     @staticmethod
@@ -86,7 +90,7 @@ class DataInfo:
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         with open(DATA_INFO_DIR_results, 'w', encoding='utf-8') as f:
-            for path in Path(GRAPHS_DIR).glob('**/data.pt'):
+            for path in Path(DATASETS_DIR).glob('**/data.pt'):
                 path = path.parts[root_dir_len + 1:-1]
                 f.write(str(Path(*path)) + '\n')
 
@@ -97,7 +101,7 @@ class DataInfo:
         """
 
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :return: keys_list witch should use specific info about object,
          full_keys_list take all keys (with technical keys),
          dir_structure dict base on save_dir_structure.json without modes keys,
@@ -154,7 +158,7 @@ class DataInfo:
 
         :param path: path of the saved object
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :return: object values based on object path and dict with technical files
         """
         with open(SAVE_DIR_STRUCTURE_PATH) as f:
@@ -199,18 +203,18 @@ class DataInfo:
     def fill_prefix_storage(
             prefix: Tuple,
             file_with_paths: Union[str, Path]
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Fill prefix storage by file with paths
 
         :param prefix: what data and in what order were used to form the path when saving the object
-         Example: modes=("data_root", "data_prepared", "models", "explanations")
+         Example: modes=("datasets", "models", "explanations")
         :param file_with_paths: file with paths of saved objects
         :return: fill prefix storage and dict with description_info about objects use hash
         """
         keys_list, full_keys_list, dir_structure, empty_dir_shift = \
             DataInfo.take_keys_etc_by_prefix(prefix=prefix)
-        ps = PrefixStorage(keys_list)
+        ps = FixedKeysPrefixStorage(keys_list)
         with open(file_with_paths, 'r', encoding='utf-8') as f:
             description_info = {
             }
@@ -222,7 +226,7 @@ class DataInfo:
                 loc_parts_values, description_info_loc = DataInfo.values_list_and_technical_files_by_path_and_prefix(
                     path=line, prefix=prefix,
                 )
-                ps.add(loc_parts_values)
+                ps.add(loc_parts_values, None)
                 description_info = DataInfo.deep_update(description_info, description_info_loc)
         return ps, description_info
 
@@ -251,13 +255,13 @@ class DataInfo:
 
     @staticmethod
     def explainers_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to explainers from a technical file with the paths of all saved explainers.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'explanations_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared", "models", "explanations"),
+            prefix=("datasets", "models", "explanations"),
             file_with_paths=DATA_INFO_DIR_results)
         description_info = DataInfo.description_info_with_paths_to_description_info_with_files_values(
             description_info=description_info, root_path=EXPLANATIONS_DIR,
@@ -266,13 +270,13 @@ class DataInfo:
 
     @staticmethod
     def models_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to models from a technical file with the paths of all saved models.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'models_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared", "models"),
+            prefix=("datasets", "models"),
             file_with_paths=DATA_INFO_DIR_results)
         description_info = DataInfo.description_info_with_paths_to_description_info_with_files_values(
             description_info=description_info, root_path=MODELS_DIR,
@@ -281,25 +285,46 @@ class DataInfo:
 
     @staticmethod
     def data_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [TuplePrefixStorage, dict]:
         """
         Parses the path to raw datasets from a technical file with the paths of all saved raw datasets.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_dir_structure'
-        ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root",),
-            file_with_paths=DATA_INFO_DIR_results)
+
+        # keys_list, full_keys_list, dir_structure, empty_dir_shift = \
+        #     DataInfo.take_keys_etc_by_prefix(prefix=("data_root",))
+        ps = TuplePrefixStorage()
+        with open(DATA_INFO_DIR_results, 'r', encoding='utf-8') as f:
+            for line in f:
+                description_info = "Info not available"
+                path = Path(line.strip())
+                try:
+                    with open(GRAPHS_DIR / path / 'metainfo', 'r') as f:
+                        metainfo = json.load(f)
+                        description_info = f'Graphs {metainfo["count"]}\nNodes: {metainfo["nodes"]}\nDirected: {metainfo["directed"]}\nHetero: {metainfo.get("hetero", False)}'
+                except FileNotFoundError: pass
+                ps.add(path.parts, description_info)
+                # loc_parts_values, description_info_loc = DataInfo.values_list_and_technical_files_by_path_and_prefix(
+                #     path=line, prefix=prefix,
+                # )
+                # ps.add(loc_parts_values)
+                # description_info = DataInfo.deep_update(description_info, description_info_loc)
         return ps
+
+        # ps, description_info = DataInfo.fill_prefix_storage(
+        #     prefix=("data_root",),
+        #     file_with_paths=DATA_INFO_DIR_results)
+        # return ps
 
     @staticmethod
     def data_var_parse(
-    ) -> [PrefixStorage, dict]:
+    ) -> [FixedKeysPrefixStorage, dict]:
         """
         Parses the path to prepared datasets from a technical file with the paths of all saved prepared datasets.
         """
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         ps, description_info = DataInfo.fill_prefix_storage(
-            prefix=("data_root", "data_prepared"),
+            prefix=("datasets",),
             file_with_paths=DATA_INFO_DIR_results)
         return ps
 
@@ -311,7 +336,7 @@ class DataInfo:
         Remove all prepared data for all datasets.
         """
         import shutil
-        for path in Path(GRAPHS_DIR).glob('**/prepared'):
+        for path in Path(DATASETS_DIR).glob('**/prepared'):
             print(path)
             if not dry_run:
                 shutil.rmtree(path)
@@ -447,10 +472,12 @@ class UserCodeInfo:
 
 
 if __name__ == '__main__':
-    DataInfo.refresh_all_data_info()
+
+    # DataInfo.refresh_all_data_info()
     ps, info = DataInfo.models_parse()
-    print(ps.to_json())
-    # ps, info = DataInfo.fill_prefix_storage(modes=("data_root", "data_prepared", "models"),
+    # print(ps.to_json(indent=2))
+    print(ps)
+    # ps, info = DataInfo.fill_prefix_storage(modes=("datasets", "models"),
     #                                         file_with_paths=DATA_INFO_DIR / 'models_dir_structure')
     # print(info)
     # DataInfo.clean_prepared_data()

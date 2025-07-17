@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 from typing import Union
 
@@ -6,7 +7,7 @@ import networkx as nx
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from base.datasets_processing import DatasetInfo
+from datasets.dataset_info import DatasetInfo
 
 
 class DatasetConverter:
@@ -18,31 +19,74 @@ class DatasetConverter:
     @staticmethod
     def format_to_ij(
             info: DatasetInfo,
-            graph_files: [Path],
-            format: str,
+            original_raw_dir: Path,
             output_dir: Path,
             default_node_attr_value: dict = None,
             default_edge_attr_value: dict = None,
     ) -> None:
         """
-        Convert graph data to our 'ij' format.
+        Convert a dataset in popular format to our 'ij' format.
+        It looks for files with extension '.<format>'.
+        It reads data to networkx.(Di)Graph, then writes to files.
+        Uses `default_node_attr_value` and `default_edge_attr_value` to fill missing values.
+        
+        :param info: metainfo for the dataset
+        :param original_raw_dir: directory with original dataset
+        :param output_dir: new raw directory where to write all data
+        :param default_node_attr_value: dict of {attr name -> default value} to use when node
+         attribute is missing
+        :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
+         attribute is missing
         """
-        assert format in DatasetConverter.supported_formats
-        if format in ['.g6', '.s6']:
+        _format = info.format
+        assert _format in DatasetConverter.supported_formats
+        if _format in ['.g6', '.s6']:
             if info.remap:
-                raise RuntimeError(f"Graphs in '{format}' format don't support nodes remapping,"
+                raise RuntimeError(f"Graphs in '{_format}' format don't support nodes remapping,"
                                    f" nodes must be enumerated from 0 to N-1.")
+
+        # Look for obligate files: graph files, a dir with labels
+        label_dir = None
+        graph_files = []
+        for p in original_raw_dir.iterdir():
+            if p.is_file() and p.name.endswith(f'.{_format}'):
+                graph_files.append(p)
+            if p.is_dir() and p.name == 'labels':
+                label_dir = p
+        if len(graph_files) == 0:
+            raise RuntimeError(
+                f"No files with extension '.{_format}' found at {original_raw_dir}. "
+                f"If your graph is heterograph, use 'register_custom_hetero()'")
+        if label_dir is None:
+            raise RuntimeError(f"No folder with name 'labels' found at {original_raw_dir}")
+
+        # Order of files is important, should be consistent with .info, we suppose they are sorted
+        graph_files = sorted(graph_files)
 
         # Read to networkx
         create_using = nx.DiGraph if info.directed else nx.Graph
         graphs = []
         for path in graph_files:
-            graph = read_nx_graph(format, path, create_using=create_using)
+            graph = read_nx_graph(_format, path, create_using=create_using)
             graphs.append(graph)
 
         assert len(graphs) == info.count
 
+        # # Move or copy original contents to a temporary dir
+        # merge_directories(path, self.raw_dir, True)
+        #
+        # # Rename the newly created dir to the original one
+        # tmp.rename(self.raw_dir)
+
+        # Copy attributes and labels files to output dir
+        for name in ['labels', 'node_attributes', 'edge_attributes']:
+            src = original_raw_dir / name
+            if src.exists():
+                dst = output_dir / name
+                shutil.copytree(src, dst)
+
         # Extract attributes
+        # If missing attributes are updated they will override the copied original ones
         all_node_attributes = []
         all_edge_attributes = []
         for graph in graphs:
@@ -52,7 +96,7 @@ class DatasetConverter:
             all_edge_attributes.append(edge_attributes)
 
         # Write graphs and attributes to output dir
-        with open(output_dir / f'{info.name}.ij', 'w') as f:
+        with open(output_dir / 'edges.ij', 'w') as f:
             for graph in graphs:
                 for i, j in graph.edges:
                     f.write(f'{i} {j}\n')
@@ -62,13 +106,13 @@ class DatasetConverter:
             for graph in graphs:
                 edges += graph.number_of_edges()
                 edge_index.append(edges)
-            with open(output_dir / f'{info.name}.edge_index', 'w') as f:
+            with open(output_dir / 'edge_index', 'w') as f:
                 json.dump(edge_index, f)
 
-        node_attr_dir = output_dir / f'{info.name}.node_attributes'
-        node_attr_dir.mkdir()
-        edge_attr_dir = output_dir / f'{info.name}.edge_attributes'
-        edge_attr_dir.mkdir()
+        node_attr_dir = output_dir / 'node_attributes'
+        node_attr_dir.mkdir(exist_ok=True)
+        edge_attr_dir = output_dir / 'edge_attributes'
+        edge_attr_dir.mkdir(exist_ok=True)
         if len(graphs) == 1:
             all_node_attributes = all_node_attributes[0]
             all_edge_attributes = all_edge_attributes[0]
@@ -103,6 +147,15 @@ class DatasetConverter:
         """
         Write a networkx graph to files according to a specified format.
         Attribute files will be created if necessary.
+
+        :param graph: networkx Graph
+        :param format: one of supported formats: "adjlist", "edgelist", "gml", "g6", "s6"
+        :param output_dir: new raw directory where to write all data
+        :param default_node_attr_value: dict of {attr name -> default value} to use when node
+         attribute is missing
+        :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
+         attribute is missing
+        :param name: output graph file will be named as <name>.<format>
         """
         node_attributes, edge_attributes = extract_attributes(
             graph, default_node_attr_value, default_edge_attr_value)
@@ -139,8 +192,8 @@ class DatasetConverter:
         else:
             raise NotImplementedError
 
-        node_attributes_dir = output_dir / f'{name}.node_attributes'
-        edge_attributes_dir = output_dir / f'{name}.edge_attributes'
+        node_attributes_dir = output_dir / 'node_attributes'
+        edge_attributes_dir = output_dir / 'edge_attributes'
 
         if not node_attrs_ok:
             node_attributes_dir.mkdir()
@@ -161,6 +214,13 @@ def extract_attributes(
 ) -> (dict, dict):
     """
     Extract nodes and edges attributes from a networkx graph.
+    Uses `default_node_attr_value` and `default_edge_attr_value` to fill missing values.
+
+    :param graph: networkx Graph
+    :param default_node_attr_value: dict of {attr name -> default value} to use when node
+     attribute is missing
+    :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
+     attribute is missing
     """
     all_node_attributes_names = set()
     all_edge_attributes_names = set()
@@ -176,11 +236,22 @@ def extract_attributes(
     #     edge_attributes[attr] = nx.get_edge_attributes(graph, attr, default_edge_attr_value[attr])
     for n, data in graph.nodes(data=True):
         for attr in all_node_attributes_names:
-            node_attributes[attr][n] = data[attr] if attr in data else default_node_attr_value[attr]
+            if attr in data:
+                node_attributes[attr][n] = data[attr]
+            elif default_node_attr_value and attr in default_node_attr_value:
+                node_attributes[attr][n] = default_node_attr_value[attr]
+            else:
+                raise KeyError(f"Unknown attribute '{attr}' for node {n}. Add it in graph data or"
+                               f" specify default value in default_node_attr_value")
     for i, j, data in graph.edges(data=True):
         for attr in all_edge_attributes_names:
-            edge_attributes[attr][f"{i},{j}"] = data[attr] if attr in data else default_edge_attr_value[attr]
-            # edge_attributes[attr][f"{i},{j}"] = data.get(attr, default_edge_attr_value[attr])
+            if attr in data:
+                edge_attributes[attr][f"{i},{j}"] = data[attr]
+            elif default_edge_attr_value and attr in default_edge_attr_value:
+                edge_attributes[attr][f"{i},{j}"] = default_edge_attr_value[attr]
+            else:
+                raise KeyError(f"Unknown value for attribute '{attr}' for edge ({i},{j}). Add it in"
+                               f" graph data or specify default value in default_edge_attr_value")
     return node_attributes, edge_attributes
 
 
@@ -280,20 +351,19 @@ def example_single():
     g.add_edge(17, 18, weight=3, type='medium')
 
     from data_structures.configs import DatasetConfig
-    from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 
     name = 'example_gml'
-    dc = DatasetConfig('single-graph', 'custom', name)
+    dc = DatasetConfig(('single-graph', 'custom', name))
 
     # Create directory
     root, files_paths = Declare.dataset_root_dir(dc)
     raw = root / 'raw'
-    raw.mkdir(parents=True)
+    raw.mkdir(parents=True, exist_ok=True)
 
     # Write info and labels
     nx.write_gml(g, raw / 'graph.gml')
-    with open(raw / '.info', 'w') as f:
+    with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 1,
@@ -313,11 +383,12 @@ def example_single():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir()
+    (raw / f'{name}.labels').mkdir(exist_ok=True)
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"11": 1, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0}, f)
 
-    custom_dataset = DatasetManager.register_custom(
+    from datasets.known_format_datasets import KnownFormatDataset
+    custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': -1, 'b': -1},
         default_edge_attr_value={'weight': -1, 'type': -1})
@@ -359,22 +430,21 @@ def example_multi():
     g3.add_edge(1, 5, weight=3.2)
 
     from data_structures.configs import DatasetConfig
-    from base.datasets_processing import DatasetManager
     from aux.declaration import Declare
 
     name = 'example_gml'
-    dc = DatasetConfig('multiple-graphs', 'custom', name)
+    dc = DatasetConfig(('multiple-graphs', 'custom', name))
 
     # Create directory
     root, files_paths = Declare.dataset_root_dir(dc)
     raw = root / 'raw'
-    raw.mkdir(parents=True)
+    raw.mkdir(parents=True, exist_ok=True)
 
     # Write info and labels
     nx.write_gml(g1, raw / 'graph1.gml')
     nx.write_gml(g2, raw / 'graph2.gml')
     nx.write_gml(g3, raw / 'graph3.gml')
-    with open(raw / '.info', 'w') as f:
+    with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
             "count": 3,
@@ -394,11 +464,12 @@ def example_multi():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir()
+    (raw / f'{name}.labels').mkdir(exist_ok=True)
     with open(raw / f'{name}.labels' / 'binary', 'w') as f:
         json.dump({"0":1,"1":0,"2":0}, f)
 
-    custom_dataset = DatasetManager.register_custom(
+    from datasets.known_format_datasets import KnownFormatDataset
+    custom_dataset = KnownFormatDataset(
         dc, 'gml',
         default_node_attr_value={'a': 0, 'b': 'alpha'},
         default_edge_attr_value={'weight': 1, 'type': 'mixed'})
@@ -406,5 +477,5 @@ def example_multi():
 
 
 if __name__ == '__main__':
-    # example_single()
-    example_multi()
+    example_single()
+    # example_multi()

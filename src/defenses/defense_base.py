@@ -1,6 +1,6 @@
 from typing import Type
 
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from models_builder.gnn_models import GNNModelManager
 

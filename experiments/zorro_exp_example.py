@@ -8,7 +8,7 @@ from data_structures.configs import ConfigPattern, ModelManagerConfig, ModelModi
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
 
@@ -25,7 +25,7 @@ def test_Zorro(save_nan=True):
     dataset_ifo = {}
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "Planetoid", 'Cora'),
+        full_name=(LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora"),
         dataset_ver_ind=0)
 
     gcn2 = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')

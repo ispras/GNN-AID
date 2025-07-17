@@ -1,4 +1,4 @@
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from explainers.explainers_manager import FrameworkExplainersManager
@@ -12,7 +12,7 @@ def test_neural_analysis(percent_train_class: float = 0.8, percent_test_class: f
     my_device = device('cuda' if is_available() else 'cpu')
 
     print('start loading data======================')
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0

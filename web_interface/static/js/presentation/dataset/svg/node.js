@@ -1,19 +1,30 @@
 // A node with an SVG primitive to draw it
 class SvgNode extends SvgElement {
-    constructor(x, y, r, width, color, text, show, $tip) {
+    constructor(x, y, r, form, width, color, text, show, $tip) {
         super(x, y, r, color, show, $tip)
+        this.form = form // form: circle, rect, polygon
         this.width = width // stroke-width
         this.color = color // default color
+        this.numEdges = null // number of edges in case of a polygon form
         // this.showFeatures = true
         // this.showLabels = true
         this.showEmbeddings = true
         this.showPredictions = true
         this.showTrainMask = true
 
-        this.circle = Svg.circle(x, y, r, color, null, show)
-        this.circle.setAttribute('stroke-width', this.width)
-        this.circle.setAttribute('class', 'graph-node')
-        this.circle.setAttribute('draggable', "true")
+        if (form === "circle") {
+            this.body = Svg.circle(x, y, r, color, null, show)
+        }
+        else if (form.startsWith("poly")) {
+            this.numEdges = form.slice(-1)
+            this.body = Svg.polygon(x, y, r, this.numEdges, color, null, show)
+        }
+        else
+            console.error("Unknown form")
+
+        this.body.setAttribute('stroke-width', this.width)
+        this.body.setAttribute('class', 'graph-node')
+        this.body.setAttribute('draggable', "true")
 
         this.text = Svg.text(text, x, y, 'middle', `${2 / 3 * r}pt`)
         this.text.setAttribute('text-anchor', 'middle')
@@ -31,7 +42,7 @@ class SvgNode extends SvgElement {
         predictions.placeX = (ix, r, count) => this.x + 0.8 * r*(-count/2 + 1/2 + ix)
         predictions.placeY = (ix, r, count) => this.y + 1.6 * r
 
-        let features = this.satellites['features'] = new Satellite("rect", this.r)
+        let features = this.satellites['node_features'] = new Satellite("rect", this.r)
         features.placeX = (ix, r, count) => this.x - 2*r
         features.placeY = (ix, r, count) => this.y - r + ix * 0.8 * r
 
@@ -50,7 +61,7 @@ class SvgNode extends SvgElement {
         //     console.error('null')
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
-        let features = this.satellites['features']
+        let features = this.satellites['node_features']
         features.blocks = []
         let tipText = "Feature:"
         if (feats.length > MAX_FEATURES_SHOWN) {
@@ -153,8 +164,13 @@ class SvgNode extends SvgElement {
     moveTo(x, y) {
         this.x = x
         this.y = y
-        this.circle.setAttribute('cx', this.x)
-        this.circle.setAttribute('cy', this.y)
+        if (this.form === "circle") {
+            this.body.setAttribute('cx', this.x)
+            this.body.setAttribute('cy', this.y)
+        }
+        else {
+            this.body.setAttribute('points', svgPolygon(x, y, this.r*this.s, this.numEdges))
+        }
         this.text.setAttribute('x', this.x)
         this.text.setAttribute('y', this.y)
 
@@ -166,14 +182,17 @@ class SvgNode extends SvgElement {
         super.scale(s)
         let r = SvgElement.scaledRadius(this.r, s)
         let size = 0.8*r // size of element
-        this.circle.setAttribute('r', r)
+        if (this.form === "circle")
+            this.body.setAttribute('r', r)
+        else
+            this.body.setAttribute('points', svgPolygon(this.x, this.y, r, this.numEdges))
         this.text.setAttribute('font-size', `${2 / 3 * r}pt`)
     }
 
     // Set visibility for all elements
     visible(show) {
         this.show = show
-        this.circle.setAttribute('display', show ? "inline" : "none")
+        this.body.setAttribute('display', show ? "inline" : "none")
         this.text.setAttribute('display', show ? "inline" : "none")
 
         for (const satellite of Object.values(this.satellites))
@@ -182,25 +201,39 @@ class SvgNode extends SvgElement {
 
     // Set stroke color
     setColor(color, width) {
-        this.circle.setAttribute('stroke', color)
+        this.body.setAttribute('stroke', color)
         if (width)
-            this.circle.setAttribute('stroke-width', width)
+            this.body.setAttribute('stroke-width', width)
     }
 
     // Set fill color
     setFillColorIdx(colorIdx) {
-        this.circle.setAttribute('fill',
+        this.body.setAttribute('fill',
             colorIdx >= 0 ? `url(#RadialGradient${colorIdx})`: this.color)
     }
 
     // Change stroke color back to default
     dropColor() {
-        this.circle.setAttribute('stroke', this.color)
-        this.circle.setAttribute('stroke-width', this.width)
+        this.body.setAttribute('stroke', this.color)
+        this.body.setAttribute('stroke-width', this.width)
     }
 
     // Change fill color back to default
     dropFillColor() {
-        this.circle.setAttribute('fill', this.color)
+        this.body.setAttribute('fill', this.color)
     }
 }
+
+/// Create an SVG path 'points' which draws a symmetric n-polygon around point pos with radius r
+function svgPolygon(x, y, r, n) {
+    const angleStep = (2 * Math.PI) / n;
+    let points = ""
+    for (let i = 0; i < n; i++) {
+        const angle = i * angleStep - Math.PI / 2; // Start from top (rotate 90 degrees)
+        let xi = x + r * Math.cos(angle)
+        let yi = y + r * Math.sin(angle)
+        points += ` ${xi},${yi}`
+    }
+    return points
+}
+

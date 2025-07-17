@@ -1,6 +1,6 @@
 import warnings
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig
 from models_builder.models_zoo import model_configs_zoo
@@ -11,7 +11,7 @@ def backend_demo():
 
     # Init datasets VK and Cora
     # dataset_cora, _, results_dataset_path_cora = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "Planetoid", 'Cora'),
+    #     full_name=(LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora"),
     #     dataset_ver_ind=0)
     # dataset_comp, _, results_dataset_path_comp = DatasetManager.get_by_full_name(
     #     full_name=("single-graph", "Amazon", "Computers",),
@@ -19,7 +19,7 @@ def backend_demo():
     # )
     # dataset_mg_example, _, results_dataset_path_mg_example = DatasetManager.get_by_full_name(
     #     full_name=("multiple-graphs", "custom", "example",),
-    #     features={'attr': {'type': 'as_is'}},
+    #     features=FeatureConfig(node_attr=['type']),
     #     labeling='binary',
     #     dataset_ver_ind=0
     # )
@@ -46,7 +46,7 @@ def backend_demo():
             domain="multiple-graphs",
             group="custom",
             graph="example"),
-        DatasetVarConfig(features={'attr': {'type': 'as_is'}},
+        DatasetVarConfig(features=FeatureConfig(node_attr=['type']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )

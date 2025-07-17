@@ -206,7 +206,7 @@ def worker_process(
 
             elif get == "data":
                 dataset_data = client.dcBlock.get_dataset_data(part=part)
-                data = json.dumps(dataset_data)
+                data = dataset_data.to_json()
                 logging.info(f"Length of dataset_data: {len(data)}")
                 result = data
 
@@ -215,7 +215,7 @@ def worker_process(
                     result = ''
                 else:
                     dataset_var_data = client.dvcBlock.get_dataset_var_data(part=part)
-                    data = json.dumps(dataset_var_data)
+                    data = dataset_var_data.to_json()
                     logging.info(f"Length of dataset_var_data: {len(data)}")
                     result = data
 
@@ -254,9 +254,9 @@ def worker_process(
                 if do == 'index':
                     type = args.get('type')
                     if type == "saved":
-                        result = client.mloadBlock.get_index()
+                        result = json_dumps(client.mloadBlock.get_index())
                     elif type == "custom":
-                        result = client.mcustomBlock.get_index()
+                        result = json_dumps(client.mcustomBlock.get_index())
                 elif do in ['train', 'reset', 'run', 'save']:
                     result = client.mtBlock.do(do, args)
                 elif do in ['run with attacks']:

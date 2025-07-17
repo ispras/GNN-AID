@@ -41,51 +41,110 @@ class MenuDatasetVarView extends MenuView {
         // $cb.append($("<label></label>").text(`node degree (size=${1})`).attr("for", id))
         // this.$nodeDegreeInput.prop("disabled", true)
 
-        if (this.datasetInfo.count === 1) {
+        if (this.datasetInfo.hetero) {
+            this.$oneHotNodeInput = {}
+            let nodeTypes = Object.keys(this.datasetInfo["nodes"][0])
+
+            // Global
             $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
+            for (const nt of nodeTypes) {
+                $cc.append($("<label></label>").html("<h5>" + nt + "</h5>"))
 
-            $cb = $("<div></div>").attr("class", "control-block")
-            $cc.append($cb)
-            id = this.idPrefix + "-node-1hot-input"
-            size = this.datasetInfo["nodes"].sum()
-            this.$oneHotNodeInput = $("<input>").attr("type", "checkbox").attr("id", id)
-            $cb.append(this.$oneHotNodeInput)
-            $cb.append($("<label></label>").text(`1-hot input (size=${size})`).attr("for", id))
-        }
-        else
-            this.$oneHotNodeInput = null
+                $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                id = this.idPrefix  + '-' + nt + "-node-1hot-input"
+                size = this.datasetInfo["nodes"][0][nt]
+                this.$oneHotNodeInput[nt] = $("<input>").attr("type", "checkbox").attr("id", id)
+                $cb.append(this.$oneHotNodeInput[nt])
+                $cb.append($("<label></label>").text(`1-hot input (size=${size})`).attr("for", id))
+            }
 
-        $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
-        let attrs = this.datasetInfo["node_attributes"]["names"]
-        let values = this.datasetInfo["node_attributes"]["values"]
-        if (this.$oneHotNodeInput && attrs.length === 0) {
-            this.$oneHotNodeInput.prop("checked", true)
-            this.$oneHotNodeInput.click((e) => e.preventDefault())
+            // Node attributes
+            $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
+            for (const nt of nodeTypes) {
+                $cc.append($("<label></label>").html("<h5>" + nt + "</h5>"))
+
+                let attrs = this.datasetInfo["node_attributes"][nt]["names"]
+                let values = this.datasetInfo["node_attributes"][nt]["values"]
+                if (this.$oneHotNodeInput[nt] && attrs.length === 0) {
+                    this.$oneHotNodeInput[nt].prop("checked", true)
+                    this.$oneHotNodeInput[nt].click((e) => e.preventDefault())
+                } else {
+                    let i = 0
+                    for (const attr of attrs) {
+                        size = 1
+                        switch (this.datasetInfo["node_attributes"][nt]["types"][i]) {
+                            case "continuous":
+                                size = 1
+                                break
+                            case "categorical":
+                                size = values[i].length
+                                break
+                            case "vector":
+                                size = values[i]
+                                break
+                            case "other":
+                                size = 0  // FIXME check
+                        }
+                        ++i
+                        if (size === 0)
+                            continue
+                        let $cb = $("<div></div>").attr("class", "control-block")
+                        $cc.append($cb)
+                        id = this.idPrefix + '-' + nt + "-attribute-" + nameToId(attr)
+                        $cb.append($("<input>").attr("type", "checkbox").attr("id", id))
+                        $cb.append($("<label></label>").text(attr + ` (size=${size})`).attr("for", id))
+                    }
+                    $('#' + this.idPrefix + "-attribute-" + nameToId(attrs[0])).prop('checked', true)
+                }
+            }
         }
         else {
-            let i = 0
-            for (const attr of attrs) {
-                let $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-attribute-" + nameToId(attr)
-                size = 1
-                switch (this.datasetInfo["node_attributes"]["types"][i]) {
-                    case "continuous":
-                        size = 1
-                        break
-                    case "categorical":
-                        size = values[i].length
-                        break
-                    case "other":
-                        size = values[i]
-                }
-                $cb.append($("<input>").attr("type", "checkbox").attr("id", id))
-                $cb.append($("<label></label>").text(attr + ` (size=${size})`).attr("for", id))
-                ++i
-            }
-            $('#' + this.idPrefix + "-attribute-" + nameToId(attrs[0])).prop('checked', true)
-        }
+            // Global if single graph
+            if (this.datasetInfo.count === 1) {
+                $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
 
+                $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                id = this.idPrefix + "-node-1hot-input"
+                size = this.datasetInfo["nodes"].sum()
+                this.$oneHotNodeInput = $("<input>").attr("type", "checkbox").attr("id", id)
+                $cb.append(this.$oneHotNodeInput)
+                $cb.append($("<label></label>").text(`1-hot input (size=${size})`).attr("for", id))
+            } else
+                this.$oneHotNodeInput = null
+
+            // Node attributes
+            $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
+            let attrs = this.datasetInfo["node_attributes"]["names"]
+            let values = this.datasetInfo["node_attributes"]["values"]
+            if (this.$oneHotNodeInput && attrs.length === 0) {
+                this.$oneHotNodeInput.prop("checked", true)
+                this.$oneHotNodeInput.click((e) => e.preventDefault())
+            } else {
+                let i = 0
+                for (const attr of attrs) {
+                    let $cb = $("<div></div>").attr("class", "control-block")
+                    $cc.append($cb)
+                    id = this.idPrefix + "-attribute-" + nameToId(attr)
+                    size = 1
+                    switch (this.datasetInfo["node_attributes"]["types"][i]) {
+                        case "continuous":
+                            size = 1
+                            break
+                        case "categorical":
+                            size = values[i].length
+                            break
+                        case "vector":
+                            size = values[i]
+                    }
+                    $cb.append($("<input>").attr("type", "checkbox").attr("id", id))
+                    $cb.append($("<label></label>").text(attr + ` (size=${size})`).attr("for", id))
+                    ++i
+                }
+                $('#' + this.idPrefix + "-attribute-" + nameToId(attrs[0])).prop('checked', true)
+            }
+        }
         // 2. class labels
         $cc.append($("<div></div>").attr("class", "menu-separator"))
 
@@ -138,16 +197,16 @@ class MenuDatasetVarView extends MenuView {
         }
 
         // Fill features according to format
-        let features = {"attr": {}}
+        let features = {"node_struct": [], "node_attr": []}
         // if (this.$nodeClusteringInput.is(":checked"))
-        //     features["str_f"] = "c"
+        //     features["node_struct"].push("clustering")
         // if (this.$nodeDegreeInput.is(":checked"))
-        //     features["str_f"] = "d"
+        //     features["node_struct"].push("degree")
         if (this.$oneHotNodeInput && this.$oneHotNodeInput.is(":checked"))
-            features["str_g"] = "one_hot"
+            features["node_struct"].push("one_hot")
         for (let i = 0; i < attrs.length; i++) {
             if (attrsChecked[i])
-                features["attr"][attrs[i]] = this.datasetInfo["node_attributes"]["types"][i]
+                features["node_attr"].push(attrs[i])
         }
         this.labeling = $("input[name='dataset-variable-labelings']:checked").val()
 

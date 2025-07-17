@@ -1,38 +1,30 @@
 {
   "data_root": {
-    "domain": {
-      "add_key_name_flag": false,
-      "files_info": null
-    },
-    "group": {
-      "add_key_name_flag": false,
-      "files_info": null
-    },
-    "graph": {
+    "full_name": {
       "add_key_name_flag": false,
       "files_info": null
     }
   },
-
-  "data_prepared": {
-    "prepared": {
-      "add_key_name_flag": null,
-      "files_info": null
-    },
-    "features": {
+  "datasets": {
+    "full_name": {
       "add_key_name_flag": true,
-      "files_info": null
+      "files_info": [
+        {
+          "format": ".json",
+          "file_name": "origin"
+        }
+      ]
     },
-    "labeling": {
+    "var": {
       "add_key_name_flag": true,
-      "files_info": null
-    },
-    "dataset_ver_ind": {
-      "add_key_name_flag": true,
-      "files_info": null
+      "files_info": [
+        {
+          "format": ".json",
+          "file_name": "origin"
+        }
+      ]
     }
   },
-
   "models": {
     "gnn": {
       "add_key_name_flag": true,

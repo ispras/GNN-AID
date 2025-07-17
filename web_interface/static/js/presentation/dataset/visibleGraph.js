@@ -60,7 +60,7 @@ function createSetOfColors(numColors, $svg) {
 // Representation of a visible part of dataset - whole graph or a neighborhood.
 // Responsible for drawing and interaction with user.
 class VisibleGraph {
-    static SATELLITES = ["features", "labels", "predictions", "embeddings", "train-test-mask"]
+    static SATELLITES = ["node_features", "labels", "predictions", "embeddings", "train-test-mask"]
 
     constructor(datasetInfo, svgPanel) {
         this.datasetInfo = datasetInfo
@@ -80,12 +80,13 @@ class VisibleGraph {
         this.pad = 30 // additional space around elements to SVG border
         this.scale = 100 // scale to adjust element
         this.scaleMax = 1e4 // maximal scale
-        this.scaleMin = 1e0 // minimal scale
+        this.scaleMin = 1e-1 // minimal scale
         this.zoomFactor = 1.15 // scaling coefficient on zoom
         this.screenPos = new Vec(-300, -400) // left-top of part of SVG visible on screen
         this.svgPos = new Vec(0, 0) // SVG viewBox left-top
         this.nodeColor = '#fff'
         this.edgeColor = '#000'
+        this.backgroundColor = "#e7e7e7"
 
         // Variables
         this.datasetData = null // Nodes, edges, attributes, don't edit - it is changed from outside
@@ -103,6 +104,7 @@ class VisibleGraph {
         this.onNodeClick = null // callback when node is clicked
         this.beforeInit = null // callback when reinit() is called
         this.afterInit = null // callback when reinit() is called
+        this.ready = false // flag whether structures are ready to be updated, e.g. for setSatellites()
         this.alive = null // needed to break draw cycle when destroying
         this.nodesVisible = true // flag whether to show nodes
         this.nodeGrabbed = null // node which is currently dragged (SVG element)
@@ -210,7 +212,7 @@ class VisibleGraph {
         // Permanent part
         this.handleDragging()
         this.createListeners()
-        $(this.svgElement).css("background-color", "#e7e7e7")
+        // $(this.svgElement).css("background-color", "#e7e7e7")
 
         await this._build()
     }
@@ -248,6 +250,7 @@ class VisibleGraph {
             this.alive = true
             this.drawCycle()
         }
+        $(this.svgElement).css("background-color", this.backgroundColor)
     }
 
     // Variable part of drop - to be overridden
@@ -279,6 +282,7 @@ class VisibleGraph {
 
     // Variable part of initVar - to be overridden
     _buildVar() {
+        this.ready = true
         for (const satellite of VisibleGraph.SATELLITES)
             this.setSatellite(satellite)
 
@@ -299,6 +303,7 @@ class VisibleGraph {
 
     // Drops and builds with other parameters, handling Var part properly, keeping listeners
     async _reinit() {
+        this.ready = false
         this._dropVar()
         this._drop()
 
@@ -346,17 +351,22 @@ class VisibleGraph {
         this.layout.setFreeze(freeze)
     }
 
-    // Get degree of a node of a graph
+    // Get degree of a node of a graph - for layout
     getDegree(node, graph) {
         console.error('Not implemented generally')
     }
 
-    // Get a set of all nodes
+    // Get a set of all nodes - for layout
     getNodes() {
         console.error('Not implemented generally')
     }
 
-    // Get a list of all edges
+    // Get a total number of nodes - for layout
+    getNumNodes() {
+        console.error('Not implemented generally')
+    }
+
+    // Get a list of all edges - for layout
     getEdges() {
         console.error('Not implemented generally')
     }
@@ -387,7 +397,7 @@ class VisibleGraph {
     // Get a list of attributes values for a node (of a graph)
     getNodeAttrs(node, graph=0) {
         let nodeAttrs = this.datasetData["node_attributes"]
-        if (nodeAttrs == null || Object.keys(nodeAttrs).length === 0)
+        if (nodeAttrs == null)
             return null
         let res = []
         for (const a of this.datasetInfo["node_attributes"]["names"]) {
@@ -408,7 +418,7 @@ class VisibleGraph {
         // Add node primitives
         let g = this.svgPanel.add("nodes")
         for (const node of Object.values(this.nodePrimitives)) {
-            g.appendChild(node.circle)
+            g.appendChild(node.body)
             g.appendChild(node.text)
         }
 
@@ -419,7 +429,8 @@ class VisibleGraph {
 
     // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
     setSatellite(satellite, on=true) {
-        if (this.nodePrimitives == null) // E.g. we rebuild graph during training
+        if (!this.ready)
+            // Could happen when we reinit graph while satellites data is being received
             return
         // Replace satellite elements
         let $g = this.svgPanel.get("nodes-" + satellite)
@@ -476,16 +487,16 @@ class VisibleGraph {
     }
 
     // Create a node SVG (will be added later together)
-    createNodePrimitive(element, i, radius, width, color, show) {
-        let node = new SvgNode(0, 0, radius, width, color, i.toString(), show, this.svgPanel.$tip)
+    createNodePrimitive(element, i, radius, form, width, color, show) {
+        let node = new SvgNode(0, 0, radius, form, width, color, i.toString(), show, this.svgPanel.$tip)
         this.nodePrimitives[i] = node
 
         // Add listeners
-        node.circle.onmousedown = (e) => this.nodeGrabbed = i
+        node.body.onmousedown = (e) => this.nodeGrabbed = i
         if (this.onNodeClick) {
-            node.circle.onclick = (e) => this.onNodeClick("left", i)
-            node.circle.oncontextmenu = (e) => this.onNodeClick("right", i)
-            node.circle.ondblclick = (e) => this.onNodeClick("double", i)
+            node.body.onclick = (e) => this.onNodeClick("left", i)
+            node.body.oncontextmenu = (e) => this.onNodeClick("right", i)
+            node.body.ondblclick = (e) => this.onNodeClick("double", i)
         }
     }
 

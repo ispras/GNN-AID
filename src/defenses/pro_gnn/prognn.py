@@ -1,4 +1,5 @@
 from typing import Iterable, Any, Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,10 +10,11 @@ from torch.optim.optimizer import required
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
-from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from defenses.poison_defense import PoisonDefender
 from src.base.datasets_processing import GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
+
+from defenses.poison_defense import PoisonDefender
 
 
 def feature_smoothing(

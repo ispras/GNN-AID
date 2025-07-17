@@ -9,7 +9,7 @@ from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETE
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
@@ -209,9 +209,9 @@ def test_attack_defense():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     # full_name = ("single-graph", "Amazon", 'Photo')
     # full_name = ("single-graph", "Planetoid", 'CiteSeer')
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
@@ -222,25 +222,25 @@ def test_attack_defense():
     )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+    #     full_name=("example", "single-graph", "example",),
+    #     features=FeatureConfig(node_attr=['a', 'b']),
     #     labeling='threeClasses',
     #     dataset_ver_ind=0
     # )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
+    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
     #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
+    #     features={'attr': {
     #         # "('personal', 'political')": 'one_hot',
     #         # "('occupation', 'type')": 'one_hot', # Don't work now
     #         # "('relation',)": 'one_hot',
     #         # "('age',)": 'one_hot',
     #         "('sex',)": 'one_hot',
     #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
+    #     # features=FeatureConfig(node_attr=['sex']),
     #     labeling='sex1',
     #     dataset_ver_ind=0
     # )
@@ -523,7 +523,7 @@ def test_attack_defense():
 def test_meta():
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -595,7 +595,7 @@ def test_nettack_evasion():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -724,7 +724,7 @@ def test_qattack():
     my_device = device('cpu')
 
     # Load dataset
-    # full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     full_name = ('single-graph', 'pytorch-geometric-other', 'KarateClub')
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -831,9 +831,9 @@ def test_jaccard():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
@@ -842,25 +842,25 @@ def test_jaccard():
     )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+    #     full_name=("example", "single-graph", "example",),
+    #     features=FeatureConfig(node_attr=['a', 'b']),
     #     labeling='threeClasses',
     #     dataset_ver_ind=0
     # )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
+    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
     #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
+    #     features={'attr': {
     #         # "('personal', 'political')": 'one_hot',
     #         # "('occupation', 'type')": 'one_hot', # Don't work now
     #         # "('relation',)": 'one_hot',
     #         # "('age',)": 'one_hot',
     #         "('sex',)": 'one_hot',
     #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
+    #     # features=FeatureConfig(node_attr=['sex']),
     #     labeling='sex1',
     #     dataset_ver_ind=0
     # )
@@ -978,7 +978,7 @@ def test_jaccard():
 
 def test_adv_training():
     my_device = device('cpu')
-    # full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     full_name = ("single-graph", "Amazon", 'Photo')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
@@ -1055,7 +1055,7 @@ def test_pgd():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1147,7 +1147,7 @@ def test_pgd():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1250,7 +1250,7 @@ def test_pgd_structure():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1339,7 +1339,7 @@ def test_pgd_structure():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1439,7 +1439,7 @@ def test_fgsm():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1529,7 +1529,7 @@ def test_fgsm():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1630,7 +1630,7 @@ def test_rewatt():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1720,7 +1720,7 @@ def test_rewatt():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0

@@ -156,24 +156,48 @@ class PanelDatasetView extends PanelView {
         // html += `<br>Size: ${N} nodes, ${E} edges`
         html += `<br>Directed: ${this.datasetInfo.directed}`
         // html += `<br>Weighted: ${this.weighted}`
-        html += `<br>Attributes:`
+        html += `<br>Node attributes:`
 
         // List attributes or their number
-        let attributesNames = this.datasetInfo["node_attributes"]["names"]
-        let attributesTypes = this.datasetInfo["node_attributes"]["types"]
-        let attributesValues = this.datasetInfo["node_attributes"]["values"]
-        if (attributesNames.length > 30)
-            html += ` ${attributesNames.length} (not shown)`
-        else {
-            let $attrList = $("<ul></ul>")
-            for (let i = 0; i < Math.min(10, attributesNames.length); i++) {
-                let item = '"' + attributesNames[i] + '"'
-                item += ' - ' + attributesTypes[i]
-                item += ', values: [' + attributesValues[i] + ']'
-                let $item = $("<li></li>").text(item)
-                $attrList.append($item)
+        if (this.datasetInfo.hetero) {
+            let nodeTypes = Object.keys(this.datasetInfo["nodes"][0])
+            for (const nt of nodeTypes) {
+                html += `<br><i>${nt}</i>`
+                let attributesNames = this.datasetInfo["node_attributes"][nt]["names"]
+                let attributesTypes = this.datasetInfo["node_attributes"][nt]["types"]
+                let attributesValues = this.datasetInfo["node_attributes"][nt]["values"]
+                if (attributesNames.length > 30)
+                    html += ` ${attributesNames.length} (not shown)`
+                else {
+                    let $attrList = $("<ul></ul>")
+                    for (let i = 0; i < Math.min(10, attributesNames.length); i++) {
+                        let item = '"' + attributesNames[i] + '"'
+                        item += ' - ' + attributesTypes[i]
+                        item += ', values: [' + attributesValues[i] + ']'
+                        let $item = $("<li></li>").text(item)
+                        $attrList.append($item)
+                    }
+                    html += $attrList.prop('outerHTML')
+                }
             }
-            html += $attrList.prop('outerHTML')
+        }
+        else {
+            let attributesNames = this.datasetInfo["node_attributes"]["names"]
+            let attributesTypes = this.datasetInfo["node_attributes"]["types"]
+            let attributesValues = this.datasetInfo["node_attributes"]["values"]
+            if (attributesNames.length > 30)
+                html += ` ${attributesNames.length} (not shown)`
+            else {
+                let $attrList = $("<ul></ul>")
+                for (let i = 0; i < Math.min(10, attributesNames.length); i++) {
+                    let item = '"' + attributesNames[i] + '"'
+                    item += ' - ' + attributesTypes[i]
+                    item += ', values: [' + attributesValues[i] + ']'
+                    let $item = $("<li></li>").text(item)
+                    $attrList.append($item)
+                }
+                html += $attrList.prop('outerHTML')
+            }
         }
         return html
     }

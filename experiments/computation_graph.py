@@ -9,7 +9,7 @@ from torch_geometric.nn import MessagePassing
 
 from data_structures.configs import ModelConfig
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNStructure
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 
 Node = namedtuple('Node', ('name', 'inputs', 'attr', 'op'))
 
@@ -672,14 +672,14 @@ if __name__ == '__main__':
     # single
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=("single-graph", "custom", 'example'),
-        features={'attr': {'a': 'as_is'}},
+        features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0)
 
     # # multi
     # dataset, data, results_dataset_path = DatasetManager.get_pytorch_geometric(
     #     full_name=("multiple-graphs", "custom", 'example'),
-    #     features={'attr': {'type': 'as_is'}},
+    #     features=FeatureConfig(node_attr=['type']),
     #     labeling='binary',
     #     dataset_ver_ind=0)
 

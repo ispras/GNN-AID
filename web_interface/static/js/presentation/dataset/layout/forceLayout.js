@@ -42,7 +42,7 @@ class ForceLayout extends Layout {
     setVisibleGraph(visibleGraph) {
         console.assert(visibleGraph instanceof Graph)
         this.edges = visibleGraph.getEdges()
-        this.numNodes = visibleGraph.numNodes
+        this.numNodes = visibleGraph.getNumNodes()
         super.setVisibleGraph(visibleGraph)
     }
 
@@ -225,7 +225,7 @@ class ForceLayout extends Layout {
       	      delta.mul((add === 0) ? 0 : this.force_r(add)/add)
       	      this.v[i].add(delta)
            }
-       }
+        }
 
         //calculating attracting forces
  	    for (const [i, j] of edges) {
@@ -236,7 +236,8 @@ class ForceLayout extends Layout {
             this.v[i].sub(delta)
             this.v[j].add(delta)
         }
-         //recompute positions
+
+ 	    //recompute positions
         this.moving = false
         for (const i of nodes) {
             if (i === this.lockedNode) {
@@ -247,15 +248,15 @@ class ForceLayout extends Layout {
             delta.mul((add === 0.0) ? 1 : 1/add)
             delta.mul((add > this.temp) ? this.temp : add)
             this.pos[i].add(delta)
-       }
+        }
         //check if structure is still moving
-       if ((this.temp > 0.005)) {
-           this.moving = true
-       }
-    if (!this.lockedNode) {
-        this.cool()
-    }
-    this.iteration += 1
+        if ((this.temp > 0.005)) {
+            this.moving = true
+        }
+        if (!this.lockedNode) {
+            this.cool()
+        }
+        this.iteration += 1
     }
 
 }

@@ -84,6 +84,10 @@ class Graph extends VisibleGraph {
         return nodes
     }
 
+    getNumNodes() {
+        return this.numNodes
+    }
+
     getEdges() {
         return this.edges
     }
@@ -155,7 +159,7 @@ class Graph extends VisibleGraph {
         // Nodes
         for (let n=0; n<this.numNodes; n++)
             this.createNodePrimitive(this.svgElement, n,
-                this.nodeRadius, this.nodeStrokeWidth, this.nodeColor, true)
+                this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
 
         super.createPrimitives()
     }
@@ -167,8 +171,9 @@ class Graph extends VisibleGraph {
     }
 
     showEdges(show) {
-        for (const svg of this.edgePrimitivesBatches[0])
-            svg.visible(show)
+        for (const batch of Object.values(this.edgePrimitivesBatches))
+            for (const svg of batch)
+                svg.visible(show)
     }
 
 }
