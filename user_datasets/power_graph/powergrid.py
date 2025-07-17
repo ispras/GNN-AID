@@ -187,7 +187,7 @@ class PowerGrid(InMemoryDataset):
                 # ydata = torch.tensor(of_mc[i][0], dtype=torch.int, device=device).view(1, -1)
             # Fill Data object, 1 Data object -> 1 graph
 
-            data = Data(x=x, edge_index=edge_iw, edge_attr=f_totw, y=ydata.to(torch.float),
+            data = Data(x=x, edge_index=edge_iw, edge_attr=f_totw, y=ydata.to(torch.long).squeeze(),
                         edge_mask=e_mask_post, idx=index)
             # index+=1
             # if ydata == 0:
