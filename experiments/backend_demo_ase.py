@@ -126,19 +126,6 @@ def test_attack_defense_small():
     )
 
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
-    # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
-
-    warnings.warn("Start training")
-    dataset.train_test_split()
-
-    gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    gnn_model_manager.train_model(
-        gen_dataset=dataset, steps=steps_epochs,
-        save_model_flag=save_model_flag,
-        metrics=[Metric("F1", mask='train', average=None)]
-    )
-
-    warnings.warn("Training was successful")
 
     metric_loc_fgsm = gnn_model_manager.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
@@ -169,7 +156,7 @@ def test_attack_defense_small():
     gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    # dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
     gnn_model_manager.train_model(
@@ -192,5 +179,5 @@ def test_attack_defense_small():
 if __name__ == '__main__':
     import random
 
-    random.seed(10)
+    random.seed(11)
     test_attack_defense_small()
