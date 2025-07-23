@@ -557,7 +557,8 @@ class FeatureConfig(Config):
         """ Sum of feature elements. NOTE, it is not the length of result feature vector.
         """
         res = 0
-        for item in self.__dict__.values():
+        for key in ["node_struct", "node_attr", "edge_attr", "graph_attr"]:
+            item = self[key]
             if item is None:
                 continue
             if isinstance(item, str):

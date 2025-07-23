@@ -23,8 +23,11 @@ class MenuModelTrainerView extends MenuView {
         this.appendAcceptBreakButtons()
         // this.$acceptDiv.hide()
 
-        this.trainStepFlag = arg["functions"].includes("train_1_step")
-        this.trainFullFlag = arg["functions"].includes("train_full")
+        // fixme outdated
+        // this.trainStepFlag = arg["functions"].includes("train_1_step")
+        // this.trainFullFlag = arg["functions"].includes("train_full")
+
+        this.trainStepFlag = true
 
         await this.updateTrainerMenu()
     }
@@ -168,12 +171,12 @@ class MenuModelTrainerView extends MenuView {
             .attr("title", "Train the model using 'train_1_step' function by calling it number of epochs times")
             .prop("disabled", !this.trainStepFlag)
         $cb.append(this.$trainByOne)
-        this.$trainFull = $("<button></button>")
-            .attr("id", "model-button-trainFull").text("Train full")
-            .css("margin-right", "5px")
-            .attr("title", "Train model by calling 'train_full' function")
-            .prop("disabled", !this.trainFullFlag)
-        $cb.append(this.$trainFull)
+        // this.$trainFull = $("<button></button>")
+        //     .attr("id", "model-button-trainFull").text("Train full")
+        //     .css("margin-right", "5px")
+        //     .attr("title", "Train model by calling 'train_full' function")
+        //     .prop("disabled", !this.trainFullFlag)
+        // $cb.append(this.$trainFull)
 
         this.progressBar = new ProgressBar()
         this.progressBar.visible(true)
@@ -225,8 +228,8 @@ class MenuModelTrainerView extends MenuView {
             }
         }
 
-        this.$trainByOne.click(() => trainFunc(this.$trainByOne, "Train by 1 step", '1_step'))
-        this.$trainFull.click(() => trainFunc(this.$trainFull, "Train full", 'full'))
+        this.$trainByOne.click(() => trainFunc(this.$trainByOne, "Train", '1_step'))
+        // this.$trainFull.click(() => trainFunc(this.$trainFull, "Train full", 'full'))
 
         this.$save.click(async () => await this.onsave())
     }

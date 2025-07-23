@@ -114,7 +114,7 @@ class ExplainerLoadBlock(Block):
         DataInfo.refresh_explanations_dir_structure()
         index, self.info = DataInfo.explainers_parse()
 
-        ps = index.filter(dict(zip(keys_list, values_info)))
+        ps = index.filter(values_info)
         # return [ps.to_json(), json_dumps(self.info)] FIXME misha parsing error on front
         return [ps.to_json(), '{}']
 

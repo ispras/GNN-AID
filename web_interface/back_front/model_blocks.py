@@ -353,6 +353,7 @@ class ModelTrainerBlock(Block):
         self.gen_dataset = gen_dataset
         self.model_manager = gmm
 
+        # fixme misha do we need it?
         return self.model_manager.get_model_data()
 
     def _finalize(

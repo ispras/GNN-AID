@@ -523,6 +523,9 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         """
         Build a new FixedKeysPrefixStorage containing a subtree starting with a given key.
         """
+        # assert all([a == b for a, b in zip(key.keys(),self._keys)])
+        # keys = [key[k] for k in self._keys[len(key):]]
+        # tps = super().filter(keys)
         tps = super().filter(key)
         ps = FixedKeysPrefixStorage(self._keys[len(key):])
         ps.content = tps.content
