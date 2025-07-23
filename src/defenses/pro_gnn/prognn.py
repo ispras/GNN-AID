@@ -11,7 +11,7 @@ from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
 from defenses.poison_defense import PoisonDefender
-from src.base.datasets_processing import GeneralDataset
+from datasets.datasets_manager import GeneralDataset
 from src.models_builder.models_zoo import model_configs_zoo
 
 from defenses.poison_defense import PoisonDefender

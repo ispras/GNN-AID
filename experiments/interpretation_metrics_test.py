@@ -12,7 +12,7 @@ from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
-from src.base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 from defenses.jaccard_defense import jaccard_def
 from attacks.metattack import meta_gradient_attack
@@ -41,10 +41,10 @@ def get_model_by_name(model_name, dataset):
     return model_configs_zoo(dataset=dataset, model_name=model_name)
 
 
-def explainer_run_config_for_node(explainer_name, node_ind, explainer_kwargs=None):
+def explainer_run_config_for_obj(explainer_name, obj_ind, explainer_kwargs=None):
     if explainer_kwargs is None:
         explainer_kwargs = {}
-    explainer_kwargs["element_idx"] = node_ind
+    explainer_kwargs["element_idx"] = obj_ind
     return ConfigPattern(
         _config_class="ExplainerRunConfig",
         _config_kwargs={
@@ -62,8 +62,8 @@ def explainer_run_config_for_node(explainer_name, node_ind, explainer_kwargs=Non
 @retry(max_tries=5)
 @timing_decorator
 def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=0):
-    steps_epochs = 200
-    num_explaining_nodes = 5
+    steps_epochs = 50  # FOR POWERGRAPH 50, PREVIOUS - 200
+    num_explaining_objs = 5
     explaining_metrics_params = {
         "stability_graph_perturbations_nums": 3,
         "stability_feature_change_percent": 0.05,
@@ -89,38 +89,42 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     metrics_path = root_dir / "experiments" / "explainers_metrics"
     dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_metrics.json"
 
+    subdataset = None
+    if len(dataset_full_name) > 3:
+        subdataset = dataset_full_name[-1]
+        dataset_full_name = dataset_full_name[:3]
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=dataset_full_name,
-        dataset_ver_ind=0
+        dataset_ver_ind=0,
+        init_kwargs={'name': subdataset}
     )
     explainer_kwargs = explainer_kwargs_by_explainer_name[explainer_name]
 
     restart_experiment = False
     if restart_experiment:
 
-        node_indices = random.sample(range(dataset.data.x.shape[0]), num_explaining_nodes)
-        result_dict = {
-            "num_nodes": num_explaining_nodes,
-            "nodes": list(node_indices),
+        expl_indices = random.sample(range(dataset.data.y.shape[0]), num_explaining_objs)
+        result_dict = {   # Graph Classification -> objs = graphs; Node Classification -> objs = nodes
+            "num_objs": num_explaining_objs,
+            "obj_indices": list(expl_indices),
             "metrics_params": explaining_metrics_params,
             "explainer_kwargs": explainer_kwargs
         }
         # save_result_dict(dataset_metrics_path, result_dict)
     else:
         result_dict = load_result_dict(dataset_metrics_path)
-        if "nodes" not in result_dict:
-            node_indices = random.sample(range(dataset.data.x.shape[0]), num_explaining_nodes)
-            result_dict["nodes"] = list(node_indices)
+        if "obj_indices" not in result_dict:
+            expl_indices = random.sample(range(dataset.data.y.shape[0]), num_explaining_objs)
+            result_dict["obj_indices"] = list(expl_indices)
             result_dict["metrics_params"] = explaining_metrics_params
-            result_dict["num_nodes"] = num_explaining_nodes
+            result_dict["num_objs"] = num_explaining_objs
             result_dict["explainer_kwargs"] = explainer_kwargs
             save_result_dict(dataset_metrics_path, result_dict)
-        node_indices = result_dict["nodes"]
+        obj_indices = result_dict["obj_indices"]
         explaining_metrics_params = result_dict["metrics_params"]
 
-
-    node_id_to_explainer_run_config = \
-        {node_id: explainer_run_config_for_node(explainer_name, node_id, explainer_kwargs) for node_id in node_indices}
+    obj_id_to_explainer_run_config = \
+        {obj_id: explainer_run_config_for_obj(explainer_name, obj_id, explainer_kwargs) for obj_id in obj_indices}
 
     experiment_name_to_experiment = [
         ("Unprotected", calculate_unprotected_metrics),
@@ -143,7 +147,7 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
                 steps_epochs,
                 explaining_metrics_params,
                 dataset,
-                node_id_to_explainer_run_config,
+                obj_id_to_explainer_run_config,
                 model_name,
                 iteration=iter
             )
@@ -158,22 +162,26 @@ def calculate_unprotected_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
-    if explainer_name == 'GSAT':
-        lr = 0.01
-    else:
-        lr = 0.001
+    # if explainer_name == 'GSAT':
+    #     lr = 0.01
+    # else:
+    #     lr = 0.001
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -236,7 +244,7 @@ def calculate_unprotected_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -246,26 +254,32 @@ def calculate_jaccard_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -325,7 +339,7 @@ def calculate_jaccard_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -335,26 +349,32 @@ def calculate_adversial_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -427,7 +447,7 @@ def calculate_adversial_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -437,26 +457,32 @@ def calculate_gnnguard_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -476,7 +502,7 @@ def calculate_gnnguard_defence_metrics(
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
             "lr": 0.01,
-            "train_iters": 200,
+            "train_iters": 50,  # FOR POWERGRAPH 50, PREVIOUS - 200
             # "model": gnn_model_manager.gnn
         }
     )
@@ -519,7 +545,7 @@ def calculate_gnnguard_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -529,26 +555,32 @@ def calculate_autoencoder_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -608,7 +640,7 @@ def calculate_autoencoder_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -618,26 +650,32 @@ def calculate_gradientregularization_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -697,7 +735,7 @@ def calculate_gradientregularization_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -707,26 +745,32 @@ def calculate_quantization_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -786,7 +830,7 @@ def calculate_quantization_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -796,26 +840,32 @@ def calculate_distillation_defence_metrics(
         steps_epochs,
         explaining_metrics_params,
         dataset,
-        node_id_to_explainer_run_config,
+        obj_id_to_explainer_run_config,
         model_name,
         iteration: int = 0
 ):
+    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
+    lr = 0.001
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 32,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": lr  # FOR GSAT
+                },
             }
         }
     )
@@ -875,7 +925,7 @@ def calculate_distillation_defence_metrics(
         explainer_name=explainer_name,
     )
 
-    explanation_metrics = explainer.evaluate_metrics(node_id_to_explainer_run_config, explaining_metrics_params)
+    explanation_metrics = explainer.evaluate_metrics(obj_id_to_explainer_run_config, explaining_metrics_params)
     return explanation_metrics
 
 
@@ -883,11 +933,11 @@ if __name__ == '__main__':
     # random.seed(777)
 
     explainers = [
-        # 'GNNExplainer(torch-geom)',
+        'GNNExplainer(torch-geom)',
         # 'SubgraphX',
         # "Zorro",
         "GSAT",
-        # "PGExplainer(dig)"
+        "PGExplainer(dig)"
     ]
 
     models = [
@@ -897,34 +947,57 @@ if __name__ == '__main__':
         # 'sage_sage_sage',
         # 'gin_gin',
         # 'gat_gat',
-        'dummy_gcn_gcn_gsat',
-        'dummy_gcn_gcn_gcn_gsat',
-        'dummy_sage_sage_gsat',
-        'dummy_sage_sage_sage_gsat',
-        'dummy_gin_gin_gsat',
-        'dummy_gat_gat_gsat',
+        # 'dummy_gcn_gcn_gsat',
+        # 'dummy_gcn_gcn_gcn_gsat',
+        # 'dummy_sage_sage_gsat',
+        # 'dummy_sage_sage_sage_gsat',
+        # 'dummy_gin_gin_gsat',
+        # 'dummy_gat_gat_gsat',
+
+        'gcn_gcn_lin_gc',
+        'gcn_gcn_gcn_lin_gc',
+        'sage_sage_lin_gc',
+        'sage_sage_sage_lin_gc',
+        'gin_gin_lin_gc',
+        'gat_gat_lin_gc',
+        'dummy_gcn_gcn_gsat_lin_gc',
+        'dummy_gcn_gcn_gcn_gsat_lin_gc',
+        'dummy_sage_sage_gsat_lin_gc',
+        'dummy_sage_sage_sage_gsat_lin_gc',
+        'dummy_gin_gin_gsat_lin_gc',
+        'dummy_gat_gat_gsat_lin_gc',
     ]
 
     datasets = [
         # ("single-graph", "Planetoid", 'Cora'),
         # ("single-graph", "Planetoid", 'CiteSeer'),
         # ("single-graph", "Planetoid", 'PubMed'),
-        ("single-graph", "Amazon", 'Computers'),
+        # ("single-graph", "Amazon", 'Computers'),
         # ("single-graph", "Amazon", 'Photo'),
+        ("example", 'custom', 'powergraph', 'uk'),
+        ("example", 'custom', 'powergraph', 'ieee24'),
+        ("example", 'custom', 'powergraph', 'ieee39'),
+        # ("example", 'custom', 'powergraph', 'ieee118'),
+
     ]
     for dataset_full_name in datasets:
-        for i in range(3, 13):
-            for model_name in models:
-                for explainer in explainers:
-                    if model_name.startswith('dummy') and explainer == 'PGExplainer(dig)':
+        for i in range(3, 9):
+            for explainer in explainers:
+                for model_name in models:
+                    if model_name.startswith('dummy') and explainer != 'GSAT':
                         continue
                     if explainer == 'GSAT' and not (model_name.startswith('dummy')):
                         continue
-                    try:
-                        print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
-                        run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
-                    except Exception as e:
-                        print(f"ERROR: {e}")
-                        continue
+                    print(f"MODEL: {model_name}, EXPL: {explainer}, i: {i}")
+                    run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    # try:
+                    #     print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
+                    #     run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    # except Exception as e:
+                    #     print(f"ERROR: {e}")
+                    #     continue
+
+
+
     # dataset_full_name = ("single-graph", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)

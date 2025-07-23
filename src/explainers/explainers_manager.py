@@ -7,7 +7,7 @@ from aux.declaration import Declare
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, import_all_from_package
 from datasets.gen_dataset import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
-from explainers.explainer_metrics import NodesExplainerMetric
+from explainers.explainer_metrics_new import NodesExplainerMetric, GraphExplainerMetric
 from models_builder.gnn_models import GNNModelManager
 
 import explainers
@@ -212,7 +212,7 @@ class FrameworkExplainersManager:
 
     def evaluate_metrics(
             self,
-            node_id_to_explainer_run_config: dict[int, ConfigPattern],
+            obj_id_to_explainer_run_config: dict[int, ConfigPattern],
             explaining_metrics_params: Union[dict, None] = None,
             socket: SocketIO = None
     ) -> dict:
@@ -225,14 +225,19 @@ class FrameworkExplainersManager:
         try:
             print("Evaluating explanation metrics...")
             if self.gen_dataset.is_multi():
-                raise NotImplementedError("Explanation metrics for graph classification")
+                explanation_metrics_calculator = GraphExplainerMetric(
+                    self,
+                    explaining_metrics_params
+                )
+                result = explanation_metrics_calculator.evaluate(obj_id_to_explainer_run_config)
+
             else:
 
                 explanation_metrics_calculator = NodesExplainerMetric(
                     self,
                     explaining_metrics_params
                 )
-                result = explanation_metrics_calculator.evaluate(node_id_to_explainer_run_config)
+                result = explanation_metrics_calculator.evaluate(obj_id_to_explainer_run_config)
             print("Explanation metrics are ready")
 
             if socket:

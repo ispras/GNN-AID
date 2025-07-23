@@ -23,14 +23,14 @@ class ModelsTest(unittest.TestCase):
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "single-graph", "example",),
+            full_name=("single-graph", "custom", "example"),
             features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(("example", "single-graph", "example")),
+            DatasetConfig(("single-graph", "custom", "example")),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
@@ -63,7 +63,7 @@ class ModelsTest(unittest.TestCase):
         )
 
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetConfig(('multiple-graphs', 'custom', 'small')),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)

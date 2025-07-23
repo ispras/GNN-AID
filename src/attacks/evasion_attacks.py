@@ -5,7 +5,7 @@ from skopt import Optimizer
 
 from attacks.attack_base import Attacker
 from aux.utils import move_to_same_device
-from base.datasets_processing import GeneralDataset
+from datasets.datasets_manager import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports

@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-from base.datasets_processing import GeneralDataset
+from datasets.datasets_manager import GeneralDataset
 # from defenses.GNNGuard.base_model import BaseModel
 from defenses.poison_defense import PoisonDefender
 

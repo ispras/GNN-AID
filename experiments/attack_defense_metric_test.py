@@ -10,7 +10,7 @@ from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETE
     EVASION_DEFENSE_PARAMETERS_PATH
 from src.models_builder.gnn_models import FrameworkGNNModelManager
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from src.base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
 
 

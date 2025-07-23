@@ -20,8 +20,9 @@ from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARA
 from datasets.datasets_manager import DatasetManager
 from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+    ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
 import explainers
 import_all_from_package(explainers)  # to import all subclasses properly
@@ -50,26 +51,26 @@ class ExplainersTest(unittest.TestCase):
     def setUp(self) -> None:
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "single-graph", "example",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
-        gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(("example", "single-graph", "example")),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
-                             labeling='binary',
-                             dataset_ver_ind=0)
-        )
-        gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.dataset_sg_example = gen_dataset_sg_example
-        results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+        # self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
+        #     full_name=("single-graph", "custom", "example",),
+        #     features=FeatureConfig(node_attr=['a']),
+        #     labeling='binary',
+        #     dataset_ver_ind=0
+        # )
+        #
+        # gen_dataset_sg_example = DatasetManager.get_by_config(
+        #     DatasetConfig(("example", "single-graph", "example")),
+        #     DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+        #                      labeling='binary',
+        #                      dataset_ver_ind=0)
+        # )
+        # gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        # self.dataset_sg_example = gen_dataset_sg_example
+        # results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
 
         #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora"),
+            full_name=("ptg-library-graphs", "single-graph", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
@@ -84,22 +85,22 @@ class ExplainersTest(unittest.TestCase):
         self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
 
         # Multi-graphs - Small
-        self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("example", "multiple-graphs", "small",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
-        gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(('example', 'multiple-graphs', 'small')),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
-                             labeling='binary',
-                             dataset_ver_ind=0)
-        )
-        gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        dataset_mg_small = gen_dataset_mg_small
-        results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
+        # self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
+        #     full_name=("example", "multiple-graphs", "small",),
+        #     features=FeatureConfig(node_attr=['a']),
+        #     labeling='binary',
+        #     dataset_ver_ind=0
+        # )
+        #
+        # gen_dataset_mg_small = DatasetManager.get_by_config(
+        #     DatasetConfig(('example', 'multiple-graphs', 'small')),
+        #     DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+        #                      labeling='binary',
+        #                      dataset_ver_ind=0)
+        # )
+        # gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        # dataset_mg_small = gen_dataset_mg_small
+        # results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
@@ -113,28 +114,28 @@ class ExplainersTest(unittest.TestCase):
         results_dataset_path_mg_mutag = gen_dataset_mg_mutag.results_dir
 
         # Init models
-        gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
-
-        gnn_model_manager_sg_example_manager_config = ConfigPattern(
-            _config_class="ModelManagerConfig",
-            _config_kwargs={
-                "batch": 10000,
-                "mask_features": []
-            }
-        )
-        self.gnn_model_manager_sg_example = FrameworkGNNModelManager(
-            gnn=gcn2_sg_example,
-            dataset_path=results_dataset_path_sg_example,
-            manager_config=gnn_model_manager_sg_example_manager_config
-        )
-
-        self.gnn_model_manager_sg_example.train_model(gen_dataset=gen_dataset_sg_example, steps=50,
-                                                      save_model_flag=False,
-                                                      metrics=[Metric("F1", mask='test')])
-
-        # TODO Kirill, tmp comment work and tests with Prot
-        gin3_lin2_prot_mg_small = model_configs_zoo(
-            dataset=dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
+        # gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
+        #
+        # gnn_model_manager_sg_example_manager_config = ConfigPattern(
+        #     _config_class="ModelManagerConfig",
+        #     _config_kwargs={
+        #         "batch": 10000,
+        #         "mask_features": []
+        #     }
+        # )
+        # self.gnn_model_manager_sg_example = FrameworkGNNModelManager(
+        #     gnn=gcn2_sg_example,
+        #     dataset_path=results_dataset_path_sg_example,
+        #     manager_config=gnn_model_manager_sg_example_manager_config
+        # )
+        #
+        # self.gnn_model_manager_sg_example.train_model(gen_dataset=gen_dataset_sg_example, steps=50,
+        #                                               save_model_flag=False,
+        #                                               metrics=[Metric("F1", mask='test')])
+        #
+        # # TODO Kirill, tmp comment work and tests with Prot
+        # gin3_lin2_prot_mg_small = model_configs_zoo(
+        #     dataset=dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
         gin3_lin2_prot_mg_mutag = model_configs_zoo(
             dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
         )
@@ -166,30 +167,30 @@ class ExplainersTest(unittest.TestCase):
             }
         )
 
-        self.prot_gnn_mm_mg_small = ProtGNNModelManager(
-            gnn=gin3_lin2_prot_mg_small, dataset_path=results_dataset_path_mg_small,
-            # manager_config=gin3_lin2_mg_small_manager_config,
-        )
+        # self.prot_gnn_mm_mg_small = ProtGNNModelManager(
+        #     gnn=gin3_lin2_prot_mg_small, dataset_path=results_dataset_path_mg_small,
+        #     # manager_config=gin3_lin2_mg_small_manager_config,
+        # )
         self.prot_gnn_mm_mutag = ProtGNNModelManager(gnn=gin3_lin2_prot_mg_mutag, dataset_path=results_dataset_path_mg_mutag)
         # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
 
-        best_acc = self.prot_gnn_mm_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=100, metrics=[])
+        # best_acc = self.prot_gnn_mm_mg_small.train_model(
+        #     gen_dataset=gen_dataset_mg_small, steps=100, metrics=[])
 
         # uncomment for ProtGNN big test
         # self.prot_gnn_mm_mutag.train_model(
         #     gen_dataset=gen_dataset_mg_mutag, steps=40, metrics=[])
 
-        gin3_lin2_mg_small = model_configs_zoo(
-            dataset=gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
-        self.gnn_model_manager_mg_small = FrameworkGNNModelManager(
-            gnn=gin3_lin2_mg_small,
-            dataset_path=results_dataset_path_mg_small,
-            manager_config=gin3_lin2_mg_small_manager_config
-        )
-        self.gnn_model_manager_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=50, save_model_flag=False,
-            metrics=[Metric("F1", mask='test')])
+        # gin3_lin2_mg_small = model_configs_zoo(
+        #     dataset=gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
+        # self.gnn_model_manager_mg_small = FrameworkGNNModelManager(
+        #     gnn=gin3_lin2_mg_small,
+        #     dataset_path=results_dataset_path_mg_small,
+        #     manager_config=gin3_lin2_mg_small_manager_config
+        # )
+        # self.gnn_model_manager_mg_small.train_model(
+        #     gen_dataset=gen_dataset_mg_small, steps=50, save_model_flag=False,
+        #     metrics=[Metric("F1", mask='test')])
 
         self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
         # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
@@ -514,6 +515,36 @@ class ExplainersTest(unittest.TestCase):
         explainer_GNNExpl = FrameworkExplainersManager(
             init_config=explainer_init_config,
             dataset=self.dataset_mg_small, gnn_manager=self.gnn_model_manager_mg_small,
+            explainer_name='GNNExplainer(torch-geom)',
+        )
+        explainer_GNNExpl.conduct_experiment(explainer_run_config)
+
+    def test_GNNExpl_PYG_Mutag(self):
+        warnings.warn("Start GNNExplainer_PYG")
+        explainer_init_config = ConfigPattern(
+            _class_name="GNNExplainer(torch-geom)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GNNExplainer(torch-geom)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_GNNExpl = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_mutag, gnn_manager=self.gnn_model_manager_mg_mutag,
             explainer_name='GNNExplainer(torch-geom)',
         )
         explainer_GNNExpl.conduct_experiment(explainer_run_config)
