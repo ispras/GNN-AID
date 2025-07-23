@@ -114,8 +114,10 @@ class Declare:
     ) -> [Path, list]:
         """
         Path to metainfo file for a dataset.
+
         :param dataset_config: DatasetConfig
-        :return: path to metainfo file for a specific dataset
+        :return: path to metainfo file for a specific
+         dataset
         """
         return Declare.dataset_root_dir(dataset_config)[0] / 'metainfo'
 
@@ -126,9 +128,11 @@ class Declare:
     ) -> [Path, list]:
         """
         Directory where the var part of a dataset is stored.
-        :param dataset_config: DatasetConfig
-        :param dataset_var_config: DatasetVarConfig
-        :return: path to the data folder, extra paths
+
+        :param dataset_config: :class:`~data_structures.configs.DatasetConfig` object
+        :param dataset_var_config: :class:`~data_structures.configs.DatasetVarConfig` object
+        :return: path to the data folder, extra paths where to save dataset_config and
+         dataset_var_config.
         """
         assert dataset_var_config.features is not None
 
@@ -162,6 +166,7 @@ class Declare:
         """
         :param class_obj: class base on GNNModelManager
         :return: The path where the model will be saved
+
         Feature of determining versions when saving: if the version is not defined,
         then saves the model with the smallest integer index that is not in the versions folder,
         starting from 0. If the version is defined, then the first save has the specified version,
@@ -224,6 +229,7 @@ class Declare:
         """
         Formation of the way to save the path of the model in the root of the project
         according to its hyperparameters and features
+
         :param dataset_path: dataset path
         :param GNNModelManager_hash: gnn model manager hash
         :param model_ver_ind: index of explain version
@@ -268,12 +274,13 @@ class Declare:
             create_dir_flag: bool = True,
     ) -> [Path, list]:
         """
+
         :param explainer_init_kwargs: dict with kwargs for explainer class
         :param explainer_run_kwargs:dict with kwargs for run explanation
         :param models_path: model path
         :param explainer_name: explainer name. Example: Zorro
         :param explainer_ver_ind: index of explain version
-        :param create_dir_flag:
+        :param create_dir_flag: whether to save kwargs to file
         :return: path for explanations result file and list with technical files
         """
         explainer_init_kwargs = explainer_init_kwargs.copy()

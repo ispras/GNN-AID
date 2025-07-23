@@ -75,6 +75,7 @@ class GNNConstructor:
     ):
         """
         :return: a vector of estimates for the distribution of input data by class.
+
         Required for some interpretation algorithms to work.
         Does not require a mandatory redefinition of def forward.
         """
@@ -93,6 +94,7 @@ class GNNConstructor:
     ):
         """
         :return: an answer to which class the input belongs to.
+
         Required for some interpretation methods to work.
         Does not require redefinition of def forward or get_predictions.
         """
@@ -118,6 +120,7 @@ class GNNConstructor:
     ):
         """
         :return: a set of names of suitable model manager classes.
+
         Model manager classes must be inherited from the GNNModelManager class
         """
         raise NotImplementedError("suitable_model_managers can't be called, because it is not implemented")

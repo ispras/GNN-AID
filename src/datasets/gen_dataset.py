@@ -18,8 +18,21 @@ from datasets.visible_part import VisiblePart
 
 class GeneralDataset(ABC):
     """
-    # TODO upd docs
-    Generalisation of Pytorch-geometric and user-defined datasets: custom, VK, etc.
+    Abstract class to represent a dataset in framework.
+    It is a generalisation of a :class:`torch_geometric.data.Dataset` to a family of such datasets.
+    To fully define a GeneralDataset you should provide 2 configs:
+
+    - :class:`~data_structures.configs.DatasetConfig` - specifies structure of the graph;
+    - :class:`~data_structures.configs.DatasetVarConfig` - specifies how to build features and
+      labels.
+
+    :class:`~datasets.gen_dataset.GeneralDataset` also requires :class:`~datasets.DatasetInfo` which describes
+    metainformation about the dataset family.
+
+    See also:
+
+    - :class:`datasets.ptg_datasets.PTGDataset`
+    - :class:`datasets.known_format_datasets.KnownFormatDataset`
     """
 
     def __init__(
@@ -27,8 +40,12 @@ class GeneralDataset(ABC):
             dataset_config: Union[DatasetConfig, ConfigPattern]
     ):
         """
+        Initialize structural part of the dataset.
+
         Args:
-            dataset_config: DatasetConfig dict from frontend
+            dataset_config (DatasetConfig | ConfigPattern): config to define where to get raw files
+             and initialization parameters. Can be :class:`~data_structures.configs.DatasetConfig`
+             object object or :class:`~data_structures.configs.ConfigPattern` with dictionary.
         """
         # TODO check that dataset_config is allowed
 
@@ -43,8 +60,13 @@ class GeneralDataset(ABC):
 
         self.dataset: Dataset = None  # Current PTG dataset
 
+        # Statistics
         from datasets.dataset_stats import DatasetStats
-        self.stats = DatasetStats(self)  # dict of {stat -> value}  # fixme misha - should keep it in prepared?
+        self.stats = DatasetStats(self)  # dict of {stat -> value}
+
+        # Feature vector components
+        self.node_attr_slices: dict = None  # indices of each attribute in feature vector, dict of {attr -> (start, end)}
+        # self.edge_attr_slices: dict = None
 
         # Data split
         self.percent_test_class = None  # FIXME misha do we need it here? it is in manager_config
@@ -60,25 +82,11 @@ class GeneralDataset(ABC):
         self._register()
 
     @property
-    def name(
-            self
-    ) -> str:
-        """ Last folder name. """
-        return self.dataset_config.full_name[-1]
-
-    @property
     def root_dir(
             self
     ) -> Path:
-        """ Dataset root directory with folders 'raw' and 'prepared'. """
+        """ Dataset root directory with folder 'raw/' and metainfo file. """
         return Declare.dataset_root_dir(self.dataset_config)[0]
-
-    @property
-    def results_dir(
-            self
-    ) -> Path:
-        """ Path to folder where tensor data is stored. """
-        return Path(Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)[0])
 
     @property
     def raw_dir(
@@ -86,6 +94,13 @@ class GeneralDataset(ABC):
     ) -> Path:
         """ Path to 'raw/' folder where raw data is stored. """
         return self.root_dir / 'raw'
+
+    @property
+    def prepared_dir(
+            self
+    ) -> Path:
+        """ Path to folder where tensor data is stored. """
+        return Path(Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)[0])
 
     @property
     def info_path(
@@ -138,7 +153,7 @@ class GeneralDataset(ABC):
     @property
     def labels(
             self
-    ) -> torch.Tensor:
+    ) -> tensor:
         if self.is_multi():
             return tensor([data.y for data in self.dataset])
         else:
@@ -188,7 +203,10 @@ class GeneralDataset(ABC):
         if dataset_var_config == self.dataset_var_config:
             return
         self.dataset_var_config = dataset_var_config
+
+        # Recompute var data
         self._compute_dataset_var_data()
+
         # Save configs
         _, [dc, dvc] = Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)
         with open(dc, 'w') as f:
@@ -240,14 +258,6 @@ class GeneralDataset(ABC):
         """ Get statistics.
         """
         return self.stats.get(stat)
-
-    @abstractmethod
-    def _compute_stat(
-            self,
-            stat: str
-    ) -> None:
-        """ Compute a non-standard statistics.
-        """
 
     def train_test_split(
             self,
@@ -487,16 +497,16 @@ class LocalDataset(
     def __init__(
             self,
             data_list: Union[List[Data], None],
-            results_dir: Union[str, Path],
+            prepared_dir: Union[str, Path],
             process_func: Union[Callable, None] = None,
     ):
         """
         :param data_list: optionally, list of ready torch_geometric.data.Data objects
-        :param results_dir: directory where tensors are stored
+        :param prepared_dir: directory where tensors are stored
         :param process_func: optionally, custom process() function, which converts raw files into tensors
         """
         self.data_list = data_list
-        self.results_dir = results_dir
+        self._prepared_dir = prepared_dir
         if process_func:
             self.process = process_func
 
@@ -527,22 +537,18 @@ class LocalDataset(
     def processed_dir(
             self
     ) -> str:
-        return self.results_dir
+        return self._prepared_dir
 
 
 if __name__ == '__main__':
     print("test dataset")
     from datasets.datasets_manager import DatasetManager
-
-    dc = DatasetConfig(('example', 'single-graph', 'example'))
+    #
+    # dc = DatasetConfig(('example', 'single-graph', 'example'))
     # dc = DatasetConfig(('example', 'multiple-graphs', 'example_gml'))
-    # dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
+    dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
     # dc = DatasetConfig(('ptg-library-graphs', 'multiple-graphs', 'TUDataset', 'MUTAG'))
 
-    # d = GeneralDataset(dc)
-
-    root = Declare.dataset_root_dir(dc)[0]
-    print(root)
     dataset = DatasetManager.get_by_config(
         dc,
         default_edge_attr_value={'type': "mixed", 'weight': 0},
@@ -558,3 +564,13 @@ if __name__ == '__main__':
     dataset.build(dvc)
     # print(dataset.dataset_var_data)
     print(dataset.visible_part.get_dataset_var_data())
+
+    from datasets.ptg_datasets import LibPTGDataset
+    from datasets.datasets_manager import DatasetManager
+
+    dc = DatasetConfig((LibPTGDataset.data_folder, 'single-graph', 'Planetoid', 'Cora'))
+
+    dataset = DatasetManager.get_by_config(dc)
+
+    dataset.build(dvc)
+    print(dataset.info.nodes)

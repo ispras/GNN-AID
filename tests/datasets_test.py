@@ -492,9 +492,13 @@ class DatasetsTest(unittest.TestCase):
         multi.build(dvc)
 
         single = DatasetStats(single)
-        multi = DatasetStats(multi)
         for stat in DatasetStats.all_stats:
             res = single.get(stat)
+            print(stat, res)
+
+        multi = DatasetStats(multi)
+        for stat in DatasetStats.multi_stats:
+            res = multi.get(stat)
             print(stat, res)
 
     def test_ptg_lib(self):

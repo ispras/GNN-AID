@@ -64,7 +64,6 @@ class DatasetManager:
         return dataset
 
     @staticmethod
-    @timing_decorator
     def get_by_full_name(
             full_name: Tuple[str, ...] = None,
             init_kwargs: Union[dict, None] = None,
@@ -108,7 +107,7 @@ class DatasetManager:
                                  percent_test_class=dvc_kwargs.get("percent_test_class", 0.2))
 
         # IMP Kirill suggest to return only dataset, else is its parts
-        return dataset, dataset.data, dataset.results_dir
+        return dataset, dataset.data, dataset.prepared_dir
 
 
 if __name__ == '__main__':

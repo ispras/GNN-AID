@@ -8,6 +8,20 @@ class PowerGraphDataset(
 ):
     """
     PowerGraph dataset from https://github.com/PowerGraph-Datasets/PowerGraph-Graph
+
+    .. code-block:: python
+
+        dc = DatasetConfig(('example', 'custom', 'powergraph'), {'name': 'uk'})
+        dataset = PowerGraphDataset(dc)
+
+        dataset.set_visible_part({'center': 0, 'depth': 0})
+        print(dataset.visible_part.get_dataset_data())
+        >>> DatasetData[
+        >>>  edges: [[(0, 1), (0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (1, 3), (2, 3), (2, 3), (3, 4), (3, 4), (3, 5), (3, 5), (3, 6), (...]]
+        >>>  nodes: [29]
+        >>>  graphs: [0]
+        >>>  node_attributes: {'unknown': {0: [[0.12097656726837158, -0.14951694011688232, 0.06792455166578293], [-0.040750112384557724, -0.26544...}}
+        >>> ]
     """
     def _define_ptg_dataset(
             self

@@ -30,7 +30,7 @@ def backend_demo():
             graph="Cora"),
     )
     dataset_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    results_dataset_path_cora = dataset_cora.results_dir
+    results_dataset_path_cora = dataset_cora.prepared_dir
 
     dataset_comp = DatasetManager.get_by_config(
         DatasetConfig(
@@ -39,7 +39,7 @@ def backend_demo():
             graph="Computers"),
     )
     dataset_comp.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    results_dataset_path_comp = dataset_comp.results_dir
+    results_dataset_path_comp = dataset_comp.prepared_dir
 
     gen_dataset_mg_example = DatasetManager.get_by_config(
         DatasetConfig(
@@ -52,7 +52,7 @@ def backend_demo():
     )
     gen_dataset_mg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
     dataset_mg_example = gen_dataset_mg_example
-    results_dataset_path_mg_example = gen_dataset_mg_example.results_dir
+    results_dataset_path_mg_example = gen_dataset_mg_example.prepared_dir
 
     # Init gnns and gnn_model_managers
     gat2_cora = model_configs_zoo(dataset=dataset_cora, model_name='gat_gat')

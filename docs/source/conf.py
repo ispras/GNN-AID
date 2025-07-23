@@ -26,20 +26,23 @@ version = '0.1.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.coverage',
-    'sphinx.ext.doctest',
-    'sphinx.ext.duration',
-    'sphinx.ext.ifconfig',
+    # 'sphinx.ext.coverage',
+    # 'sphinx.ext.doctest',
+    # 'sphinx.ext.duration',
+    # 'sphinx.ext.ifconfig',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.todo',
+    # 'sphinx.ext.mathjax',
+    # 'sphinx.ext.viewcode',
+    # 'sphinx.ext.todo',
+    'sphinx.ext.napoleon',  # support Google-style docstrings
 #    'sphinxcontrib.fulltoc',
 ]
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
+    'torch': ("https://pytorch.org/docs/stable/", None),
+    'torch_geometric': ('https://pytorch-geometric.readthedocs.io/en/latest/', None),
 }
 intersphinx_disabled_domains = ['std']
 
@@ -48,6 +51,13 @@ templates_path = ['_templates']
 # -- Options for HTML output
 
 html_theme = 'sphinx_rtd_theme'
+html_theme_options = {
+    'collapse_navigation': True,
+    'titles_only': False,
+}
+
+html_static_path = ["_static"]
+html_logo = "_static/logo.png"
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
@@ -64,4 +74,5 @@ autodoc_default_options = {
     'ignore-module-all': True,
 }
 
-
+autosummary_generate = True
+add_module_names = False  # убирает 'datasets.ptg_datasets.' перед именем

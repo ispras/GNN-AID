@@ -26,6 +26,10 @@ class GCN(nn.Module):
         """
         Forward pass of the GCN.
 
+        :param x: Input feature matrix of shape [num_nodes, num_features].
+        :param edge_index: Edge indices of shape [2, num_edges].
+        :returns: Node embeddings of shape [num_nodes, out_ft].
+
         Args:
             x (Tensor): Input feature matrix of shape [num_nodes, num_features].
             edge_index (Tensor): Edge indices of shape [2, num_edges].

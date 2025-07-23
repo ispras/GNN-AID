@@ -17,8 +17,41 @@ class KnownFormatDataset(
     GeneralDataset
 ):
     """
-    Custom dataset in 'ij' format or one of popular formats (see DatasetConverter.supported_formats).
+    Custom dataset in 'ij' format or one of popular formats (see
+    :class:`~datasets.dataset_converter.DatasetConverter.supported_formats`).
     User defines functions for building graph from raw files and feature creation.
+
+    Example of usage
+
+    .. code-block:: python
+
+        from datasets.datasets_manager import DatasetManager
+
+        # Define dataset config - where to get raw data
+        dc = DatasetConfig(('example', 'single-graph', 'example'))
+        dataset = DatasetManager.get_by_config(dc)
+
+        # Get graph data from a 1-neighborhood of node 0
+        dataset.set_visible_part({'center': 0, 'depth': 1})
+        print(dataset.visible_part.get_dataset_data())
+        >>> DatasetData[
+        >>>  edges: [[], [(1, 0)]]
+        >>>  nodes: [[0], [1]]
+        >>>  graphs: None
+        >>>  node_attributes: {'a': [{0: 1, 1: 1}], 'b': [{0: 'A', 1: 'A'}]}
+        >>> ]
+
+        # Define var config and build tensors
+        dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a', 'b']),
+                               labeling='binary', dataset_ver_ind=0)
+        dataset.build(dvc)
+
+        # Get var data from the neighborhood
+        print(dataset.visible_part.get_dataset_var_data())
+        >>> DatasetVarData[
+        >>>  labels: {0: 1, 1: 1}
+        >>>  node_features: {0: [1.0, 1.0, 0.0, 0.0], 1: [1.0, 1.0, 0.0, 0.0]}
+        >>> ]
     """
 
     def __init__(
@@ -29,10 +62,10 @@ class KnownFormatDataset(
     ):
         """
         Args:
-            dataset_config: DatasetConfig dict from frontend
-            default_node_attr_value: dict as {attr -> value} with default node attributes values to
+            dataset_config (DatasetConfig | ConfigPattern): config to define dataset
+            default_node_attr_value (dict): dict as {attr -> value} with default node attributes values to
              apply where missing.
-            default_edge_attr_value: dict as {attr -> value} with default edge attributes values to
+            default_edge_attr_value (dict): dict as {attr -> value} with default edge attributes values to
              apply where missing.
         """
         self._default_node_attr_value = default_node_attr_value
@@ -241,6 +274,53 @@ class KnownFormatDataset(
             self._read_single()
         self._read_attributes()
 
+        self._infer_feature_slices_form_attributes()
+
+    def _infer_feature_slices_form_attributes(
+            self,
+    ) -> None:
+        """ Set correspondence of attributes to components of feature vector.
+        """
+        node_attributes = self.info.node_attributes
+
+        if len(node_attributes) > 0 and\
+                isinstance(next(iter(node_attributes.values())), dict):
+            # TODO misha hetero
+            return
+
+        self.node_attr_slices = {}
+        if node_attributes:
+            start_attr_index = 0
+            for i in range(len(node_attributes['names'])):
+                if node_attributes['types'][i] == 'vector':
+                    attr_len = node_attributes['values'][i]
+                elif node_attributes['types'][i] == 'categorical':
+                    attr_len = len(node_attributes['values'][i])
+                elif node_attributes['types'][i] == 'continuous':
+                    attr_len = 1
+                else:
+                    attr_len = 0
+                self.node_attr_slices[node_attributes['names'][i]] = (
+                    start_attr_index, start_attr_index + attr_len)
+                start_attr_index = start_attr_index + attr_len
+
+        # edge_attributes = self.info.edge_attributes
+        # self.edge_attr_slices = {}
+        # if edge_attributes:
+        #     start_attr_index = 0
+        #     for i in range(len(edge_attributes['names'])):
+        #         if edge_attributes['types'][i] == 'vector':
+        #             attr_len = edge_attributes['values'][i]
+        #         elif edge_attributes['types'][i] == 'categorical':
+        #             attr_len = len(edge_attributes['values'][i])
+        #         elif edge_attributes['types'][i] == 'continuous':
+        #             attr_len = 1
+        #         else:
+        #             attr_len = 1
+        #         self.edge_attr_slices[edge_attributes['names'][i]] = (
+        #             start_attr_index, start_attr_index + attr_len)
+        #         start_attr_index = start_attr_index + attr_len
+
     def _read_single(
             self
     ) -> None:
@@ -372,7 +452,7 @@ class KnownFormatDataset(
     ) -> None:
         """ Build PTG Dataset based on dataset_var_config.
         """
-        self.dataset = LocalDataset(None, self.results_dir, process_func=self._create_ptg)
+        self.dataset = LocalDataset(None, self.prepared_dir, process_func=self._create_ptg)
 
     def _create_ptg(
             self
@@ -392,8 +472,8 @@ class KnownFormatDataset(
             data_list.append(data)
 
         # Build slices and save
-        self.results_dir.mkdir(exist_ok=True, parents=True)
-        torch.save(InMemoryDataset.collate(data_list), self.results_dir / 'data.pt')
+        self.prepared_dir.mkdir(exist_ok=True, parents=True)
+        torch.save(InMemoryDataset.collate(data_list), self.prepared_dir / 'data.pt')
 
     def _iter_nodes(
             self,
@@ -527,70 +607,3 @@ class KnownFormatDataset(
         if len(node_features[0]) == 0:
             raise RuntimeError("Feature vector size must be > 0")
         return node_features
-
-    def _compute_stat(
-            self,
-            stat: str
-    ) -> dict:
-        """ Compute some additional stats
-        """
-        if stat == "attr_corr":
-            if self.node_attributes_dir.exists():
-                # Read all continuous attrs
-                node_attributes = self.info.node_attributes
-                attr_node_attrs = {}  # {attr -> {node -> attr value}}
-                for ix, a in enumerate(node_attributes["names"]):
-                    if node_attributes["types"][ix] != "continuous": continue
-                    with open(self.node_attributes_dir / a, 'r') as f:
-                        attr_node_attrs[a] = json.load(f)
-
-                # FIXME misha - for single graph [0]
-                edges = self.edge_index
-                node_map = (lambda i: str(self.node_map[i])) if self.node_map else lambda i: str(i)
-
-                # Compute mean and std over edges
-                in_attr_mean = {}
-                in_attr_denom = {}
-                out_attr_mean = {}
-                out_attr_denom = {}
-                for a, node_attrs in attr_node_attrs.items():
-                    ins = []
-                    outs = []
-                    for i, j in zip(*edges):
-                        i = int(i)
-                        j = int(j)
-                        outs.append(node_attrs[node_map(i)])
-                        ins.append(node_attrs[node_map(j)])
-                    in_attr_mean[a] = np.mean(ins)
-                    in_attr_denom[a] = (np.sum(np.array(ins) ** 2) - len(edges) * in_attr_mean[
-                        a] ** 2) ** 0.5
-                    out_attr_mean[a] = np.mean(outs)
-                    out_attr_denom[a] = (np.sum(np.array(outs) ** 2) - len(edges) * out_attr_mean[
-                        a] ** 2) ** 0.5
-
-                # Compute corr
-                attrs = list(attr_node_attrs.keys())
-                # Matrix of corr numerators
-                pearson_corr = np.zeros((len(attrs), len(attrs)), dtype=float)
-                for i, out_a in enumerate(attrs):
-                    out_node_attrs = attr_node_attrs[out_a]
-                    for j, in_a in enumerate(attrs):
-                        in_node_attrs = attr_node_attrs[in_a]
-                        corr = 0
-                        for x, y in zip(*edges):
-                            x = int(x)
-                            y = int(y)
-                            corr += (out_node_attrs[node_map(x)] - out_attr_mean[out_a]) * (
-                                    in_node_attrs[node_map(y)] - in_attr_mean[in_a])
-                        pearson_corr[i][j] = corr
-
-                # Normalize on stds
-                for i, out_a in enumerate(attrs):
-                    for j, in_a in enumerate(attrs):
-                        denom = out_attr_denom[out_a] * in_attr_denom[in_a]
-                        pc = pearson_corr[i][j] / denom if denom != 0 else 1
-                        pearson_corr[i][j] = min(1, max(-1, pc))
-
-                return {'attributes': attrs, 'correlations': pearson_corr.tolist()}
-
-        raise NotImplementedError()

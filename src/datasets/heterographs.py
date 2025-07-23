@@ -123,14 +123,6 @@ class CustomHeteroDataset(
                     labels = json.load(f)
                 assert all_nodes[nt] == set(map(int, labels.keys()))
 
-    def _compute_stat(
-            self,
-            stat: str
-    ) -> dict:
-        """ Compute some additional stats
-        """
-        raise NotImplementedError()
-
     def _compute_dataset_data(
             self
     ) -> None:
@@ -235,8 +227,8 @@ class CustomHeteroDataset(
             data_list.append(data)
 
         # Build slices and save
-        self.results_dir.mkdir(exist_ok=True, parents=True)
-        torch.save(InMemoryDataset.collate(data_list), self.results_dir / 'data.pt')
+        self.prepared_dir.mkdir(exist_ok=True, parents=True)
+        torch.save(InMemoryDataset.collate(data_list), self.prepared_dir / 'data.pt')
 
     def _iter_nodes(
             self,

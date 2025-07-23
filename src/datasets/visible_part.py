@@ -90,6 +90,7 @@ class DatasetIndex:
     ) -> None:
         """
         Build index on a dataset.
+
         :param gen_dataset:
         :param center: central node/graph or a list of nodes/graphs
         :param depth: neighborhood depth or number of graphs before and after center to take,

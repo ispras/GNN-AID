@@ -35,7 +35,7 @@ class ModelsTest(unittest.TestCase):
                              dataset_ver_ind=0)
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
@@ -52,7 +52,7 @@ class ModelsTest(unittest.TestCase):
                              dataset_ver_ind=0)
         )
         self.gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.2)
-        self.results_dataset_path_mg_small = self.gen_dataset_mg_small.results_dir
+        self.results_dataset_path_mg_small = self.gen_dataset_mg_small.prepared_dir
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
         )

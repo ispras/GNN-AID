@@ -71,7 +71,7 @@ class ExplainersTest(unittest.TestCase):
         )
         gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.dataset_sg_example = gen_dataset_sg_example
-        results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+        results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
@@ -89,7 +89,7 @@ class ExplainersTest(unittest.TestCase):
         )
         gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         dataset_mg_small = gen_dataset_mg_small
-        results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
+        results_dataset_path_mg_small = gen_dataset_mg_small.prepared_dir
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
@@ -100,7 +100,7 @@ class ExplainersTest(unittest.TestCase):
         gen_dataset_mg_mutag = self.dataset_mg_mutag
         gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         dataset_mg_mutag = gen_dataset_mg_mutag
-        results_dataset_path_mg_mutag = gen_dataset_mg_mutag.results_dir
+        results_dataset_path_mg_mutag = gen_dataset_mg_mutag.prepared_dir
 
         # Init models
         gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')

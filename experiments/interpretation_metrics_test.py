@@ -154,7 +154,7 @@ def calculate_unprotected_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -235,7 +235,7 @@ def calculate_jaccard_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(
@@ -323,7 +323,7 @@ def calculate_adversial_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(
@@ -424,7 +424,7 @@ def calculate_gnnguard_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(

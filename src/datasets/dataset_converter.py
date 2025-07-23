@@ -14,7 +14,7 @@ class DatasetConverter:
     """
     Converts graph data from one format to another.
     """
-    supported_formats = ["adjlist", "edgelist", "gml", "g6", "s6"]
+    supported_formats = ["adjlist", "edgelist", "gml", "g6", "s6"]  #: Supported raw graph data formats
 
     @staticmethod
     def format_to_ij(

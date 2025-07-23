@@ -1,6 +1,7 @@
 const IMPORTANCE_COLORMAP = 'cool'
 const PREDICTION_COLORMAP = 'binary'
 const EMBEDDING_COLORMAP = 'bwr'
+const CORRELATION_COLORMAP = 'bwr'
 const EDGE_MINIBATCH_SIZE = 10000 // Not necessary
 const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 50 // When Scale < THR, light mode is on to improve visibility (for single graph)
 const LIGHT_MODE_SCALE_THRESHOLD_MULTI = 20 // When Scale < THR, light mode is on to improve visibility (for multiple graph)

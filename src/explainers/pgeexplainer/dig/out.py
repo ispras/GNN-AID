@@ -103,7 +103,7 @@ class PGExplainer(nn.Module, Explainer):
         path = Path(root_dir)
         # path /= Path(str(model_manager.model_config()))
         path /= Path("PGE_gen_models")
-        path /= Path(self.gen_dataset.name)
+        path /= Path(self.gen_dataset.dataset_config.path())
         path /= Path("epochs=" + str(self.epochs) + ",learn_rate=" + str(self.lr))
         if not os.path.exists(path):
             os.makedirs(path)

@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import json
 from collections import Counter
@@ -8,11 +9,19 @@ import networkx as nx
 from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
+from aux.declaration import Declare
+from data_structures.configs import DatasetVarConfig, FeatureConfig
+from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import GeneralDataset
 from aux.utils import edge_index_to_edge_list
+from datasets.known_format_datasets import KnownFormatDataset
 
 
 class DatasetStats:
+    """
+    Stores statistics for a dataset.
+
+    """
     stats = [
         'num_nodes',
         'num_edges',
@@ -35,10 +44,19 @@ class DatasetStats:
     var_stats = [
         'label_distr',
         'label_assort',
-        'feature_distr',
-        'feature_assort',
+        # 'feature_distr',
+        # 'feature_assort',
     ]
     all_stats = stats + var_stats
+
+    multi_stats = [
+        'num_nodes',
+        'num_edges',
+        'avg_degree',
+
+        'label_distr',
+        # 'feature_distr',
+    ]
 
     def __init__(
             self,
@@ -46,8 +64,8 @@ class DatasetStats:
     ):
         self.gen_dataset: GeneralDataset = dataset
 
-        self.stats = {}  # keep the computed stats
-        self.nx_graph = None  # converted to networkx version
+        self._store = {}  # keep the computed stats
+        self._nx_graph = None  # converted to networkx version
 
     @property
     def dataset(
@@ -74,14 +92,25 @@ class DatasetStats:
         """ Save directory for statistics of variable part. """
         directory = None
         if stat in DatasetStats.stats:
-            directory = self.gen_dataset.root_dir / '.stats'
+            # Can't call prepared_dir.parent since dataset_var_config may be None
+            _, [_, dvc_path] = Declare.dataset_prepared_dir(
+                self.gen_dataset.dataset_config, DatasetVarConfig(
+                    features=FeatureConfig(), dataset_ver_ind=0)
+            )
+            directory = dvc_path.parent / 'stats'
         elif stat in DatasetStats.var_stats:
             # We suppose here that dataset_var_config is defined for our gen dataset.
-            directory = self.gen_dataset.results_dir / '.stats'
+            directory = self.gen_dataset.prepared_dir / 'var_stats'
         else:
-            raise NotImplementedError
-        directory.mkdir(exist_ok=True)
+            raise KeyError(f"Unknown stat {stat}")
+        directory.mkdir(parents=True, exist_ok=True)
         return directory / stat
+
+    def __getitem__(
+            self,
+            item: str
+    ) -> Union[int, float, dict, str]:
+        return self.get(stat=item)
 
     def get(
             self,
@@ -91,28 +120,31 @@ class DatasetStats:
         It will be read from file or computed and saved.
         """
         assert stat in DatasetStats.all_stats
-        if stat in self.stats:
-            return self.stats[stat]
+        if stat in self._store:
+            return self._store[stat]
 
         # Try to read from file
         path = self._save_path(stat)
         if path.exists():
             with path.open('r') as f:
                 value = json.load(f)
-            self.stats[stat] = value
+            self._store[stat] = value
             return value
 
         # Compute
-        method = {
-            False: self._compute,
-            True: self._compute_multi,
-        }[self.is_multi]
-        method(stat)
-        value = self.stats[stat]
-        if value is None:
-            value = f"Statistics '{stat}' is not implemented."
+        if self.is_multi:
+            self._compute_multi(stat)
+        else:
+            self._compute(stat)
 
-        return value
+        return self._store[stat]
+
+    def __setitem__(
+            self,
+            key: str,
+            value: Union[int, float, dict, str]
+    ) -> None:
+        self.set(key, value)
 
     def set(
             self,
@@ -122,39 +154,45 @@ class DatasetStats:
         """ Set statistics to a specified value and save to file.
         """
         assert stat in DatasetStats.all_stats
-        self.stats[stat] = value
+        self._store[stat] = value
         path = self._save_path(stat)
         with path.open('w') as f:
             json.dump(value, f, ensure_ascii=False, indent=1)
 
-    def remove(
-            self,
-            stat: str
-    ) -> None:
-        """ Remove statistics from dict and file.
-        """
-        if stat in self.stats:
-            del self.stats[stat]
-        try:
-            os.remove(self._save_path(stat))
-        except FileNotFoundError: pass
-
-    def clear_all_stats(
-            self
-    ) -> None:
-        """ Remove all stats. E.g. the graph has changed.
-        """
-        for s in DatasetStats.all_stats:
-            self.remove(s)
-
-    def update_var_config(
-            self
-    ) -> None:
-        """ Remove var stats from dict since dataset config has changed.
-        """
-        for s in DatasetStats.var_stats:
-            if s in self.stats:
-                del self.stats[s]
+    # def __delitem__(
+    #         self,
+    #         key
+    # ) -> None:
+    #     self.remove(key)
+    #
+    # def remove(
+    #         self,
+    #         stat: str
+    # ) -> None:
+    #     """ Remove statistics from dict and file.
+    #     """
+    #     if stat in self._stats:
+    #         del self._stats[stat]
+    #     try:
+    #         os.remove(self._save_path(stat))
+    #     except FileNotFoundError: pass
+    #
+    # def clear_all_stats(
+    #         self
+    # ) -> None:
+    #     """ Remove all stats. E.g. the graph has changed.
+    #     """
+    #     for s in DatasetStats.all_stats:
+    #         self.remove(s)
+    #
+    # def update_var_config(
+    #         self
+    # ) -> None:
+    #     """ Remove var stats from dict since dataset config has changed.
+    #     """
+    #     for s in DatasetStats.var_stats:
+    #         if s in self._stats:
+    #             del self._stats[s]
 
     def _compute(
             self,
@@ -169,6 +207,9 @@ class DatasetStats:
         num_nodes = self.gen_dataset.info.nodes[0]
 
         # Simple stats
+        if stat == "num_nodes":
+            self.set("num_nodes", num_nodes)
+            return
         if stat in ["num_edges", "avg_degree"]:
             num_edges = len(edges)
             avg_deg = len(edges) / num_nodes * (1 if self.is_directed else 2)
@@ -178,79 +219,137 @@ class DatasetStats:
 
         # Var stats
         if stat == "label_distr":
-            labels = self.gen_dataset.dataset_var_data["labels"]
+            labels = self.gen_dataset.labels.tolist()
             self.set("label_distr", list_to_hist(labels))
             return
 
         # More complex stats - we use networkx
-        if self.nx_graph is None:
+        if self._nx_graph is None:
             # Converting to networkx
-            self.nx_graph = nx.DiGraph() if self.is_directed else nx.Graph()
+            self._nx_graph = nx.DiGraph() if self.is_directed else nx.Graph()
             for i, j in edges:
-                self.nx_graph.add_edge(i, j)
+                self._nx_graph.add_edge(i, j)
 
         try:
             # TODO misha simplify - some stats can be computed easier
 
             if stat == "clustering_coeff":
                 # NOTE this is average local clustering, not global
-                self.set("clustering_coeff", nx.average_clustering(self.nx_graph))
+                self.set("clustering_coeff", nx.average_clustering(self._nx_graph))
 
             elif stat == "num_triangles":
-                self.set("num_triangles", int(sum(nx.triangles(self.nx_graph).values()) / 3))
+                self.set("num_triangles", int(sum(nx.triangles(self._nx_graph).values()) / 3))
 
             elif stat in ['gcc_size', 'gcc_rel_size', 'num_cc', 'cc_distr', 'gcc_diam']:
                 if self.is_directed:
-                    wcc = list(nx.weakly_connected_components(self.nx_graph))
-                    scc = list(nx.strongly_connected_components(self.nx_graph))
+                    wcc = list(nx.weakly_connected_components(self._nx_graph))
+                    scc = list(nx.strongly_connected_components(self._nx_graph))
                     self.set("num_cc", {"WCC": len(wcc), "SCC": len(scc)})
                     self.set("gcc_size", {"WCC": len(wcc[0]), "SCC": len(scc[0])})
                     self.set("gcc_rel_size", {"WCC": len(wcc[0]) / num_nodes,
                                               "SCC": len(scc[0]) / num_nodes})
                     self.set("cc_distr", {"WCC": list_to_hist([len(c) for c in wcc]),
                                           "SCC": list_to_hist([len(c) for c in scc])})
-                    self.set("gcc_diam", nx.diameter(self.nx_graph.subgraph(scc[0])))
+                    self.set("gcc_diam", nx.diameter(self._nx_graph.subgraph(scc[0])))
                     # self.set("gcc_diam", {"WCC": nx.diameter(self.nx_graph.to_undirected().subgraph(wcc[0])),
                     #                       "SCC": nx.diameter(self.nx_graph.subgraph(scc[0]))})
                 else:
-                    cc = list(nx.connected_components(self.nx_graph))
+                    cc = list(nx.connected_components(self._nx_graph))
                     self.set("num_cc", len(cc))
                     self.set("gcc_size", len(cc[0]))
                     self.set("gcc_rel_size", len(cc[0]) / num_nodes)
                     self.set("cc_distr", list_to_hist([len(c) for c in cc]))
-                    self.set("gcc_diam", nx.diameter(self.nx_graph.subgraph(cc[0])))
+                    self.set("gcc_diam", nx.diameter(self._nx_graph.subgraph(cc[0])))
 
             elif stat == "degree_assort":
                 if self.is_directed:
                     degree_assort = {
-                        "in-in": nx.degree_assortativity_coefficient(self.nx_graph, "in", "in"),
-                        "in-out": nx.degree_assortativity_coefficient(self.nx_graph, "in", "out"),
-                        "out-in": nx.degree_assortativity_coefficient(self.nx_graph, "out", "in"),
-                        "out-out": nx.degree_assortativity_coefficient(self.nx_graph, "out", "out"),
+                        "in-in": nx.degree_assortativity_coefficient(self._nx_graph, "in", "in"),
+                        "in-out": nx.degree_assortativity_coefficient(self._nx_graph, "in", "out"),
+                        "out-in": nx.degree_assortativity_coefficient(self._nx_graph, "out", "in"),
+                        "out-out": nx.degree_assortativity_coefficient(self._nx_graph, "out", "out"),
                     }
                     self.set("degree_assort", degree_assort)
                 else:
-                    self.set("degree_assort", nx.degree_assortativity_coefficient(self.nx_graph))
+                    self.set("degree_assort", nx.degree_assortativity_coefficient(self._nx_graph))
 
             elif stat == "degree_distr":
                 if self.is_directed:
                     self.set("degree_distr", {
-                        "in": list_to_hist([d for _, d in self.nx_graph.in_degree()]),
-                        "out": list_to_hist([d for _, d in self.nx_graph.out_degree()])
+                        "in": list_to_hist([d for _, d in self._nx_graph.in_degree()]),
+                        "out": list_to_hist([d for _, d in self._nx_graph.out_degree()])
                     })
                 else:
-                    self.set("degree_distr", {i: d for i, d in enumerate(nx.degree_histogram(self.nx_graph))})
+                    self.set("degree_distr", {i: d for i, d in enumerate(nx.degree_histogram(self._nx_graph))})
 
             elif stat == "label_assort":
-                labels = self.gen_dataset.dataset_var_data["labels"]
-                nx.set_node_attributes(self.nx_graph, dict(list(enumerate(labels))), 'label')
-                self.set("label_assort", nx.attribute_assortativity_coefficient(self.nx_graph, 'label'))
+                labels = self.gen_dataset.labels
+                nx.set_node_attributes(self._nx_graph, dict(list(enumerate(labels))), 'label')
+                self.set("label_assort", nx.attribute_assortativity_coefficient(self._nx_graph, 'label'))
+
+            elif stat == "attr_corr":
+                if not isinstance(self.gen_dataset, KnownFormatDataset):
+                    raise NotImplementedError(f"Not implemented for dataset class"
+                                              f" {self.gen_dataset.__class__.__name__}")
+
+                attrs = []
+                # Pick suitable attributes - continuous type
+                for attr, _type in zip(
+                        self.gen_dataset.info.node_attributes['names'],
+                        self.gen_dataset.info.node_attributes['types']):
+                    if _type in ["continuous"]:
+                        attrs.append(attr)
+
+                attr_node_attrs = self.gen_dataset.node_attributes(attrs)
+
+                # Compute mean and std over edges
+                in_attr_mean = {}
+                in_attr_denom = {}
+                out_attr_mean = {}
+                out_attr_denom = {}
+                for a, node_attrs in attr_node_attrs.items():
+                    ins = []
+                    outs = []
+                    node_attrs = node_attrs[0]
+                    for i, j in edges:
+                        outs.append(node_attrs[i])
+                        ins.append(node_attrs[j])
+                    in_attr_mean[a] = np.mean(ins)
+                    in_attr_denom[a] = (np.sum(np.array(ins) ** 2) - len(edges) * in_attr_mean[
+                        a] ** 2) ** 0.5
+                    out_attr_mean[a] = np.mean(outs)
+                    out_attr_denom[a] = (np.sum(np.array(outs) ** 2) - len(edges) *
+                                         out_attr_mean[
+                                             a] ** 2) ** 0.5
+
+                # Compute corr
+                attrs = list(attr_node_attrs.keys())
+                # Matrix of corr numerators
+                pearson_corr = np.zeros((len(attrs), len(attrs)), dtype=float)
+                for i, out_a in enumerate(attrs):
+                    out_node_attrs = attr_node_attrs[out_a][0]
+                    for j, in_a in enumerate(attrs):
+                        in_node_attrs = attr_node_attrs[in_a][0]
+                        corr = 0
+                        for x, y in edges:
+                            corr += (out_node_attrs[x] - out_attr_mean[out_a]) * (
+                                    in_node_attrs[y] - in_attr_mean[in_a])
+                        pearson_corr[i][j] = corr
+
+                # Normalize on stds
+                for i, out_a in enumerate(attrs):
+                    for j, in_a in enumerate(attrs):
+                        denom = out_attr_denom[out_a] * in_attr_denom[in_a]
+                        pc = pearson_corr[i][j] / denom if denom != 0 else 1
+                        pearson_corr[i][j] = min(1, max(-1, pc))
+
+                self.set(stat, {'attributes': attrs, 'correlations': pearson_corr.tolist()})
                 return
 
             else:
-                value = self.gen_dataset._compute_stat(stat)
-                self.set(stat, value)
-        except (NetworkXError, NetworkXNotImplemented) as e:
+                raise NotImplementedError()
+
+        except (NetworkXError, NetworkXNotImplemented, NotImplementedError) as e:
             self.set(stat, str(e))
 
     def _compute_multi(
@@ -264,8 +363,9 @@ class DatasetStats:
 
         # Var stats
         if stat == "label_distr":
-            labels = self.gen_dataset.dataset_var_data["labels"]
-            self.set("label_distr", list_to_hist([x for xs in labels for x in xs]))
+            labels = self.gen_dataset.labels
+            self.set("label_distr", list_to_hist([int(y) for y in labels]))
+            # self.set("label_distr", list_to_hist([x for xs in labels for x in xs]))
             return
 
         # Simple stats
@@ -280,7 +380,7 @@ class DatasetStats:
             return
 
         else:
-            value = 'Unknown stats'
+            raise NotImplementedError
         # except (NetworkXError, NetworkXNotImplemented) as e:
         #     value = str(e)
 

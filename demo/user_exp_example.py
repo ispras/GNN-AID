@@ -73,7 +73,7 @@ def test_Konst_model():
     model_manager = klass(
         gnn=gnn,
         manager_config=manager_config,
-        dataset_path=dataset.results_dir)
+        dataset_path=dataset.prepared_dir)
 
     warnings.warn("Start training")
     dataset.train_test_split()

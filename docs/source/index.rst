@@ -1,19 +1,49 @@
 Welcome to GNN-AID documentation!
 ===================================
 
-GNN-AID is an open instrument for Analysis, Interpretation, and Defensing Graph Neural Networks for explaining your graph neural network with a number of existing explainers.
+GNN-AID is an open instrument for Analysis, Interpretation, and Defensing Graph Neural Networks.
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
+Check out the :doc:`usage` section for further information, including :ref:`installation` of the project.
 
 .. note::
 
-   This project is under active development.
+    This project is under active development.
 
-Contents
---------
 
 .. toctree::
+    :maxdepth: 1
+    :caption: Getting started
 
-   usage
-   api
+    get_started
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Tutorials
+
+    tutorials
+
+.. toctree::
+    :maxdepth: 1
+    :caption: User guide
+
+    user_guide
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Developer guide
+
+    user_guide
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Package reference
+
+    api/aux
+    api/data_structures
+    api/datasets
+    api/models_builder
+    api/explainers
+    api/attacks
+    api/defenses
+    api/user_datasets
+

@@ -84,7 +84,7 @@ class ModelLoadBlock(Block):
     ) -> None:
         from models_builder.gnn_models import GNNModelManager
         self.model_manager, train_test_split_path = GNNModelManager.from_model_path(
-            model_path=self.model_path, dataset_path=self.gen_dataset.results_dir)
+            model_path=self.model_path, dataset_path=self.gen_dataset.prepared_dir)
         self._load_train_test_mask(train_test_split_path / 'train_test_split')
 
         self._object = self.model_manager
@@ -275,7 +275,7 @@ class ModelManagerBlock(Block):
         self._object = mm_class(
             gnn=self.gnn,
             manager_config=self.model_manager_config,
-            dataset_path=self.gen_dataset.results_dir,
+            dataset_path=self.gen_dataset.prepared_dir,
             modification=ModelModificationConfig(
                 model_ver_ind=0,
                 # FIXME Kirill front attack

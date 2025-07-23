@@ -20,7 +20,9 @@ class PTGDataset(GeneralDataset):
     """
     Generalisation and a wrapper over a single ptg Dataset.
     Features and labels are defined at initialisation.
-    You should extend from this class.
+    Extend this class if you have a dataset extending :class:`torch_geometric.data.Dataset`.
+
+
     """
     default_dataset_var_config = DatasetVarConfig(
         features=FeatureConfig(node_attr=[PTG_FEATURE_NAME]),
@@ -36,7 +38,6 @@ class PTGDataset(GeneralDataset):
     ):
         """
         :param dataset_config: dataset config dictionary
-        # :param ptg_kwargs: additional args to init torch_geometric.data.Dataset
         """
         super(PTGDataset, self).__init__(dataset_config)
 
@@ -44,21 +45,23 @@ class PTGDataset(GeneralDataset):
             self
     ) -> None:
         self.dataset_var_config = PTGDataset.default_dataset_var_config.copy()
-        results_exist = self.results_dir.exists()
+        results_exist = self.prepared_dir.exists()
 
-        self._define_ptg_dataset()  # creates tensors and save them to self.results_dir
+        self._define_ptg_dataset()  # creates tensors and save them to self.prepared_dir
+
+        self.node_attr_slices = {PTG_FEATURE_NAME: (0, self.dataset.data.x.shape[1])}
 
         if results_exist:
             # Read info
             self.info = DatasetInfo.read(self.info_path)
 
         else:  # first time
-            self.results_dir.parent.mkdir(parents=True, exist_ok=True)
-            if self.results_dir != self.dataset.processed_dir\
+            self.prepared_dir.parent.mkdir(parents=True, exist_ok=True)
+            if self.prepared_dir != self.dataset.processed_dir\
                     and Path(self.dataset.processed_dir).is_dir():
                 # Create link to original processed files
                 # (we do not move them to avoid torch graph calling process() each time)
-                self.results_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
+                self.prepared_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
 
             # Define and save DatasetInfo
             self.info = self.induce_dataset_info()
@@ -72,7 +75,7 @@ class PTGDataset(GeneralDataset):
     def _define_ptg_dataset(
             self
     ) -> None:
-        """ This function creates all tensors and save them to self.results_dir
+        """ This function creates all tensors and save them to self.prepared_dir
         """
         raise RuntimeError("This should be implemented in subclass")
 
@@ -82,7 +85,7 @@ class PTGDataset(GeneralDataset):
     ) -> Dict[str, Union[list, torch.Tensor]]:
         """ Get node attributes as a dict {name -> list}"""
         # return {}  # features are not attributes
-        assert attrs is None or attrs == [PTG_FEATURE_NAME]
+        assert attrs is None or attrs == [] or attrs == [PTG_FEATURE_NAME]
         return {PTG_FEATURE_NAME: [data.x.tolist() for data in self.dataset]}
 
     def edge_attributes(
@@ -147,13 +150,6 @@ class PTGDataset(GeneralDataset):
         res.check()
         return res
 
-    def _compute_stat(
-            self,
-            stat: str
-    ) -> None:
-        # TODO misha
-        raise NotImplementedError
-
 
 class LocalPTGDataset(PTGDataset):
     """
@@ -193,10 +189,10 @@ class LocalPTGDataset(PTGDataset):
     ) -> None:
         # Create local ptg dataset
 
-        if self.results_dir.exists():
-            self.dataset = LocalDataset(None, self.results_dir)
+        if self.prepared_dir.exists():
+            self.dataset = LocalDataset(None, self.prepared_dir)
         else:
-            self.dataset = LocalDataset(self.data_list, self.results_dir)
+            self.dataset = LocalDataset(self.data_list, self.prepared_dir)
 
 
 class LibPTGDataset(PTGDataset):
@@ -230,9 +226,9 @@ class LibPTGDataset(PTGDataset):
             processed: Union[str, Path]
     ) -> None:
         """ Move ptg processed files to folder when tenors are stored """
-        if not self.results_dir.exists():
-            self.results_dir.mkdir(parents=True)
-            os.rename(processed, self.results_dir)
+        if not self.prepared_dir.exists():
+            self.prepared_dir.mkdir(parents=True)
+            os.rename(processed, self.prepared_dir)
         else:
             shutil.rmtree(processed)
 
@@ -266,15 +262,15 @@ class LibPTGDataset(PTGDataset):
                     #  https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.BAShapes.html#torch_geometric.datasets.BAShapes
                     #  e.g. BAShapes, other/PCPNetDataset etc
                     self.dataset = dataset_cls(**self._params)
-                    if not os.path.exists(self.results_dir):
-                        os.makedirs(self.results_dir)
+                    if not os.path.exists(self.prepared_dir):
+                        os.makedirs(self.prepared_dir)
                     torch.save(obj=(self.dataset.data, self.dataset.slices),
-                               f=self.results_dir / 'data.pt')
+                               f=self.prepared_dir / 'data.pt')
             else:
                 dataset_cls = import_by_name(self._group, ['torch_geometric.datasets'])
                 self.dataset = dataset_cls(root=self.root_dir.parent, name=self._name, **self._params)
                 # QUE Kirill, maybe we can do it some other way
-                if self.name == 'PROTEINS':
+                if self._name == 'PROTEINS':
                     torch.save((self.dataset.data, self.dataset.slices),
                                self.dataset.processed_paths[0])
                 if self._group in ["GEDDataset"]:

@@ -172,8 +172,22 @@ class PanelDatasetView extends PanelView {
                     let $attrList = $("<ul></ul>")
                     for (let i = 0; i < Math.min(10, attributesNames.length); i++) {
                         let item = '"' + attributesNames[i] + '"'
-                        item += ' - ' + attributesTypes[i]
-                        item += ', values: [' + attributesValues[i] + ']'
+                        item += ' - ' + attributesTypes[i] + ', '
+                        switch (attributesTypes[i]) {
+                            case "continuous":
+                                item += 'values in'
+                                break
+                            case "categorical":
+                                item += 'values:'
+                                break
+                            case "vector":
+                                item += 'values of length'
+                                break
+                            case "other":
+                                item += 'values:'
+                                break
+                        }
+                        item += ' [' + attributesValues[i] + ']'
                         let $item = $("<li></li>").text(item)
                         $attrList.append($item)
                     }
@@ -191,8 +205,22 @@ class PanelDatasetView extends PanelView {
                 let $attrList = $("<ul></ul>")
                 for (let i = 0; i < Math.min(10, attributesNames.length); i++) {
                     let item = '"' + attributesNames[i] + '"'
-                    item += ' - ' + attributesTypes[i]
-                    item += ', values: [' + attributesValues[i] + ']'
+                    item += ' - ' + attributesTypes[i] + ', '
+                    switch (attributesTypes[i]) {
+                        case "continuous":
+                            item += 'values in'
+                            break
+                        case "categorical":
+                            item += 'values:'
+                            break
+                        case "vector":
+                            item += 'values of length'
+                            break
+                        case "other":
+                            item += 'values:'
+                            break
+                    }
+                    item += ' [' + attributesValues[i] + ']'
                     let $item = $("<li></li>").text(item)
                     $attrList.append($item)
                 }
@@ -265,13 +293,18 @@ class PanelDatasetView extends PanelView {
             $acDiv.append($button1)
             $button1.click(async () => {
                 $button1.prop("disabled", true)
-                let data = controller.ajaxRequest('/dataset', {get: "stat", stat: "attr_corr"})
+                let data = await controller.ajaxRequest('/dataset', {get: "stat", stat: "attr_corr"})
 
-                let attrs = data['attributes']
-                let correlations = data['correlations']
                 $acDiv.empty()
                 $acDiv.append(name1 + ':<br>')
 
+                if (typeof data === 'string') {
+                    $acDiv.append(data)
+                    return
+                }
+
+                let attrs = data['attributes']
+                let correlations = data['correlations']
                 // Adds mouse listener for all elements which shows a tip with given text
                 let $tip = $("<span></span>").addClass("tooltip-text")
                 $acDiv.append($tip)

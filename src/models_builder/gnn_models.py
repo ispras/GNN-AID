@@ -1256,10 +1256,10 @@ class FrameworkGNNModelManager(GNNModelManager):
                                     batch_ind * self.batch: (batch_ind + 1) * self.batch]:
                         if hasattr(self, 'mask_features'):
                             for feature in self.mask_features:
-                                # features_mask_tensor_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                #                                     gen_dataset.info.node_attr_slices[feature][1]] = False
-                                data_x_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                                      gen_dataset.info.node_attr_slices[feature][1]] = 0
+                                # features_mask_tensor_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                #                                     gen_dataset.node_attr_slices[feature][1]] = False
+                                data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                                      gen_dataset.node_attr_slices[feature][1]] = 0
                         # if self.gnn_mm.train_mask_flag:
                         #     data_x_copy[elem_ind] = torch.zeros(data_x_elem_len)
                         # y_true = torch.masked.masked_tensor(data.y, mask_tensor)

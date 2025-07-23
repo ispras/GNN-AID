@@ -3,8 +3,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Union
 
-from torch_geometric.data import Dataset, HeteroData, Data
-from torch_geometric.data.data import BaseData
+from torch_geometric.data import Dataset, Data
 
 
 class DatasetInfo:
@@ -12,6 +11,70 @@ class DatasetInfo:
     Description for a dataset, its metainfo.
     It is created with the dataset and does not change.
     Some fields are obligate, others are not.
+
+    Class Attributes
+    ================
+
+    - ``class_name`` (*str*)
+      The name of the class used to initialize the object.
+
+    - ``import_from`` (*str*)
+      The module name from which to import the class.
+
+    - ``name`` (*str*, optional)
+      The dataset name. Defaults to the dataset path if not specified.
+
+    - ``format`` (*str*, optional)
+      The format of the raw data. Default is ``ij``.
+
+    - ``count`` (*int*)
+      The number of graphs.
+
+    - ``directed`` (*bool*, optional)
+      Flag indicating whether the edges are directed. Default is ``False``.
+
+    - ``hetero`` (*bool*, optional)
+      Flag indicating whether the graph is heterogeneous. Default is ``False``.
+
+    - ``nodes`` (*List[int]*)
+      List containing the number of nodes in each graph.
+
+    - ``remap`` (*bool*, optional)
+      Flag indicating whether to remap node indices. Default is ``False``.
+
+    - ``node_attributes`` (*dict*, optional)
+      Information about node attributes. The dictionary keys may include intermediate keys for node
+      types (used in heterogeneous graphs).
+      Contains the following fields:
+
+      - ``names`` (*List[str]*)
+        List of attribute names.
+      - ``types`` (*List[str]*)
+        List of attribute types, each being one of the following:
+
+        - ``"continuous"`` — continuous numerical values
+        - ``"categorical"`` — categorical values
+        - ``"vector"`` — continuous vector values (e.g., as in PyTorch)
+        - ``"other"`` — other types, such as strings
+      - ``values`` (*List*)
+        Possible values for the attributes, depending on their type:
+
+        - For ``continuous`` — list containing minimum and maximum values
+        - For ``categorical`` — list enumerating possible categories
+        - For ``vector`` — list containing minimum and maximum values
+        - For ``other`` — an empty list or some instructions on how to process the values
+
+    - ``edge_attributes`` (*dict*, optional)
+      Information about edge attributes, structured similarly to ``node_attributes``.
+
+    - ``labelings`` (*dict*)
+      Information about labelings. The dictionary keys may include intermediate keys for node types
+      (in heterogeneous graphs). Each labeling entry maps a label name to a value, for example:
+
+      - For classification — the number of classes
+      - For regression on nodes — minimum and maximum values or 0
+      - Other label types as applicable
+
     """
 
     def __init__(
@@ -30,8 +93,6 @@ class DatasetInfo:
         self.node_attributes: OrderedDict = None
         self.edge_attributes: OrderedDict = None
         self.labelings: dict = None
-        self.node_attr_slices: dict = None
-        self.edge_attr_slices: dict = None
         # self.node_info: dict = {}
         # self.edge_info: dict = {}
         # self.graph_info: dict = {}
@@ -174,63 +235,18 @@ class DatasetInfo:
         res = DatasetInfo()
         for k, v in a_dict.items():
             setattr(res, k, v)
-        res.node_attr_slices, res.edge_attr_slices = res.get_attributes_slices_form_attributes(
-            res.node_attributes, res.edge_attributes)
         res.check()
         return res
 
-    @staticmethod
-    def get_attributes_slices_form_attributes(
-            node_attributes: dict,
-            edge_attributes: dict,
-    ) -> (dict, dict):
-        if len(node_attributes) > 0 and\
-                isinstance(next(iter(node_attributes.values())), dict):
-            # TODO misha hetero
-            return None, None
-
-        node_attr_slices = {}
-        if node_attributes:
-            start_attr_index = 0
-            for i in range(len(node_attributes['names'])):
-                if node_attributes['types'][i] == 'vector':
-                    attr_len = node_attributes['values'][i]
-                elif node_attributes['types'][i] == 'categorical':
-                    attr_len = len(node_attributes['values'][i])
-                elif node_attributes['types'][i] == 'continuous':
-                    attr_len = 1
-                else:
-                    attr_len = 0
-                node_attr_slices[node_attributes['names'][i]] = (
-                    start_attr_index, start_attr_index + attr_len)
-                start_attr_index = start_attr_index + attr_len
-
-        edge_attr_slices = {}
-        if edge_attributes:
-            start_attr_index = 0
-            for i in range(len(edge_attributes['names'])):
-                if edge_attributes['types'][i] == 'vector':
-                    attr_len = edge_attributes['values'][i]
-                elif edge_attributes['types'][i] == 'categorical':
-                    attr_len = len(edge_attributes['values'][i])
-                elif edge_attributes['types'][i] == 'continuous':
-                    attr_len = 1
-                else:
-                    attr_len = 1
-                edge_attr_slices[edge_attributes['names'][i]] = (
-                    start_attr_index, start_attr_index + attr_len)
-                start_attr_index = start_attr_index + attr_len
-
-        return node_attr_slices, edge_attr_slices
-
 
 def is_graph_directed(
-        data: Union[Data, BaseData]
+        data: Data
 ) -> bool:
-    """ Detect whether graph is directed or not (for each edge i->j, exists j->i).
     """
-    # Note: this does not work correctly. E.g. for TUDataset/MUTAG it incorrectly says directed.
-    # return not data.is_undirected()
+    Detect whether graph is directed or not (for each edge i->j, exists j->i).
+    NOTE: torch func data.is_undirected() does not work correctly,
+    e.g. for TUDataset/MUTAG it incorrectly says directed.
+    """
 
     edges = data.edge_index.tolist()
     edges_set = set()

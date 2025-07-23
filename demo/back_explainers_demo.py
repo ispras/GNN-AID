@@ -50,10 +50,10 @@ def explainers_test():
 
 
     dataset_mg_small = gen_dataset_mg_small
-    results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
+    results_dataset_path_mg_small = gen_dataset_mg_small.prepared_dir
 
     dataset_sg_example = gen_dataset_sg_example
-    results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+    results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
     # Init gnns and gnn_model_managers
     # gat2_cora = model_configs_zoo(dataset=dataset_cora, model_name='gat_gat')

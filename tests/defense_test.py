@@ -41,7 +41,7 @@ class DefenseTest(unittest.TestCase):
                              dataset_ver_ind=0)
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
 
         #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
@@ -57,7 +57,7 @@ class DefenseTest(unittest.TestCase):
         #     DatasetVarConfig(dataset_ver_ind=0)
         # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
