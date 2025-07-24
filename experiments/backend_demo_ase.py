@@ -100,7 +100,7 @@ def test_attack_defense_small():
 
     warnings.warn("Training was successful")
 
-    metric_loc_grad_reg = gnn_model_manager.evaluate_model(
+    metric_loc_clean = gnn_model_manager.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
 
@@ -115,14 +115,6 @@ def test_attack_defense_small():
                 "_config_kwargs": {},
             }
         }
-    )
-
-    steps_epochs = 200
-    gnn_model_manager = FrameworkGNNModelManager(
-        gnn=gnn,
-        dataset_path=results_dataset_path,
-        manager_config=manager_config,
-        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
 
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
@@ -167,7 +159,7 @@ def test_attack_defense_small():
 
     warnings.warn("Training was successful")
 
-    metric_loc_clean = gnn_model_manager.evaluate_model(
+    metric_loc_grad_reg = gnn_model_manager.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
 
