@@ -171,5 +171,5 @@ def test_attack_defense_small():
 if __name__ == '__main__':
     import random
 
-    random.seed(11)
+    random.seed(10)
     test_attack_defense_small()
