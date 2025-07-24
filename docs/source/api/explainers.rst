@@ -1,14 +1,16 @@
 explainers
 **********
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
 Base classes
 ============
 .. automodule:: explainers.explainer
-    :members:
-
-
+   :members:
+.. automodule:: explainers.explainer_metrics
+   :members:
+.. automodule:: explainers.explainers_manager
+   :members:

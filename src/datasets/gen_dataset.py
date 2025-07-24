@@ -1,13 +1,12 @@
-from abc import ABC, abstractmethod
 import json
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union, List, Callable, Dict
 
 import torch
 from torch import default_generator, randperm, tensor
-# from torch._C import default_generator
-# from torch._C._VariableFunctions import randperm
 from torch_geometric.data import Dataset, InMemoryDataset, Data
+from torch_geometric.data.collate import collate
 
 from aux.declaration import Declare
 from aux.utils import root_dir
@@ -26,8 +25,8 @@ class GeneralDataset(ABC):
     - :class:`~data_structures.configs.DatasetVarConfig` - specifies how to build features and
       labels.
 
-    :class:`~datasets.gen_dataset.GeneralDataset` also requires :class:`~datasets.DatasetInfo` which describes
-    metainformation about the dataset family.
+    :class:`~datasets.gen_dataset.GeneralDataset` also requires :class:`~datasets.DatasetInfo` which
+    describes metainformation about the dataset family.
 
     See also:
 
@@ -59,6 +58,7 @@ class GeneralDataset(ABC):
         self.visible_part: VisiblePart = None  # index of visible nodes/graphs at frontend
 
         self.dataset: Dataset = None  # Current PTG dataset
+        self._data: Data = None
 
         # Statistics
         from datasets.dataset_stats import DatasetStats
@@ -103,7 +103,7 @@ class GeneralDataset(ABC):
         return Path(Declare.dataset_prepared_dir(self.dataset_config, self.dataset_var_config)[0])
 
     @property
-    def info_path(
+    def metainfo_path(
             self
     ) -> Path:
         """ Path to 'metainfo' file. """
@@ -113,20 +113,35 @@ class GeneralDataset(ABC):
     def data(
             self
     ) -> Data:
-        # fixme access
-        return self.dataset._data
+        """
+        Get tensors as :class:`torch_geometric.data.data.Data` object.
+        NOTE: this will load the whole dataset into memory, be careful if the size is large.
+        """
+        if self._data is None:
+            if self.is_multi():
+                if isinstance(self.dataset, InMemoryDataset):
+                    self._data = self.dataset._data
+                else:
+                    from warnings import warn
+                    warn("The ptg dataset is not InMemoryDataset. "
+                         "Getting its data might consume too much resources if the dataset is "
+                         "large. Consider using dataset.get(i) to get Data for i graph.")
+
+                    data_list = [self.dataset.get(i) for i in range(self.info.count)]
+                    self._data, _, _ = collate(Data, data_list)
+
+            else:
+                self._data = self.dataset.get(0)
+
+        return self._data
 
     @property
-    def num_classes(
+    def edges(
             self
-    ) -> int:
-        return self.dataset.num_classes
-
-    @property
-    def num_node_features(
-            self
-    ) -> int:
-        return self.dataset.num_node_features
+    ) -> List[torch.Tensor]:
+        """ Edge index as a list of tensors """
+        # NOTE for the first time this makes shallow copy of all data
+        return [data.edge_index for data in self.dataset]
 
     @abstractmethod
     def node_attributes(
@@ -143,14 +158,6 @@ class GeneralDataset(ABC):
         """ Get node attributes as a dict {name -> list}"""
 
     @property
-    def edges(
-            self
-    ) -> List[torch.Tensor]:
-        """ Edge index as a list of tensors """
-        # NOTE for the first time this makes shallow copy of all data
-        return [data.edge_index for data in self.dataset]
-
-    @property
     def labels(
             self
     ) -> tensor:
@@ -158,6 +165,18 @@ class GeneralDataset(ABC):
             return tensor([data.y for data in self.dataset])
         else:
             return self.dataset[0].y
+
+    @property
+    def num_classes(
+            self
+    ) -> int:
+        return self.dataset.num_classes
+
+    @property
+    def num_node_features(
+            self
+    ) -> int:
+        return self.dataset.num_node_features
 
     @property
     def node_features(
@@ -242,7 +261,7 @@ class GeneralDataset(ABC):
             parts[-1] = parts[-1].removesuffix(file_path.suffix)
             self.info.import_from = '.'.join(parts)
             print(f"Registered graph with class_name={self.info.class_name}")
-            self.info.save(self.info_path)
+            self.info.save(self.metainfo_path)
 
     @abstractmethod
     def _compute_dataset_var_data(

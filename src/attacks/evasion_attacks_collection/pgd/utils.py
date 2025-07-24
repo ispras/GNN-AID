@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
 
+# FIXME where do we use all these?
 
 class Projection:
     def __init__(self, eps):

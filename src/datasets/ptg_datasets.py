@@ -22,7 +22,6 @@ class PTGDataset(GeneralDataset):
     Features and labels are defined at initialisation.
     Extend this class if you have a dataset extending :class:`torch_geometric.data.Dataset`.
 
-
     """
     default_dataset_var_config = DatasetVarConfig(
         features=FeatureConfig(node_attr=[PTG_FEATURE_NAME]),
@@ -53,7 +52,7 @@ class PTGDataset(GeneralDataset):
 
         if results_exist:
             # Read info
-            self.info = DatasetInfo.read(self.info_path)
+            self.info = DatasetInfo.read(self.metainfo_path)
 
         else:  # first time
             self.prepared_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -65,7 +64,7 @@ class PTGDataset(GeneralDataset):
 
             # Define and save DatasetInfo
             self.info = self.induce_dataset_info()
-            self.info.save(self.info_path)
+            self.info.save(self.metainfo_path)
 
     def _compute_dataset_var_data(
             self
@@ -164,7 +163,7 @@ class LocalPTGDataset(PTGDataset):
             dataset_config: DatasetConfig = None
     ):
         """
-        :param data_list: list of ready torch_geometric.data.Data objects
+        :param data_list: list of ready :class:`torch_geometric.data.data.Data` objects
         :param name: unique dataset name
         :param dataset_config: is optional here
         """
@@ -204,15 +203,11 @@ class LibPTGDataset(PTGDataset):
     def __init__(
             self,
             dataset_config: DatasetConfig,
-            # domain: str,
-            # group: str,
-            # name: str,
             **params
     ):
         """
-        :param group: group name, e.g. 'TUDataset'
-        :param name: dataset name, e.g. 'MUTAG'
-        :param params: optional init parameters
+        :param dataset_config: dataset config dictionary
+        :param params: additional parameters to init ptg class if needed
         """
         # assert domain in ['single-graph', 'multiple-graphs']
         first, self._domain, self._group, self._name = dataset_config.full_name
@@ -283,7 +278,7 @@ class LibPTGDataset(PTGDataset):
             #
             # # Define and save DatasetInfo
             # self.info = self.induce_dataset_info()
-            # self.info.save(self.info_path)
+            # self.info.save(self.metainfo_path)
         else:
             raise RuntimeError()
 

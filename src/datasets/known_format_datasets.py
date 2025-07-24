@@ -255,7 +255,7 @@ class KnownFormatDataset(
     ) -> None:
         """ Read edges and attributes from raw files.
         """
-        self.info = DatasetInfo.read(self.info_path)
+        self.info = DatasetInfo.read(self.metainfo_path)
         self._format = self.info.format or 'ij'
         if self._format != 'ij':
             self._convert_to_ij()
@@ -324,7 +324,7 @@ class KnownFormatDataset(
     def _read_single(
             self
     ) -> None:
-        """ Read edges, remap node, create feature tensors - for single graph case.
+        """ Read edges, remap node, create edge index - for single graph case.
         """
         node_map = {}
         ptg_edge_index = [[], []]
@@ -355,7 +355,7 @@ class KnownFormatDataset(
     def _read_multi(
             self
     ) -> None:
-        """ Read edges, remap node, create feature tensors - for multi graph case.
+        """ Read edges, remap node, create edge index - for multi graph case.
         """
         count = self.info.count
         node_maps = []  # list of node_maps

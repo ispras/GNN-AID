@@ -1,19 +1,17 @@
 aux
 ***
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
-Base classes
-============
 .. automodule:: aux.data_info
-    :members:
-.. automodule:: aux.declaration
-    :members:
+   :members:
+
 .. automodule:: aux.utils
-    :members:
-.. automodule:: aux.custom_decorators
-    :members:
+   :members:
+
+.. automodule:: aux.declaration
+   :members:
 

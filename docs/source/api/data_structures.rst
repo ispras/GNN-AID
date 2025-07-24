@@ -1,15 +1,27 @@
 data_structures
 ***************
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
-Base classes
-============
-.. automodule:: data_structures.configs
-    :members:
+Prefix storage
+==============
 .. automodule:: data_structures.prefix_storage
-    :members:
+   :members:
 
+Configs
+=======
+.. automodule:: data_structures.configs
+   :members:
+
+
+Other
+=====
+.. automodule:: data_structures.explanation
+   :members:
+.. automodule:: data_structures.graph_modification_artifacts
+   :members:
+.. automodule:: data_structures.mi_results
+   :members:

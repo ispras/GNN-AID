@@ -1,13 +1,18 @@
 defenses
 ********
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
 Base classes
 ============
 .. automodule:: defenses.defense_base
-    :members:
-
+   :members:
+.. automodule:: defenses.evasion_defense
+   :members:
+.. automodule:: defenses.mi_defense
+   :members:
+.. automodule:: defenses.poison_defense
+   :members:

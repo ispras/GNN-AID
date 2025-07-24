@@ -1,5 +1,5 @@
-Get started
-***********
+Installation and first steps
+****************************
 
 .. contents::
     :local:

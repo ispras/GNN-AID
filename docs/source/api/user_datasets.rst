@@ -1,14 +1,13 @@
 user_datasets
 *************
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
-User dataset examples
-=====================
+Examples
+========
 .. automodule:: user_datasets.power_graph.dataset
-    :members:
-    :show-inheritance:
+   :members:
 

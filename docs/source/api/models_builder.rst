@@ -1,15 +1,24 @@
 models_builder
 **************
 
-.. contents::
-    :local:
-    :depth: 2
+
+.. autosummary::
+   :toctree: generated
 
 
-Creating and managing models
-==============================
+Base classes
+============
+.. automodule:: models_builder.attack_defense_manager
+   :members:
+.. automodule:: models_builder.attack_defense_metric
+   :members:
+.. automodule:: models_builder.custom_layers
+   :members:
 .. automodule:: models_builder.gnn_constructor
-    :members:
+   :members:
 .. automodule:: models_builder.gnn_models
-    :members:
-
+   :members:
+.. automodule:: models_builder.models_utils
+   :members:
+.. automodule:: models_builder.models_zoo
+   :members:

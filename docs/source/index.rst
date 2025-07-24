@@ -1,20 +1,31 @@
 Welcome to GNN-AID documentation!
 ===================================
 
-GNN-AID is an open instrument for Analysis, Interpretation, and Defensing Graph Neural Networks.
+GNN-AID is an open framework for **A**\ nalysis, **I**\ nterpretation, and **D**\ efensing Graph Neural Networks.
+It is built on `PyTorch-Geometric <https://pytorch-geometric.readthedocs.io>`_ and:
 
-Check out the :doc:`usage` section for further information, including :ref:`installation` of the project.
+- includes preloaded `datasets from PyG <https://pytorch-geometric.readthedocs.io/en/latest/cheatsheet/data_cheatsheet.html>`_
+- extendable API for custom architectures: datasets, models, explainers, attacks and defense methods
+- MLOps features for experiments reproducibility
 
-.. note::
+GNN-AID has a web interface which supports:
 
-    This project is under active development.
+- graph visualization and analysis tools
+- no-code model building
+- visualization of models explanations
+
+.. Check out :doc:`installation` of the project.
+
+.. .. note::
+
+..    This project is under active development.
 
 
 .. toctree::
     :maxdepth: 1
     :caption: Getting started
 
-    get_started
+    installation
 
 .. toctree::
     :maxdepth: 1
@@ -32,7 +43,7 @@ Check out the :doc:`usage` section for further information, including :ref:`inst
     :maxdepth: 1
     :caption: Developer guide
 
-    user_guide
+    dev_guide
 
 .. toctree::
     :maxdepth: 1

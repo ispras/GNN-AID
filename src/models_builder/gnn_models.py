@@ -922,7 +922,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     ) -> None:
         for _ in range(steps):
             self.before_epoch(gen_dataset)
-            print("epoch", self.modification.epochs)
+            # print("epoch", self.modification.epochs)
             train_loss = self.train_1_step(gen_dataset)
             self.after_epoch(gen_dataset)
             early_stopping_flag = self.early_stopping(train_loss=train_loss, gen_dataset=gen_dataset,
@@ -984,7 +984,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             self.before_batch(batch)
             loss += self.train_on_batch_full(batch, task_type)
             self.after_batch(batch)
-        print("loss %.8f" % loss)
+        # print("loss %.8f" % loss)
         self.modification.epochs += 1
         self.gnn.eval()
         return loss.cpu().detach().numpy().tolist()
@@ -1307,7 +1307,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
                 gen_dataset = gen_dataset.apply_modification(artifact=artifact)
             except Exception as e:
-                print(f"An error occurred: {type(e).__name__} - {e}")
+                # print(f"An error occurred: {type(e).__name__} - {e}")
                 loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
                 self.poison_attacker.dataset_diff()
                 if loc is not None:
@@ -1343,7 +1343,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
                 gen_dataset = gen_dataset.apply_modification(artifact=artifact)
             except Exception as e:
-                print(f"An error occurred: {type(e).__name__} - {e}")
+                # print(f"An error occurred: {type(e).__name__} - {e}")
                 loc = self.poison_defender.defense(gen_dataset=gen_dataset)
                 self.poison_defender.dataset_diff()
                 if loc is not None:

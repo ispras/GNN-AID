@@ -49,5 +49,3 @@ Additional dataset related modules
     :members:
 .. automodule:: datasets.visible_part
     :members:
-
-
