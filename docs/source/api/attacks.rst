@@ -51,7 +51,7 @@ Nettack
 
 Projected Gradient Descent
 --------------------------
-.. automodule:: attacks.evasion_attacks_collection.pdg.utils
+.. automodule:: attacks.evasion_attacks_collection.pgd.utils
    :members:
 
 Rewatt

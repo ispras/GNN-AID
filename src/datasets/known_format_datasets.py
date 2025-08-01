@@ -274,53 +274,6 @@ class KnownFormatDataset(
             self._read_single()
         self._read_attributes()
 
-        self._infer_feature_slices_form_attributes()
-
-    def _infer_feature_slices_form_attributes(
-            self,
-    ) -> None:
-        """ Set correspondence of attributes to components of feature vector.
-        """
-        node_attributes = self.info.node_attributes
-
-        if len(node_attributes) > 0 and\
-                isinstance(next(iter(node_attributes.values())), dict):
-            # TODO misha hetero
-            return
-
-        self.node_attr_slices = {}
-        if node_attributes:
-            start_attr_index = 0
-            for i in range(len(node_attributes['names'])):
-                if node_attributes['types'][i] == 'vector':
-                    attr_len = node_attributes['values'][i]
-                elif node_attributes['types'][i] == 'categorical':
-                    attr_len = len(node_attributes['values'][i])
-                elif node_attributes['types'][i] == 'continuous':
-                    attr_len = 1
-                else:
-                    attr_len = 0
-                self.node_attr_slices[node_attributes['names'][i]] = (
-                    start_attr_index, start_attr_index + attr_len)
-                start_attr_index = start_attr_index + attr_len
-
-        # edge_attributes = self.info.edge_attributes
-        # self.edge_attr_slices = {}
-        # if edge_attributes:
-        #     start_attr_index = 0
-        #     for i in range(len(edge_attributes['names'])):
-        #         if edge_attributes['types'][i] == 'vector':
-        #             attr_len = edge_attributes['values'][i]
-        #         elif edge_attributes['types'][i] == 'categorical':
-        #             attr_len = len(edge_attributes['values'][i])
-        #         elif edge_attributes['types'][i] == 'continuous':
-        #             attr_len = 1
-        #         else:
-        #             attr_len = 1
-        #         self.edge_attr_slices[edge_attributes['names'][i]] = (
-        #             start_attr_index, start_attr_index + attr_len)
-        #         start_attr_index = start_attr_index + attr_len
-
     def _read_single(
             self
     ) -> None:
@@ -582,8 +535,9 @@ class KnownFormatDataset(
                 value = attrs[n]
                 node_features[n].extend(func(value))
 
+        node_attributes_info = self.info.node_attributes
+        self.node_attr_slices = {}
         for attr in node_attr:
-            node_attributes_info = self.info.node_attributes
             ix = node_attributes_info["names"].index(attr)
             _type = node_attributes_info["types"][ix]
 
@@ -600,7 +554,10 @@ class KnownFormatDataset(
                 node_attributes = node_attributes[g_ix]
             else:
                 node_attributes = node_attributes[0]
+            start = len(node_features[0])
             assign_feats(node_attributes, func)
+            end = len(node_features[0])
+            self.node_attr_slices[attr] = (start, end)
 
         # TODO in future, same for edge and graph attributes
 

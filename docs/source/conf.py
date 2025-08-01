@@ -41,7 +41,8 @@ extensions = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
-    'torch': ("https://pytorch.org/docs/stable/", None),
+    # 'torch': ("https://pytorch.org/docs/stable/", None),
+    'torch': ("https://docs.pytorch.org/docs/stable/", None),
     'torch_geometric': ('https://pytorch-geometric.readthedocs.io/en/latest/', None),
 }
 intersphinx_disabled_domains = ['std']
