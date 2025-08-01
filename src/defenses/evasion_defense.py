@@ -78,7 +78,7 @@ class GradientRegularizationDefender(
             **kwargs
     ) -> dict:
         batch.x.requires_grad = True
-        outputs = model_manager.gnn(batch.x, batch.edge_index)
+        outputs = model_manager.gnn(batch.x, batch.edge_index, batch.batch)
         loss_loc = model_manager.loss_function(*move_to_same_device(outputs, batch.y))
         gradients = torch.autograd.grad(outputs=loss_loc, inputs=batch.x,
                                         grad_outputs=torch.ones_like(loss_loc),

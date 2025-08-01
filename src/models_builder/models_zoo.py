@@ -2428,7 +2428,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2442,7 +2442,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [
@@ -2450,7 +2450,7 @@ def model_configs_zoo(
                                 'into_layer': 2,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2490,7 +2490,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2504,7 +2504,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2518,7 +2518,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [
@@ -2526,7 +2526,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2566,7 +2566,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2580,7 +2580,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [
@@ -2588,7 +2588,7 @@ def model_configs_zoo(
                                 'into_layer': 2,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2628,7 +2628,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2642,7 +2642,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2656,7 +2656,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [
@@ -2664,7 +2664,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2716,7 +2716,7 @@ def model_configs_zoo(
                                         }
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -2729,7 +2729,7 @@ def model_configs_zoo(
                                         },
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -2758,7 +2758,7 @@ def model_configs_zoo(
                                         }
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -2771,7 +2771,7 @@ def model_configs_zoo(
                                         },
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -2782,7 +2782,7 @@ def model_configs_zoo(
                                 'into_layer': 2,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2830,7 +2830,7 @@ def model_configs_zoo(
                             }
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2845,7 +2845,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [
@@ -2853,7 +2853,7 @@ def model_configs_zoo(
                                 'into_layer': 2,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2894,7 +2894,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -2911,7 +2911,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2925,7 +2925,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -2942,7 +2942,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -2983,7 +2983,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -3000,7 +3000,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3014,7 +3014,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3028,7 +3028,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3045,7 +3045,7 @@ def model_configs_zoo(
                                 'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -3086,7 +3086,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -3103,7 +3103,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3117,7 +3117,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3134,7 +3134,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -3175,7 +3175,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -3192,7 +3192,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3206,7 +3206,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3220,7 +3220,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3237,7 +3237,7 @@ def model_configs_zoo(
                                 'into_layer': 5,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -3278,7 +3278,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -3307,7 +3307,7 @@ def model_configs_zoo(
                                         }
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -3320,7 +3320,7 @@ def model_configs_zoo(
                                         },
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -3349,7 +3349,7 @@ def model_configs_zoo(
                                         }
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -3362,7 +3362,7 @@ def model_configs_zoo(
                                         },
                                     },
                                     'activation': {
-                                        'activation_name': 'ReLU',
+                                        'activation_name': 'LeakyReLU',
                                         'activation_kwargs': None,
                                     },
                                 },
@@ -3382,7 +3382,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -3423,7 +3423,7 @@ def model_configs_zoo(
                                 'into_layer': 3,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'stack',
                                 },
@@ -3448,7 +3448,7 @@ def model_configs_zoo(
                             }
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3463,7 +3463,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                     },
@@ -3480,7 +3480,7 @@ def model_configs_zoo(
                                 'into_layer': 4,
                                 'connection_kwargs': {
                                     'pool': {
-                                        'pool_type': 'global_add_pool',
+                                        'pool_type': 'global_max_pool',
                                     },
                                     'aggregation_type': 'cat',
                                 },
@@ -3520,7 +3520,7 @@ def model_configs_zoo(
                             },
                         },
                         'activation': {
-                            'activation_name': 'ReLU',
+                            'activation_name': 'LeakyReLU',
                             'activation_kwargs': None,
                         },
                         'connections': [

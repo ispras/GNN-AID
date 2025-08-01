@@ -161,10 +161,10 @@ class GNNExplainer(Explainer):
                 # TODO add functional if node_mask_type=="attributes"
                 raise NotImplementedError(f"Node mask type '{self.node_mask_type}' is not yet implemented.")
 
-        if self.gen_dataset.is_multi():
-            important_edges = {self.graph_idx: important_edges}
-            important_nodes = {self.graph_idx: important_nodes}
-            important_features = {self.graph_idx: important_features}
+        # if self.gen_dataset.is_multi():
+        #     important_edges = {self.graph_idx: important_edges}
+        #     important_nodes = {self.graph_idx: important_nodes}
+        #     important_features = {self.graph_idx: important_features}
 
         # TODO Write functions with output threshold
         self.explanation.add_edges(important_edges)
@@ -272,7 +272,9 @@ class GNNExplainerAlgorithm(ExplainerAlgorithm):
         for i in range(self.epochs):
             optimizer.zero_grad()
 
+            # h = x * self.node_mask
             h = x if self.node_mask is None else x * self.node_mask.sigmoid()
+            # h = x
             y_hat, y = model(h, edge_index, **kwargs), target
 
             if index is not None:

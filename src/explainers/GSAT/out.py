@@ -44,17 +44,21 @@ class GSATExplainer(Explainer):
 
         self.pbar.reset(total=1)
         if self.gen_dataset.is_multi():
-            raise NotImplementedError
+            graph = self.gen_dataset.dataset[idx]
+            self.raw_explanation = self(graph.x, graph.edge_index, **kwargs)
         else:
             self.raw_explanation = self(
                 self.gen_dataset.data.x, self.gen_dataset.data.edge_index,
                 node_idx=idx, **kwargs)
         self.pbar.close()
 
-    def get_filtered_k_hop_subgraph(self, node_idx, num_hops, edge_index, attention_scores, threshold):
-        subset, edge_index_subgraph, mapping, edge_mask = k_hop_subgraph(
-            node_idx, num_hops, edge_index, relabel_nodes=False
-        )
+    def get_filtered_k_hop_subgraph(self, num_hops, edge_index, attention_scores, threshold, node_idx=None):
+        if node_idx is not None:
+            subset, edge_index_subgraph, mapping, edge_mask = k_hop_subgraph(
+                node_idx, num_hops, edge_index, relabel_nodes=False
+            )
+        else:
+            edge_mask = torch.ones(edge_index.shape[1], dtype=torch.bool)
         # attention_scores = (attention_scores - attention_scores.mean()) / attention_scores.std()  # normalize attention
 
         attention_scores = attention_scores[:edge_index.shape[1]]  # remove self-loop (need?)
@@ -76,12 +80,16 @@ class GSATExplainer(Explainer):
         edge_att = getattr(self.model, self.model.gsat_layer_name).edge_att
         node_att = getattr(self.model, self.model.gsat_layer_name).node_att
         if self.expl_type == 'binary':
-            raw_explanation = self.get_filtered_k_hop_subgraph(node_idx, self.model.get_num_hops(), edge_index, edge_att,
-                                                               self.thrsh)
+            raw_explanation = self.get_filtered_k_hop_subgraph(self.model.get_num_hops(), edge_index, edge_att,
+                                                               self.thrsh, node_idx=node_idx)
         else:
-            subset, edge_index_subgraph, mapping, edge_mask = k_hop_subgraph(
-                node_idx, self.model.get_num_hops(), edge_index, relabel_nodes=False
-            )
+            if node_idx is not None:
+                subset, edge_index_subgraph, mapping, edge_mask = k_hop_subgraph(
+                    node_idx, self.model.get_num_hops(), edge_index, relabel_nodes=False
+                )
+            else:
+                subset = torch.unique(edge_index)
+                edge_mask = torch.ones(edge_index.shape[1]).bool()
             edge_dict = {}
             for i in range(edge_index.shape[1]):
                 if not edge_mask[i]:

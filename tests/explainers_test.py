@@ -139,8 +139,11 @@ class ExplainersTest(unittest.TestCase):
         gin3_lin2_prot_mg_mutag = model_configs_zoo(
             dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
         )
+        # gin3_lin1_mg_mutag = model_configs_zoo(
+        #     dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin')
+
         gin3_lin1_mg_mutag = model_configs_zoo(
-            dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin')
+            dataset=dataset_mg_mutag, model_name='gcn_gcn_lin_gc')
 
         gnn_model_manager_mg_mutag_manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",

@@ -143,7 +143,9 @@ class ExplainerMetric:
         new_x = x[node_mask]
         if target_node is not None:
             new_target_node = important_node_indices.index(target_node)
-        return new_x, new_edge_index, new_target_node
+            return new_x, new_edge_index, new_target_node
+        else:
+            return new_x, new_edge_index
 
     @staticmethod
     def calculate_explanation_vectors(
@@ -339,7 +341,7 @@ class GraphExplainerMetric(ExplainerMetric):
             self.edge_index = self.graph.edge_index
             original_answer = self.model.get_answer(self.x, self.edge_index)
             graph_explanation = self.get_explanations(graph_ind)[0]
-            new_x, new_edge_index, new_target_node = self.filter_graph_by_explanation(
+            new_x, new_edge_index = self.filter_graph_by_explanation(
                 self.x, self.edge_index, graph_explanation,
             )
             filtered_answer = self.model.get_answer(new_x, new_edge_index)

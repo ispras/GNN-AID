@@ -8,6 +8,7 @@ import torch
 from aux.custom_decorators import timing_decorator, retry
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
@@ -62,7 +63,10 @@ def explainer_run_config_for_obj(explainer_name, obj_ind, explainer_kwargs=None)
 @retry(max_tries=5)
 @timing_decorator
 def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=0):
-    steps_epochs = 50  # FOR POWERGRAPH 50, PREVIOUS - 200
+    if dataset_full_name[-1] == 'uk':
+        steps_epochs = 50
+    else:
+        steps_epochs = 100  # FOR POWERGRAPH 50, PREVIOUS - 200, TUDataset - 300
     num_explaining_objs = 5
     explaining_metrics_params = {
         "stability_graph_perturbations_nums": 3,
@@ -90,7 +94,7 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_metrics.json"
 
     subdataset = None
-    if len(dataset_full_name) > 3:
+    if 'powergraph' in dataset_full_name:
         subdataset = dataset_full_name[-1]
         dataset_full_name = dataset_full_name[:3]
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
@@ -130,7 +134,7 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
         ("Unprotected", calculate_unprotected_metrics),
         ("Jaccard_defence", calculate_jaccard_defence_metrics),
         ("GNNGuard_defence", calculate_gnnguard_defence_metrics),
-        ("AdvTraining_defence", calculate_adversial_defence_metrics),
+        # ("AdvTraining_defence", calculate_adversial_defence_metrics),
         ("AutoEncoderDefender", calculate_autoencoder_defence_metrics),
         ("QuantizationDefender", calculate_quantization_defence_metrics),
         ("GradientRegularizationDefender", calculate_gradientregularization_defence_metrics),
@@ -166,22 +170,26 @@ def calculate_unprotected_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
 
     data, results_dataset_path = dataset.data, dataset.results_dir
 
-    # if explainer_name == 'GSAT':
-    #     lr = 0.01
-    # else:
-    #     lr = 0.001
-    lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    # lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -258,7 +266,7 @@ def calculate_jaccard_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -266,11 +274,19 @@ def calculate_jaccard_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    # lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -353,7 +369,7 @@ def calculate_adversial_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -361,11 +377,19 @@ def calculate_adversial_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    # lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -461,7 +485,7 @@ def calculate_gnnguard_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -469,11 +493,19 @@ def calculate_gnnguard_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    # lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -559,7 +591,7 @@ def calculate_autoencoder_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -567,11 +599,19 @@ def calculate_autoencoder_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    # lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -654,7 +694,7 @@ def calculate_gradientregularization_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -662,11 +702,19 @@ def calculate_gradientregularization_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    # lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -749,7 +797,7 @@ def calculate_quantization_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -757,11 +805,19 @@ def calculate_quantization_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    # lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -844,7 +900,7 @@ def calculate_distillation_defence_metrics(
         model_name,
         iteration: int = 0
 ):
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)  # FOR POWERGRAPH
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)  # FOR POWERGRAPH
 
     save_model_flag = True
     device = torch.device('cpu')
@@ -852,11 +908,19 @@ def calculate_distillation_defence_metrics(
     data, results_dataset_path = dataset.data, dataset.results_dir
 
     gnn = get_model_by_name(model_name, dataset)
-    lr = 0.001
+    # lr = 0.001
+    if explainer_name == 'GSAT' and dataset.name != 'powergraph':
+        lr = 0.01
+    else:
+        lr = 0.001
+    if dataset.name == 'powergraph':
+        batch_s = 16
+    else:
+        batch_s = 32
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 32,  # FOR POWERGRAPH
+            "batch": batch_s,  # FOR POWERGRAPH
             "mask_features": [],
             "optimizer": {
                 # "_config_class": "Config",
@@ -937,7 +1001,7 @@ if __name__ == '__main__':
         # 'SubgraphX',
         # "Zorro",
         "GSAT",
-        "PGExplainer(dig)"
+        # "PGExplainer(dig)"
     ]
 
     models = [
@@ -954,18 +1018,19 @@ if __name__ == '__main__':
         # 'dummy_gin_gin_gsat',
         # 'dummy_gat_gat_gsat',
 
+        'gin_gin_lin_gc',
+        'gat_gat_lin_gc',
+        'dummy_gin_gin_gsat_lin_gc',
+        'dummy_gat_gat_gsat_lin_gc',
+        'gcn_lin_gc',
         'gcn_gcn_lin_gc',
         'gcn_gcn_gcn_lin_gc',
         'sage_sage_lin_gc',
         'sage_sage_sage_lin_gc',
-        'gin_gin_lin_gc',
-        'gat_gat_lin_gc',
         'dummy_gcn_gcn_gsat_lin_gc',
         'dummy_gcn_gcn_gcn_gsat_lin_gc',
         'dummy_sage_sage_gsat_lin_gc',
         'dummy_sage_sage_sage_gsat_lin_gc',
-        'dummy_gin_gin_gsat_lin_gc',
-        'dummy_gat_gat_gsat_lin_gc',
     ]
 
     datasets = [
@@ -974,28 +1039,37 @@ if __name__ == '__main__':
         # ("single-graph", "Planetoid", 'PubMed'),
         # ("single-graph", "Amazon", 'Computers'),
         # ("single-graph", "Amazon", 'Photo'),
-        ("example", 'custom', 'powergraph', 'uk'),
-        ("example", 'custom', 'powergraph', 'ieee24'),
-        ("example", 'custom', 'powergraph', 'ieee39'),
+
+        (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "MUTAG"),
+        # (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "BZR"),
+        # (LibPTGDataset.data_folder, "multiple-graphs", "TUDataset", "AIDS"),
+        
+        # ("example", 'custom', 'powergraph', 'uk'),
+        # ("example", 'custom', 'powergraph', 'ieee24'),
+        # ("example", 'custom', 'powergraph', 'ieee39'),
+
         # ("example", 'custom', 'powergraph', 'ieee118'),
 
     ]
     for dataset_full_name in datasets:
-        for i in range(3, 9):
+        for i in range(5, 9):
             for explainer in explainers:
                 for model_name in models:
                     if model_name.startswith('dummy') and explainer != 'GSAT':
                         continue
                     if explainer == 'GSAT' and not (model_name.startswith('dummy')):
                         continue
-                    print(f"MODEL: {model_name}, EXPL: {explainer}, i: {i}")
-                    run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
-                    # try:
-                    #     print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
-                    #     run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
-                    # except Exception as e:
-                    #     print(f"ERROR: {e}")
+                    # if explainer != "PGExplainer(dig)" and dataset_full_name[-1] == 'MUTAG':
                     #     continue
+                    # print(f"MODEL: {model_name}, EXPL: {explainer}, i: {i}")
+                    # run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+
+                    try:
+                        print(f"Iter: {i}; Model: {model_name}; Dataset: {dataset_full_name[2]}")
+                        run_interpretation_test(explainer, dataset_full_name, model_name, iter=i)
+                    except Exception as e:
+                        print(f"ERROR: {e}")
+                        continue
 
 
 

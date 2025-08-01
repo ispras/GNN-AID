@@ -410,10 +410,10 @@ class PGExplainer(nn.Module, Explainer):
                                                      edge_mask,
                                                      top_k=top_k,
                                                      un_directed=True)  # TODO how understand 'un_directed' using dataset?
-
-        if self.gen_dataset.is_multi():
-            important_edges = {self.graph_idx: important_edges}
-            important_nodes = {self.graph_idx: important_nodes}
+        #
+        # if self.gen_dataset.is_multi():
+        #     important_edges = {self.graph_idx: important_edges}
+        #     important_nodes = {self.graph_idx: important_nodes}
 
         # TODO Misha D. fix the rendering threshold on the front
         self.explanation.add_edges(important_edges)

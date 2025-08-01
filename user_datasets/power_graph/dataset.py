@@ -40,7 +40,7 @@ if __name__ == '__main__':
     from models_builder.models_zoo import model_configs_zoo
     from models_builder.gnn_models import ModelModificationConfig, ModelConfig, ConfigPattern, FrameworkGNNModelManager, Metric
 
-    dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.1)
+    dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
     results_dataset_path = dataset.results_dir
     default_config = ModelModificationConfig(
         model_ver_ind=0,
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         _config_class="ModelManagerConfig",
         _config_kwargs={
             "mask_features": [],
-            "batch": 32,
+            "batch": 16,
             "optimizer": {
                 # "_config_class": "Config",
                 "_class_name": "Adam",
@@ -63,11 +63,14 @@ if __name__ == '__main__':
         }
     )
 
-    gin3_lin2_mg_pg = model_configs_zoo(dataset=dataset,
-                                           model_name='dummy_gin_gin_gsat_lin_gc')
+    # gin3_lin2_mg_pg = model_configs_zoo(dataset=dataset,
+    #                                        model_name='gin_gin_lin_gc')
+
+    gcn2_lin_mg_pg = model_configs_zoo(dataset=dataset,
+                                           model_name='dummy_gat_gat_gsat_lin_gc')
 
     gnn_mm_mg_small = FrameworkGNNModelManager(
-        gnn=gin3_lin2_mg_pg,
+        gnn=gcn2_lin_mg_pg,
         dataset_path=results_dataset_path,
         modification=default_config,
         manager_config=manager_config,
@@ -79,3 +82,5 @@ if __name__ == '__main__':
     metric_loc = gnn_mm_mg_small.evaluate_model(
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average="macro"), Metric("Accuracy", mask='test')])
     print(metric_loc)
+
+    print("TEST")
