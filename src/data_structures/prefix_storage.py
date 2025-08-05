@@ -193,7 +193,7 @@ class TuplePrefixStorage:
             self
     ):
         def enum(obj, elems):
-            if isinstance(obj, tuple):
+            if isinstance(obj, (tuple, list)):
                 yield elems, obj[0]
             else:
                 for k, v in obj.items():

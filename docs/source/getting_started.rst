@@ -1,5 +1,5 @@
-Installation and first steps
-****************************
+Getting started
+***************
 
 .. contents::
     :local:
@@ -19,7 +19,26 @@ Installation and first steps
 Installation
 ============
 
+We suggest to install GNN-AID locally to get all functionality but you can also use docker.
+
+Local version
+-------------
+
+GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit best for it.
+For another OS consider docker.
+
+First you need python
+```python -m pip install --upgrade pip```
+
+ to get auxiliary libraries
+```
+sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
+```
+
 To use GNN-AID, first install it using pip:
+
+Docker version
+--------------
 
 Create dataset
 ==============

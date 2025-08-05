@@ -144,7 +144,6 @@ class PTGDataset(GeneralDataset):
                 "values": [len(self.dataset.get(0).x[0])]
             }
             res.labelings = {"origin": self.dataset.num_classes}
-            res.node_attr_slices = res.get_attributes_slices_form_attributes(res.node_attributes, res.edge_attributes)
 
         res.check()
         return res

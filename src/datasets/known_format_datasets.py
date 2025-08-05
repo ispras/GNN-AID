@@ -509,10 +509,10 @@ class KnownFormatDataset(
                     node_features[n].extend([1] * 10)
 
             elif elem == FeatureConfig.degree:
-                raise NotImplementedError
+                raise NotImplementedError  # todo
 
             elif elem == FeatureConfig.clustering:
-                raise NotImplementedError
+                raise NotImplementedError  # todo
 
             else:
                 raise RuntimeError(f"Unknown feature config for node_struct: '{elem}'")

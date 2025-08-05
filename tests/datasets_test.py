@@ -477,14 +477,14 @@ class DatasetsTest(unittest.TestCase):
         """
         from datasets.dataset_stats import DatasetStats
 
-        dc = DatasetConfig(('single-graph', 'example'))
+        dc = DatasetConfig(('single-graph', 'test_stats'))
         dvc = DatasetVarConfig(
             features=FeatureConfig(node_attr=['a']), labeling='binary', dataset_ver_ind=0)
         _create_single2_ij(dc)
         single = DatasetManager.get_by_config(dc)
         single.build(dvc)
 
-        dc = DatasetConfig(('multi-graph', 'test'))
+        dc = DatasetConfig(('multi-graph', 'test_stats'))
         dvc = DatasetVarConfig(
             features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
         _create_multi_ij(dc)
@@ -510,7 +510,7 @@ class DatasetsTest(unittest.TestCase):
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = FixedKeysPrefixStorage.from_json(f.read(), )
 
-        for full_name in ps:
+        for full_name, _ in ps:
             print(f"Checking {full_name}")
 
             try:
