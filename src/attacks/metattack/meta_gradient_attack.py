@@ -21,8 +21,10 @@ from attacks.poison_attacks import PoisonAttacker
 class BaseMeta(PoisonAttacker):
     """
     Super class for Metattack on GNNs
+
     Parameters
     ----------
+
     model:
         surrogate model that will be attacked directly
     num_nodes : int
@@ -31,8 +33,8 @@ class BaseMeta(PoisonAttacker):
         number of initial training iterations for surrogate model
     attack_iters: int
         number of training iterations for surrogate model for meta-gradient calc
-    lambda_ : float
-        lambda_ is used to weight the two objectives in Eq. (10) in the paper.
+    ``lambda_`` : float
+        ``lambda_`` is used to weight the two objectives in Eq. (10) in the paper.
     lr: float
         learning rate for surrogate meta-training
     feature_shape : tuple

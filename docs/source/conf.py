@@ -31,9 +31,9 @@ extensions = [
     # 'sphinx.ext.duration',
     # 'sphinx.ext.ifconfig',
     'sphinx.ext.intersphinx',
-    # 'sphinx.ext.mathjax',
-    # 'sphinx.ext.viewcode',
-    # 'sphinx.ext.todo',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.todo',
     'sphinx.ext.napoleon',  # support Google-style docstrings
 #    'sphinxcontrib.fulltoc',
 ]
@@ -77,3 +77,5 @@ autodoc_default_options = {
 
 autosummary_generate = True
 add_module_names = False  # убирает 'datasets.ptg_datasets.' перед именем
+
+todo_include_todos = True

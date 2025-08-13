@@ -53,7 +53,7 @@ if __name__ == '__main__':
     from models_builder.gnn_models import ModelModificationConfig, ModelConfig, ConfigPattern, FrameworkGNNModelManager, Metric
 
     dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.2)
-    results_dataset_path = dataset.results_dir
+    prepared_dataset_path = dataset.prepared_dir
     default_config = ModelModificationConfig(
         model_ver_ind=0,
     )
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     gnn_mm_mg_small = FrameworkGNNModelManager(
         gnn=gin3_lin2_mg_pg,
-        dataset_path=results_dataset_path,
+        dataset_path=prepared_dataset_path,
         modification=default_config,
         manager_config=manager_config,
     )

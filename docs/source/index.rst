@@ -37,13 +37,22 @@ GNN-AID has a web interface which supports:
     :maxdepth: 1
     :caption: User guide
 
-    user_guide
+    user_guide/pipeline
+    user_guide/backend
+    user_guide/frontend
+    user_guide/datasets
+    user_guide/interpretation
+    user_guide/attack
+    user_guide/defense
 
 .. toctree::
     :maxdepth: 1
     :caption: Developer guide
 
-    dev_guide
+    dev_guide/arch_back.rst
+    dev_guide/arch_front.rst
+    dev_guide/extend.rst
+    dev_guide/code_style.rst
 
 .. toctree::
     :maxdepth: 1
