@@ -1808,7 +1808,7 @@ class GSATModelManager(FrameworkGNNModelManager):
         if task_type == "multiple-graphs":
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
-            att = self.gsat_layer.att
+            att = self.gsat_layer.edge_att
             loss = self.gsat_loss(*move_to_same_device(att, clf_logits, batch.y, self.modification.epochs))
             # loss = self.loss_function(clf_logits, batch.y)
             self.optimizer.zero_grad()

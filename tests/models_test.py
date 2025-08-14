@@ -134,7 +134,7 @@ class ModelsTest(unittest.TestCase):
                                                  save_model_flag=True,
                                                  metrics=[Metric("F1", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(
-            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', )])
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
         sg_example_model_path = gnn_model_manager_sg_example.model_path_info() / 'model'
@@ -154,7 +154,7 @@ class ModelsTest(unittest.TestCase):
                                                  save_model_flag=True,
                                                  metrics=[Metric("F1", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(
-            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', )])
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
         sg_example_model_path = gnn_model_manager_sg_example.model_path_info() / 'model'
