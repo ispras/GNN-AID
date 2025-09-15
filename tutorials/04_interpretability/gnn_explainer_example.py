@@ -78,13 +78,13 @@ def gnnexplainer_test():
                 "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
                 "_config_class": "Config",
                 "_config_kwargs": {
-                    "element_idx": 1
+                    "element_idx": 691
                 },
             }
         }
     )
     # Now we can run the experiment and get an explanation of how the model works on the input data sample.
-    # The resulting explanation is saved in the experiments folder and has its own unique number for the given
+    # The resulting explanation is saved in the ./explanations folder and has its own unique number for the given
     # dataset, model, and explainer configurations.
     explainer_GNNExpl.conduct_experiment(explainer_run_config)
 

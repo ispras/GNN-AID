@@ -42,8 +42,9 @@ def evasion_attack():
 
     gnn_model_manager.train_model(gen_dataset=dataset, steps=200)
 
-    metric_before_evasion_attack = gnn_model_manager.evaluate_model(gen_dataset=dataset,
-                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    metric_before_evasion_attack = gnn_model_manager.evaluate_model(
+        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+                                      Metric("Accuracy", mask='test')])
 
     # Let's attack our model by first creating the evasion attack we need, and then measure the model's metrics after
     # the evasion attack. You can see the available evasion attack types and their default parameters in
@@ -62,8 +63,9 @@ def evasion_attack():
     # (gnn_model_manager.evasion_attack_flag=False), then the manager will know about the attack, but will not use it.
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
 
-    metric_after_evasion_attack = gnn_model_manager.evaluate_model(gen_dataset=dataset,
-                                         metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+    metric_after_evasion_attack = gnn_model_manager.evaluate_model(
+        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+                                      Metric("Accuracy", mask='test')])
 
     print(f"Model accuracy without attack: {metric_before_evasion_attack}")
     print(f"Model accuracy after FGSM attack: {metric_after_evasion_attack}")

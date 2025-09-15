@@ -62,7 +62,8 @@ def train_gnn():
     gnn_model_manager.load_model(path=str(Path(__file__).resolve().parent) + '/weights')
 
     metric_loc = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro')])
+        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+                                      Metric("Accuracy", mask='test')])
     print(metric_loc)
 
 
