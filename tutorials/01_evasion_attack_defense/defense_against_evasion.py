@@ -1,13 +1,9 @@
-import numpy as np
 import torch
-
-import warnings
-
 from torch import device
 
 from src.aux.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ConfigPattern
 from base.datasets_processing import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
@@ -66,7 +62,8 @@ def test_attack_defense_small():
         gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
 
-    # Now we will create defence, and then we will attack the defended model.
+    # Now we will create evasion defense, and then we will attack the defended model. You can see the available evasion
+    # defenses and their default parameters in ./metainfo/evasion_defense_parameters.json
     gradientregularization_evasion_defense_config = ConfigPattern(
         _class_name="GradientRegularizationDefender",
         _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
@@ -96,6 +93,10 @@ def test_attack_defense_small():
     )
 
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+    # Here we pass information to the model manager about the defense configuration, which will be enabled by default
+    # at the training stage. If you need to disable it, you can change the defense flag to inactive
+    # (gnn_model_manager.evasion_defense_flag=False), then the manager will know about the defense, but will not use it.
     gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     gnn_model_manager.train_model(gen_dataset=dataset, steps=200)

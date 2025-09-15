@@ -45,7 +45,9 @@ def evasion_attack():
     metric_before_evasion_attack = gnn_model_manager.evaluate_model(gen_dataset=dataset,
                                          metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
 
-    # Let's attack our model by first creating the attack we need, and then measure the model's metrics after the attack.
+    # Let's attack our model by first creating the evasion attack we need, and then measure the model's metrics after
+    # the evasion attack. You can see the available evasion attack types and their default parameters in
+    # ./metainfo/evasion_attack_parameters.json
     evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
@@ -55,7 +57,9 @@ def evasion_attack():
             "is_feature_attack": True,
         }
     )
-
+    # Here we pass information to the model manager about the attack configuration, which will be enabled by default
+    # at the evaluation stage. If you need to disable it, you can change the attack flag to inactive
+    # (gnn_model_manager.evasion_attack_flag=False), then the manager will know about the attack, but will not use it.
     gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
 
     metric_after_evasion_attack = gnn_model_manager.evaluate_model(gen_dataset=dataset,

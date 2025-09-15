@@ -13,7 +13,8 @@ def train_gnn():
 
     # --- Load dataset ---
     # Here you can upload your own dataset, specified in the basic input data format.
-    # It is also possible to use existing datasets in the PyG.
+    # It is also possible to use most of the existing datasets in the PyG.
+    # You can see all supported datasets in the ./metainfo/torch_geom_index_all.json
     full_name = ("single-graph", "Planetoid", 'Cora')
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -23,18 +24,22 @@ def train_gnn():
     dataset.dataset.data.to(my_device)
 
     # --- Construct model ---
-    # Here you can use your own model, or quickly construct a gnn using the GNN-AID functionality for constructing models.
+    # Here you can use your own model, or quickly construct a gnn using the GNN-AID functionality for constructing
+    # models. Examples of model configurations can be found in ./src/models_builder/models_zoo
     # As an example we will use a simple two-layer GNN.
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
-    # Here we can set the configuration of the model training parameters.
+    # Here we can set the configuration of the optimizer parameters. If you do not specify parameters, they will
+    # be set by default. You can see the default optimizer parameter values in ./metainfo/optimizers_parameters.json
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
             "mask_features": [],
             "optimizer": {
                 "_class_name": "Adam",
-                "_config_kwargs": {},
+                "_config_kwargs": {
+                    "lr": 0.01
+                },
             }
         }
     )
