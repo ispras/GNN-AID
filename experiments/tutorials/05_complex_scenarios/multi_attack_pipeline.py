@@ -14,8 +14,6 @@ from base.datasets_processing import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
-full_name = None
-
 full_name = ("single-graph", "Planetoid", 'Cora')
 
 torch.manual_seed(1234)
