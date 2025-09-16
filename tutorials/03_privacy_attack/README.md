@@ -39,7 +39,8 @@ In this mode:
 - A **naive membership inference attack** is applied, labeling samples as training data based on higher model confidence.
 - Attack performance metrics are measured.
 
-#### Performance of Naive MI Attack (note that this is not model performance)
+#### Performance of Naive MI Attack
+Note that this is not model performance, metrics being calculated on results of attack, for example accuracy means percentage of data that are right classified as train by MI Attacker
 
 | Metric               | Value         |
 |----------------------|---------------|
@@ -56,6 +57,8 @@ In this mode:
 - Metrics demonstrate the defense effectiveness in reducing attack performance.
 
 #### You will get these results
+Note that this is not model performance, metrics being calculated on results of attack, for example accuracy means percentage of data that are right classified as train by MI Attacker
+Therefore we see that the defense reduced MI attacker's performance
 
 | Metric               | Attack (no defense) | Attack + defense |
 |----------------------|---------------------|------------------|
