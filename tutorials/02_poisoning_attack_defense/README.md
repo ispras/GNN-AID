@@ -1,21 +1,81 @@
-These tutorials focus on the application of poisoning attacks (and defenses against them) within our framework.
+# Poisoning attacks and defense
 
-Let's consider poisoning_attack.py:
-Running this file with line 65 commented out runs the clean GIN_2l model on the Cora dataset.
-At the end of the output, the user receives the model's quality metrics on the test portion of the dataset:
+This experiment demonstrates the behavior of the graph model under poisoning attack and the defense capabilities of 
+Jaccard-based defender. We use the Cora dataset and the GIN model.
 
-{'test': {'F1': 0.837926471703686, 'Accuracy': 0.8431734317343174}}
+---
 
-Running with line 65 uncommented executes the CLGA poisoning attack.
-(The parameters are chosen so that the attack is effective but also has an optimal duration for the tutorial. Approximate training time is 3 minutes).
+## Folder contents
+- `poisoning_attack.py` — script for training GIN + attack.
+- `defense_against_poisoning.py` — script for training GIN + defense + attack.
+- `README.md` — description of the experiment.
+- `run_example.sh` — script for running the experiment.
 
-Similarly, the user receives the following results:
+---
 
-{'test': {'F1': 0.6468543445372832, 'Accuracy': 0.6734317343173432}}
+## Quick start
 
-Thus, we can see that using CLGA degrades the model's final performance on the dataset.
+Two launch modes are supported:
+1. `clean` — only clean model training without attack.
+2. `attack` — poisoning attack is performed.
+3. `defense` — defense is applied against poisoning attack.
 
-Let's consider defense_against_poisoning.py:
-This file runs a pipeline similar to the previous one, but with the addition of a Jaccard-based defense against poisoning attacks. While this defense is somewhat naive, it allows for quickly observing the degradation in the CLGA attack's performance.
-The user will obtain the following results:
-{'test': {'F1': 0.6780780144051877, 'Accuracy': 0.7140221402214022}}
+### 1. Clean model training
+```bash
+python poisoning_attack.py  # with line 65 commented
+```
+
+### 2. Poisoning attack
+```bash
+python poisoning_attack.py  # with line 65 uncommented
+```
+
+### 3. Defense against poisoning
+```bash
+python defense_against_poisoning.py
+```
+
+---
+## Description of modes
+
+### 1. Clean model training
+
+In this mode:
+- The GIN_2l model is trained **without any attack or defense** on Cora dataset.
+- Model quality metrics are measured on the test portion.
+
+#### Performance of clean model
+
+| Metric          | Value         |
+|-----------------|---------------|
+| **F1 (macro)**  | ~0.84         |
+| **Accuracy**    | ~0.84         |
+
+### 2. Poisoning attack
+
+In this mode:
+- The **CLGA poisoning attack** is applied during model training.
+- Attack parameters are optimized for effectiveness and reasonable training time (~3 minutes).
+- Metrics are measured after attack completion.
+
+#### Performance of the attacked model
+
+| Metric          | Clean model | After attack |
+|-----------------|-------------|--------------|
+| **F1 (macro)**  | ~0.84       | ~0.65        |
+| **Accuracy**    | ~0.84       | ~0.67        |
+
+### 3. Defense against poisoning
+
+In this mode:
+- The model is trained **with Jaccard-based defense** against poisoning attacks.
+- The **CLGA attack** is applied to the defended model.
+- JaccardDefense may not be the most prospect poison defense but aim of this tutorial is to demonstrate poison defense usage within GNN-AID
+
+#### The results user will get
+
+| Metric          | Clean model | Attack (no defense) | Attack + defense |
+|-----------------|-------------|---------------------|------------------|
+| **F1 (macro)**  | 0.84        | 0.65                | 0.68             |
+| **Accuracy**    | 0.84        | 0.67                | 0.71             |
+

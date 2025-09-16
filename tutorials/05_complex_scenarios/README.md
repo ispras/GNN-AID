@@ -1,37 +1,66 @@
-The tutorials in this folder provide examples of more complex, combined usage scenarios with the framework.
+# Combined attacks and defenses workflow
 
-multi_attack_pipeline.py:
-This file demonstrates running GIN_2l on the Cora dataset using two attacks:
-CLGA (a poisoning attack) and FGSM (an evasion attack).
-By commenting/uncommenting lines 73-74, you can examine four different pipelines:
+This experiment demonstrates complex usage scenarios with the framework, including combined attacks, multi-defense pipelines, 
+and integrated interpretation workflows. We use the Cora dataset and the GIN model.
 
-Running the clean model
-{'test': {'F1': 0.837926471703686, 'Accuracy': 0.8431734317343174}}
+---
 
-CLGA attack only
-{'test': {'F1': 0.6468543445372832, 'Accuracy': 0.6734317343173432}}
+## Folder contents
+- `multi_attack_pipeline.py` — script for running combined attack scenarios.
+- `multi_defense_pipeline.py` — script for running multi-defense scenarios.
+- `combined_workflow.py` — script for integrated attack-defense-interpretation workflow.
+- `README.md` — description of the experiments.
+- `run_example.sh` — script for running the experiment.
 
-FGSM attack only
-{'test': {'F1': 0.6876629611752214, 'Accuracy': 0.7029520295202952}}
+---
 
-Simultaneous application of both attacks
-{'test': {'F1': 0.553660031435681, 'Accuracy': 0.5885608856088561}}
+## Quick start
 
-Thus, we can observe that combining these attacks can be viewed as a more powerful attack strategy, capable of degrading the model's performance more severely than either attack could achieve individually.
+### 1. Multi-attack pipeline
+```bash
+python multi_attack_pipeline.py
+```
 
-multi_defense_pipeline.py:
+### 2. Multi-defense pipeline  
+```bash
+python multi_defense_pipeline.py
+```
 
-This file explores a scenario of building a model with simultaneous protection against both poisoning attacks and evasion attacks.
+### 3. Combined workflow
+```bash
+python combined_workflow.py
+```
 
-When line 88 is commented out, a typical pipeline for defending the model against evasion attacks is executed.
-{'test': {'F1': 0.8200952562430774, 'Accuracy': 0.8173431734317343}}
+---
+## Experimental results
 
-With line 88 uncommented, a defense against poisoning attacks (Jaccard Defense) is applied.
-{'test': {'F1': 0.7756653295032969, 'Accuracy': 0.7749077490774908}}
+### 1. Multi-attack pipeline
 
-Thus, we can see that it is possible to combine defenses against different types of attacks without critically degrading the model's performance.
+This script demonstrates running GIN_2l on Cora dataset with four different configurations:
 
-combined_workflow.py:
-Finally, this tutorial provides an example of simultaneously using the attack-defense module and the interpretation module in our framework.
+| Configuration | F1 (macro) | Accuracy |
+|---------------|------------|----------|
+| Clean model | 0.8379 | 0.8432 |
+| CLGA attack only | 0.6469 | 0.6734 |
+| FGSM attack only | 0.6877 | 0.7030 |
+| Both attacks combined | 0.5537 | 0.5886 |
 
-The GIN_2l model undergoes a combined CLGA-FGSM attack pipeline (as in multi_attack_pipeline.py), and then the results of its operation are interpreted using GNNExplainer.
+The results show that combining attacks creates a more powerful attack strategy, degrading model performance more severely than individual attacks.
+
+### 2. Multi-defense pipeline
+
+This script explores building models with simultaneous protection against multiple attack types:
+
+| Configuration | F1 (macro) | Accuracy |
+|---------------|------------|----------|
+| Defense against evasion attacks | 0.8201 | 0.8173 |
+| Defense against both evasion and poisoning attacks | 0.7757 | 0.7749 |
+
+The results demonstrate that defenses against different attack types can be combined without critically degrading model performance.
+
+### 3. Combined workflow
+
+This tutorial provides an integrated workflow example:
+- GIN_2l model undergoes combined CLGA-FGSM attack pipeline
+- Attack results are interpreted using GNNExplainer
+- Demonstrates simultaneous use of attack-defense and interpretation modules
