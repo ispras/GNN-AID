@@ -173,9 +173,9 @@ class GNNGuard(PoisonDefender):
             model_manager: GNNModelManager
     ):
         if gen_dataset.dataset.data.edge_weight is None:
-            return False
-        else:
             return True
+        else:
+            return False
 
 
 class GuardWrapper(nn.Module):
