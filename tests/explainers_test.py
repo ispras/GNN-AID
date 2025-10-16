@@ -50,14 +50,14 @@ class ExplainersTest(unittest.TestCase):
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "single-graph", "example",),
+            full_name=("example", "example",),
             features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(("example", "single-graph", "example")),
+            DatasetConfig(("example", "example")),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
@@ -68,14 +68,14 @@ class ExplainersTest(unittest.TestCase):
 
         # Multi-graphs - Small
         self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("example", "multiple-graphs", "small",),
+            full_name=("example", "small",),
             features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetConfig(('example', 'small')),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)

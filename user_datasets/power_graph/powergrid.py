@@ -53,7 +53,8 @@ class PowerGrid(InMemoryDataset):
 
     @property
     def raw_dir(self):
-        return osp.join(self.root, self.name, "raw")
+        return self.root
+        # return osp.join(self.root, self.name, "raw")
 
     @property
     def processed_dir(self):
@@ -80,9 +81,9 @@ class PowerGrid(InMemoryDataset):
         return 'data.pt'
 
     def download(self):
-        # Download the file specified in self.url and store
-        # it in self.raw_dir
-        zip_path = Path(self.root) / "downloaded.zip"
+        # Download the file specified in self.url and extract the graph by name.
+
+        zip_path = Path(self.root).parent / "downloaded.zip"
         url = "https://figshare.com/ndownloader/files/46619158"
 
         # Download zip file
@@ -99,11 +100,10 @@ class PowerGrid(InMemoryDataset):
         zip_path.unlink()
 
         # Move raw files, e.g. dataset_cascades/uk/uk/raw -> uk/raw
-        base = Path(self.root) / 'dataset_cascades'
-        for name in self.names.keys():
-            dst = Path(self.root) / name / 'raw'
-            dst.mkdir(parents=True, exist_ok=True)
-            (base / name / name / 'raw').rename(dst)
+        base = zip_path.parent / 'dataset_cascades'
+        dst = Path(self.root)
+        dst.mkdir(parents=True, exist_ok=True)
+        (base / self.name / self.name / 'raw').rename(dst)
         shutil.rmtree(base)
 
     def process(self):

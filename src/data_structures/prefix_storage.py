@@ -45,6 +45,9 @@ class TuplePrefixStorage:
     # ) -> tuple:
     #     return tuple(self._keys)
 
+    def __len__(self):
+        return self.size()
+
     def size(
             self
     ) -> int:
@@ -127,7 +130,7 @@ class TuplePrefixStorage:
             parent = content
             content = content[k]
 
-        if isinstance(content, tuple):
+        if isinstance(content, (tuple, list)):
             # We remove object
             del parent[key[-1]]
         if isinstance(content, dict):

@@ -43,7 +43,7 @@ class DatasetManager:
                 class_name = LibPTGDataset.__name__
                 import_from = LibPTGDataset.__module__
             else:
-                raise RuntimeError(f"No metainfo file found for dataset with config {dataset_config}")
+                raise RuntimeError(f"No metainfo file found at '{path}'.")
 
         else:
             # Read metainfo
@@ -66,7 +66,6 @@ class DatasetManager:
     @staticmethod
     def get_by_full_name(
             full_name: Tuple[str, ...] = None,
-            init_kwargs: Union[dict, None] = None,
             **dvc_kwargs
     ) -> [GeneralDataset, torch_geometric.data.Data, Path]:
         """
@@ -76,7 +75,6 @@ class DatasetManager:
 
         Args:
             full_name: full name of graph data as a tuple of strings
-            init_kwargs: init kwargs for `DatasetConfig`
             **dvc_kwargs: kwargs for `DatasetVarConfig`, optional.
              If given, try to create var config and call dataset.build()
 
@@ -85,7 +83,7 @@ class DatasetManager:
 
         """
         from datasets.ptg_datasets import PTGDataset
-        dc = DatasetConfig(full_name=full_name, init_kwargs=init_kwargs)
+        dc = DatasetConfig(full_name=full_name)
         dataset = DatasetManager.get_by_config(dc)
         # if not isinstance(dataset, PTGDataset):
         #     raise RuntimeError(f"get_by_full_name suits only for {PTGDataset.__name__} datasets."
@@ -108,47 +106,3 @@ class DatasetManager:
 
         # IMP Kirill suggest to return only dataset, else is its parts
         return dataset, dataset.data, dataset.prepared_dir
-
-
-if __name__ == '__main__':
-    # TODO remove
-    print("test configs")
-
-    # DataInfo.refresh_data_dir_structure()
-
-    # dc = DatasetConfig(('single', 'test1'), init_kwargs={"a": 10, "b": 'line'})
-    # print(Declare.dataset_root_dir(dc))
-
-    # ba1 = BAShapes()
-    # ba2 = BAShapes(connection_distribution="uniform")
-
-    class UserLocalDataset(InMemoryDataset):
-        def __init__(self, root, data_list, transform=None):
-            self.data_list = data_list
-            super().__init__(root, transform)
-            # NOTE: it is important to define self.slices here, since it is used to calculate len()
-            self.data, self.slices = torch.load(self.processed_paths[0])
-
-        @property
-        def processed_file_names(self):
-            return 'data.pt'
-
-        def process(self):
-            torch.save(self.collate(self.data_list), self.processed_paths[0])
-
-
-    dc = DatasetConfig(('single', 'test1'), init_kwargs={"a": 10, "b": 'line'})
-
-    from torch import tensor
-    x = tensor([[0, 0], [1, 0], [1, 0]])
-    edge_index = tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
-    y = tensor([0, 1, 1])
-
-    # Single
-    data_list = [Data(x=x, edge_index=edge_index, y=y)]
-    tmp_dir = tmp_dir(Path('.')).tmp_dir
-    dataset = UserLocalDataset(tmp_dir / 'test_dataset_single', data_list)
-    gen_dataset = DatasetManager.register_torch_geometric_local(dataset)
-
-    gen_dataset._compute_dataset_data()
-    print(json.dumps(gen_dataset.dataset_data, indent=1))

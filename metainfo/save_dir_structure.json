@@ -6,7 +6,7 @@
     }
   },
   "datasets": {
-    "full_name": {
+    "dataset_config": {
       "add_key_name_flag": true,
       "files_info": [
         {
@@ -15,7 +15,7 @@
         }
       ]
     },
-    "var": {
+    "dataset_var_config": {
       "add_key_name_flag": true,
       "files_info": [
         {

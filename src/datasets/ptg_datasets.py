@@ -1,14 +1,18 @@
+import copy
 import inspect
+import json
 import os
 import shutil
+import warnings
 from pathlib import Path
 from time import time
 from typing import Union, List, Dict
 
 import torch
-from torch_geometric.data import Data, HeteroData
+from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
 
-from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH
+from aux.declaration import Declare
+from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH, all_subclasses
 from datasets.gen_dataset import GeneralDataset, LocalDataset
 from datasets.dataset_info import DatasetInfo
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
@@ -48,23 +52,38 @@ class PTGDataset(GeneralDataset):
 
         self._define_ptg_dataset()  # creates tensors and save them to self.prepared_dir
 
-        self.node_attr_slices = {PTG_FEATURE_NAME: (0, self.dataset.data.x.shape[1])}
+        assert isinstance(self.dataset, Dataset)
+        assert isinstance(self.dataset[0], Data)
+        # TODO Data can have no attribute 'x', do we support this?
+        assert self.dataset[0].x is not None, "Data objects must have 'x' attribute"
+        assert self.dataset[0].edge_index is not None, "Data objects must have 'edge_index' attribute"
+
+        shape = self.dataset[0].x.shape
+        node_feats = shape[1] if len(shape) > 1 else 1
+        assert node_feats == self.dataset.num_node_features
+        self.node_attr_slices = {PTG_FEATURE_NAME: (0, node_feats)}
 
         if results_exist:
             # Read info
             self.info = DatasetInfo.read(self.metainfo_path)
 
         else:  # first time
-            self.prepared_dir.parent.mkdir(parents=True, exist_ok=True)
-            if self.prepared_dir != self.dataset.processed_dir\
-                    and Path(self.dataset.processed_dir).is_dir():
-                # Create link to original processed files
-                # (we do not move them to avoid torch graph calling process() each time)
-                self.prepared_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
-
             # Define and save DatasetInfo
             self.info = self.induce_dataset_info()
             self.info.save(self.metainfo_path)
+
+            # # Save json with config in data/
+            # _, files_paths = Declare.dataset_root_dir(self.dataset_config)
+            # with open(files_paths[0], "w") as f:
+            #     f.write(self.dataset_config.json_for_config())
+
+            # Save json with configs in datasets/
+            _, files_paths = Declare.dataset_prepared_dir(
+                self.dataset_config, self.dataset_var_config)
+            with open(files_paths[0], "w") as f:
+                f.write(self.dataset_config.json_for_config())
+            with open(files_paths[1], "w") as f:
+                f.write(self.dataset_var_config.json_for_config())
 
     def _compute_dataset_var_data(
             self
@@ -103,12 +122,14 @@ class PTGDataset(GeneralDataset):
         res.count = len(self.dataset)
         # from datasets.ptg_datasets import is_graph_directed
         # res.directed = is_graph_directed(dataset.get(0))
-        data = self.dataset.get(0)
-        res.directed = data.is_directed()  # FIXME misha check correct
-        if isinstance(data, HeteroData):
+        msg = ""
+        data0 = self.dataset[0]
+        if data0.edge_index is not None:
+            res.directed = data0.is_directed()  # FIXME misha check correct
+        if isinstance(data0, HeteroData):
             res.hetero = True
-            node_types = data.node_types
-            res.nodes = [{nt: data[nt].num_nodes for nt in node_types}]
+            node_types = data0.node_types
+            res.nodes = [{nt: data0[nt].num_nodes for nt in node_types}]
             res.node_attributes = {
                 nt: {
                     # "names": [],
@@ -116,10 +137,10 @@ class PTGDataset(GeneralDataset):
                     # "values": []
                     "names": [PTG_FEATURE_NAME],
                     "types": ["vector"],
-                    "values": [len(data[nt].x[0])]
+                    "values": [len(data0[nt].x[0])]
                 } for nt in node_types
             }
-            edge_types = [','.join([f'"{x}"' for x in et]) for et in data.edge_types]
+            edge_types = [','.join([f'"{x}"' for x in et]) for et in data0.edge_types]
             res.edge_attributes = {
                 et: {
                     "names": [],
@@ -130,22 +151,46 @@ class PTGDataset(GeneralDataset):
             # TODO add edge attributes
             res.labelings = {}
             for nt in node_types:
-                if hasattr(data[nt], 'y'):
-                    res.labelings[nt] = {"origin": int(max(data[nt].y)) + 1}
-        else:
-            res.hetero = False
-            res.nodes = [len(self.dataset.get(ix).x) for ix in range(len(self.dataset))]
-            res.node_attributes = {
-                # "names": [],
-                # "types": [],
-                # "values": []
-                "names": [PTG_FEATURE_NAME],
-                "types": ["vector"],
-                "values": [len(self.dataset.get(0).x[0])]
-            }
-            res.labelings = {"origin": self.dataset.num_classes}
+                if hasattr(data0[nt], 'y'):
+                    res.labelings[nt] = {"origin": int(max(data0[nt].y)) + 1}
 
-        res.check()
+        elif isinstance(data0, Data):
+            res.hetero = False
+            res.nodes = [data.num_nodes for data in self.dataset]
+
+            if hasattr(self.dataset, 'num_classes'):
+                res.labelings = {"origin": self.dataset.num_classes}
+            else:
+                res.labelings = "?"
+                msg += f"Cannot get num_classes Dataset of type {self.dataset.__class__}. "
+
+            if self.dataset[0].x is not None:
+                res.node_attributes = {
+                    "names": [PTG_FEATURE_NAME],
+                    "types": ["vector"],
+                    "values": [len(self.dataset[0].x[0])]
+                }
+
+            else:
+                res.node_attributes = {
+                    "names": ["?"],
+                    "types": ["?"],
+                    "values": ["?"]
+                }
+                msg += "Cannot induce node_attributes for such type of Data that have no 'x'" \
+                       " attribute. "
+
+        else:
+            raise NotImplementedError(
+                f"Cannot induce metainfo for Dataset that contains objects of type"
+                f" {self.dataset[0].__class__}. Only torch_geometric.data.Data is supported.")
+
+        if msg:
+            msg = "Cannot induce metainfo for this kind of data." \
+                  " Metainfo file is created, but you need to finish it manually. " + msg
+            warnings.warn(msg)
+        else:
+            res.check()
         return res
 
 
@@ -202,84 +247,101 @@ class LibPTGDataset(PTGDataset):
     def __init__(
             self,
             dataset_config: DatasetConfig,
-            **params
+            **ptg_init_kwargs
     ):
         """
         :param dataset_config: dataset config dictionary
-        :param params: additional parameters to init ptg class if needed
+        :param ptg_init_kwargs: additional parameters to init ptg class, e.g. constructor params or
+         torch_geometric.transforms. Possible only if dataset is not created yet.
         """
-        # assert domain in ['single-graph', 'multiple-graphs']
-        first, self._domain, self._group, self._name = dataset_config.full_name
+        first, self._domain, self._group, *rest = dataset_config.full_name
+        self._name = rest[0] if len(rest) > 0 else None
+
         assert first == self.data_folder
-        self._params = params
+        self._ptg_init_kwargs = copy.deepcopy(ptg_init_kwargs)
 
         super(LibPTGDataset, self).__init__(dataset_config)
-
-    def move_processed(
-            self,
-            processed: Union[str, Path]
-    ) -> None:
-        """ Move ptg processed files to folder when tenors are stored """
-        if not self.prepared_dir.exists():
-            self.prepared_dir.mkdir(parents=True)
-            os.rename(processed, self.prepared_dir)
-        else:
-            shutil.rmtree(processed)
-
-    def move_raw(
-            self,
-            raw: Union[str, Path]
-    ) -> None:
-        """ Move ptg raw files to folder when raw files are stored """
-        if Path(raw) == self.raw_dir:
-            return
-        if not self.raw_dir.exists():
-            self.raw_dir.mkdir(parents=True)
-            os.rename(raw, self.raw_dir)
-        else:
-            raise RuntimeError(f"raw_dir '{self.raw_dir}' already exists")
 
     def _define_ptg_dataset(
             self
     ) -> None:
+        dataset_cls = import_by_name(self._group, ['torch_geometric.datasets'])
 
-        if is_in_torch_geometric_datasets((self._domain, self._group, self._name)):
-            # Download specific dataset
-            # TODO add all torch-geometric datasets
-            if self._group in ["pytorch-geometric-other"]:
-                dataset_cls = import_by_name(self._name, ['torch_geometric.datasets'])
-                if 'root' in str(inspect.signature(dataset_cls.__init__)):
-                    self.dataset = dataset_cls(root=str(self.root_dir), **self._params)
-                    self.move_processed(self.dataset.processed_dir)
-                else:
-                    # TODO misha or Kirill have get params,
-                    #  https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.BAShapes.html#torch_geometric.datasets.BAShapes
-                    #  e.g. BAShapes, other/PCPNetDataset etc
-                    self.dataset = dataset_cls(**self._params)
-                    if not os.path.exists(self.prepared_dir):
-                        os.makedirs(self.prepared_dir)
-                    torch.save(obj=(self.dataset.data, self.dataset.slices),
-                               f=self.prepared_dir / 'data.pt')
-            else:
-                dataset_cls = import_by_name(self._group, ['torch_geometric.datasets'])
-                self.dataset = dataset_cls(root=self.root_dir.parent, name=self._name, **self._params)
-                # QUE Kirill, maybe we can do it some other way
-                if self._name == 'PROTEINS':
-                    torch.save((self.dataset.data, self.dataset.slices),
-                               self.dataset.processed_paths[0])
-                if self._group in ["GEDDataset"]:
-                    root = self.root_dir.parent
-                else:
-                    root = self.root_dir
+        # If tensors exist, load as a LocalDataset
+        if self.prepared_dir.exists():
+            if self._ptg_init_kwargs:
+                warnings.warn(f"Dataset {self.dataset_config} already exists, so ptg init kwargs"
+                              f" will be ignored.")
+            # Just load as LocalDataset to avoid re-generating tensors within PTG class
 
-            #     self.move_processed(self.dataset.processed_dir)
-            #     self.move_raw(self.dataset.raw_dir)
+            # NOTE: this works if `processed_file_names` does not use self - we pass None.
+            # We do not want to create object since it may make unnecessary computations
+            processed_file_names = lambda: dataset_cls.processed_file_names.fget(None)
+            self.dataset = LocalDataset(None, self.prepared_dir,
+                                        processed_file_names=processed_file_names)
+            return
+
+        assert self._domain in ["Homogeneous", "Heterogeneous", "Synthetic"]
+        if self._domain == "Heterogeneous":
+            raise NotImplementedError("Heterogeneous ptg datasets are not supported yet")
+
+        has_root = 'root' in str(inspect.signature(dataset_cls.__init__).parameters.keys())
+        if has_root:
+            self._ptg_init_kwargs['root'] = str(self.root_dir)
+            # self._ptg_init_kwargs['root'] = str(self.root_dir.parent)  FIXME ???
+        if self._name:
+            self._ptg_init_kwargs['name'] = self._name
+
+        self.dataset = dataset_cls(**self._ptg_init_kwargs)
+
+        if has_root:
+            # Move (link) processed data to self.prepared_dir
+            self.move_processed_to_prepared()
+
+            # if self._group in ["pytorch-geometric-other"]:
+        #     # Datasets from torch_geometric.datasets package
+        #     dataset_cls = import_by_name(self._name, ['torch_geometric.datasets'])
+
+            # if 'root' in str(inspect.signature(dataset_cls.__init__).parameters.keys()):
+            #     # Dataset is created or loaded if already exists
+            #     self.dataset = dataset_cls(root=str(self.root_dir), **self._ptg_init_kwargs)
             #
-            # # Define and save DatasetInfo
-            # self.info = self.induce_dataset_info()
-            # self.info.save(self.metainfo_path)
+            #     # Move (link) processed data to self.prepared_dir
+            #     self.move_processed_to_prepared()
+
+        elif issubclass(dataset_cls, InMemoryDataset):
+            # InMemoryDatasets do not save data by default
+
+            # Dataset is generated, we save it manually
+            self.dataset = dataset_cls(**self._ptg_init_kwargs)
+            self.prepared_dir.mkdir(parents=True, exist_ok=True)
+
+            # Take self.data since it applies transforms if any to get final data.
+            torch.save(obj=(self.data, self.dataset.slices), f=self.prepared_dir / 'data.pt')
+
+            # And create an empty raw folder so framework can recognize a dataset
+            self.raw_dir.mkdir(parents=True)
+
         else:
-            raise RuntimeError()
+            # The problem is that self.data will read all dataset into memory, but it could
+            # be too large.
+            raise NotImplementedError("Non InMemoryDataset without root are not supported yet")
+
+        if len(self.data.x.shape) == 1:
+            # Some datasets, e.g. AQSOL, have Data.x of shape (N) instead of (N, 1)
+            self.data.x = torch.reshape(self.data.x, (self.data.x.shape[0], 1))
+
+    def move_processed_to_prepared(
+            self
+    ) -> None:
+        """ Move (link) processed data to self.prepared_dir
+        """
+        self.prepared_dir.parent.mkdir(parents=True, exist_ok=True)
+        if self.prepared_dir != self.dataset.processed_dir \
+                and Path(self.dataset.processed_dir).is_dir():
+            # Create link to original processed files
+            # (we do not move them to avoid torch graph calling process() each time)
+            self.prepared_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
 
 
 def is_in_torch_geometric_datasets(
@@ -288,3 +350,49 @@ def is_in_torch_geometric_datasets(
     from data_structures.prefix_storage import FixedKeysPrefixStorage
     with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
         return FixedKeysPrefixStorage.from_json(f.read(), ).check(full_name)
+
+
+if __name__ == '__main__':
+    from datasets.datasets_manager import DatasetManager
+    from torch_geometric.datasets.graph_generator import GraphGenerator
+    from aux.utils import import_all_from_package
+
+    # import torch_geometric.transforms as T
+    # params = {
+    #         "graph_generator": "BAGraph",
+    #         "graph_generator_kwargs": {"num_nodes": 300, "num_edges": 10},
+    #         "motif_generator": "HouseMotif",
+    #         "motif_generator_kwargs": {},
+    #         "num_motifs": 3,
+    #         "transform": T.Constant()
+    # }
+    # dc = DatasetConfig(
+    #     (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'ExplainerDataset',
+    #      'BAGraph(num_nodes=300,num_edges=10),HouseMotif(),num_motifs=3)'))
+    # params = {
+    #         "graph_generator": "BAGraph",
+    #         "num_infected_nodes": 10,
+    #         "max_path_length": 3,
+    #         "graph_generator_kwargs": {"num_nodes": 30, "num_edges": 10}
+    #     }
+    # dc = DatasetConfig(
+    #     (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'InfectionDataset',
+    #      'BAGraph(num_nodes=30,num_edges=10),num_infected_nodes=10,max_path_length=3)'))
+    # dataset = LibPTGDataset(dc)
+    # dataset = LibPTGDataset(dc, **params)
+
+    dc = DatasetConfig(
+        # (LibPTGDataset.data_folder, 'Homogeneous', 'AQSOL'))
+        (LibPTGDataset.data_folder, 'Homogeneous', 'GNNBenchmarkDataset', 'PATTERN'))
+
+    # import torch_geometric.datasets
+    # import_all_from_package(torch_geometric.datasets)  # to import all subclasses properly
+    # sb = all_subclasses(Dataset)
+    # for c in sb:
+    #     print(c)
+    #     if hasattr(c, "names"):
+    #         print(c.names)
+
+    dataset = DatasetManager.get_by_config(dc)
+    # d = dataset.dataset.get(1)
+    print(dataset.data)

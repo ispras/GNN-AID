@@ -335,7 +335,7 @@ class SubgraphXExplainer(Explainer):
             data = self.gen_dataset.dataset.get(self.explained_graph)
             pred = self.model.get_answer(data.x, data.edge_index).item()
         else:
-            data = self.gen_dataset.dataset.data
+            data = self.gen_dataset.data
             pred = self.model.get_answer(data.x, data.edge_index)[self.explained_node].item()
 
         # Getting important nodes

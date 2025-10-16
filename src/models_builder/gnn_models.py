@@ -1226,7 +1226,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                         shuffle=False
                     )
                 )
-                full_out = torch.empty(0, device=dataset.data.x.device)
+                full_out = torch.empty(0, device=gen_dataset.data.x.device)
                 # y_true = torch.Tensor()
                 if hasattr(self, 'optimizer'):
                     self.optimizer.zero_grad()
@@ -1703,7 +1703,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
         # Prototype projection
         if cur_step > self.proj_epochs and cur_step % self.proj_epochs == 0:
-            self.prot_layer.projection(self.gnn, gen_dataset.dataset, train_ind, gen_dataset.dataset.data,
+            self.prot_layer.projection(self.gnn, gen_dataset.dataset, train_ind, gen_dataset.data,
                                        thrsh=self.prot_thrsh)
         self.gnn.train()
         for p in self.gnn.parameters():

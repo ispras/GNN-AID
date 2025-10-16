@@ -2,9 +2,9 @@ import json
 
 from aux.data_info import DataInfo
 from aux.utils import TORCH_GEOM_GRAPHS_PATH
+from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from datasets.datasets_manager import DatasetManager
 from datasets.gen_dataset import GeneralDataset
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from datasets.visible_part import DatasetVarData, DatasetData
 from web_interface.back_front.block import Block
 from web_interface.back_front.utils import json_dumps, get_config_keys
@@ -20,6 +20,11 @@ class DatasetBlock(Block):
 
         self.dataset_config = None
 
+        from data_structures.prefix_storage import TuplePrefixStorage
+        self._index = None
+        with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
+            self._torch_geom_index = TuplePrefixStorage.from_json(f.read())
+
     def _init(
             self
     ) -> None:
@@ -32,6 +37,7 @@ class DatasetBlock(Block):
             return False
 
         self.dataset_config = DatasetConfig(**self._config)
+
         return True
 
     def _submit(
@@ -49,21 +55,21 @@ class DatasetBlock(Block):
             self
     ) -> str:
         DataInfo.refresh_data_dir_structure()
-        index = DataInfo.data_parse()
+        self._index = DataInfo.data_parse()
 
         # Add torch_geom
         from datasets.ptg_datasets import LibPTGDataset
-        with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
-            configuration = json.load(f)
-            # assert len(index.keys) == 3
-            for i in configuration['content']:
-                for j in configuration['content'][i]:
-                    for k in configuration['content'][i][j]:
-                        try:
-                            index.add((LibPTGDataset.data_folder, i, j, k), "Not loaded yet")
-                        except KeyError: pass
+        # assert len(index.keys) == 3
+        for key, value in self._torch_geom_index:
+            if key[0] == "Heterogeneous":
+                continue  # Not implemented
+            if value is not None and key not in self._index:
+                continue  # Requires creation from backend
+            try:
+                self._index.add([LibPTGDataset.data_folder] + key, "Not loaded yet")
+            except KeyError: pass
 
-        return json_dumps([index.to_json(), json_dumps('')])
+        return json_dumps([self._index.to_json(), json_dumps('')])
 
     def set_visible_part(
             self,
@@ -88,7 +94,7 @@ class DatasetVarBlock(Block):
         super().__init__(*args, **kwargs)
         self.tag = 'dvc'
 
-        self.gen_dataset: GeneralDataset = None  # FIXME duplication!!!
+        self.gen_dataset: GeneralDataset = None  # FIXME misha duplication!!!
         self.dataset_var_config = None
 
     def _init(

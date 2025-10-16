@@ -28,7 +28,7 @@ class KnownFormatDataset(
         from datasets.datasets_manager import DatasetManager
 
         # Define dataset config - where to get raw data
-        dc = DatasetConfig(('example', 'single-graph', 'example'))
+        dc = DatasetConfig(('example', 'example'))
         dataset = DatasetManager.get_by_config(dc)
 
         # Get graph data from a 1-neighborhood of node 0

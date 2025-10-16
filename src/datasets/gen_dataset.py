@@ -114,24 +114,28 @@ class GeneralDataset(ABC):
             self
     ) -> Data:
         """
-        Get tensors as :class:`torch_geometric.data.data.Data` object.
+        Get tensors of the whole dataset as :class:`torch_geometric.data.data.Data` object.
+
         NOTE: this will load the whole dataset into memory, be careful if the size is large.
         """
         if self._data is None:
-            if self.is_multi():
+            if len(self.dataset) > 1:
                 if isinstance(self.dataset, InMemoryDataset):
                     self._data = self.dataset._data
+                    if self.dataset.transform is not None:
+                        self._data = self.dataset.transform(self._data)
                 else:
                     from warnings import warn
                     warn("The ptg dataset is not InMemoryDataset. "
                          "Getting its data might consume too much resources if the dataset is "
                          "large. Consider using dataset.get(i) to get Data for i graph.")
 
-                    data_list = [self.dataset.get(i) for i in range(self.info.count)]
+                    # transform is applied within __get_item__
+                    data_list = [self.dataset[i] for i in range(self.info.count)]
                     self._data, _, _ = collate(Data, data_list)
 
             else:
-                self._data = self.dataset.get(0)
+                self._data = self.dataset[0]
 
         return self._data
 
@@ -250,7 +254,8 @@ class GeneralDataset(ABC):
     def _register(
             self
     ) -> None:
-        """ Add info about class to metainfo and save to file.
+        """ Finalize the dataset if not yet. Have effect on the first call.
+        Add info about class to metainfo.
         """
         if self.info.class_name is None:
             import inspect
@@ -313,9 +318,9 @@ class GeneralDataset(ABC):
         self.train_mask = train_mask
         self.test_mask = test_mask
         self.val_mask = val_mask
-        self.dataset.data.train_mask = train_mask
-        self.dataset.data.test_mask = test_mask
-        self.dataset.data.val_mask = val_mask
+        self._data.train_mask = train_mask
+        self._data.test_mask = test_mask
+        self._data.val_mask = val_mask
 
     def save_train_test_mask(
             self,
@@ -518,19 +523,24 @@ class LocalDataset(
             data_list: Union[List[Data], None],
             prepared_dir: Union[str, Path],
             process_func: Union[Callable, None] = None,
+            processed_file_names: Union[Callable, None] = None,
+            **in_memory_dataset_kwargs
     ):
         """
         :param data_list: optionally, list of ready torch_geometric.data.Data objects
         :param prepared_dir: directory where tensors are stored
         :param process_func: optionally, custom process() function, which converts raw files into tensors
+        :param in_memory_dataset_kwargs: optionally, kwargs to InMemoryDataset constructor, e.g. transform
         """
         self.data_list = data_list
         self._prepared_dir = prepared_dir
         if process_func:
             self.process = process_func
+        if processed_file_names:
+            self._processed_file_names = processed_file_names
 
         # Init and process
-        super().__init__(None)
+        super().__init__(**in_memory_dataset_kwargs)
 
         # Load, (even if data_list is given, to correctly define self._data, self._data_list)
         self.data, *rest_data = torch.load(self.processed_paths[0])
@@ -545,7 +555,11 @@ class LocalDataset(
     def processed_file_names(
             self
     ) -> str:
-        return 'data.pt'
+        if self._processed_file_names is not None:
+            res = self._processed_file_names()
+            return res
+        else:
+            return 'data.pt'
 
     def process(
             self
@@ -558,14 +572,18 @@ class LocalDataset(
     ) -> str:
         return self._prepared_dir
 
+    @processed_file_names.setter
+    def processed_file_names(self, value):
+        self._processed_file_names = value
+
 
 if __name__ == '__main__':
     print("test dataset")
     from datasets.datasets_manager import DatasetManager
     #
-    # dc = DatasetConfig(('example', 'single-graph', 'example'))
-    # dc = DatasetConfig(('example', 'multiple-graphs', 'example_gml'))
-    dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
+    # dc = DatasetConfig(('example', 'example'))
+    dc = DatasetConfig(('example', 'example_gml'))
+    # dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
     # dc = DatasetConfig(('ptg-library-graphs', 'multiple-graphs', 'TUDataset', 'MUTAG'))
 
     dataset = DatasetManager.get_by_config(

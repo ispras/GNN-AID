@@ -473,13 +473,13 @@ class UserCodeInfo:
 
 if __name__ == '__main__':
 
-    # DataInfo.refresh_all_data_info()
+    DataInfo.refresh_all_data_info()
     ps, info = DataInfo.models_parse()
     # print(ps.to_json(indent=2))
     print(ps)
     # ps, info = DataInfo.fill_prefix_storage(modes=("datasets", "models"),
     #                                         file_with_paths=DATA_INFO_DIR / 'models_dir_structure')
-    # print(info)
+    print(json.dumps(info, indent=1))
     # DataInfo.clean_prepared_data()
     # DataInfo.del_all_empty_folders(MODELS_DIR)
     # UserCodeInfo.user_models_list_ref()

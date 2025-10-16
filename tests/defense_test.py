@@ -28,14 +28,14 @@ class DefenseTest(unittest.TestCase):
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "single-graph", "example",),
+            full_name=("example", "example",),
             features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(("example", "single-graph", "example")),
+            DatasetConfig(("example", "example")),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)

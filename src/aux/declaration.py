@@ -21,7 +21,7 @@ class Declare:
     ) -> [Path, list]:
         """
         :param what_save: the path for which object is being built.
-         Now support: data_root, data_prepared, models, explanations
+         Now support: data_root, datasets, models, explanations
         :param previous_path: the path over which you need to add the folder
          structure corresponding to the element being saved
         :param obj_info: information about the object, which must match the dictionary keys
@@ -103,9 +103,11 @@ class Declare:
         :return: path to the data folder, path to a specific dataset
         """
         path = GRAPHS_DIR
-        dataset_config_val = [dataset_config.path()]
+        obj_info = [
+            dataset_config.path(),
+        ]
         path, files_paths = Declare.obj_info_to_path(previous_path=path, what_save="data_root",
-                                                     obj_info=dataset_config_val)
+                                                     obj_info=obj_info)
         return path, files_paths
 
     @staticmethod

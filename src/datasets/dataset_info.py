@@ -131,7 +131,7 @@ class DatasetInfo:
             elif type == "continuous":
                 assert isinstance(value, list)
             elif type == "vector":
-                assert isinstance(value, int) and value > 0
+                assert isinstance(value, int) and value > 0, "Node feature size must be positive"
             elif type == "other":
                 assert isinstance(value, int) or value in ["str", None]
         assert len(self.labelings) > 0

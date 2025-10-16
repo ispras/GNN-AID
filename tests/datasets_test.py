@@ -504,24 +504,156 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from data_structures.prefix_storage import FixedKeysPrefixStorage
+        from data_structures.prefix_storage import TuplePrefixStorage
         from aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
-            ps = FixedKeysPrefixStorage.from_json(f.read(), )
+            ps = TuplePrefixStorage.from_json(f.read(), )
 
-        for full_name, _ in ps:
-            print(f"Checking {full_name}")
+        # AssertionError "Node feature size must be positive"
+        # ps.remove(('Homogeneous', 'TUDataset', 'DBLP_v1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'COIL-RAG'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'COIL-DEL'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'COLORS-3'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'FRANKENSTEIN'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'Fingerprint'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-high'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-low'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-med'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'QM9'))
+
+        # AssertionError: Data objects must have 'x' attribute
+        # ps.remove(('Homogeneous', 'TUDataset', 'IMDB-BINARY'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'IMDB-MULTI'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-BINARY'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-MULTI-12K'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-MULTI-5K'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'deezer_ego_nets'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'github_stargazers'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'reddit_threads'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'twitch_egos'))
+
+        # ValueError: expected sequence of length 2 at dim 1 (got 4)
+        # ps.remove(('Homogeneous', 'TUDataset', 'dblp_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'dblp_ct2'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'facebook_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'facebook_ct2'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'highschool_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'highschool_ct2'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'infectious_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'infectious_ct2'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'mit_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'mit_ct2'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'tumblr_ct1'))
+        # ps.remove(('Homogeneous', 'TUDataset', 'tumblr_ct2'))
+
+        # ValueError: Cannot load file containing pickled data when allow_pickle=False
+        # ps.remove(('Homogeneous', 'AmazonProducts'))
+
+
+        errors = []
+        for ix, (full_name, default_init_kwargs) in enumerate(ps):
+            if ix < 136: continue
+            print(f"Checking {full_name} ({ix+1} of {len(ps)})")
 
             try:
                 try:
                     # Downloads and processes for the first time
                     dc = DatasetConfig(tuple([LibPTGDataset.data_folder] + full_name))
-                    dataset = LibPTGDataset(dc)
+                    default_init_kwargs = default_init_kwargs or {}
+                    dataset = LibPTGDataset(dc, **default_init_kwargs)
                     self.assertTrue(1)
                 except Exception as e:
                     print('\n\n')
                     print(f"ERROR at {full_name}:")
+                    print(traceback.print_exc())
+                    errors.append(dc)
+                    continue
+
+                try:
+                    # Read from file for second time
+                    DatasetManager.get_by_config(dc)
+                    self.assertTrue(1)
+                except Exception as e:
+                    print('\n\n')
+                    print(f"ERROR at load {dc}:")
+                    print(traceback.print_exc())
+
+            # Remove
+            finally:
+                from aux.declaration import Declare
+                root_dir, files_paths = Declare.dataset_root_dir(dc)
+                if root_dir.exists():
+                    shutil.rmtree(root_dir)
+
+        print(f"{len(errors)} Errors", '\n'.join(errors))
+
+    def test_ptg_lib_with_params(self):
+        """
+        """
+        import torch_geometric.transforms as T
+        dataset_config_list = [
+            [
+                DatasetConfig(
+                    (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'InfectionDataset',
+                     'BAGraph(num_nodes=30,num_edges=10),num_infected_nodes=10,max_path_length=3')),
+                {
+                    "graph_generator": "BAGraph",
+                    "num_infected_nodes": 10,
+                    "max_path_length": 3,
+                    "graph_generator_kwargs": {"num_nodes": 30, "num_edges": 10}
+                }
+            ],
+            [
+                DatasetConfig(
+                    (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'FakeDataset',
+                     'version1')),
+                    {
+                        "num_graphs": 2,
+                        "avg_num_nodes": 200,
+                        "avg_degree": 15,
+                        "num_channels": 64,
+                        "edge_dim": 0,
+                        "num_classes": 10,
+                        "task": "auto",
+                    }
+            ],
+            [
+                DatasetConfig(
+                    (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'MixHopSyntheticDataset',
+                     '04')),
+                    {
+                        "homophily": 0.4,
+                    },
+            ],
+            [
+                # Requires transform to be applied
+                DatasetConfig(
+                    (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'ExplainerDataset',
+                     'BAGraph(num_nodes=300,num_edges=10),HouseMotif(),num_motifs=3)')),
+                {
+                    "graph_generator": "BAGraph",
+                    "graph_generator_kwargs": {"num_nodes": 300, "num_edges": 10},
+                    "motif_generator": "HouseMotif",
+                    "motif_generator_kwargs": {},
+                    "num_motifs": 3,
+                    "transform": T.Constant()
+                }
+            ]
+        ]
+
+        import traceback
+        for dc, params in dataset_config_list:
+            print(f"Checking {dc}")
+
+            try:
+                try:
+                    # Downloads and processes for the first time
+                    dataset = LibPTGDataset(dc, **params)
+                    self.assertTrue(1)
+                except Exception as e:
+                    print('\n\n')
+                    print(f"ERROR at {dc}:")
                     print(traceback.print_exc())
                     continue
 

@@ -482,22 +482,15 @@ class DatasetConfig(
     def __init__(
             self,
             full_name: Tuple[str, ...] = None,
-            init_kwargs: Union[dict, None] = None
     ):
         """
         """
         assert len(full_name) >= 2
-        if init_kwargs is None:
-            init_kwargs = {}
-        super().__init__(full_name=full_name, init_kwargs=init_kwargs)
+        super().__init__(full_name=full_name)
 
     @property
     def full_name(self):
         return self["full_name"]
-
-    @property
-    def init_kwargs(self):
-        return self["init_kwargs"]
 
     def path(
             self
