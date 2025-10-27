@@ -33,7 +33,8 @@ jobs:
         sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
     - name: Install all dependencies
       run: |
-        pip install -r requirements1.txt -r requirements2.txt -r requirements3.txt
+        pip install -r requirements1.txt -r requirements2.txt
+        PIP_NO_BUILD_ISOLATION=false pip install -r requirements3.txt
     - name: Set PYTHONPATH
       run: |
         echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
