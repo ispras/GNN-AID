@@ -2,6 +2,7 @@ from typing import Any, Union, Optional, List
 from typing import Callable
 
 import torch
+import torch.nn as nn
 from torch import Tensor
 from torch.utils.hooks import RemovableHandle
 from torch_geometric.nn import MessagePassing
@@ -110,3 +111,25 @@ def attention_message_hook(
                 return lambda module, input, out: out * att.view(att.shape[0], 1, 1)
             else:
                 return lambda module, input, out: out * att
+
+
+class EdgeMaskingWrapper(nn.Module):
+    def __init__(self, model: nn.Module, num_edges: int):
+        super().__init__()
+        self.model = model
+        self.edge_mask = nn.Parameter(torch.ones(num_edges))  # [E], requires_grad=True
+
+        for module in self.model.modules():
+            if isinstance(module, MessagePassing):
+                if hasattr(module, 'add_self_loops'):
+                    module.add_self_loops = False
+                module.register_message_forward_hook(self._make_mask_hook())
+
+    def _make_mask_hook(self):
+        def hook(module, inputs, message_output):
+            # message_output: [E, F]
+            return message_output * self.edge_mask.to(message_output.device).view(-1, 1)
+        return hook
+
+    def forward(self, *args, **kwargs):
+        return self.model(*args, **kwargs)
