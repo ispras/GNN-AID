@@ -1,11 +1,11 @@
 import json
-from typing import Union, List, Tuple
-
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
-    SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 import os
 from pathlib import Path
+from typing import Union, Tuple
+
+from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
+    SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
 class Declare:

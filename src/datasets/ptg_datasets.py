@@ -1,23 +1,18 @@
 import copy
 import inspect
-import json
-import os
-import shutil
 import warnings
 from pathlib import Path
 from time import time
 from typing import Union, List, Dict
 
 import torch
-from torch import Tensor
 from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
-from torch_sparse import SparseTensor
 
 from aux.declaration import Declare
-from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH, all_subclasses, shape
-from datasets.gen_dataset import GeneralDataset, LocalDataset
-from datasets.dataset_info import DatasetInfo
+from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH, shape
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
+from datasets.dataset_info import DatasetInfo
+from datasets.gen_dataset import GeneralDataset, LocalDataset
 
 PTG_FEATURE_NAME = "unknown"
 
@@ -340,64 +335,3 @@ class LibPTGDataset(PTGDataset):
             # Create link to original processed files
             # (we do not move them to avoid torch graph calling process() each time)
             self.prepared_dir.symlink_to(self.dataset.processed_dir, target_is_directory=True)
-
-
-def is_in_torch_geometric_datasets(
-        full_name: tuple = None
-) -> bool:
-    from data_structures.prefix_storage import FixedKeysPrefixStorage
-    with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
-        return FixedKeysPrefixStorage.from_json(f.read(), ).check(full_name)
-
-
-if __name__ == '__main__':
-    from datasets.datasets_manager import DatasetManager
-    from torch_geometric.datasets.graph_generator import GraphGenerator
-    from aux.utils import import_all_from_package
-
-    # import torch_geometric.transforms as T
-    # params = {
-    #         "graph_generator": "BAGraph",
-    #         "graph_generator_kwargs": {"num_nodes": 300, "num_edges": 10},
-    #         "motif_generator": "HouseMotif",
-    #         "motif_generator_kwargs": {},
-    #         "num_motifs": 3,
-    #         "transform": T.Constant()
-    # }
-    # dc = DatasetConfig(
-    #     (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'ExplainerDataset',
-    #      'BAGraph(num_nodes=300,num_edges=10),HouseMotif(),num_motifs=3)'))
-    params = {
-            "graph_generator": "BAGraph",
-            "num_infected_nodes": 10,
-            "max_path_length": 3,
-            "graph_generator_kwargs": {"num_nodes": 30, "num_edges": 10}
-        }
-    dc = DatasetConfig(
-        (LibPTGDataset.data_folder, 'Homogeneous', 'InfectionDataset',
-         'BAGraph(num_nodes=30,num_edges=10),num_infected_nodes=10,max_path_length=3)'))
-    # dataset = LibPTGDataset(dc)
-    # dataset = LibPTGDataset(dc, **params)
-
-    dc = DatasetConfig(
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'AQSOL'))
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'MoleculeNet', 'ESOL'))
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'MD17', 'uracil'))
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'SNAPDataset', 'ego-facebook'))
-        (LibPTGDataset.data_folder, 'Homogeneous', 'WebKB', 'Cornell'))
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'ZINC'))
-        # (LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
-
-    # params = {'subset': True}
-    # import torch_geometric.datasets
-    # import_all_from_package(torch_geometric.datasets)  # to import all subclasses properly
-    # sb = all_subclasses(Dataset)
-    # for c in sb:
-    #     print(c)
-    #     if hasattr(c, "names"):
-    #         print(c.names)
-
-    # dataset = LibPTGDataset(dc, **params)
-    dataset = DatasetManager.get_by_config(dc)
-    # d = dataset.dataset.get(1)
-    print(dataset.data)

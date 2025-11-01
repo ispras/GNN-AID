@@ -12,7 +12,7 @@ from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
 from models_builder.models_zoo import model_configs_zoo
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from aux.utils import OPTIMIZERS_PARAMETERS_PATH
+from aux.utils import OPTIMIZERS_PARAMETERS_PATH, move_to_same_device
 from torch_geometric.utils import dense_to_sparse
 
 from attacks.poison_attacks import PoisonAttacker
@@ -57,8 +57,8 @@ class BaseMeta(PoisonAttacker):
     ):
         return False  # BaseMeta is a helper class, not a method
 
-    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
-                 attack_structure=True, attack_features=False, undirected=False, device='cpu'):
+    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100,
+                 attack_budget=10, lr=0.1, attack_structure=True, attack_features=False, undirected=False, device='cpu'):
         super().__init__()
         self.model = None
         self.num_nodes = num_nodes  # will be set from dataset in attack()
@@ -66,6 +66,7 @@ class BaseMeta(PoisonAttacker):
         self.lambda_ = lambda_
         self.train_iters = train_iters
         self.attack_iters = attack_iters
+        self.attack_budget = attack_budget
         self.lr = lr
         self.device = device
 
@@ -125,7 +126,7 @@ class BaseMeta(PoisonAttacker):
             manager_config=manager_config,
         )
 
-        gnn_model_manager_surrogate.train_model(gen_dataset=gen_dataset, steps=self.train_iters)
+        gnn_model_manager_surrogate.train_model(gen_dataset=gen_dataset, steps=self.train_iters, save_model_flag=False)
 
         self.pred_labels = gnn_model_manager_surrogate.run_model(gen_dataset=gen_dataset, mask='all', out='answers')
 
@@ -160,9 +161,12 @@ class BaseMeta(PoisonAttacker):
         output = self.pred_labels
         # labels_self_training = output.argmax(1)
         labels_self_training = self.pred_labels.long().clone().detach()
+        labels_self_training, labels = move_to_same_device(
+            labels_self_training, labels,
+            device=torch.device(self.device)
+        )
         labels_self_training[idx_train] = labels[idx_train]
         return labels_self_training
-
 
     def log_likelihood_constraint(self, modified_adj, ori_adj, ll_cutoff):
         """
@@ -175,7 +179,8 @@ class BaseMeta(PoisonAttacker):
         if self.undirected:
             t_possible_edges = np.array(np.triu(np.ones((self.num_nodes, self.num_nodes)), k=1).nonzero()).T
         else:
-            t_possible_edges = np.array((np.ones((self.num_nodes, self.num_nodes)) - np.eye(self.num_nodes)).nonzero()).T
+            t_possible_edges = np.array(
+                (np.ones((self.num_nodes, self.num_nodes)) - np.eye(self.num_nodes)).nonzero()).T
         allowed_mask, current_ratio = utils.likelihood_ratio_filter(t_possible_edges,
                                                                     modified_adj,
                                                                     ori_adj, t_d_min,
@@ -190,7 +195,7 @@ class BaseMeta(PoisonAttacker):
         adj_meta_grad = adj_meta_grad - torch.diag(torch.diag(adj_meta_grad, 0))
         # # Set entries to 0 that could lead to singleton nodes.
         singleton_mask = self.filter_potential_singletons(modified_adj)
-        adj_meta_grad = adj_meta_grad *  singleton_mask
+        adj_meta_grad = adj_meta_grad * singleton_mask
 
         if ll_constraint:
             allowed_mask, self.ll_ratio = self.log_likelihood_constraint(modified_adj, ori_adj, ll_cutoff)
@@ -224,11 +229,11 @@ class MetaAttackFull(BaseMeta):
     ):
         return True  # TODO
 
-    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100, lr=0.1,
-                 momentum=0.9, attack_structure=True, attack_features=False, undirected=False, device='cpu',
-                 with_bias=False, with_relu=False):
+    def __init__(self, num_nodes=None, feature_shape=None, lambda_=0.5, train_iters=200, attack_iters=100,
+                 attack_budget=10, lr=0.1,momentum=0.9, attack_structure=True, attack_features=False,
+                 undirected=False, device='cpu', with_bias=False, with_relu=False):
         super().__init__(num_nodes=num_nodes, feature_shape=feature_shape, lambda_=lambda_, train_iters=train_iters,
-                         attack_iters=attack_iters, lr=lr, attack_features=attack_features,
+                         attack_iters=attack_iters, attack_budget=attack_budget, lr=lr, attack_features=attack_features,
                          attack_structure=attack_structure, undirected=undirected, device=device)
         self.with_bias = with_bias
         self.with_relu = with_relu
@@ -239,10 +244,10 @@ class MetaAttackFull(BaseMeta):
         self.b_velocities = []
         self.momentum = momentum
 
-    def attack(self, gen_dataset, attack_budget=10, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
-        self.hidden_sizes = [16]   # FIXME get from model architecture
+        self.hidden_sizes = [16]  # FIXME get from model architecture
         self.nfeat = gen_dataset.num_node_features
         self.nclass = gen_dataset.num_classes
 
@@ -287,7 +292,7 @@ class MetaAttackFull(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
-        for i in tqdm(range(attack_budget), desc="Perturbing graph"):
+        for i in tqdm(range(self.attack_budget), desc="Perturbing graph"):
             if self.attack_structure:
                 modified_adj = self.get_modified_adj(ori_adj)
 
@@ -297,7 +302,8 @@ class MetaAttackFull(BaseMeta):
             adj_norm = utils.normalize_adj_tensor(modified_adj)
             self.inner_train(modified_features, adj_norm, idx_train, idx_unlabeled, labels)
 
-            adj_grad, feature_grad = self.get_meta_grad(modified_features, adj_norm, idx_train, idx_unlabeled, labels, labels_self_training)
+            adj_grad, feature_grad = self.get_meta_grad(modified_features, adj_norm, idx_train, idx_unlabeled, labels,
+                                                        labels_self_training)
 
             adj_meta_score = torch.tensor(0.0).to(self.device)
             feature_meta_score = torch.tensor(0.0).to(self.device)
@@ -432,11 +438,12 @@ class MetaAttackApprox(BaseMeta):
         return True  # TODO
 
     def __init__(self, num_nodes=None, feature_shape=None, attack_structure=True, attack_features=False,
-                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200, attack_iters=10,
-                 lr=0.01, with_relu=False):
+                 undirected=False, device='cpu', with_bias=False, lambda_=0.5, train_iters=200,
+                 attack_iters=10, attack_budget=10, lr=0.01, with_relu=False):
         super().__init__(num_nodes=num_nodes, feature_shape=feature_shape, lambda_=lambda_, train_iters=train_iters,
                          attack_iters=attack_iters, lr=lr, attack_features=attack_features,
-                         attack_structure=attack_structure, undirected=undirected, device=device)
+                         attack_structure=attack_structure, attack_budget=attack_budget,
+                         undirected=undirected, device=device)
 
         self.lr = lr
         self.train_iters = train_iters
@@ -457,10 +464,10 @@ class MetaAttackApprox(BaseMeta):
         if self.attack_features:
             self.feature_grad_sum = torch.zeros(self.feature_shape).to(self.device)
 
-    def attack(self, gen_dataset, attack_budget=500, ll_constraint=True, ll_cutoff=0.004):
+    def attack(self, gen_dataset, ll_constraint=True, ll_cutoff=0.004):
         super().attack(gen_dataset=gen_dataset)
 
-        self.hidden_sizes = [16]   # FIXME get from model architecture
+        self.hidden_sizes = [16]  # FIXME get from model architecture
         self.nfeat = gen_dataset.num_node_features
         self.nclass = gen_dataset.num_classes
 
@@ -493,7 +500,7 @@ class MetaAttackApprox(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
-        for i in tqdm(range(attack_budget), desc="Perturbing graph"):
+        for i in tqdm(range(self.attack_budget), desc="Perturbing graph"):
             self._initialize()
 
             if self.attack_structure:
@@ -589,7 +596,6 @@ class MetaAttackApprox(BaseMeta):
                 self.feature_grad_sum += torch.autograd.grad(attack_loss, self.feature_changes, retain_graph=True)[0]
 
             self.optimizer.step()
-
 
         loss_test_val = F.nll_loss(output[idx_unlabeled], labels[idx_unlabeled])
         print('GCN loss on unlabled data: {}'.format(loss_test_val.item()))

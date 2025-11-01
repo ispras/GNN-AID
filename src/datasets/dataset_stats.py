@@ -1,19 +1,17 @@
-import numpy as np
-import os
 import json
 from collections import Counter
 from pathlib import Path
 from typing import Union
 
 import networkx as nx
+import numpy as np
 from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
 from aux.declaration import Declare
-from data_structures.configs import DatasetVarConfig, FeatureConfig
-from datasets.dataset_info import DatasetInfo
-from datasets.gen_dataset import GeneralDataset
 from aux.utils import edge_index_to_edge_list
+from data_structures.configs import DatasetVarConfig, FeatureConfig
+from datasets.gen_dataset import GeneralDataset
 from datasets.known_format_datasets import KnownFormatDataset
 
 

@@ -403,38 +403,39 @@ class UserCodeInfo:
         DATA_INFO_DIR.mkdir(exist_ok=True, parents=True)
         DATA_INFO_USER_MODELS_INFO = DATA_INFO_DIR / 'user_model_list'
         user_models_obj_dict_info = {}
-        for path in os.scandir(USER_MODELS_DIR):
-            if path.is_file():
-                # print(path.name)
-                user_files_path = USER_MODELS_DIR / path.name
-                file_loc_obj = {}
-                try:
-                    spec = importlib.util.spec_from_file_location("models_init", user_files_path)
-                    foo = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(foo)
-                    file_loc_obj = foo.models_init()
-                    file_loc_obj = dict(filter(lambda y: isinstance(y[1], GNNConstructor), file_loc_obj.items()))
-                except:
-                    logging.warning(f"\nFile {user_files_path} \n"
-                                    f"doesn't contain function models_init, write it to access model objects or \n"
-                                    f"returns objects that don't inherit from GNNConstructor.\n"
-                                    f"def models_init should have the following logic:\n"
-                                    f"def models_init():\n"
-                                    f"  obj_1 = UserGNNClass_1(any parameters)\n"
-                                    f"  obj_2 = UserGNNClass_2(any parameters)\n"
-                                    f"  return locals()\n"
-                                    f"where UserGNNClass inherit from GNNConstructor")
-                user_files_path = str(user_files_path)
-                if file_loc_obj:
-                    # user_models_obj_dict_info[user_files_path] = {}
-                    for key, val in file_loc_obj.items():
-                        if val.__class__.__name__ in user_models_obj_dict_info:
-                            user_models_obj_dict_info[val.__class__.__name__]['obj_names'].append(key)
-                        else:
-                            user_models_obj_dict_info[val.__class__.__name__] = {'obj_names': [key],
-                                                                                 'import_path': user_files_path}
-        with open(DATA_INFO_USER_MODELS_INFO, 'w', encoding='utf-8') as f:
-            f.write(json.dumps(user_models_obj_dict_info, indent=2))
+        if os.path.exists(USER_MODELS_DIR):
+            for path in os.scandir(USER_MODELS_DIR):
+                if path.is_file():
+                    # print(path.name)
+                    user_files_path = USER_MODELS_DIR / path.name
+                    file_loc_obj = {}
+                    try:
+                        spec = importlib.util.spec_from_file_location("models_init", user_files_path)
+                        foo = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(foo)
+                        file_loc_obj = foo.models_init()
+                        file_loc_obj = dict(filter(lambda y: isinstance(y[1], GNNConstructor), file_loc_obj.items()))
+                    except:
+                        logging.warning(f"\nFile {user_files_path} \n"
+                                        f"doesn't contain function models_init, write it to access model objects or \n"
+                                        f"returns objects that don't inherit from GNNConstructor.\n"
+                                        f"def models_init should have the following logic:\n"
+                                        f"def models_init():\n"
+                                        f"  obj_1 = UserGNNClass_1(any parameters)\n"
+                                        f"  obj_2 = UserGNNClass_2(any parameters)\n"
+                                        f"  return locals()\n"
+                                        f"where UserGNNClass inherit from GNNConstructor")
+                    user_files_path = str(user_files_path)
+                    if file_loc_obj:
+                        # user_models_obj_dict_info[user_files_path] = {}
+                        for key, val in file_loc_obj.items():
+                            if val.__class__.__name__ in user_models_obj_dict_info:
+                                user_models_obj_dict_info[val.__class__.__name__]['obj_names'].append(key)
+                            else:
+                                user_models_obj_dict_info[val.__class__.__name__] = {'obj_names': [key],
+                                                                                     'import_path': user_files_path}
+            with open(DATA_INFO_USER_MODELS_INFO, 'w', encoding='utf-8') as f:
+                f.write(json.dumps(user_models_obj_dict_info, indent=2))
 
         return user_models_obj_dict_info
 

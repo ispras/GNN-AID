@@ -1,6 +1,9 @@
-from typing import Any
+from typing import Any, Optional, List
+from typing import Callable
 
 import torch
+import torch.nn as nn
+from torch.utils.hooks import RemovableHandle
 from torch_geometric.nn import MessagePassing
 
 
@@ -30,18 +33,39 @@ def apply_message_gradient_capture(
                 grad: torch.Tensor
         ) -> None:
             layer.message_gradients[name] = grad.detach()
+
         x_j.register_hook(save_message_grad)
         return original_message(x_j=x_j, *args, **kwargs)
+
     layer.message = capture_message_gradients
 
     def get_message_gradients(
     ) -> dict:
         return layer.message_gradients
+
     layer.get_message_gradients = get_message_gradients
 
 
+# def apply_attention(
+#         layer: Any,
+#         name: str
+# ) -> None:
+#     """Modifies the forward method of the given layer to include edge_atten handling."""
+#     original_forward = layer.forward
+#
+#     def modified_forward(self: Any, *args, edge_atten: Optional[Tensor] = None, **kwargs) -> Tensor:
+#         # Inject edge_atten into kwargs if it's provided
+#         if edge_atten is not None:
+#             kwargs['edge_atten'] = edge_atten
+#
+#         return original_forward(*args, **kwargs)
+#
+#     layer.forward = modified_forward.__get__(layer)
+
+
 def apply_decorator_to_graph_layers(
-        model: Any
+        model: Any,
+        dec_f: Callable = apply_message_gradient_capture
 ) -> None:
     # TODO Kirill add more options
     """
@@ -50,7 +74,58 @@ def apply_decorator_to_graph_layers(
     """
     for name, layer in model.named_children():
         if isinstance(layer, MessagePassing):
-            apply_message_gradient_capture(layer, name)
+            dec_f(layer, name)
         elif isinstance(layer, torch.nn.Module):
-            apply_decorator_to_graph_layers(layer)
+            apply_decorator_to_graph_layers(layer, dec_f)
 
+
+def apply_attention_to_messages(
+        model: Any,
+        att: torch.Tensor
+) -> List[RemovableHandle]:
+    handlers = []
+    for name, layer in model.named_children():
+        if isinstance(layer, MessagePassing):
+            handlers.append(layer.register_message_forward_hook(attention_message_hook(att, layer)))
+        elif isinstance(layer, torch.nn.Module):
+            new_handlers = apply_attention_to_messages(layer, att)
+            handlers.extend(new_handlers)
+    return handlers
+
+
+def attention_message_hook(
+        att: Optional[torch.Tensor],
+        layer: torch.nn.Module
+):
+    if att is None:
+        return lambda module, input, out: out
+    else:
+        if not hasattr(layer, 'add_self_loops') or not layer.add_self_loops:
+            return lambda module, input, out: out * att[out.shape[0], :]  # TODO assert here?
+        else:
+            if hasattr(layer, 'heads'):
+                return lambda module, input, out: out * att.view(att.shape[0], 1, 1)
+            else:
+                return lambda module, input, out: out * att
+
+
+class EdgeMaskingWrapper(nn.Module):
+    def __init__(self, model: nn.Module, num_edges: int):
+        super().__init__()
+        self.model = model
+        self.edge_mask = nn.Parameter(torch.ones(num_edges))  # [E], requires_grad=True
+
+        for module in self.model.modules():
+            if isinstance(module, MessagePassing):
+                if hasattr(module, 'add_self_loops'):
+                    module.add_self_loops = False
+                module.register_message_forward_hook(self._make_mask_hook())
+
+    def _make_mask_hook(self):
+        def hook(module, inputs, message_output):
+            # message_output: [E, F]
+            return message_output * self.edge_mask.to(message_output.device).view(-1, 1)
+        return hook
+
+    def forward(self, *args, **kwargs):
+        return self.model(*args, **kwargs)

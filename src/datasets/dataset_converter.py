@@ -1,7 +1,7 @@
 import json
 import shutil
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 import networkx as nx
 from torch_geometric.data import Data
@@ -211,7 +211,7 @@ def extract_attributes(
         graph: nx.Graph,
         default_node_attr_value: dict = None,
         default_edge_attr_value: dict = None,
-) -> (dict, dict):
+) -> Tuple[dict, dict]:
     """
     Extract nodes and edges attributes from a networkx graph.
     Uses `default_node_attr_value` and `default_edge_attr_value` to fill missing values.
@@ -366,6 +366,7 @@ def example_single():
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
+            "format": "gml",
             "count": 1,
             "directed": True,
             "nodes": [g.number_of_nodes()],
@@ -383,13 +384,13 @@ def example_single():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir(exist_ok=True)
-    with open(raw / f'{name}.labels' / 'binary', 'w') as f:
+    (raw / 'labels').mkdir(exist_ok=True)
+    with open(raw / 'labels' / 'binary', 'w') as f:
         json.dump({"11": 1, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0}, f)
 
     from datasets.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
-        dc, 'gml',
+        dc,
         default_node_attr_value={'a': -1, 'b': -1},
         default_edge_attr_value={'weight': -1, 'type': -1})
     custom_dataset.check_validity()
@@ -447,6 +448,7 @@ def example_multi():
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "name": name,
+            "format": "gml",
             "count": 3,
             "directed": False,
             "nodes": [g.number_of_nodes() for g in [g1,g2,g3]],
@@ -464,13 +466,13 @@ def example_multi():
             "labelings": {"binary": 2}
         }, f)
 
-    (raw / f'{name}.labels').mkdir(exist_ok=True)
-    with open(raw / f'{name}.labels' / 'binary', 'w') as f:
+    (raw / 'labels').mkdir(exist_ok=True)
+    with open(raw / 'labels' / 'binary', 'w') as f:
         json.dump({"0":1,"1":0,"2":0}, f)
 
     from datasets.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
-        dc, 'gml',
+        dc,
         default_node_attr_value={'a': 0, 'b': 'alpha'},
         default_edge_attr_value={'weight': 1, 'type': 'mixed'})
     custom_dataset.check_validity()

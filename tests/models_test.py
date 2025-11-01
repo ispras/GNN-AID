@@ -7,7 +7,8 @@ from aux.utils import monkey_patch_directories
 monkey_patch_directories()
 
 from datasets.datasets_manager import DatasetManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, \
+    GSATModelManager
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
@@ -21,13 +22,6 @@ class ModelsTest(unittest.TestCase):
 
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "example",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
             DatasetConfig(("example", "example")),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
@@ -37,14 +31,23 @@ class ModelsTest(unittest.TestCase):
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
 
-        # Multi-graphs - Small
-        self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("example", "example8",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("Homogeneous", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
+
+        # Multi-graphs - Small
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
@@ -57,17 +60,30 @@ class ModelsTest(unittest.TestCase):
             model_ver_ind=0,
         )
 
+        # Multi-graphs - MUTAG
+        self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
+            full_name=("Homogeneous", "TUDataset", "MUTAG",),
+            dataset_ver_ind=0
+        )
+
+        self.gen_dataset_mg_mutag = self.dataset_mg_mutag
+        self.gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        # dataset_mg_mutag = gen_dataset_mg_mutag
+        self.results_dataset_path_mg_mutag = self.gen_dataset_mg_mutag.prepared_dir
+
         self.manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",
             _config_kwargs={
                 "mask_features": [],
-                # "optimizer": {
-                #     # "_config_class": "Config",
-                #     "_class_name": "Adam",
-                #     # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
-                #     # "_class_import_info": ["torch.optim"],
-                #     "_config_kwargs": {},
-                # }
+                "optimizer": {
+                    # "_config_class": "Config",
+                    "_class_name": "Adam",
+                    # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                    # "_class_import_info": ["torch.optim"],
+                    "_config_kwargs": {
+                        "lr": 0.01
+                    },
+                }
             }
         )
 
@@ -85,7 +101,7 @@ class ModelsTest(unittest.TestCase):
                                                  save_model_flag=True,
                                                  metrics=[Metric("F1", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(
-            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', )])
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
         sg_example_model_path = gnn_model_manager_sg_example.model_path_info() / 'model'
@@ -105,7 +121,7 @@ class ModelsTest(unittest.TestCase):
                                                  save_model_flag=True,
                                                  metrics=[Metric("F1", mask='test')])
         metric_loc = gnn_model_manager_sg_example.evaluate_model(
-            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', )])
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
 
         sg_example_model_path = gnn_model_manager_sg_example.model_path_info() / 'model'
@@ -161,6 +177,83 @@ class ModelsTest(unittest.TestCase):
         print(metric_loc)
         mg_small_model_path = prot_gnn_mm_mg_small.model_path_info() / 'model'
         prot_gnn_mm_mg_small.load_model_executor(path=mg_small_model_path)
+
+    def test_model_on_multiple_graph_with_gsat(self):
+        dummy_gin3_gsat_lin2_mg_mutag = model_configs_zoo(dataset=self.gen_dataset_mg_mutag,
+                                                    model_name='dummy_gin_gin_gin_gsat_lin_lin')
+
+        gsat_gnn_mm_mg_mutag = GSATModelManager(
+            gnn=dummy_gin3_gsat_lin2_mg_mutag,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_mg_mutag)
+
+        gsat_gnn_mm_mg_mutag.train_model(gen_dataset=self.gen_dataset_mg_mutag, steps=500, metrics=[])
+        metric_loc = gsat_gnn_mm_mg_mutag.evaluate_model(
+            gen_dataset=self.gen_dataset_mg_mutag, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        mg_small_model_path = gsat_gnn_mm_mg_mutag.model_path_info() / 'model'
+        gsat_gnn_mm_mg_mutag.load_model_executor(path=mg_small_model_path)
+
+    def test_model_on_single_graph_with_gsat(self):
+        dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name="dummy_gcn_gcn_gsat")
+
+        gsat_gnn_mm_sg_example = GSATModelManager(
+            gnn=dummy_gcn_2_gsat,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_example
+        )
+
+        gsat_gnn_mm_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100, metrics=[])
+        metric_loc = gsat_gnn_mm_sg_example.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_example, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_example_model_path = gsat_gnn_mm_sg_example.model_path_info() / 'model'
+        gsat_gnn_mm_sg_example.load_model_executor(path=sg_example_model_path)
+
+    def test_model_on_cora_graph_with_gsat(self):
+        dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
+        # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
+
+        gsat_gnn_mm_sg_cora = GSATModelManager(
+            gnn=dummy_gcn_2_gsat,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        # gsat_gnn_mm_sg_cora = FrameworkGNNModelManager(
+        #     gnn=dummy_gcn_2_gsat,
+        #     manager_config=self.manager_config,
+        #     modification=self.default_config,
+        #     dataset_path=self.results_dataset_path_sg_cora
+        # )
+
+        gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = gsat_gnn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = gsat_gnn_mm_sg_cora.model_path_info() / 'model'
+        gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
+    def test_model_on_cora(self):
+        gcn_gcn = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
+
+        gcn_gcn_mm_sg_cora = FrameworkGNNModelManager(
+            gnn=gcn_gcn,
+            manager_config=self.manager_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        gcn_gcn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = gcn_gcn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = gcn_gcn_mm_sg_cora.model_path_info() / 'model'
+        gcn_gcn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
 
 
 if __name__ == '__main__':

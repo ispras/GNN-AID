@@ -1,5 +1,4 @@
 import collections.abc
-
 collections.Callable = collections.abc.Callable
 
 import json
@@ -512,7 +511,6 @@ class DatasetsTest(unittest.TestCase):
 
         errors = []
         for ix, (full_name, default_init_kwargs) in enumerate(ps):
-            if ix < 55: continue
             print(f"Checking {full_name} ({ix+1} of {len(ps)})")
 
             try:

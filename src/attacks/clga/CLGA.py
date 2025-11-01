@@ -9,6 +9,7 @@ from attacks.clga.differentiable_models.gcn import GCN
 from attacks.clga.differentiable_models.model import GRACE
 from attacks.poison_attacks import PoisonAttacker
 from datasets.gen_dataset import GeneralDataset
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from models_builder.models_utils import apply_decorator_to_graph_layers
 
 
@@ -32,6 +33,7 @@ class CLGAAttack(PoisonAttacker):
             device: str = "cpu"
     ) -> None:
         super().__init__()
+        self.attack_diff = GraphModificationArtifact()
         self.num_nodes = num_nodes
         self.feature_shape = feature_shape
         self.learning_rate = learning_rate
@@ -142,6 +144,8 @@ class CLGAAttack(PoisonAttacker):
         """
         Execute the CLGA attack.
         """
+        remove_edges = set()
+
         self._init(gen_dataset)
         self.model = GRACE(
             encoder=GCN(self.feature_shape, self.num_hidden, 'prelu'),
@@ -185,14 +189,19 @@ class CLGAAttack(PoisonAttacker):
             i = int(edge_index_mutated[0, max_grad_index])
             j = int(edge_index_mutated[1, max_grad_index])
 
+
             if (i, j) in edge_index_set:
                 if grad_sum[max_grad_index] <= 0:
                     perturbed_edges[0].append(i)
                     perturbed_edges[1].append(j)
+                else:
+                    remove_edges.add((i,j))
             else:
                 if grad_sum[max_grad_index] > 0:
                     perturbed_edges[0].append(i)
                     perturbed_edges[1].append(j)
+                else:
+                    remove_edges.add((i,j))
 
             # if grad_sum[row, col] > 0 and adj[row, col] == 0:
             #     adj[row, col] = 1
@@ -204,4 +213,5 @@ class CLGAAttack(PoisonAttacker):
             # perturbed_edges.append((row, col))
             #gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
 
+        self.attack_diff.remove_edges(list(remove_edges))
         gen_dataset.dataset.data.edge_index = torch.tensor(perturbed_edges)

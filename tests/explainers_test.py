@@ -13,49 +13,30 @@ import shutil
 import signal
 from time import time
 
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories()
+
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
 from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
+from data_structures.configs import FeatureConfig
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
 import explainers
 import_all_from_package(explainers)  # to import all subclasses properly
-
-tmp_dir = utils.EXPLANATIONS_DIR / (utils.EXPLANATIONS_DIR.name + str(time()))
-utils.EXPLANATIONS_DIR = tmp_dir
-
-
-def my_ctrlc_handler(signal, frame):
-    if tmp_dir.exists():
-        shutil.rmtree(tmp_dir)
-    raise KeyboardInterrupt
-
-
-signal.signal(signal.SIGINT, my_ctrlc_handler)
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases
 
 class ExplainersTest(unittest.TestCase):
-    @classmethod
-    def tearDownClass(cls) -> None:
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
-
     def setUp(self) -> None:
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("example", "example",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
         gen_dataset_sg_example = DatasetManager.get_by_config(
             DatasetConfig(("example", "example")),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
@@ -66,23 +47,31 @@ class ExplainersTest(unittest.TestCase):
         self.dataset_sg_example = gen_dataset_sg_example
         results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
-        # Multi-graphs - Small
-        self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("example", "example8",),
-            features=FeatureConfig(node_attr=['a']),
-            labeling='binary',
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("Homogeneous", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
-        gen_dataset_mg_small = DatasetManager.get_by_config(
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
+
+        # Multi-graphs - Small
+        self.dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
-        gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        dataset_mg_small = gen_dataset_mg_small
-        results_dataset_path_mg_small = gen_dataset_mg_small.prepared_dir
+        self.dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        results_dataset_path_mg_small = self.dataset_mg_small.prepared_dir
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
@@ -117,7 +106,7 @@ class ExplainersTest(unittest.TestCase):
 
         # TODO Kirill, tmp comment work and tests with Prot
         gin3_lin2_prot_mg_small = model_configs_zoo(
-            dataset=dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
         gin3_lin2_prot_mg_mutag = model_configs_zoo(
             dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
         )
@@ -157,22 +146,73 @@ class ExplainersTest(unittest.TestCase):
         # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
 
         best_acc = self.prot_gnn_mm_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=100, metrics=[])
+            gen_dataset=self.dataset_mg_small, steps=100, metrics=[])
 
         # uncomment for ProtGNN big test
         # self.prot_gnn_mm_mutag.train_model(
         #     gen_dataset=gen_dataset_mg_mutag, steps=40, metrics=[])
 
         gin3_lin2_mg_small = model_configs_zoo(
-            dataset=gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin')
         self.gnn_model_manager_mg_small = FrameworkGNNModelManager(
             gnn=gin3_lin2_mg_small,
             dataset_path=results_dataset_path_mg_small,
             manager_config=gin3_lin2_mg_small_manager_config
         )
         self.gnn_model_manager_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=50, save_model_flag=False,
+            gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
             metrics=[Metric("F1", mask='test')])
+
+        self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
+        # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
+
+
+        self.gsat_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    # "_config_class": "Config",
+                    "_class_name": "Adam",
+                    # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                    # "_class_import_info": ["torch.optim"],
+                    "_config_kwargs": {
+                        "lr": 0.01
+                    },
+                }
+            }
+        )
+        # self.gsat_config = ConfigPattern(
+        #     _config_class="ModelManagerConfig",
+        #     _config_kwargs={
+        #         "mask_features": [],
+        #     }
+        # )
+
+        self.default_config = ModelModificationConfig(
+            model_ver_ind=0,
+        )
+
+        self.gsat_gnn_mm_sg_cora = GSATModelManager(
+            gnn=self.dummy_gcn_2_gsat,
+            manager_config=self.gsat_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        # gsat_gnn_mm_sg_cora = FrameworkGNNModelManager(
+        #     gnn=dummy_gcn_2_gsat,
+        #     manager_config=self.manager_config,
+        #     modification=self.default_config,
+        #     dataset_path=self.results_dataset_path_sg_cora
+        # )
+
+        self.gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = self.gsat_gnn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = self.gsat_gnn_mm_sg_cora.model_path_info() / 'model'
+        self.gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
 
     def test_PGE_SG(self):
         # FIXME not working with another tests
@@ -479,6 +519,36 @@ class ExplainersTest(unittest.TestCase):
     #         explainer_name='NeuralAnalysis',
     #     )
     #     explainer.conduct_experiment(explainer_run_config)
+
+    def test_GSAT_SG(self):
+        warnings.warn("Start GSATExplainer")
+        explainer_init_config = ConfigPattern(
+            _class_name="GSAT",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GSAT",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+                        'element_idx': 0,
+                    },
+                }
+            }
+        )
+        explainer_GSAT = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.gen_dataset_sg_cora, gnn_manager=self.gsat_gnn_mm_sg_cora,
+            explainer_name='GSAT',
+        )
+        explanation = explainer_GSAT.conduct_experiment(explainer_run_config)
 
 
 if __name__ == '__main__':

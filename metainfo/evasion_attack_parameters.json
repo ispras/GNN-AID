@@ -26,10 +26,11 @@
  },
  "PGD": {
   "is_feature_attack": ["is feature attack", "bool", false, {}, "If true, applies perturbations to node features; otherwise, perturbs the graph structure (edges)"],
-  "epsilon": ["Epsilon", "float", 0.1, {"min": 0, "max": 1, "step": 0.01}, "Maximum allowed perturbation — defines the attack strength or budget"],
+  "epsilon": ["Epsilon", "float", 10, {"min": 0, "max": 1, "step": 0.01}, "Maximum allowed perturbation — defines the attack strength or budget"],
   "element_idx": ["node", "int", 0, {"min": 0, "step": 1}, "Index of the element to attack"],
-  "learning_rate": ["Learning rate", "float", 0.01, {}, "Learning rate used for optimizing perturbations during the attack"],
-  "num_iterations": ["Number of iterations", "int", 100, {"min":  1, "step": 1}, "Number of optimization steps for generating adversarial perturbations"]
+  "learning_rate": ["Learning rate", "float", 0.1, {}, "Learning rate used for optimizing perturbations during the attack"],
+  "num_iterations": ["Number of iterations", "int", 100, {"min":  1, "step": 1}, "Number of optimization steps for generating adversarial perturbations"],
+  "random_sampling_num_trials": ["Number of random sampling trials", "int", 100, {"min":  1, "step": 1}, "Number of iterations of the random sampling algorithm"]
  },
 "RLS2VAttack": {
   "num_steps": ["Number of steps", "int", 500000, {"min": 1, "step": 1}, "rl training steps"],

@@ -29,7 +29,7 @@ def explainers_test():
 
     gen_dataset_mg_small = DatasetManager.get_by_config(
         DatasetConfig(
-            domain="multiple-graphs",
+            domain="Homogeneous",
             group="custom",
             graph="small"),
         DatasetVarConfig(features=FeatureConfig(node_attr=['a']),

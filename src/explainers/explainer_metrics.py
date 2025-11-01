@@ -117,17 +117,19 @@ class NodesExplainerMetric:
         local_subset, local_edge_index, _, _ = k_hop_subgraph(node_ind, num_hops, self.edge_index, relabel_nodes=False)
         num = 0
         den = 0
-        if explanation_data["nodes"] and len(explanation_data["nodes"]) != 0:
+        if "nodes" in explanation_data and explanation_data["nodes"] and len(explanation_data["nodes"]) != 0:
             num += len(explanation["data"]["nodes"])
             den += local_subset.shape[0]
-        if explanation_data["edges"] and len(explanation_data["nodes"]) != 0:
+        if "edges" in explanation_data and explanation_data["edges"] and len(explanation_data["edges"]) != 0:
             num += len(explanation["data"]["edges"])
             den += local_edge_index.shape[1]
-        if explanation_data["features"] and len(explanation_data["features"]) != 0:
+        if "features" in explanation_data and explanation_data["features"] and len(explanation_data["features"]) != 0:
             num += len(explanation_data["features"])
             den += self.x.shape[1]
         if den == 0:
-            raise Exception(f"Invalid explanation. No data. Explanation: {explanation}")
+            num = 1
+            den = 1
+            # raise Exception(f"Invalid explanation. No data. Explanation: {explanation}")
         sparsity = 1 - num / den
         print(f"Sparsity calculation for node id {node_ind} completed.")
         return sparsity

@@ -19,5 +19,5 @@ pgmpy==0.1.24
 matplotlib
 
 # For other datasets
-dgl
-mat73
+dgl==1.1.0
+mat73  # powergraph

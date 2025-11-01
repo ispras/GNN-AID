@@ -1,9 +1,9 @@
 from typing import Type, Union
 import torch
-import numpy as np
-from skopt import Optimizer
+import copy
 
 from attacks.attack_base import Attacker
+from aux.utils import move_to_same_device
 from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
@@ -12,11 +12,13 @@ from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, N
 
 # PGD imports
 from torch_geometric.utils import k_hop_subgraph
+from models_builder.models_utils import EdgeMaskingWrapper
+from attacks.evasion_attacks_collection.pgd.utils import random_sampling
+from data_structures.graph_modification_artifacts import GraphModificationArtifact, GlobalNodeIndexer
 from tqdm import tqdm
 
 # FGSM imports
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from torch_geometric.data import Data
 
 # ReWatt imports
 from attacks.evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
@@ -54,6 +56,14 @@ class FGSMAttacker(
 ):
     name = "FGSM"
 
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        """ Availability check for the given dataset and model manager. """
+        return True
+
     def __init__(
             self,
             is_feature_attack: bool = False,
@@ -65,6 +75,7 @@ class FGSMAttacker(
         self.element_idx = element_idx
         self.epsilon = epsilon
         self.grad_aggr_type = 'mean'
+        self.attack_diff = GraphModificationArtifact()
 
     def attack(
             self,
@@ -80,20 +91,41 @@ class FGSMAttacker(
         else:
             task_type = False
         if self.is_feature_attack:
-            gen_dataset.data.x.requires_grad = True
             model = model_manager.gnn
             model.eval()
-            output = model(gen_dataset.data.x, gen_dataset.data.edge_index, gen_dataset.data.batch)
             if task_type:
-                loss = model_manager.loss_function(output, gen_dataset.dataset[self.element_idx].y)
+                graph_idx = self.element_idx
+                x = gen_dataset.dataset[graph_idx].x
+                x.requires_grad = True
+                edge_index = gen_dataset.dataset[graph_idx].edge_index
+                y = gen_dataset.dataset[graph_idx].y
             else:
-                loss = model_manager.loss_function(output[self.element_idx], gen_dataset.data.y[self.element_idx])
+                # node_idx = self.element_idx
+                x = gen_dataset.data.x
+                x.requires_grad = True
+                edge_index = gen_dataset.data.edge_index
+                y = gen_dataset.data.y
+            output = model(x, edge_index)
+            loss = model_manager.loss_function(*move_to_same_device(output, y))
             model.zero_grad()
             loss.backward()
-            sign_data_grad = gen_dataset.data.x.grad.sign()
-            perturbed_data_x = gen_dataset.data.x + self.epsilon * sign_data_grad
+            sign_data_grad = x.grad.sign()
+            perturbed_data_x = x + self.epsilon * sign_data_grad
             perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-            gen_dataset.data.x = perturbed_data_x.detach()
+            # gen_dataset.data.x = perturbed_data_x.detach()
+            if task_type:
+                gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
+            else:
+                gen_dataset.data.x = perturbed_data_x.detach()
+            # if task_type:
+            #     gni = GlobalNodeIndexer(gen_dataset.dataset)
+            #     for node_idx in tqdm(range(perturbed_data_x.size(0))):
+            #         for feature_idx in range(perturbed_data_x.size(1)):
+            #             self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[gni.to_global(graph_idx, node_idx)][feature_idx].detach().cpu().item())
+            # else:
+            #     for node_idx in tqdm(range(gen_dataset.data.x.size(0))):
+            #         for feature_idx in range(gen_dataset.data.x.size(1)):
+            #             self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[node_idx][feature_idx].detach().cpu().item())
         else:
             if task_type:
                 graph_idx = self.element_idx
@@ -105,8 +137,7 @@ class FGSMAttacker(
                 model = model_manager.gnn
                 model.eval()
 
-                first_layer_name, first_layer = next(model.named_children())
-                layer = getattr(model, first_layer_name)
+                first_layer_name, layer = next(model.named_children())
                 apply_decorator_to_graph_layers(model)
 
                 budget = int(self.epsilon * edge_index.size(1))
@@ -121,7 +152,7 @@ class FGSMAttacker(
 
                 for _ in tqdm(range(budget)):
                     out = model(x, perturbed_edges)
-                    loss = -model_manager.loss_function(out, y)
+                    loss = -model_manager.loss_function(*move_to_same_device(out, y))
                     loss.backward()
 
                     grad = layer.message_gradients[first_layer_name]
@@ -136,7 +167,19 @@ class FGSMAttacker(
                     max_index = torch.argmax(grad)
                     perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
                                                 dim=1)
-                self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
+                # self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
+                set_a = set(map(tuple, edge_index.T.tolist()))
+                set_b = set(map(tuple, perturbed_edges.T.tolist()))
+
+                diff_a = list(set_a - set_b)
+                diff_b = list(set_b - set_a)
+
+                gni = GlobalNodeIndexer(gen_dataset.dataset)
+                diff_a = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_a]
+                diff_b = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_b]
+
+                self.attack_diff.remove_edges(diff_a)
+                self.attack_diff.add_edges(diff_b)
             else:
                 node_idx = self.element_idx
 
@@ -160,8 +203,7 @@ class FGSMAttacker(
                 x = x.clone()
                 x = x[subset]
 
-                first_layer_name, first_layer = next(model.named_children())
-                layer = getattr(model, first_layer_name)
+                first_layer_name, layer = next(model.named_children())
                 apply_decorator_to_graph_layers(model)
 
                 budget = int(self.epsilon * edge_index_subset.size(1))
@@ -176,7 +218,7 @@ class FGSMAttacker(
 
                 for _ in tqdm(range(budget)):
                     out = model(x, perturbed_edges)
-                    loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
+                    loss = -model_manager.loss_function(*move_to_same_device(out[node_idx_remap], y[node_idx_remap]))
                     loss.backward()
 
                     grad = layer.message_gradients[first_layer_name]
@@ -189,14 +231,30 @@ class FGSMAttacker(
                         grad = grad[:-self_loops_part_size]
 
                     max_index = torch.argmax(grad)
-                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]), dim=1)
+                    perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
+                                                dim=1)
 
                 # Update dataset
                 edges_to_keep = edge_index[:, ~edge_mask]
                 updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
                 gen_dataset.data.edge_index = updated_edge_index
-                self.attack_diff = gen_dataset
-        return gen_dataset
+                # self.attack_diff = gen_dataset
+
+                set_a = set(map(tuple, edge_index.T.tolist()))
+                set_b = set(map(tuple, updated_edge_index.T.tolist()))
+
+                diff_a = list(set_a - set_b)
+                diff_b = list(set_b - set_a)
+
+                self.attack_diff.remove_edges(diff_a)
+                self.attack_diff.add_edges(diff_b)
+
+        # return gen_dataset
+
+    def dataset_diff(
+            self
+    ) -> GraphModificationArtifact:
+        return self.attack_diff
 
 
 class PGDAttacker(
@@ -204,29 +262,48 @@ class PGDAttacker(
 ):
     name = "PGD"
 
+    @staticmethod
+    def check_availability(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ):
+        """ Availability check for the given dataset and model manager. """
+        return True
+
     def __init__(
             self,
             is_feature_attack: bool = False,
             element_idx: int = 0,
-            epsilon: float = 0.5,
+            epsilon: float = 10,
             learning_rate: float = 0.001,
             num_iterations: int = 100,
-            # num_rand_trials: int = 100,
-            # grad_aggr_type: str = 'mean'
+            random_sampling_num_trials: int = 100,
     ):
 
         super().__init__()
-        self.attack_diff = None
         self.is_feature_attack = is_feature_attack  # feature / structure
         self.element_idx = element_idx
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.num_iterations = num_iterations
-        # self.num_rand_trials = num_rand_trials
-        # self.grad_aggr_type = grad_aggr_type
+        self.random_sampling_num_trials = random_sampling_num_trials
+        self.attack_diff = GraphModificationArtifact()
 
-        # TODO check grad_aggr_type correctness
-        # raise ValueError(f"Invalid grad_aggr_type: {self.grad_aggr_type}.")
+        # Process epsilon depending on attack type
+        if not is_feature_attack:
+            # For structure attack: treat epsilon as fraction or float budget → convert to int
+            self.epsilon = int(epsilon)
+        else:
+            self.epsilon = epsilon  # For feature attack: leave as float
+
+    @staticmethod
+    def get_attack_loss(model_manager):
+        """
+        Returns a loss function that computes -loss_fn(pred, target). Lower loss value means better attack.
+        """
+        def attack_loss(output, target):
+            return -model_manager.loss_function(output, target)
+        return attack_loss
 
     def attack(
             self,
@@ -241,213 +318,122 @@ class PGDAttacker(
             task_type = True
         else:
             task_type = False
+
+        model = model_manager.gnn
+        model.eval()
+        attack_loss = self.get_attack_loss(model_manager)
+
         if task_type:
-            self._attack_on_graph(model_manager, gen_dataset)
+            graph_idx = self.element_idx
+            x = gen_dataset.dataset[graph_idx].x.clone()
+            edge_index = gen_dataset.dataset[graph_idx].edge_index.clone()
+            y = gen_dataset.dataset[graph_idx].y.clone()
         else:
-            self._attack_on_node(model_manager, gen_dataset)
+            node_idx = self.element_idx
+            x = gen_dataset.data.x.clone()
+            edge_index = gen_dataset.data.edge_index.clone()
+            y = gen_dataset.data.y.clone()
 
-    def _attack_on_node(
-            self,
-            model_manager: Type,
-            gen_dataset: GeneralDataset
-    ) -> None:
-        node_idx = self.element_idx
-
-        edge_index = gen_dataset.data.edge_index
-        y = gen_dataset.data.y
-        x = gen_dataset.data.x
-
-        model = model_manager.gnn
-        model.eval()
-        num_hops = model.n_layers
-
-        subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=node_idx,
-                                                                   num_hops=num_hops,
-                                                                   edge_index=edge_index,
-                                                                   relabel_nodes=True,
-                                                                   directed=False)
-
-        if self.is_feature_attack:  # feature attack
+            num_hops = model.n_layers
+            subset, edge_index_subset, inv, edge_mask_k_hop = k_hop_subgraph(
+                node_idx=node_idx,
+                num_hops=num_hops,
+                edge_index=edge_index,
+                relabel_nodes=True,
+                directed=False
+            )
             node_idx_remap = torch.where(subset == node_idx)[0].item()
-            y = y.clone()
-            y = y[subset]
-            x = x.clone()
             x = x[subset]
+            y = y[subset]
+
+        if self.is_feature_attack:
             orig_x = x.clone()
             x.requires_grad = True
-            optimizer = torch.optim.Adam([x], lr=self.learning_rate, weight_decay=5e-4)
 
-            for t in tqdm(range(self.num_iterations)):
-                out = model(x, edge_index_subset)
-                loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
-                # print(loss)
-                model.zero_grad()
+            for _ in tqdm(range(self.num_iterations)):
+                if x.grad is not None:
+                    x.grad.zero_()
+                if task_type:
+                    out = model(x, edge_index)
+                    loss = attack_loss(out, y)
+                else:
+                    out = model(x, edge_index_subset)
+                    loss = attack_loss(out[node_idx_remap], y[node_idx_remap])
                 loss.backward()
-                x.grad.sign_()
-                optimizer.step()
                 with torch.no_grad():
+                    x -= self.learning_rate * x.grad.sign()
                     x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
                     x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
-            # return the modified lines back to the original tensor x
-            gen_dataset.data.x[subset] = x.detach()
-            self.attack_diff = gen_dataset
+
+            # Save changes
+            if task_type:
+                gni = GlobalNodeIndexer(gen_dataset.dataset)
+                for node_idx in range(x.size(0)):
+                    for feature_idx in range(x.size(1)):
+                        self.attack_diff.change_node_feature(gni.to_global(graph_idx, node_idx), feature_idx,
+                                                             x[node_idx][feature_idx].detach().cpu().item())
+            else:
+                for remap_idx, node_idx in enumerate(subset.detach().cpu()):
+                    for feature_idx in range(x.size(1)):
+                        self.attack_diff.change_node_feature(node_idx, feature_idx,
+                                                             x[remap_idx][feature_idx].detach().cpu().item())
         else:  # structure attack
-            node_idx_remap = torch.where(subset == node_idx)[0].item()
-            y = y.clone()
-            y = y[subset]
-            x = x.clone()
-            x = x[subset]
+            if task_type:
+                num_edges = edge_index.size(1)
+            else:
+                num_edges = edge_index_subset.size(1)
+            wrapped_model = EdgeMaskingWrapper(copy.deepcopy(model), num_edges=num_edges)
+            edge_mask = wrapped_model.edge_mask  # optimized mask
 
-            budget = int(self.epsilon * edge_index_subset.size(1))
-            perturbed_edges = edge_index_subset.clone()
-
-            space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
-
-            opt = Optimizer(
-                dimensions=space,
-                acq_func="EI",
-                random_state=42
-            )
-
-            orig_mask = torch.ones(edge_index_subset.size(1), dtype=torch.bool)
             for i in tqdm(range(self.num_iterations)):
-                mask = opt.ask()  # selecting the next point
-                mask = torch.tensor(mask, dtype=torch.bool)
-
-                # --- budget control ---
-                diff = mask != orig_mask
-                change_indices = torch.where(diff)[0]
-                num_changes = len(change_indices)
-
-                if num_changes > budget:
-                    perturbed_masks = []
-                    losses = []
-
-                    for idx in change_indices:
-                        temp_mask = mask.clone()
-                        temp_mask[idx] = orig_mask[idx]
-
-                        perturbed_edges = edge_index_subset[:, temp_mask]
-                        out = model(x, perturbed_edges)
-                        loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
-
-                        perturbed_masks.append(temp_mask)
-                        losses.append(loss.item())
-
-                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
-                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
-                    selected_changes = change_indices.clone().detach()[sorted_indices]
-
-                    mask[:] = orig_mask
-                    mask[selected_changes] = ~orig_mask[selected_changes]
-                # ----------------------
-
-                perturbed_edges = edge_index_subset[:, mask]  # apply mask to edges
-                out = model(x, perturbed_edges)
-                loss = -model_manager.loss_function(out[node_idx_remap], y[node_idx_remap])
-                opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
-            best_mask = opt.Xi[np.argmin(opt.yi)]
-            best_mask = torch.tensor(best_mask, dtype=torch.bool)
-
-            # Update dataset
-            edges_to_keep = edge_index[:, ~edge_mask]
-            perturbed_edges = edge_index_subset[:, best_mask]
-            updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
-
-            gen_dataset.data.edge_index = updated_edge_index
-            self.attack_diff = gen_dataset
-
-    def _attack_on_graph(
-            self,
-            model_manager: Type,
-            gen_dataset: GeneralDataset
-    ):
-        graph_idx = self.element_idx
-
-        edge_index = gen_dataset.dataset[graph_idx].edge_index
-        y = gen_dataset.dataset[graph_idx].y
-        x = gen_dataset.dataset[graph_idx].x
-
-        model = model_manager.gnn
-        model.eval()
-
-        if self.is_feature_attack:  # feature attack
-            x = x.clone()
-            orig_x = x.clone()
-            x.requires_grad = True
-            optimizer = torch.optim.Adam([x], lr=self.learning_rate, weight_decay=5e-4)
-
-            for t in tqdm(range(self.num_iterations)):
-                out = model(x, edge_index)
-                loss = -model_manager.loss_function(out, y)
-                # print(loss)
-                model.zero_grad()
+                if task_type:
+                    out = wrapped_model(x, edge_index)
+                    loss = attack_loss(out, y)
+                else:
+                    out = wrapped_model(x, edge_index_subset)
+                    loss = attack_loss(out[node_idx_remap], y[node_idx_remap])
                 loss.backward()
-                x.grad.sign_()
-                optimizer.step()
                 with torch.no_grad():
-                    x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
-                    x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
-            gen_dataset.dataset[graph_idx].x.copy_(x.detach())
-            self.attack_diff = gen_dataset
-        else:  # structure attack
-            budget = int(self.epsilon * edge_index.size(1))
-            perturbed_edges = edge_index.clone()
+                    grad = edge_mask.grad
+                    edge_mask -= self.learning_rate * grad
+                    edge_mask.clamp_(0, 1)
 
-            space = [(0, 1) for _ in range(perturbed_edges.size(1))]  # binary space {0, 1}^N
+            # Random sampling from probabilistic to binary topology perturbation
+            if task_type:
+                edge_index_for_random_sampling = edge_index
+                target_idx = None
+            else:
+                edge_index_for_random_sampling = edge_index_subset
+                target_idx = node_idx_remap
 
-            opt = Optimizer(
-                dimensions=space,
-                acq_func="EI",
-                random_state=42
+            best_binary_mask = random_sampling(
+                edge_mask=edge_mask,
+                budget=self.epsilon,
+                num_trials=self.random_sampling_num_trials,
+                model=model,
+                x=x,
+                edge_index=edge_index_for_random_sampling,
+                y=y,
+                attack_loss=attack_loss,
+                target_idx=target_idx
             )
 
-            orig_mask = torch.ones(edge_index.size(1), dtype=torch.bool)
-            for i in tqdm(range(self.num_iterations)):
-                mask = opt.ask()  # selecting the next point
-                mask = torch.tensor(mask, dtype=torch.bool)
-
-                # --- budget control ---
-                diff = mask != orig_mask
-                change_indices = torch.where(diff)[0]
-                num_changes = len(change_indices)
-
-                if num_changes > budget:
-                    perturbed_masks = []
-                    losses = []
-
-                    for idx in change_indices:
-                        temp_mask = mask.clone()
-                        temp_mask[idx] = orig_mask[idx]
-
-                        perturbed_edges = edge_index[:, temp_mask]
-                        out = model(x, perturbed_edges)
-                        loss = -model_manager.loss_function(out, y)
-
-                        perturbed_masks.append(temp_mask)
-                        losses.append(loss.item())
-
-                    # select `eps` of the most "dangerous" changes (maximizing `loss`)
-                    sorted_indices = torch.tensor(losses).argsort(descending=True)[:budget]
-                    selected_changes = change_indices.clone().detach()[sorted_indices]
-
-                    mask[:] = orig_mask
-                    mask[selected_changes] = ~orig_mask[selected_changes]
-                # ----------------------
-
-                perturbed_edges = edge_index[:, mask]  # apply mask to edges
-                out = model(x, perturbed_edges)
-                loss = -model_manager.loss_function(out, y)
-                opt.tell(mask.tolist(), loss.item())  # report the result to the optimizer
-            best_mask = opt.Xi[np.argmin(opt.yi)]
-            best_mask = torch.tensor(best_mask, dtype=torch.bool)
-            perturbed_edges = edge_index[:, best_mask]
-
-            self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
+            # Save changes
+            if task_type:
+                gni = GlobalNodeIndexer(gen_dataset.dataset)
+                edges_to_delete = edge_index[:, best_binary_mask].T.tolist()
+                for edge in edges_to_delete:
+                    self.attack_diff.remove_edge(gni.to_global(graph_idx, edge[0]), gni.to_global(graph_idx, edge[1]))
+            else:
+                subset_edge_indices = edge_mask_k_hop.nonzero(as_tuple=True)[0]
+                edges_to_delete_indices = subset_edge_indices[best_binary_mask]
+                for idx in edges_to_delete_indices:
+                    edge = edge_index[:, idx].tolist()
+                    self.attack_diff.remove_edge(edge[0], edge[1])
 
     def dataset_diff(
             self
-    ):
+    ) -> GraphModificationArtifact:
         return self.attack_diff
 
 
@@ -492,6 +478,7 @@ class NettackAttacker(
         self.delta_cutoff = delta_cutoff
         self.surrogate_train_ratio = surrogate_train_ratio
         self.surrogate_epochs = surrogate_epochs
+        self.attack_diff = GraphModificationArtifact()
 
     def attack(
             self,
@@ -499,8 +486,8 @@ class NettackAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        data = gen_dataset.data
-        x, edge_index, y = data.x, data.edge_index, data.y
+        data = gen_dataset.dataset.data
+        x, edge_index, y = move_to_same_device(data.x, data.edge_index, data.y, device=torch.device('cpu'))
 
         num_classes = y.max().item() + 1
         surrogate = NettackSurrogate(in_channels=x.size(1), out_channels=num_classes).to(x.device)
@@ -515,6 +502,7 @@ class NettackAttacker(
             edge_index=edge_index,
             num_classes=num_classes,
             target_node=self.node_idx,
+            attack_diff=self.attack_diff,
             direct=self.direct,
             depth=self.depth,
             delta_cutoff=self.delta_cutoff
@@ -537,10 +525,13 @@ class NettackAttacker(
         # pred_after = logits_after.argmax().item()
         # prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
         # print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
+        # gen_dataset.data.x = attacker.x
+        # gen_dataset.data.edge_index = attacker.edge_index
+        # return attacker.x, attacker.edge_index
 
-        return attacker.x, attacker.edge_index
-
-    def attack_diff(self):
+    def dataset_diff(
+            self
+    ) -> GraphModificationArtifact:
         return self.attack_diff
 
 
@@ -605,7 +596,7 @@ class ReWattAttacker(
         self.h_method = h_method
         self.pooling_method = pooling_method
 
-        self.attack_diff = None
+        self.attack_diff = GraphModificationArtifact()
         self.my_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def attack(
@@ -635,18 +626,18 @@ class ReWattAttacker(
         if gen_dataset.is_multi():
             graph_idx = self.element_idx
             node_idx=None
-            edge_index = gen_dataset.dataset[graph_idx].edge_index
-            y = gen_dataset.dataset[graph_idx].y.squeeze()
-            x = gen_dataset.dataset[graph_idx].x
+            edge_index = gen_dataset.dataset[graph_idx].edge_index.to(self.my_device)
+            y = gen_dataset.dataset[graph_idx].y.squeeze().to(self.my_device)
+            x = gen_dataset.dataset[graph_idx].x.to(self.my_device)
             y_prob = torch.softmax(model(x, edge_index), dim=1).squeeze().max().item()
             penultimate_layer_embeddings_idx = model.embedding_levels_by_layers.index('g') - 1
             penultimate_layer_embeddings_dim = (
                 model.get_all_layer_embeddings(x, edge_index)[penultimate_layer_embeddings_idx].size(1))
         else:
             node_idx = self.element_idx
-            y = gen_dataset.data.y[node_idx]
-            x = gen_dataset.data.x
-            edge_index = gen_dataset.data.edge_index
+            y = gen_dataset.data.y[node_idx].to(self.my_device)
+            x = gen_dataset.data.x.to(self.my_device)
+            edge_index = gen_dataset.data.edge_index.to(self.my_device)
             y_prob = torch.softmax(model(x, edge_index)[node_idx], dim=0).max().item()
             penultimate_layer_embeddings_idx = len(model.embedding_levels_by_layers) - 2
             penultimate_layer_embeddings_dim = (
@@ -655,23 +646,39 @@ class ReWattAttacker(
         # the attack makes sense when the model's prediction is correct !!!
         # we use y_prob in the attack because in case the attack fails to change the class, we have saved
         # the state of the graph that most reduces the probability of a correct prediction.
-        initial_graph_state = GraphState(x, edge_index, y, y_prob)
+        initial_graph_state = GraphState(x, edge_index, y, y_prob, device=self.my_device)
         env = GraphEnvironment(model, initial_graph_state, eps=self.eps, node_idx=node_idx)
 
-        policy = ReWattPolicyNet(gnn_model=model,
-                                 penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
-                                 penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
-                                 node_idx=node_idx,
-                                 mlp_hidden=self.mlp_hidden,
-                                 h_method=self.h_method,
-                                 pooling_method=self.pooling_method,
-                                 device=self.my_device)
+        policy = ReWattPolicyNet(
+            gnn_model=model,
+            penultimate_layer_embeddings_dim=penultimate_layer_embeddings_dim,
+            penultimate_layer_embeddings_idx=penultimate_layer_embeddings_idx,
+            node_idx=node_idx,
+            mlp_hidden=self.mlp_hidden,
+            h_method=self.h_method,
+            pooling_method=self.pooling_method,
+            device=self.my_device
+        )
 
         agent = ReWattAgent(policy, env, lr=1e-3, gamma=0.99)
         attacked_graph = agent.train(epochs=self.epochs)
 
+        set_a = set(map(tuple, edge_index.T.tolist()))
+        set_b = set(map(tuple, attacked_graph.edge_index.T.tolist()))
+
+        diff_a = list(set_a - set_b)
+        diff_b = list(set_b - set_a)
+
         if gen_dataset.is_multi():
-            self.attack_diff = Data(x=x, edge_index=attacked_graph.edge_index, y=y)
-        else:
-            gen_dataset.data.edge_index = attacked_graph.edge_index
-            self.attack_diff = gen_dataset
+            gni = GlobalNodeIndexer(gen_dataset.dataset)
+            diff_a = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_a]
+            diff_b = [tuple(gni.to_global(graph_idx, node) for node in edge) for edge in diff_b]
+
+        self.attack_diff.remove_edges(diff_a)
+        self.attack_diff.add_edges(diff_b)
+
+    def dataset_diff(
+            self
+    ) -> GraphModificationArtifact:
+        return self.attack_diff
+

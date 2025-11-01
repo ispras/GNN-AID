@@ -44,7 +44,7 @@ class GeneralDataset(ABC):
         Args:
             dataset_config (DatasetConfig | ConfigPattern): config to define where to get raw files
              and initialization parameters. Can be :class:`~data_structures.configs.DatasetConfig`
-             object object or :class:`~data_structures.configs.ConfigPattern` with dictionary.
+             object or :class:`~data_structures.configs.ConfigPattern` with dictionary.
         """
         # TODO check that dataset_config is allowed
 
@@ -573,39 +573,3 @@ class LocalDataset(
     @processed_file_names.setter
     def processed_file_names(self, value):
         self._processed_file_names = value
-
-
-if __name__ == '__main__':
-    print("test dataset")
-    from datasets.datasets_manager import DatasetManager
-    #
-    # dc = DatasetConfig(('example', 'example'))
-    dc = DatasetConfig(('example', 'example_gml'))
-    # dc = DatasetConfig(('ptg-library-graphs', 'single-graph', 'Planetoid', 'Cora'))
-    # dc = DatasetConfig(('ptg-library-graphs', 'multiple-graphs', 'TUDataset', 'MUTAG'))
-
-    dataset = DatasetManager.get_by_config(
-        dc,
-        default_edge_attr_value={'type': "mixed", 'weight': 0},
-        default_node_attr_value={'b': "alpha"})
-
-    dataset.set_visible_part({'center': 0, 'depth': 1})
-    # dataset.set_visible_part({})
-    print(dataset.visible_part.get_dataset_data())
-
-    dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a', 'b']),
-                           labeling='binary', dataset_ver_ind=0)
-
-    dataset.build(dvc)
-    # print(dataset.dataset_var_data)
-    print(dataset.visible_part.get_dataset_var_data())
-
-    from datasets.ptg_datasets import LibPTGDataset
-    from datasets.datasets_manager import DatasetManager
-
-    dc = DatasetConfig((LibPTGDataset.data_folder, 'single-graph', 'Planetoid', 'Cora'))
-
-    dataset = DatasetManager.get_by_config(dc)
-
-    dataset.build(dvc)
-    print(dataset.info.nodes)

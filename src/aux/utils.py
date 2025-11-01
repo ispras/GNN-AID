@@ -3,9 +3,10 @@ import json
 import warnings
 from pathlib import Path
 from pydoc import locate
-from typing import Union, Type, Any
+from typing import Union, Type, Any, Tuple
 
 import numpy as np
+import torch
 from torch import tensor, Tensor
 from torch_sparse import SparseTensor
 
@@ -151,7 +152,7 @@ def setting_class_default_parameters(
         class_name: str,
         class_kwargs: dict,
         default_parameters_file_path: Union[str, Path]
-) -> [dict, dict]:
+) -> Tuple[dict, dict]:
     """
     :param class_name: class name, should be same in default_parameters_file
     :param class_kwargs: dict with parameters, which needs to be supplemented with default parameters
@@ -170,7 +171,7 @@ def setting_class_default_parameters(
             warnings.warn(f"WARNING: Parameter {key} cannot be set for {class_name} "
                           f"in def setting_class_default_parameters")
             continue
-        elif val is None or class_kwargs_default[key][1] == 'string' or np.isinf(val):
+        elif val is None or class_kwargs_default[key][1] == 'string' or (class_kwargs_default[key][1] == 'dynamic' and isinstance(val, str)) or np.isinf(val):
             class_kwargs[key] = val
         else:
             class_kwargs[key] = locate(class_kwargs_default[key][1])(val)
@@ -235,6 +236,22 @@ def all_subclasses(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
+def move_to_same_device(
+        *tensors,
+        device: torch.device = None
+):
+    def is_movable_tensor(x):
+        return isinstance(x, torch.Tensor) and hasattr(x, 'to')
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    moved_args = tuple(
+        t.to(device) if is_movable_tensor(t) else t
+        for t in tensors
+    )
+    return moved_args
+
+
 def import_all_from_package(package) -> None:
     """ Import all modules recursively from a given python package, within the project.
     All subpackages must contain '__init__.py' to be imported properly.
@@ -260,6 +277,7 @@ class tmp_dir():
     """
     Temporary create a directory near the given path. Remove it on exit.
     """
+
     def __init__(
             self,
             path: Path

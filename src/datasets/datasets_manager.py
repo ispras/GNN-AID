@@ -1,17 +1,14 @@
-import json
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Tuple
 
-import torch
 import torch_geometric
-from torch_geometric.data import InMemoryDataset, Data
 
-from aux.custom_decorators import timing_decorator
 from aux.declaration import Declare
-from aux.utils import tmp_dir, import_by_name
+from aux.utils import import_by_name
 from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import GeneralDataset
+from datasets.ptg_datasets import LibPTGDataset
 
 
 class DatasetManager:
@@ -67,7 +64,7 @@ class DatasetManager:
     def get_by_full_name(
             full_name: Tuple[str, ...] = None,
             **dvc_kwargs
-    ) -> [GeneralDataset, torch_geometric.data.Data, Path]:
+    ) -> Tuple[GeneralDataset, torch_geometric.data.Data, Path]:
         """
         Get built `PTGDataset` by its full name and additional kwargs for dataset var config.
         Starts the creation of an object from raw data or takes already saved datasets in prepared
@@ -83,6 +80,8 @@ class DatasetManager:
 
         """
         from datasets.ptg_datasets import PTGDataset
+        if full_name[0] != LibPTGDataset.data_folder:
+            full_name = tuple([LibPTGDataset.data_folder] + list(full_name))
         dc = DatasetConfig(full_name=full_name)
         dataset = DatasetManager.get_by_config(dc)
         # if not isinstance(dataset, PTGDataset):

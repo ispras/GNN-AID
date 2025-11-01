@@ -4,12 +4,12 @@
 		"clip": ["Clip gradients", "float", null, {"min": 0, "special": [null]}, null]
 	},
 	"ProtGNNModelManager":	{
-	  "batch": ["Batch", "int", 32, {"min": 1, "step": 100}, null],
+	  "batch": ["Batch", "int", 10000, {"min": 1, "step": 100}, null],
 		"clip": ["Clip gradients", "float", null, {"min": 0, "special": [null]}, null],
 	  "clst": ["Cluster loss", "float", 0.1, {"min": 0, "step": 0.01}, "Cluster loss: prototypes of one class should be close to each other"],
 	  "sep": ["Separation loss", "float", 0.05, {"min": 0, "step": 0.01}, "Separation loss: prototypes of different classes shouldn't be close"],
 	  "lr": ["Learn rate", "float", 0.005, {"min": 0, "step": 0.001}, "Learning rate"],
-	  "early_stopping": ["Early stop", "int", 45, {"min": 0}, "Stop if metrics on validation haven't grown"],
+	  "early_stopping": ["Early stop", "int", 35, {"min": 0}, "Stop if metrics on validation haven't grown"],
 	  "proj_epochs": ["Project per epochs", "int", 15, {"min": 1}, "Prototype projection each n epochs"],
 	  "warm_epoch": ["Warm epochs", "int", 15, {"min": 1}, "Training without prototypes"],
 	  "save_epoch": ["Save epochs", "int", 10, {"min": 1}, "?"],
@@ -20,5 +20,19 @@
 	},
 	"_DummyModelManager":	{
 		"param": ["Param", "int", 1, {"min": 1, "step": 1}, null]
-	}
+	},
+	"GSATModelManager":	{
+		"batch": ["Batch", "int", 10000, {"min": 1, "step": 100}, null],
+		"clip": ["Clip gradients", "float", null, {"min": 0, "special": [null]}, null],
+		"learn_edge_features": ["Learn edge features", "bool", false, {}, "Whether to learn edge features and perform edge attention of node attention"],
+		"hidden_size": ["Hidden size", "int", 64, {"min": 1, "step": 1}, "Size of hidden layers"],
+		"decay_int": ["Decay interval", "int", 10, {"min": 1, "step": 1}, "Epochs between updates of the exploration rate"],
+		"decay_r": ["Decay rate", "float", 0.1, {"min": 0, "max": 1, "step": 0.01}, "Rate at which r is decayed"],
+		"init_r": ["Initial r", "float", 0.9, {"min": 0, "max": 1, "step": 0.01}, "Initial exploration ratio"],
+		"final_r": ["Final r", "float", 0.1, {"min": 0, "max": 1, "step": 0.01}, "Final exploration ratio"],
+		"fix_r": ["Fix r", "bool", false, {}, "Keep exploration ratio fixed at initial value"],
+		"pred_loss_coef": ["Prediction loss coefficient", "float", 1, {"min": 0, "step": 0.1}, "Weight for prediction loss"],
+		"info_loss_coef": ["Information loss coefficient", "float", 1, {"min": 0, "step": 0.1}, "Weight for information bottleneck loss"],
+		"extractor_dropout_p": ["Extractor dropout", "float", 0.5, {"min": 0, "max": 1, "step": 0.05}, "Dropout probability for feature extractor"]
+}
 }

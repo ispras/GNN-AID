@@ -1,5 +1,4 @@
 import json
-from json.encoder import JSONEncoder
 from pathlib import Path
 from typing import Union, Dict, Any
 

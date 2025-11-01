@@ -1,11 +1,10 @@
-import json
-import logging
-import re
-from json import JSONEncoder
 import copy
 import inspect
+import json
+import logging
+from json import JSONEncoder
 from pathlib import Path
-from typing import Union, Any, Type, Tuple, List, Self
+from typing import Union, Any, Type, Tuple, Self
 
 from aux.utils import setting_class_default_parameters, \
     OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, import_by_name, \
@@ -24,7 +23,7 @@ DATA_CHANGE_FLAG = "__data_change_flag"
 
 # Patch of json.dumps() - classes which implement to_json() can be jsonified
 def _default(
-        self,
+        self: Any,
         obj: Any
 ):
     return getattr(obj.__class__, "to_json", _default.default)(obj)
