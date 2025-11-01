@@ -92,7 +92,9 @@ class GeneralDataset(ABC):
     def raw_dir(
             self
     ) -> Path:
-        """ Path to 'raw/' folder where raw data is stored. """
+        """ Path to 'raw/' folder where raw data is stored.
+        For ptg datasets, dataset.root_dir folder should point here.
+        """
         return self.root_dir / 'raw'
 
     @property
@@ -318,9 +320,6 @@ class GeneralDataset(ABC):
         self.train_mask = train_mask
         self.test_mask = test_mask
         self.val_mask = val_mask
-        self._data.train_mask = train_mask
-        self._data.test_mask = test_mask
-        self._data.val_mask = val_mask
 
     def save_train_test_mask(
             self,
@@ -555,10 +554,9 @@ class LocalDataset(
     def processed_file_names(
             self
     ) -> str:
-        if self._processed_file_names is not None:
-            res = self._processed_file_names()
-            return res
-        else:
+        try:
+            return self._processed_file_names()
+        except (NotImplementedError, AttributeError):
             return 'data.pt'
 
     def process(

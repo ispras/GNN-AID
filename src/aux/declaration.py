@@ -1,5 +1,5 @@
 import json
-from typing import Union
+from typing import Union, List, Tuple
 
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
@@ -95,7 +95,7 @@ class Declare:
     @staticmethod
     def dataset_root_dir(
             dataset_config: DatasetConfig
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         Directory where dataset raw files and metainfo are stored.
 
@@ -113,13 +113,12 @@ class Declare:
     @staticmethod
     def dataset_info_path(
             dataset_config: DatasetConfig
-    ) -> [Path, list]:
+    ) -> Path:
         """
         Path to metainfo file for a dataset.
 
         :param dataset_config: DatasetConfig
-        :return: path to metainfo file for a specific
-         dataset
+        :return: path to metainfo file for a specific dataset
         """
         return Declare.dataset_root_dir(dataset_config)[0] / 'metainfo'
 
@@ -127,7 +126,7 @@ class Declare:
     def dataset_prepared_dir(
             dataset_config: Union[ConfigPattern, DatasetConfig],
             dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         Directory where the var part of a dataset is stored.
 
@@ -164,7 +163,7 @@ class Declare:
     @staticmethod
     def models_path(
             class_obj: 'GNNModelManager'
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         :param class_obj: class base on GNNModelManager
         :return: The path where the model will be saved
@@ -227,7 +226,7 @@ class Declare:
             evasion_attack_hash: str,
             poison_attack_hash: str,
             epochs: Union[int, str] = None,
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         Formation of the way to save the path of the model in the root of the project
         according to its hyperparameters and features
@@ -274,7 +273,7 @@ class Declare:
             explainer_run_kwargs: dict = None,
             explainer_init_kwargs: dict = None,
             create_dir_flag: bool = True,
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
 
         :param explainer_init_kwargs: dict with kwargs for explainer class

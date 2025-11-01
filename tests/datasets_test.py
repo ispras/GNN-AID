@@ -510,50 +510,9 @@ class DatasetsTest(unittest.TestCase):
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = TuplePrefixStorage.from_json(f.read(), )
 
-        # AssertionError "Node feature size must be positive"
-        # ps.remove(('Homogeneous', 'TUDataset', 'DBLP_v1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'COIL-RAG'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'COIL-DEL'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'COLORS-3'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'FRANKENSTEIN'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'Fingerprint'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-high'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-low'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'Letter-med'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'QM9'))
-
-        # AssertionError: Data objects must have 'x' attribute
-        # ps.remove(('Homogeneous', 'TUDataset', 'IMDB-BINARY'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'IMDB-MULTI'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-BINARY'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-MULTI-12K'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'REDDIT-MULTI-5K'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'deezer_ego_nets'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'github_stargazers'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'reddit_threads'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'twitch_egos'))
-
-        # ValueError: expected sequence of length 2 at dim 1 (got 4)
-        # ps.remove(('Homogeneous', 'TUDataset', 'dblp_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'dblp_ct2'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'facebook_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'facebook_ct2'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'highschool_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'highschool_ct2'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'infectious_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'infectious_ct2'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'mit_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'mit_ct2'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'tumblr_ct1'))
-        # ps.remove(('Homogeneous', 'TUDataset', 'tumblr_ct2'))
-
-        # ValueError: Cannot load file containing pickled data when allow_pickle=False
-        # ps.remove(('Homogeneous', 'AmazonProducts'))
-
-
         errors = []
         for ix, (full_name, default_init_kwargs) in enumerate(ps):
-            if ix < 136: continue
+            if ix < 55: continue
             print(f"Checking {full_name} ({ix+1} of {len(ps)})")
 
             try:
@@ -571,22 +530,32 @@ class DatasetsTest(unittest.TestCase):
                     continue
 
                 try:
+                    # Ensure metainfo and raw exist
+                    path = Declare.dataset_root_dir(dc)[0]
+                    self.assertTrue((path / 'raw').exists())
+                    self.assertTrue((path / 'metainfo').exists())
+
                     # Read from file for second time
-                    DatasetManager.get_by_config(dc)
+                    if default_init_kwargs:
+                        dataset = LibPTGDataset(dc, **default_init_kwargs)
+                    else:
+                        DatasetManager.get_by_config(dc)
                     self.assertTrue(1)
                 except Exception as e:
                     print('\n\n')
                     print(f"ERROR at load {dc}:")
                     print(traceback.print_exc())
+                    errors.append(dc)
 
             # Remove
             finally:
-                from aux.declaration import Declare
                 root_dir, files_paths = Declare.dataset_root_dir(dc)
                 if root_dir.exists():
                     shutil.rmtree(root_dir)
 
-        print(f"{len(errors)} Errors", '\n'.join(errors))
+        if len(errors) > 0:
+            self.assertFalse(1)
+            print(f"{len(errors)} Errors", '\n'.join(errors))
 
     def test_ptg_lib_with_params(self):
         """
@@ -595,7 +564,7 @@ class DatasetsTest(unittest.TestCase):
         dataset_config_list = [
             [
                 DatasetConfig(
-                    (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'InfectionDataset',
+                    (LibPTGDataset.data_folder, 'Homogeneous', 'InfectionDataset',
                      'BAGraph(num_nodes=30,num_edges=10),num_infected_nodes=10,max_path_length=3')),
                 {
                     "graph_generator": "BAGraph",
@@ -606,7 +575,7 @@ class DatasetsTest(unittest.TestCase):
             ],
             [
                 DatasetConfig(
-                    (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'FakeDataset',
+                    (LibPTGDataset.data_folder, 'Homogeneous', 'FakeDataset',
                      'version1')),
                     {
                         "num_graphs": 2,
@@ -620,16 +589,16 @@ class DatasetsTest(unittest.TestCase):
             ],
             [
                 DatasetConfig(
-                    (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'MixHopSyntheticDataset',
+                    (LibPTGDataset.data_folder, 'Homogeneous', 'MixHopSyntheticDataset',
                      '04')),
                     {
                         "homophily": 0.4,
-                    },
+                    }
             ],
             [
                 # Requires transform to be applied
                 DatasetConfig(
-                    (LibPTGDataset.data_folder, 'multiple-graphs', 'pytorch-geometric-other', 'ExplainerDataset',
+                    (LibPTGDataset.data_folder, 'Homogeneous', 'ExplainerDataset',
                      'BAGraph(num_nodes=300,num_edges=10),HouseMotif(),num_motifs=3)')),
                 {
                     "graph_generator": "BAGraph",
@@ -643,6 +612,7 @@ class DatasetsTest(unittest.TestCase):
         ]
 
         import traceback
+        errors = []
         for dc, params in dataset_config_list:
             print(f"Checking {dc}")
 
@@ -655,16 +625,18 @@ class DatasetsTest(unittest.TestCase):
                     print('\n\n')
                     print(f"ERROR at {dc}:")
                     print(traceback.print_exc())
+                    errors.append(dc)
                     continue
 
                 try:
                     # Read from file for second time
-                    DatasetManager.get_by_config(dc)
+                    dataset = LibPTGDataset(dc, **params)
                     self.assertTrue(1)
                 except Exception as e:
                     print('\n\n')
                     print(f"ERROR at load {dc}:")
                     print(traceback.print_exc())
+                    errors.append(dc)
 
             # Remove
             finally:
@@ -672,6 +644,10 @@ class DatasetsTest(unittest.TestCase):
                 root_dir, files_paths = Declare.dataset_root_dir(dc)
                 if root_dir.exists():
                     shutil.rmtree(root_dir)
+
+        if len(errors) > 0:
+            self.assertFalse(1)
+            print(f"{len(errors)} Errors", '\n'.join(errors))
 
 
 if __name__ == '__main__':

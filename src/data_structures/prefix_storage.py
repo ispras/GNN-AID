@@ -199,7 +199,7 @@ class TuplePrefixStorage:
             if isinstance(obj, (tuple, list)):
                 yield elems, obj[0]
             else:
-                for k, v in obj.items():
+                for k, v in sorted(obj.items()):
                     for _ in enum(v, elems + [k]):
                         yield _
 

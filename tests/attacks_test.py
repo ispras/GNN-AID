@@ -30,14 +30,14 @@ class AttacksTest(unittest.TestCase):
         # Init datasets
         # Multi-Graphs - Example
         self.dataset_mg_small, _, results_dataset_path_sg_small = DatasetManager.get_by_full_name(
-            full_name=("example", "multiple-graphs", "small",),
+            full_name=("example", "example8",),
             features=FeatureConfig(node_attr=['a']),
             labeling='binary',
             dataset_ver_ind=0
         )
 
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(('example', 'multiple-graphs', 'small')),
+            DatasetConfig(('example', 'example8')),
             DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)

@@ -6,7 +6,8 @@ from pydoc import locate
 from typing import Union, Type, Any
 
 import numpy as np
-from torch import tensor
+from torch import tensor, Tensor
+from torch_sparse import SparseTensor
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -310,3 +311,17 @@ def edge_index_to_edge_list(
         for i, j in edges:
             edge_set.add(tuple(sorted((i, j))))
         return list(edge_set)
+
+
+def shape(
+        x: Union[Tensor, SparseTensor]
+) -> list:
+
+    if isinstance(x, Tensor):
+        shape = list(x.shape)
+    elif isinstance(x, SparseTensor):
+        shape = x.sizes()
+    else:
+        raise NotImplementedError
+
+    return shape

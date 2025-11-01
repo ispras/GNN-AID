@@ -14,7 +14,7 @@ def explainers_test():
 
     # Init datasets
     dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-        full_name=("example", "multiple-graphs", "small",),
+        full_name=("example", "example3",),
         features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0
