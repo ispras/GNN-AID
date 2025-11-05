@@ -20,8 +20,8 @@ monkey_patch_directories()
 from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
+from datasets_block.datasets_manager import DatasetManager
+from datasets_block.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from data_structures.configs import FeatureConfig
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager

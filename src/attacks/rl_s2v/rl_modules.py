@@ -15,7 +15,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from copy import deepcopy
 
 from attacks.RL_S2V.utils import sum_coo_tensors, norm_adj
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from attacks.RL_S2V.q_learning import NstepReplayMem, NStepQNetNode, node_greedy_actions
 
 

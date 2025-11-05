@@ -76,6 +76,6 @@ autodoc_default_options = {
 }
 
 autosummary_generate = True
-add_module_names = False  # убирает 'datasets.ptg_datasets.' перед именем
+add_module_names = False  # убирает 'datasets_block.ptg_datasets.' перед именем
 
 todo_include_todos = True

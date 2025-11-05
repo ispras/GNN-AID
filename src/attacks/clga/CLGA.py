@@ -8,7 +8,7 @@ from tqdm import tqdm
 from attacks.clga.differentiable_models.gcn import GCN
 from attacks.clga.differentiable_models.model import GRACE
 from attacks.poison_attacks import PoisonAttacker
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from models_builder.models_utils import apply_decorator_to_graph_layers
 

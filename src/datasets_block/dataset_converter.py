@@ -7,7 +7,7 @@ import networkx as nx
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from datasets.dataset_info import DatasetInfo
+from datasets_block.dataset_info import DatasetInfo
 
 
 class DatasetConverter:
@@ -388,7 +388,7 @@ def example_single():
     with open(raw / 'labels' / 'binary', 'w') as f:
         json.dump({"11": 1, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0}, f)
 
-    from datasets.known_format_datasets import KnownFormatDataset
+    from datasets_block.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
         dc,
         default_node_attr_value={'a': -1, 'b': -1},
@@ -470,7 +470,7 @@ def example_multi():
     with open(raw / 'labels' / 'binary', 'w') as f:
         json.dump({"0":1,"1":0,"2":0}, f)
 
-    from datasets.known_format_datasets import KnownFormatDataset
+    from datasets_block.known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(
         dc,
         default_node_attr_value={'a': 0, 'b': 'alpha'},

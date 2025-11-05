@@ -2,7 +2,7 @@ import numpy as np
 
 from attacks.mi_attacks import MIAttacker
 from aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo

@@ -8,7 +8,7 @@ from sklearn.svm import SVC
 from attacks.attack_base import Attacker
 from aux.utils import move_to_same_device
 from data_structures.mi_results import MIResultsStore
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from models_builder.models_zoo import model_configs_zoo
 
 

@@ -6,9 +6,9 @@ import torch_geometric
 from aux.declaration import Declare
 from aux.utils import import_by_name
 from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
-from datasets.dataset_info import DatasetInfo
-from datasets.gen_dataset import GeneralDataset
-from datasets.ptg_datasets import LibPTGDataset
+from datasets_block.dataset_info import DatasetInfo
+from datasets_block.gen_dataset import GeneralDataset
+from datasets_block.ptg_datasets import LibPTGDataset
 
 
 class DatasetManager:
@@ -35,7 +35,7 @@ class DatasetManager:
 
         # Check special cases when there is no metainfo file but we know where to get class
         if not path.exists():
-            from datasets.ptg_datasets import LibPTGDataset
+            from datasets_block.ptg_datasets import LibPTGDataset
             if dataset_config.full_name[0] == LibPTGDataset.data_folder:
                 class_name = LibPTGDataset.__name__
                 import_from = LibPTGDataset.__module__
@@ -79,7 +79,7 @@ class DatasetManager:
         the path where the dataset is saved.
 
         """
-        from datasets.ptg_datasets import PTGDataset
+        from datasets_block.ptg_datasets import PTGDataset
         if full_name[0] != LibPTGDataset.data_folder:
             full_name = tuple([LibPTGDataset.data_folder] + list(full_name))
         dc = DatasetConfig(full_name=full_name)

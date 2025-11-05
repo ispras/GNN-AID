@@ -11,8 +11,8 @@ from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
 from aux.declaration import Declare
 from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH, shape
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
-from datasets.dataset_info import DatasetInfo
-from datasets.gen_dataset import GeneralDataset, LocalDataset
+from datasets_block.dataset_info import DatasetInfo
+from datasets_block.gen_dataset import GeneralDataset, LocalDataset
 
 PTG_FEATURE_NAME = "unknown"
 
@@ -117,7 +117,7 @@ class PTGDataset(GeneralDataset):
         """
         res = DatasetInfo()
         res.count = len(self.dataset)
-        # from datasets.ptg_datasets import is_graph_directed
+        # from datasets_block.ptg_datasets import is_graph_directed
         # res.directed = is_graph_directed(dataset.get(0))
         msg = ""
         data0 = self.dataset[0]

@@ -6,8 +6,8 @@ from aux.utils import monkey_patch_directories
 monkey_patch_directories()
 
 from attacks.mi_attacks import MIAttacker
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
+from datasets_block.datasets_manager import DatasetManager
+from datasets_block.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig

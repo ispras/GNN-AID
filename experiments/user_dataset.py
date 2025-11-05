@@ -2,7 +2,7 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 
 
 # Example of local user PTG dataset
@@ -117,8 +117,8 @@ def simgnn():
 
 def nx_to_ptg_converter():
     from aux.utils import GRAPHS_DIR
-    from datasets.dataset_converter import networkx_to_ptg
-    from datasets.datasets_manager import DatasetManager
+    from datasets_block.dataset_converter import networkx_to_ptg
+    from datasets_block.datasets_manager import DatasetManager
     import networkx as nx
 
     nx_path = GRAPHS_DIR / 'networkx-graphs' / 'input' / 'reply_graph.edgelist'

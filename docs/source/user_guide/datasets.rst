@@ -172,7 +172,7 @@ DatasetInfo - метаинформация о датасете
 
    {
     "class_name": "KnownFormatDataset",
-    "import_from": "datasets.known_format_datasets",
+    "import_from": "datasets_block.known_format_datasets",
     "name": "example",
     "count": 1,
     "directed": false,
@@ -860,8 +860,8 @@ raw файлы,метаинфо,определить- node_attributes()- edge_at
 .. code:: python
 
    from data_structures.configs import DatasetConfig
-   from datasets.ptg_datasets import LibPTGDataset
-   from datasets.datasets_manager import DatasetManager
+   from datasets_block.ptg_datasets import LibPTGDataset
+   from datasets_block.datasets_manager import DatasetManager
 
    dc = DatasetConfig((LibPTGDataset.data_folder, 'single-graph', 'Planetoid', 'Cora'))
    dataset = DatasetManager.get_by_config(dc)
@@ -876,7 +876,7 @@ raw файлы,метаинфо,определить- node_attributes()- edge_at
 .. code:: python
 
    from torch_geometric.data import Data
-   from datasets.ptg_datasets import LibPTGDataset
+   from datasets_block.ptg_datasets import LibPTGDataset
 
    x = tensor([[0, 0], [1, 0], [1, 0]])
    edge_index = tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
@@ -896,7 +896,7 @@ raw файлы,метаинфо,определить- node_attributes()- edge_at
 
    from aux.declaration import Declare  
    from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig  
-   from datasets.datasets_manager import DatasetManager  
+   from datasets_block.datasets_manager import DatasetManager
      
    dc = DatasetConfig(('single', 'custom', 'test'))  
    root, files_paths = Declare.dataset_root_dir(dc)  
@@ -914,7 +914,7 @@ raw файлы,метаинфо,определить- node_attributes()- edge_at
    with open(root / 'metainfo', 'w') as f:  
        json.dump({  
            "class_name": "KnownFormatDataset",  
-           "import_from": "datasets.known_format_datasets",  
+           "import_from": "datasets_block.known_format_datasets",
            "name": "example",  
            "count": 1,  
            "directed": False,  

@@ -11,7 +11,7 @@ from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from models_builder.models_zoo import model_configs_zoo
 from defenses.poison_defense import PoisonDefender
 

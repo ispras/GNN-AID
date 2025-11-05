@@ -5,7 +5,7 @@ from data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDef
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     MI_DEFENSE_PARAMETERS_PATH
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
 from models_builder.gnn_models import GNNModelManager
 from web_interface.back_front.block import Block

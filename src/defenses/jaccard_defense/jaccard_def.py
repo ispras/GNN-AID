@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from defenses.poison_defense import PoisonDefender
 

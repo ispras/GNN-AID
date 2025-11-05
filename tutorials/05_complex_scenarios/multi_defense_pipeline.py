@@ -5,7 +5,7 @@ from torch import device
 
 from aux.utils import import_all_from_package
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
 from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \

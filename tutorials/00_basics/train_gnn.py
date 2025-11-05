@@ -4,7 +4,7 @@ from torch import device
 
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ConfigPattern
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
 

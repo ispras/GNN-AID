@@ -9,7 +9,7 @@ from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETE
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker

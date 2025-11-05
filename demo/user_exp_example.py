@@ -6,7 +6,7 @@ from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, model_managers_info_by_names_list, TECHNICAL_PARAMETER_KEY
 from models_builder.gnn_models import Metric
 from data_structures.configs import CONFIG_CLASS_NAME
-from datasets.datasets_manager import DatasetManager
+from datasets_block.datasets_manager import DatasetManager
 
 
 def test_Konst_model():

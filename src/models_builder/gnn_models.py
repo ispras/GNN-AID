@@ -28,7 +28,7 @@ from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OB
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
     CONFIG_CLASS_NAME
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
-from datasets.gen_dataset import GeneralDataset
+from datasets_block.gen_dataset import GeneralDataset
 from explainers.protgnn.MCTS import mcts_args
 from web_interface.back_front.utils import SocketConnect
 
