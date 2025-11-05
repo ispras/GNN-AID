@@ -29,5 +29,5 @@ jobs:
     - name: Build documentation
       # Build the documentation, you can use this command locally
       run: |
-        cd docs/source
-        python -m sphinx -T -W --keep-going -b html -d _build/doctrees -D language=en . docs/html
+        python -c "from datasets_block.datasets_manager import DatasetManager; print(DatasetManager)"
+        python -m sphinx -T -W --keep-going -b html -d docs/source/_build/doctrees -D language=en docs/source/ docs/source/docs/html

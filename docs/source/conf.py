@@ -8,9 +8,14 @@
 #
 import os
 import sys
+sys.path.insert(0, os.path.abspath('src'))
 sys.path.insert(0, os.path.abspath('../../src'))
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../../'))
 sys.setrecursionlimit(1500)
+
+import datasets_block
+print("DEBUG datasets_block imported from:", datasets_block.__file__)
+
 
 # -- Project information
 

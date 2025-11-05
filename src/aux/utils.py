@@ -7,8 +7,7 @@ from typing import Union, Type, Any, Tuple
 
 import numpy as np
 import torch
-from torch import tensor, Tensor
-from torch_sparse import SparseTensor
+from torch import tensor
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -332,8 +331,11 @@ def edge_index_to_edge_list(
 
 
 def shape(
-        x: Union[Tensor, SparseTensor]
+        x: Union['Tensor', 'SparseTensor']
 ) -> list:
+    # Do not import them at the top level to avoid including them to reqs for documentation
+    from torch import Tensor
+    from torch_sparse import SparseTensor
 
     if isinstance(x, Tensor):
         shape = list(x.shape)
