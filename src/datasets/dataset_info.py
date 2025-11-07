@@ -102,7 +102,7 @@ class DatasetInfo:
     ) -> None:
         """ Check existing fields have allowed values. """
         if self.format:
-            from datasets_block.dataset_converter import DatasetConverter
+            from datasets.dataset_converter import DatasetConverter
             assert self.format == 'ij' or self.format in DatasetConverter.supported_formats
         assert self.count > 0
         assert len(self.node_attributes) > 0

@@ -5,9 +5,9 @@ from torch import nn
 from torch_geometric.nn import GMMConv, InstanceNorm
 from torch_geometric.utils import is_undirected, sort_edge_index
 from torch_sparse import transpose
+
 from src.models_builder.models_utils import apply_attention_to_messages
 
-from explainers.protgnn.MCTS import mcts
 import ctypes
 
 
@@ -91,6 +91,8 @@ class ProtLayer(torch.nn.Module):
         return similarity, distance
 
     def projection(self, gnn, dataset, data_indices, data, thrsh=10):
+        from explainers.protgnn.MCTS import mcts
+
         best_graph = None
         best_coalition = None
         gnn.eval()
@@ -145,6 +147,7 @@ class GSATLayer(torch.nn.Module):
             extractor_dropout_p: float = 0.5,
     ):
         super().__init__()
+
         self.is_inside = False
         self.learn_edge_features = learn_edge_features
         self.extractor = ExtractorMLP(in_features, learn_edge_features, extractor_dropout_p)

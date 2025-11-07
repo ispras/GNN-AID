@@ -8,14 +8,13 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('src'))
 sys.path.insert(0, os.path.abspath('../../src'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.setrecursionlimit(1500)
 
-import datasets_block
-print("DEBUG datasets_block imported from:", datasets_block.__file__)
-
+# Use fake imports sto avoid readthedocs fails because of installation timeout
+sys.path.insert(0, os.path.abspath("../"))    # path to docs/
+import docs.mock_imports
 
 # -- Project information
 
@@ -81,6 +80,6 @@ autodoc_default_options = {
 }
 
 autosummary_generate = True
-add_module_names = False  # убирает 'datasets_block.ptg_datasets.' перед именем
+add_module_names = False  # убирает 'datasets.ptg_datasets.' перед именем
 
 todo_include_todos = True

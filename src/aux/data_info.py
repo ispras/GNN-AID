@@ -13,9 +13,6 @@ import os
 from pathlib import Path
 from data_structures.prefix_storage import FixedKeysPrefixStorage, TuplePrefixStorage
 
-# Hierarchy of dataset naming
-from models_builder.gnn_constructor import GNNConstructor
-
 
 class DataInfo:
     """
@@ -400,6 +397,9 @@ class UserCodeInfo:
              return locals()
          where UserGNNClass inherits from GNNConstructor
         """
+        # Hierarchy of dataset naming
+        from models_builder.gnn_constructor import GNNConstructor
+
         DATA_INFO_DIR.mkdir(exist_ok=True, parents=True)
         DATA_INFO_USER_MODELS_INFO = DATA_INFO_DIR / 'user_model_list'
         user_models_obj_dict_info = {}

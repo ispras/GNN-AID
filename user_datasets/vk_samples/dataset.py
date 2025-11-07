@@ -12,7 +12,7 @@ import torch
 
 from data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig
 from data_structures.configs import DatasetConfig
-from datasets_block.known_format_datasets import KnownFormatDataset
+from datasets.known_format_datasets import KnownFormatDataset
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
 

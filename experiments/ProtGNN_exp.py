@@ -2,13 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
 
 
-# from datasets_block.datasets_processing import Datasets
+# from datasets.datasets_processing import Datasets
 # from course_work.prot_datasets import SentiGraphDataset
 
 

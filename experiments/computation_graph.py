@@ -9,7 +9,7 @@ from torch_geometric.nn import MessagePassing
 
 from data_structures.configs import ModelConfig
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNStructure
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 
 Node = namedtuple('Node', ('name', 'inputs', 'attr', 'op'))
 

@@ -13,11 +13,11 @@ from aux.utils import monkey_patch_directories
 monkey_patch_directories(include_graphs_dir=True)
 
 from aux.declaration import Declare
-from datasets_block.dataset_converter import networkx_to_ptg
+from datasets.dataset_converter import networkx_to_ptg
 from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
-from datasets_block.datasets_manager import DatasetManager
-from datasets_block.known_format_datasets import KnownFormatDataset
-from datasets_block.ptg_datasets import LocalPTGDataset, LibPTGDataset
+from datasets.datasets_manager import DatasetManager
+from datasets.known_format_datasets import KnownFormatDataset
+from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
 
 
 def _create_single_ij(dc: DatasetConfig):
@@ -85,7 +85,7 @@ def _create_single2_ij(dc: DatasetConfig):
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "class_name": "KnownFormatDataset",
-            "import_from": "datasets_block.known_format_datasets",
+            "import_from": "datasets.known_format_datasets",
             "name": "example",
             "count": 1,
             "directed": False,
@@ -141,7 +141,7 @@ def _create_multi_ij(dc: DatasetConfig):
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "class_name": "KnownFormatDataset",
-            "import_from": "datasets_block.known_format_datasets",
+            "import_from": "datasets.known_format_datasets",
             "count": 3,
             "directed": False,
             "nodes": [3, 4, 5],
@@ -226,7 +226,7 @@ class DatasetsTest(unittest.TestCase):
 
     # def test_converted_local_ptg(self):
     #     """ """
-    #     from datasets_block.datasets_manager import DatasetManager
+    #     from datasets.datasets_manager import DatasetManager
     #     from dgl.data import BA2MotifDataset
     #     from torch_geometric.data import Data
     #
@@ -343,7 +343,7 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_other_single(self):
         """ """
-        from datasets_block.dataset_converter import DatasetConverter
+        from datasets.dataset_converter import DatasetConverter
         import networkx as nx
 
         g = nx.Graph()
@@ -474,7 +474,7 @@ class DatasetsTest(unittest.TestCase):
     def test_stats(self):
         """ Statistics
         """
-        from datasets_block.dataset_stats import DatasetStats
+        from datasets.dataset_stats import DatasetStats
 
         dc = DatasetConfig(('single-graph', 'test_stats'))
         dvc = DatasetVarConfig(

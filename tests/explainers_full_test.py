@@ -7,9 +7,6 @@ collections.Callable = collections.abc.Callable
 
 import unittest
 import warnings
-import shutil
-import signal
-from time import time
 
 # Monkey patch main dirs - before other imports
 from aux.utils import monkey_patch_directories
@@ -17,21 +14,11 @@ monkey_patch_directories()
 
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
-
-# from src.aux import utils
-# from src.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-#     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-# from src.base.datasets_processing import DatasetManager
-# from src.explainers.explainers_manager import FrameworkExplainersManager
-# from src.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-# from src.aux.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
-#     ExplainerInitConfig, ConfigPattern
-# from src.models_builder.models_zoo import model_configs_zoo
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases

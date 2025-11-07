@@ -2,7 +2,7 @@ import warnings
 from torch import device
 from torch.cuda import is_available
 
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ExplainerInitConfig, ExplainerRunConfig
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric

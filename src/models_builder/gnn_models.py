@@ -17,8 +17,7 @@ from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     MI_ATTACK_PARAMETERS_PATH, \
-    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, \
-    import_all_from_package
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
@@ -28,8 +27,7 @@ from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OB
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
     CONFIG_CLASS_NAME
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
-from datasets_block.gen_dataset import GeneralDataset
-from explainers.protgnn.MCTS import mcts_args
+from datasets.gen_dataset import GeneralDataset
 from web_interface.back_front.utils import SocketConnect
 
 
@@ -183,11 +181,6 @@ class GNNModelManager:
         self.gnn = None
         self.socket = None  # Websocket for sending info to frontend, we avoid to store it since it is not pickleable
         self.stats_data = None  # Stores some stats to be sent to frontend
-
-        import attacks
-        import_all_from_package(attacks)  # to import all subclasses properly
-        import defenses
-        import_all_from_package(defenses)  # to import all subclasses properly
 
         self.set_poison_defender()
         self.set_poison_attacker()
@@ -1583,6 +1576,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         self.save_thrsh = _config_obj.save_thrsh
         # TODO implement other MCTS args too
         # TODO MCTS args via static ?
+        from explainers.protgnn.MCTS import mcts_args
         mcts_args.min_atoms = _config_obj.mcts_min_atoms
         mcts_args.max_atoms = _config_obj.mcts_max_atoms
         self.prot_thrsh = _config_obj.prot_thrsh

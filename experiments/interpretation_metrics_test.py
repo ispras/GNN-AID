@@ -6,17 +6,16 @@ import warnings
 import torch
 
 from aux.custom_decorators import timing_decorator, retry
-from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
+from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, \
+    root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from data_structures.configs import ModelModificationConfig, ConfigPattern
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
 from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
-from src.base.datasets_processing import DatasetManager
 from src.models_builder.models_zoo import model_configs_zoo
-from defenses.jaccard_defense import jaccard_def
-from attacks.metattack import meta_gradient_attack
-from defenses.gnn_guard import gnnguard
 
 
 def load_result_dict(path):

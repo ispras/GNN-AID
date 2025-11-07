@@ -8,14 +8,8 @@ from typing import Union, List
 import numpy as np
 import torch
 
-from attacks.evasion_attacks import EvasionAttacker
-from attacks.mi_attacks import MIAttacker
-from attacks.poison_attacks import PoisonAttacker
-from aux.utils import import_all_from_package, all_subclasses
-from datasets_block.gen_dataset import GeneralDataset
-from defenses.evasion_defense import EvasionDefender
-from defenses.mi_defense import MIDefender
-from defenses.poison_defense import PoisonDefender
+from aux.utils import all_subclasses
+from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 
@@ -500,10 +494,12 @@ class FrameworkAttackDefenseManager:
     ) -> dict:
         """ Get a list of attack and defense methods applicable for current model and dataset.
         """
-        import attacks
-        import_all_from_package(attacks)  # to import all subclasses properly
-        import defenses
-        import_all_from_package(defenses)  # to import all subclasses properly
+        from attacks.evasion_attacks import EvasionAttacker
+        from attacks.mi_attacks import MIAttacker
+        from attacks.poison_attacks import PoisonAttacker
+        from defenses.evasion_defense import EvasionDefender
+        from defenses.mi_defense import MIDefender
+        from defenses.poison_defense import PoisonDefender
         res = {
             "AD-pa": [e.name for e in all_subclasses(PoisonAttacker) if e.check_availability(gen_dataset, model_manager)],
             "AD-pd": [e.name for e in all_subclasses(PoisonDefender) if e.check_availability(gen_dataset, model_manager)],

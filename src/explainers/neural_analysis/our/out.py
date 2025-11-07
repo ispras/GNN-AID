@@ -11,8 +11,8 @@ from data_structures.explanation import ConceptExplanationGlobal
 from explainers.explainer import Explainer, finalize_decorator
 from explainers.neural_analysis.orig.concept_utils import clean_concepts
 from explainers.neural_analysis.orig.graph_utils import edge_index_to_tuples, add_edge
-from explainers.neural_analysis.our.concept_ranker import by_weight
-from explainers.neural_analysis.our.concepts import ConceptSet
+from .concept_ranker import by_weight
+from .concepts import ConceptSet
 
 
 

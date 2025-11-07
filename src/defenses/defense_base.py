@@ -1,5 +1,5 @@
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
-from datasets_block.gen_dataset import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 

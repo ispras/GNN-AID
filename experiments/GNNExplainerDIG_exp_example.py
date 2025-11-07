@@ -9,7 +9,7 @@ from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARA
 from explainers.explainers_manager import FrameworkExplainersManager
 
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
 

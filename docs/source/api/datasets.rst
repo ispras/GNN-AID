@@ -12,40 +12,40 @@ Short overview
     :toctree: generated/datasets/
     :nosignatures:
 
-    datasets_block.dataset_info.DatasetInfo
-    datasets_block.gen_dataset.GeneralDataset
-    datasets_block.ptg_datasets.PTGDataset
-    datasets_block.known_format_datasets.KnownFormatDataset
-    datasets_block.datasets_manager.DatasetManager
-    datasets_block.visible_part.DatasetData
-    datasets_block.visible_part.DatasetVarData
+    datasets.dataset_info.DatasetInfo
+    datasets.gen_dataset.GeneralDataset
+    datasets.ptg_datasets.PTGDataset
+    datasets.known_format_datasets.KnownFormatDataset
+    datasets.datasets_manager.DatasetManager
+    datasets.visible_part.DatasetData
+    datasets.visible_part.DatasetVarData
 
 
 Base classes
 ============
-.. automodule:: datasets_block.dataset_info
+.. automodule:: datasets.dataset_info
     :members:
-.. automodule:: datasets_block.gen_dataset
+.. automodule:: datasets.gen_dataset
     :members:
 
 
 Inherited dataset classes
 =========================
-.. automodule:: datasets_block.ptg_datasets
+.. automodule:: datasets.ptg_datasets
     :members:
     :show-inheritance:
-.. automodule:: datasets_block.known_format_datasets
+.. automodule:: datasets.known_format_datasets
     :members:
     :show-inheritance:
 
 
 Additional dataset related modules
 ==================================
-.. automodule:: datasets_block.datasets_manager
+.. automodule:: datasets.datasets_manager
     :members:
-.. automodule:: datasets_block.dataset_converter
+.. automodule:: datasets.dataset_converter
     :members:
-.. automodule:: datasets_block.dataset_stats
+.. automodule:: datasets.dataset_stats
     :members:
-.. automodule:: datasets_block.visible_part
+.. automodule:: datasets.visible_part
     :members:

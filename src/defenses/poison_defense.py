@@ -1,6 +1,6 @@
 import numpy as np
 
-from datasets_block.gen_dataset import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from defenses.defense_base import Defender
 
 

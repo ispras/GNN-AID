@@ -3,7 +3,7 @@ import torch
 import torch_scatter
 from collections import defaultdict
 
-from src.explainers.neural_analysis.orig import concepts
+from explainers.neural_analysis.orig import concepts
 
 class ConceptSet(concepts.ConceptSet):
     def __init__(self, graphs, task, omega=[10, 20, 20], pbar=None, device=None):

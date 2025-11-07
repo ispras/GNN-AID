@@ -11,8 +11,8 @@ from torch_geometric.data.collate import collate
 from aux.declaration import Declare
 from aux.utils import root_dir
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
-from datasets_block.dataset_info import DatasetInfo
-from datasets_block.visible_part import VisiblePart
+from datasets.dataset_info import DatasetInfo
+from datasets.visible_part import VisiblePart
 
 
 class GeneralDataset(ABC):
@@ -25,13 +25,13 @@ class GeneralDataset(ABC):
     - :class:`~data_structures.configs.DatasetVarConfig` - specifies how to build features and
       labels.
 
-    :class:`~datasets_block.gen_dataset.GeneralDataset` also requires :class:`~datasets_block.DatasetInfo` which
+    :class:`~datasets.gen_dataset.GeneralDataset` also requires :class:`~datasets.DatasetInfo` which
     describes metainformation about the dataset family.
 
     See also:
 
-    - :class:`datasets_block.ptg_datasets.PTGDataset`
-    - :class:`datasets_block.known_format_datasets.KnownFormatDataset`
+    - :class:`datasets.ptg_datasets.PTGDataset`
+    - :class:`datasets.known_format_datasets.KnownFormatDataset`
     """
 
     def __init__(
@@ -61,7 +61,7 @@ class GeneralDataset(ABC):
         self._data: Data = None
 
         # Statistics
-        from datasets_block.dataset_stats import DatasetStats
+        from datasets.dataset_stats import DatasetStats
         self.stats = DatasetStats(self)  # dict of {stat -> value}
 
         # Feature vector components

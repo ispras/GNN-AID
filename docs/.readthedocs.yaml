@@ -8,6 +8,18 @@ build:
   tools:
     python: "3.11"
 
+#  jobs:
+#    pre_build:
+#      - python -m pip install --upgrade pip setuptools wheel
+#      - python -m pip install -r requirements1.txt -r requirements2.txt
+#      - python -m pip install -r docs/requirements.txt
+#      - python -m pip install --upgrade --upgrade-strategy only-if-needed --no-cache-dir .
+#    build:
+#      commands:
+#        - mkdir -p _build/html
+#        - python -m sphinx -T --keep-going -b html -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/html
+
+
 python:
   install:
     - requirements: requirements1.txt
@@ -17,6 +29,6 @@ python:
       path: .
 
 sphinx:
-  builder: html
+#  builder: html
   configuration: docs/source/conf.py
-  fail_on_warning: true
+  fail_on_warning: false

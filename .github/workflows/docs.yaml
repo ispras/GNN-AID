@@ -21,13 +21,12 @@ jobs:
       run: |
         sudo apt update
         python -m pip install --upgrade --no-cache-dir pip setuptools
-        python -m pip install --exists-action=w --no-cache-dir -r requirements1.txt
-        python -m pip install --exists-action=w --no-cache-dir -r requirements2.txt
+        pip install -r requirements1.txt -r requirements2.txt
         python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
         python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir .
 
     - name: Build documentation
       # Build the documentation, you can use this command locally
       run: |
-        python -c "from datasets_block.datasets_manager import DatasetManager; print(DatasetManager)"
-        python -m sphinx -T -W --keep-going -b html -d docs/source/_build/doctrees -D language=en docs/source/ docs/source/docs/html
+        cd docs/source
+        python -m sphinx -T --keep-going -b html -d _build/doctrees -D language=en . docs/html

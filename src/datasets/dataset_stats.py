@@ -11,8 +11,8 @@ from torch_geometric.data import Dataset
 from aux.declaration import Declare
 from aux.utils import edge_index_to_edge_list
 from data_structures.configs import DatasetVarConfig, FeatureConfig
-from datasets_block.gen_dataset import GeneralDataset
-from datasets_block.known_format_datasets import KnownFormatDataset
+from datasets.gen_dataset import GeneralDataset
+from datasets.known_format_datasets import KnownFormatDataset
 
 
 class DatasetStats:

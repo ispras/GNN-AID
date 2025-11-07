@@ -4,7 +4,7 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.gnn_constructor import GNNStructure
 from explainers.gradcam.GradCAM import GradCAM, GradCAMOut

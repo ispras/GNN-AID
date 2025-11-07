@@ -7,7 +7,8 @@ from typing import Union, Type, Any, Tuple
 
 import numpy as np
 import torch
-from torch import tensor
+from torch import tensor, Tensor
+from torch_sparse import SparseTensor
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -251,27 +252,6 @@ def move_to_same_device(
     return moved_args
 
 
-def import_all_from_package(package) -> None:
-    """ Import all modules recursively from a given python package, within the project.
-    All subpackages must contain '__init__.py' to be imported properly.
-    """
-    import pkgutil
-    import os
-    from importlib import import_module
-    for importer, modname, ispkg in pkgutil.walk_packages(
-            path=package.__path__, onerror=lambda x: None):
-
-        # We consider only modules from the project directory
-        if not Path(os.path.commonpath([SOURCE_DIR, importer.path])) == SOURCE_DIR:
-            continue
-
-        full_modname = package.__name__ + '.' + modname
-        module = import_module(full_modname, package.__name__)
-
-        if ispkg:
-            import_all_from_package(module)
-
-
 class tmp_dir():
     """
     Temporary create a directory near the given path. Remove it on exit.
@@ -331,12 +311,8 @@ def edge_index_to_edge_list(
 
 
 def shape(
-        x: Union['Tensor', 'SparseTensor']
+        x: Union[Tensor, SparseTensor]
 ) -> list:
-    # Do not import them at the top level to avoid including them to reqs for documentation
-    from torch import Tensor
-    from torch_sparse import SparseTensor
-
     if isinstance(x, Tensor):
         shape = list(x.shape)
     elif isinstance(x, SparseTensor):

@@ -9,8 +9,8 @@ import torch
 from torch_geometric.data import Data, InMemoryDataset
 
 from data_structures.configs import DatasetConfig, ConfigPattern, FeatureConfig
-from datasets_block.dataset_info import DatasetInfo
-from datasets_block.gen_dataset import LocalDataset, GeneralDataset
+from datasets.dataset_info import DatasetInfo
+from datasets.gen_dataset import LocalDataset, GeneralDataset
 
 
 class KnownFormatDataset(
@@ -18,14 +18,14 @@ class KnownFormatDataset(
 ):
     """
     Custom dataset in 'ij' format or one of popular formats (see
-    :class:`~datasets_block.dataset_converter.DatasetConverter.supported_formats`).
+    :class:`~datasets.dataset_converter.DatasetConverter.supported_formats`).
     User defines functions for building graph from raw files and feature creation.
 
     Example of usage
 
     .. code-block:: python
 
-        from datasets_block.datasets_manager import DatasetManager
+        from datasets.datasets_manager import DatasetManager
 
         # Define dataset config - where to get raw data
         dc = DatasetConfig(('example', 'example'))
@@ -238,7 +238,7 @@ class KnownFormatDataset(
 
         # Convert the data if necessary, write it to 'converted/' directory
         self.raw_dir.mkdir(exist_ok=False)
-        from datasets_block.dataset_converter import DatasetConverter
+        from datasets.dataset_converter import DatasetConverter
         DatasetConverter.format_to_ij(
             self.info, self.root_dir / 'raw', self.raw_dir,
             self._default_node_attr_value, self._default_edge_attr_value)

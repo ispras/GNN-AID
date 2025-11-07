@@ -4,12 +4,13 @@ import warnings
 
 from torch import device
 
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.models_utils import apply_decorator_to_graph_layers
 from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
@@ -476,8 +477,9 @@ def test_attack_defense():
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
-    gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+    # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
     dataset.train_test_split()
@@ -1824,13 +1826,13 @@ if __name__ == '__main__':
     import random
 
     random.seed(10)
-    test_attack_defense_small()
-    # test_attack_defense()
+    # test_attack_defense_small()
+    test_attack_defense()
     # test_nettack_evasion()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
-    test_pgd()
+    # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
     # test_rewatt()

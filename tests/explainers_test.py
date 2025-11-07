@@ -1,7 +1,4 @@
 import collections.abc
-
-# from experiments.SubgraphX_MultiGraph_Example import dataset
-
 collections.Callable = collections.abc.Callable
 import sys
 import os
@@ -9,26 +6,20 @@ sys.path.append(f"{os.getcwd()}/src")
 
 import unittest
 import warnings
-import shutil
-import signal
-from time import time
 
 # Monkey patch main dirs - before other imports
 from aux.utils import monkey_patch_directories
 monkey_patch_directories()
 
-from aux import utils
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
-from datasets_block.datasets_manager import DatasetManager
-from datasets_block.ptg_datasets import LibPTGDataset
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from data_structures.configs import FeatureConfig
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
-import explainers
-import_all_from_package(explainers)  # to import all subclasses properly
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases

@@ -3,9 +3,9 @@ import json
 from aux.data_info import DataInfo
 from aux.utils import TORCH_GEOM_GRAPHS_PATH
 from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
-from datasets_block.datasets_manager import DatasetManager
-from datasets_block.gen_dataset import GeneralDataset
-from datasets_block.visible_part import DatasetVarData, DatasetData
+from datasets.datasets_manager import DatasetManager
+from datasets.gen_dataset import GeneralDataset
+from datasets.visible_part import DatasetVarData, DatasetData
 from web_interface.back_front.block import Block
 from web_interface.back_front.utils import json_dumps, get_config_keys
 
@@ -58,7 +58,7 @@ class DatasetBlock(Block):
         self._index = DataInfo.data_parse()
 
         # Add torch_geom
-        from datasets_block.ptg_datasets import LibPTGDataset
+        from datasets.ptg_datasets import LibPTGDataset
         # assert len(index.keys) == 3
         for key, value in self._torch_geom_index:
             if key[0] == "Heterogeneous":

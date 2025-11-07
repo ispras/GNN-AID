@@ -6,7 +6,7 @@ import unittest
 from aux.utils import monkey_patch_directories
 monkey_patch_directories()
 
-from datasets_block.datasets_manager import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, \
     GSATModelManager
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \

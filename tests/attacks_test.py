@@ -5,21 +5,20 @@ import torch
 
 # Monkey patch main dirs - before other imports
 from aux.utils import monkey_patch_directories
+
 monkey_patch_directories()
 
 from attacks.mi_attacks import MIAttacker
-from datasets_block.datasets_manager import DatasetManager
-from datasets_block.ptg_datasets import LibPTGDataset
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, import_all_from_package, MI_ATTACK_PARAMETERS_PATH
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH
 
-import attacks
-import_all_from_package(attacks)  # to import all subclasses properly
 
 
 class AttacksTest(unittest.TestCase):
