@@ -234,6 +234,7 @@ class AdvTraining(
             **kwargs,
     ):
         super().pre_batch(model_manager=model_manager, batch=batch)
+        # FIXME Kirill, what a strange code about datasets
         self.perturbed_gen_dataset = data.Data()
         self.perturbed_gen_dataset.data = copy.deepcopy(batch)
         self.perturbed_gen_dataset.dataset = self.perturbed_gen_dataset.data

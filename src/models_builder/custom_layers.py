@@ -6,7 +6,7 @@ from torch_geometric.nn import GMMConv, InstanceNorm
 from torch_geometric.utils import is_undirected, sort_edge_index
 from torch_sparse import transpose
 
-from src.models_builder.models_utils import apply_attention_to_messages
+from models_builder.models_utils import apply_attention_to_messages
 
 import ctypes
 

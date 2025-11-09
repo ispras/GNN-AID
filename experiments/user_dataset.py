@@ -103,7 +103,7 @@ def api():
 
 # This is to register user-defined dataset classes
 def simgnn():
-    # from src.aux.utils import root_dir
+    # from aux.utils import root_dir
     # from external.simgnn_for_mdr.simgnn.data import random_data, src_dst_data
     from simgnn.data import random_data, src_dst_data
 

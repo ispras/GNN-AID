@@ -172,10 +172,10 @@ class ShadowModelMIAttacker(
             optimizer.zero_grad()
 
             # Forward pass
-            outputs = shadow_model(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
+            outputs = shadow_model(gen_dataset.data.x, gen_dataset.data.edge_index)
 
             # Compute loss only on shadow training nodes
-            loss = criterion(*move_to_same_device(outputs[shadow_train_mask], gen_dataset.dataset.data.y[shadow_train_mask]))
+            loss = criterion(*move_to_same_device(outputs[shadow_train_mask], gen_dataset.data.y[shadow_train_mask]))
             print(f"Shadow loss: {loss}")
 
             # Backward pass
@@ -195,7 +195,7 @@ class ShadowModelMIAttacker(
         """
         shadow_model.eval()
         with torch.no_grad():
-            outputs = shadow_model(shadow_data.dataset.data.x, shadow_data.dataset.data.edge_index)
+            outputs = shadow_model(shadow_data.data.x, shadow_data.data.edge_index)
             probs = torch.softmax(outputs, dim=1)
             # max_probs = torch.max(probs, dim=1).values.cpu().numpy()
         # Prepare features and labels for attack classifier
@@ -230,7 +230,7 @@ class ShadowModelMIAttacker(
 
         shadow_dataset = copy.deepcopy(gen_dataset)
 
-        num_nodes = gen_dataset.dataset.data.x.shape[0]
+        num_nodes = gen_dataset.data.x.shape[0]
         shadow_indices = torch.randperm(num_nodes)[:int(num_nodes * self.shadow_data_ratio)]
         shadow_train_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
         shadow_test_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
@@ -248,7 +248,7 @@ class ShadowModelMIAttacker(
         print("Performing attack on target model...")
         model.eval()
         with torch.no_grad():
-            outputs = shadow_model(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
+            outputs = shadow_model(gen_dataset.data.x, gen_dataset.data.edge_index)
             probs = torch.softmax(outputs, dim=1)
             max_probs = torch.max(probs, dim=1).values.detach().cpu().numpy()
         # Predict membership using attack classifier

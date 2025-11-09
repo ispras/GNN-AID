@@ -64,7 +64,7 @@ class RLS2VAttacker(EvasionAttacker):
         self.setup(gen_dataset, gnn, mask_tensor)
         self.agent.train(num_steps=self.num_steps, lr=self.lr)
         edge_index, edge_weight = self.agent.eval()
-        gen_dataset.dataset.data.edge_index = edge_index
+        gen_dataset.data.edge_index = edge_index
         # QUE edge_weight implemented in out framework?
 
     def setup(
@@ -73,10 +73,10 @@ class RLS2VAttacker(EvasionAttacker):
             gnn,
             mask
             ) -> None:
-        dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.dataset.data.edge_index)
+        dict_of_lists = edge_index_to_dict_of_lists(gen_dataset.data.edge_index)
         idx_test = torch.nonzero(mask, as_tuple=True)[0].tolist()
-        pred_labels = gnn.get_answer(gen_dataset.dataset.data.x, gen_dataset.dataset.data.edge_index)
-        acc = pred_labels.eq(gen_dataset.dataset.data.y).double()
+        pred_labels = gnn.get_answer(gen_dataset.data.x, gen_dataset.data.edge_index)
+        acc = pred_labels.eq(gen_dataset.data.y).double()
         acc_test = acc[mask]
 
         # attack_list = []
@@ -84,7 +84,7 @@ class RLS2VAttacker(EvasionAttacker):
         #     # only attack those misclassifed and degree>0 nodes
         #     if acc_test[i] > 0 and len(dict_of_lists[idx_test[i]]):
         #         attack_list.append(idx_test[i])
-        attack_list = [x for x in range(gen_dataset.dataset.data.x.shape[0])]
+        attack_list = [x for x in range(gen_dataset.data.x.shape[0])]
 
         total = attack_list
         idx_valid = idx_test
@@ -98,7 +98,7 @@ class RLS2VAttacker(EvasionAttacker):
         #     else:
         #         num_wrong += 1
 
-        device = gen_dataset.dataset.data.x.device
+        device = gen_dataset.data.x.device
 
         self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
                                  classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type, gm=self.gm)

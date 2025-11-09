@@ -5,7 +5,6 @@ from typing import Union, Tuple
 
 from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
     SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
 
 
 class Declare:
@@ -94,7 +93,7 @@ class Declare:
 
     @staticmethod
     def dataset_root_dir(
-            dataset_config: DatasetConfig
+            dataset_config: 'DatasetConfig'
     ) -> Tuple[Path, list]:
         """
         Directory where dataset raw files and metainfo are stored.
@@ -112,7 +111,7 @@ class Declare:
 
     @staticmethod
     def dataset_info_path(
-            dataset_config: DatasetConfig
+            dataset_config: 'DatasetConfig'
     ) -> Path:
         """
         Path to metainfo file for a dataset.
@@ -124,8 +123,8 @@ class Declare:
 
     @staticmethod
     def dataset_prepared_dir(
-            dataset_config: Union[ConfigPattern, DatasetConfig],
-            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
+            dataset_config: Union['ConfigPattern', 'DatasetConfig'],
+            dataset_var_config: Union['ConfigPattern', 'DatasetVarConfig']
     ) -> Tuple[Path, list]:
         """
         Directory where the var part of a dataset is stored.

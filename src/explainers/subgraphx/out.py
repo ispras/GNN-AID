@@ -9,7 +9,7 @@ from explainers.explainer import Explainer, finalize_decorator
 from data_structures.explanation import AttributionExplanation
 
 
-# FIXME Monkey Patch for SubgraphX until DIG library doesn't support torch-geometric 2.3.1
+# FIXME Monkey Patch for SubgraphX until DIG library supports torch-geometric 2.3.1
 # PATCH BEGIN
 MarginalSubgraphDataset.__abstractmethods__ = frozenset()
 # PATCH END

@@ -279,9 +279,9 @@ class MetaAttackFull(BaseMeta):
 
         self._initialize()
 
-        ori_features = gen_dataset.dataset.data.x
-        ori_adj = gen_dataset.dataset.data.edge_index
-        labels = gen_dataset.dataset.data.y
+        ori_features = gen_dataset.data.x
+        ori_adj = gen_dataset.data.edge_index
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.train_mask
         idx_unlabeled = gen_dataset.test_mask
 
@@ -329,9 +329,9 @@ class MetaAttackFull(BaseMeta):
             self.modified_features = self.get_modified_features(ori_features).detach()
 
         if self.attack_structure:
-            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+            gen_dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
         if self.attack_features:
-            gen_dataset.dataset.data.x = self.modified_features
+            gen_dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):
@@ -488,9 +488,9 @@ class MetaAttackApprox(BaseMeta):
         self.optimizer = optim.Adam(self.weights + self.biases, lr=self.lr)  # , weight_decay=5e-4)
         self._initialize()
 
-        ori_features = gen_dataset.dataset.data.x
-        ori_adj = gen_dataset.dataset.data.edge_index
-        labels = gen_dataset.dataset.data.y
+        ori_features = gen_dataset.data.x
+        ori_adj = gen_dataset.data.edge_index
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.train_mask
         idx_unlabeled = gen_dataset.test_mask
 
@@ -537,9 +537,9 @@ class MetaAttackApprox(BaseMeta):
             self.modified_features = self.get_modified_features(ori_features).detach()
 
         if self.attack_structure:
-            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+            gen_dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
         if self.attack_features:
-            gen_dataset.dataset.data.x = self.modified_features
+            gen_dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):

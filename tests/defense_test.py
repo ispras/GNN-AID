@@ -131,7 +131,7 @@ class DefenseTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])

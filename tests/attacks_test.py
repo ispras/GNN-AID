@@ -267,7 +267,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_example.dataset.data.x.shape[0], size=attack_cnt,
+        target_list = np.random.choice(self.gen_dataset_sg_example.info.nodes[0], size=attack_cnt,
                                        replace=False)
 
         gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
@@ -280,7 +280,7 @@ class AttacksTest(unittest.TestCase):
 
         for mask, res in gnn_model_manager_sg_example.mi_attacker.results.items():
             print(f"MI Attack accuracy:"
-                  f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_example.dataset.data.y)}")
+                  f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_example.data.y)}")
 
     def test_mi_naive_cora(self):
         mi_attack_config = ConfigPattern(
@@ -308,7 +308,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])
@@ -697,7 +697,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])

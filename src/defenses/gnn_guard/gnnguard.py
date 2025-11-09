@@ -172,7 +172,7 @@ class GNNGuard(PoisonDefender):
             gen_dataset: GeneralDataset,
             model_manager: GNNModelManager
     ):
-        if gen_dataset.dataset.data.edge_weight is None:
+        if gen_dataset.data.edge_weight is None:
             return True
         else:
             return False

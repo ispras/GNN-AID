@@ -6,7 +6,7 @@ from torch import device
 
 from datasets.ptg_datasets import LibPTGDataset
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
@@ -24,11 +24,11 @@ def test_attack_defense_small():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     full_name = ("Homogeneous", "Planetoid", 'Cora')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
     )
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -57,7 +57,7 @@ def test_attack_defense_small():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    dataset.dataset.data.to(my_device)
+    gen_dataset.data.to(my_device)
 
     fgsm_evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
@@ -79,9 +79,9 @@ def test_attack_defense_small():
     )
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -102,23 +102,23 @@ def test_attack_defense_small():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_grad_reg = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(f"Accuracy {metric_loc_grad_reg}")
 
     # # # # # # # # #
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -143,23 +143,23 @@ def test_attack_defense_small():
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_fgsm = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(metric_loc)
 
     # # # # # # # # #
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -185,17 +185,17 @@ def test_attack_defense_small():
 
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_clean = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(metric_loc)
     print(f"Model accuracy without attack and defense: {metric_loc_clean}")
@@ -217,7 +217,7 @@ def test_attack_defense():
     # full_name = ("Homogeneous", "Planetoid", 'CiteSeer')
     # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
     )
@@ -248,7 +248,7 @@ def test_attack_defense():
 
     # print(data.train_mask)
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gat_gcn_sage_gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
     # gnn = model_configs_zoo(dataset=dataset, model_name='test_gnn')
@@ -296,7 +296,7 @@ def test_attack_defense():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    dataset.dataset.data.to(my_device)
+    gen_dataset.data.to(my_device)
 
     # poison_attack_config = ConfigPattern(
     #     _class_name="RandomPoisonAttack",
@@ -312,7 +312,7 @@ def test_attack_defense():
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
         _config_class="PoisonAttackConfig",
         _config_kwargs={
-            "num_nodes": dataset.dataset.x.shape[0],
+            "num_nodes": gen_dataset.dataset.x.shape[0],
             "lambda_": 1,
             "attack_features": True,
             "attack_iters": 100,
@@ -322,7 +322,7 @@ def test_attack_defense():
     metafull_poison_attack_config_clone = metafull_poison_attack_config.clone_with(
         overrides={
             "_config_kwargs": {
-                "num_nodes": dataset.dataset.x.shape[0] - 1
+                "num_nodes": gen_dataset.dataset.x.shape[0] - 1
             }
         }
     )
@@ -482,7 +482,7 @@ def test_attack_defense():
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     try:
         raise FileNotFoundError()
@@ -495,21 +495,21 @@ def test_attack_defense():
         # )
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-        train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+        train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                               save_model_flag=save_model_flag,
                                                               metrics=[Metric("F1", mask='train', average=None)])
 
         if train_test_split_path is not None:
-            dataset.save_train_test_mask(train_test_split_path)
+            gen_dataset.save_train_test_mask(train_test_split_path)
             train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
                                                                 :]
-            dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
+            gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask = train_mask, val_mask, test_mask
             data.percent_train_class, data.percent_test_class = train_test_sizes
 
     warnings.warn("Training was successful")
 
     metric_loc = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
 
@@ -1021,7 +1021,7 @@ def test_adv_training():
         }
     )
     from defenses.evasion_defense import EvasionDefender
-    from src.aux.utils import all_subclasses
+    from aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
 

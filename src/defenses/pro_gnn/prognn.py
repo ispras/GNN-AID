@@ -89,13 +89,13 @@ class ProGNNDefender(PoisonDefender):
             **kw
     ) -> GeneralDataset:
 
-        features = gen_dataset.dataset.data.x
-        labels = gen_dataset.dataset.data.y
+        features = gen_dataset.data.x
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.dataset.train_mask
-        # adj = to_torch_coo_tensor(gen_dataset.dataset.data.edge_index)
-        adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze(0)
+        # adj = to_torch_coo_tensor(gen_dataset.data.edge_index)
+        adj = to_dense_adj(gen_dataset.data.edge_index).squeeze(0)
 
-        self.device = gen_dataset.dataset.data.x.device
+        self.device = gen_dataset.data.x.device
 
         self.model = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
         self.optimizer = optim.Adam(self.model.parameters(),
@@ -122,9 +122,9 @@ class ProGNNDefender(PoisonDefender):
                 self.train_gcn_one_epoch(features, labels, idx_train)
 
         new_edge_index = dense_to_sparse(adj)[0]
-        self.remove_edge_index = ProGNNDefender.get_unique_in_first(gen_dataset.dataset.data.edge_index, new_edge_index)
-        self.add_edge_index = ProGNNDefender.get_unique_in_first(new_edge_index, gen_dataset.dataset.data.edge_index)
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
+        self.remove_edge_index = ProGNNDefender.get_unique_in_first(gen_dataset.data.edge_index, new_edge_index)
+        self.add_edge_index = ProGNNDefender.get_unique_in_first(new_edge_index, gen_dataset.data.edge_index)
+        gen_dataset.data.edge_index = dense_to_sparse(adj)[0]
         return gen_dataset
 
     def dataset_diff(

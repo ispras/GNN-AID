@@ -255,6 +255,5 @@ class ModelsTest(unittest.TestCase):
         gcn_gcn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
 
 
-
 if __name__ == '__main__':
     unittest.main()

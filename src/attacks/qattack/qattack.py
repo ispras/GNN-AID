@@ -26,7 +26,7 @@ class QAttacker(EvasionAttacker):
             population_size - size of population
             individual_size - amount of rewiring actions in one gene/individual
         """
-        assert self.individual_size * 2 < gen_dataset.dataset.data.edge_index.shape[1], "Too big individual_size for this dataset"
+        assert self.individual_size * 2 < gen_dataset.data.edge_index.shape[1], "Too big individual_size for this dataset"
 
         self.population = []
 
@@ -243,5 +243,5 @@ class QAttacker(EvasionAttacker):
             adj_list[n] = list(
                 set(adj_list[n]).union(set([int(rewiring[n]['add'])])).difference(set([int(rewiring[n]['del'])])))
 
-        gen_dataset.dataset.data.edge_index = from_adj_list(adj_list)
+        gen_dataset.data.edge_index = from_adj_list(adj_list)
         return gen_dataset

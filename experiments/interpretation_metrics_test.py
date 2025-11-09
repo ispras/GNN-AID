@@ -14,8 +14,8 @@ from datasets.datasets_manager import DatasetManager
 from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
-from src.models_builder.models_zoo import model_configs_zoo
+from aux.utils import POISON_DEFENSE_PARAMETERS_PATH
+from models_builder.models_zoo import model_configs_zoo
 
 
 def load_result_dict(path):
@@ -386,7 +386,7 @@ def calculate_adversial_defence_metrics(
     )
 
     from defenses.evasion_defense import EvasionDefender
-    from src.aux.utils import all_subclasses
+    from aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 

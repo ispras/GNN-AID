@@ -326,13 +326,10 @@ class GeneralDataset(ABC):
             path: Union[str, Path]
     ) -> None:
         """ Save current train/test mask to a given path (together with the model). """
-        if path is not None:
-            path /= 'train_test_split'
-            path.parent.mkdir(exist_ok=True, parents=True)
-            torch.save([self.train_mask, self.val_mask, self.test_mask,
-                        (self.percent_train_class, self.percent_test_class)], path)
-        else:
-            assert Exception("Path for save file is None")
+        path.mkdir(exist_ok=True, parents=True)
+        torch.save([self.train_mask, self.val_mask, self.test_mask,
+                    (self.percent_train_class, self.percent_test_class)],
+                   path / 'train_test_split')
 
     def apply_modification(
             self,
@@ -504,6 +501,7 @@ class GeneralDataset(ABC):
 
         # === Update GeneralDataset properties ===
         self.dataset.data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
+        self._data = None  # to be recomputed
         # self.dataset.num_classes = int(data.y.max().item()) + 1 if hasattr(data, 'y') and data.y is not None else 0
         # self.dataset.num_node_features = data.x.size(1)
         self._labels = data.y if hasattr(data, 'y') else None

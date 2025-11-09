@@ -280,7 +280,6 @@ class VisiblePart:
             index = DatasetIndex(self.gen_dataset, **part)
 
         dataset_data = DatasetData()
-        # FIXME misha - we want not tensors
         dataset_data.node_attributes = {}
 
         # Add structure

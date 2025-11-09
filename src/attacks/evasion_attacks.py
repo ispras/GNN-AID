@@ -486,7 +486,7 @@ class NettackAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        data = gen_dataset.dataset.data
+        data = gen_dataset.data
         x, edge_index, y = move_to_same_device(data.x, data.edge_index, data.y, device=torch.device('cpu'))
 
         num_classes = y.max().item() + 1

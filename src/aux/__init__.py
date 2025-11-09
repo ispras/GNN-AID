@@ -1,4 +1,4 @@
-from . import custom_decorators
-from . import data_info
-from . import declaration
-from . import utils
+import aux.custom_decorators
+import aux.data_info
+import aux.declaration
+import aux.utils

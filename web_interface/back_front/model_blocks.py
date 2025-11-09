@@ -243,7 +243,7 @@ class ModelManagerBlock(Block):
 
         mm_set = self.gnn.suitable_model_managers()
         # mm_set.add("_DummyModelManager")
-        if len(mm_set) == 0:  # FIXME is it ik for custom model?
+        if len(mm_set) == 0:  # FIXME is it ok for custom model?
             mm_set.add("FrameworkGNNModelManager")
         mm_info = model_managers_info_by_names_list(mm_set)
         return mm_info

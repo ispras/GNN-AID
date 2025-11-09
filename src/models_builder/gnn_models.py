@@ -10,8 +10,7 @@ import torch
 from torch import tensor
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
-from torch_geometric.data import DataLoader
-from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
+from torch_geometric.loader import DataLoader, NeighborLoader, LinkNeighborLoader
 
 from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
@@ -947,14 +946,14 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
-        # TODO misha it is not task type, change to getting dvc field
+        # FIXME misha it is not task type, change to getting dvc field
         task_type = "multiple-graphs" if gen_dataset.is_multi() else "single-graph"
         if task_type == "single-graph":
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
                 Iterable,
                 NeighborLoader(
-                    gen_dataset.dataset._data,
+                    gen_dataset.data,
                     num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
                     batch_size=self.batch, shuffle=True
                 )
@@ -972,7 +971,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             loader = cast(
                 Iterable,
                 LinkNeighborLoader(
-                    gen_dataset.dataset._data,
+                    gen_dataset.data,
                     num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
                     batch_size=self.batch, shuffle=True
                 )
@@ -1238,7 +1237,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     full_out = torch.cat((move_to_same_device(full_out, out)))
                     # y_true = torch.cat((y_true, data.y))
             else:  # single-graph
-                data = gen_dataset.dataset._data  # FIXME what if no data? use .get(0) ?
+                data = gen_dataset.data  # FIXME what if no data? use .get(0) ?
                 ver_ind = [n for n, x in enumerate(mask) if x]
                 mask_size = len(ver_ind)
 

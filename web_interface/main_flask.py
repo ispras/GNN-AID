@@ -52,17 +52,6 @@ def worker_process(
             if part:
                 part = json_loads(part)
 
-            # # FIXME tmp
-            #
-            # from web_interface.back_front.communication import SocketConnect, WebInterfaceError
-            # socket = SocketConnect(socket=socketio)
-            # for i in range(300):
-            #     print('sending', i, 'big')
-            #     socket.send(i, 1000000 * "x")
-            #     # print('sending', i, 'small')
-            #     # socket.send(i, "small")
-            #     sleep(0.5/25)
-
             if set == "visible_part":
                 result = client.dcBlock.set_visible_part(part=part)
 
@@ -180,7 +169,6 @@ def handle_disconnect(*args, **kwargs
 @app.route('/')
 def home(
 ) -> str:
-    # FIXME ?
     DataInfo.refresh_all_data_info()
 
     mode = ClientMode.analysis

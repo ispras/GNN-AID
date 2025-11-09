@@ -1,71 +1,18 @@
 import torch
 from tqdm import tqdm
 
-# FIXME where do we use all these?
-
-class Projection:
-    def __init__(self, eps):
-        self.eps = eps
-
-    def __call__(self, a):
-        """
-        """
-        # a = a_matrix.flatten()
-
-        projection = self.projection(a)
-
-        # projection_matrix = projection.view(a_matrix.shape)
-        return projection
-
-    def projection(self, a):
-        """
-        Calculating the projection of 'a' onto a set 'S'
-        """
-        if torch.isnan(a).any():
-            # NaN found in vector a. Replace with zeros.
-            a = torch.nan_to_num(a, nan=0.0)
-
-        # Projection onto [0, 1]
-        s = torch.clamp(a, min=0, max=1)
-
-        # Check the sum, otherwise project onto simplex
-        if torch.sum(s) <= self.eps:
-            return s
-
-        # Projection onto simplex
-        return self.projection_onto_simplex(s)
-
-    def projection_onto_simplex(self, v):
-        """
-        Projection of a vector 'v' onto a simplex with a restriction on the sum of elements
-        """
-        if torch.sum(v) <= self.eps:
-            return v
-
-        # Sort the elements of the vector 'v' in descending order
-        u, _ = torch.sort(v, descending=True)
-        cssv = torch.cumsum(u, dim=0) - self.eps
-
-        # Find the index 'rho' where the projection begins
-        mask = u > (cssv / torch.arange(1, len(u) + 1, dtype=v.dtype))
-        indices = torch.nonzero(mask).squeeze()
-
-        rho = indices[-1]
-
-        theta = cssv[rho] / (rho.item() + 1)
-
-        # Final projection onto simplex
-        proj = torch.clamp(v - theta, min=0)
-
-        # This simplex projection algorithm guarantees that torch.sum(v) <= self.eps.
-        # Let's write an assertion taking into account the rule for comparing floating-point numbers.
-        assert torch.allclose(torch.sum(proj), torch.tensor(self.eps, dtype=torch.float)) is True
-
-        return proj
-
-
-def random_sampling(edge_mask: torch.Tensor, budget: int, num_trials: int = 20, model=None,
-                  x=None, edge_index=None, y=None, attack_loss=None, task_type=True, target_idx=None):
+def random_sampling(
+        edge_mask: torch.Tensor,
+        budget: int,
+        num_trials: int = 20,
+        model=None,
+        x=None,
+        edge_index=None,
+        y=None,
+        attack_loss=None,
+        task_type=True,
+        target_idx=None
+):
     """
     Performs random sampling over a probabilistic edge mask to generate discrete binary masks,
     while respecting a budget constraint on the number of modified edges.

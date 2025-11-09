@@ -2,19 +2,19 @@ import copy
 import json
 import os
 from pathlib import Path
-from typing import Union, Type
+from typing import Union
 
 import numpy as np
 import torch
 from torch_geometric.utils import subgraph, k_hop_subgraph
 
-from data_structures.configs import ConfigPattern, ExplainerRunConfig
 from aux.custom_decorators import timing_decorator
+from data_structures.configs import ConfigPattern, ExplainerRunConfig
 from datasets.gen_dataset import GeneralDataset
 
 
 class NodesExplainerMetric:
-    def __init__(self, explainers_manager: Type, explaining_metrics_params=None):
+    def __init__(self, explainers_manager: 'FrameworkExplainersManager', explaining_metrics_params=None):
         self.node_id_to_explainer_run_config = None
         self.explanation_metrics_path = None
         if explaining_metrics_params is None:
