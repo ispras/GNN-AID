@@ -1,0 +1,8 @@
+Defense methods
+***************
+
+.. contents::
+    :local:
+
+
+

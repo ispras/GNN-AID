@@ -4,12 +4,13 @@ import warnings
 
 from torch import device
 
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from src.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 from attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
@@ -21,13 +22,13 @@ from defenses.pro_gnn.prognn import ProGNNDefender
 
 def test_attack_defense_small():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = ("Homogeneous", "Planetoid", 'Cora')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
     )
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -56,7 +57,7 @@ def test_attack_defense_small():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    dataset.dataset.data.to(my_device)
+    gen_dataset.data.to(my_device)
 
     fgsm_evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
@@ -78,9 +79,9 @@ def test_attack_defense_small():
     )
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -101,23 +102,23 @@ def test_attack_defense_small():
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_grad_reg = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(f"Accuracy {metric_loc_grad_reg}")
 
     # # # # # # # # #
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -142,23 +143,23 @@ def test_attack_defense_small():
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=autoencoder_evasion_defense_config)
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_fgsm = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(metric_loc)
 
     # # # # # # # # #
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -184,17 +185,17 @@ def test_attack_defense_small():
 
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-    train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+    train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                           save_model_flag=save_model_flag,
                                                           metrics=[Metric("F1", mask='train', average=None)])
 
     warnings.warn("Training was successful")
 
     metric_loc_clean = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     # print(metric_loc)
     print(f"Model accuracy without attack and defense: {metric_loc_clean}")
@@ -209,45 +210,45 @@ def test_attack_defense():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    # full_name = ("single-graph", "Amazon", 'Photo')
-    # full_name = ("single-graph", "Planetoid", 'CiteSeer')
-    # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
+    # full_name = ("Homogeneous", "Amazon", 'Photo')
+    # full_name = ("Homogeneous", "Planetoid", 'CiteSeer')
+    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
     )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+    #     full_name=("example", "single-graph", "example",),
+    #     features=FeatureConfig(node_attr=['a', 'b']),
     #     labeling='threeClasses',
     #     dataset_ver_ind=0
     # )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
+    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
     #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
+    #     features={'attr': {
     #         # "('personal', 'political')": 'one_hot',
     #         # "('occupation', 'type')": 'one_hot', # Don't work now
     #         # "('relation',)": 'one_hot',
     #         # "('age',)": 'one_hot',
     #         "('sex',)": 'one_hot',
     #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
+    #     # features=FeatureConfig(node_attr=['sex']),
     #     labeling='sex1',
     #     dataset_ver_ind=0
     # )
 
     # print(data.train_mask)
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gat_gcn_sage_gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
     # gnn = model_configs_zoo(dataset=dataset, model_name='test_gnn')
@@ -295,7 +296,7 @@ def test_attack_defense():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    dataset.dataset.data.to(my_device)
+    gen_dataset.data.to(my_device)
 
     # poison_attack_config = ConfigPattern(
     #     _class_name="RandomPoisonAttack",
@@ -311,7 +312,7 @@ def test_attack_defense():
         _import_path=POISON_ATTACK_PARAMETERS_PATH,
         _config_class="PoisonAttackConfig",
         _config_kwargs={
-            "num_nodes": dataset.dataset.x.shape[0],
+            "num_nodes": gen_dataset.dataset.x.shape[0],
             "lambda_": 1,
             "attack_features": True,
             "attack_iters": 100,
@@ -321,7 +322,7 @@ def test_attack_defense():
     metafull_poison_attack_config_clone = metafull_poison_attack_config.clone_with(
         overrides={
             "_config_kwargs": {
-                "num_nodes": dataset.dataset.x.shape[0] - 1
+                "num_nodes": gen_dataset.dataset.x.shape[0] - 1
             }
         }
     )
@@ -476,11 +477,12 @@ def test_attack_defense():
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
-    gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
-    gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
+    gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
+    # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
 
     warnings.warn("Start training")
-    dataset.train_test_split()
+    gen_dataset.train_test_split()
 
     try:
         raise FileNotFoundError()
@@ -493,21 +495,21 @@ def test_attack_defense():
         # )
     except FileNotFoundError:
         gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-        train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=steps_epochs,
+        train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=steps_epochs,
                                                               save_model_flag=save_model_flag,
                                                               metrics=[Metric("F1", mask='train', average=None)])
 
         if train_test_split_path is not None:
-            dataset.save_train_test_mask(train_test_split_path)
+            gen_dataset.save_train_test_mask(train_test_split_path)
             train_mask, val_mask, test_mask, train_test_sizes = torch.load(train_test_split_path / 'train_test_split')[
                                                                 :]
-            dataset.train_mask, dataset.val_mask, dataset.test_mask = train_mask, val_mask, test_mask
+            gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask = train_mask, val_mask, test_mask
             data.percent_train_class, data.percent_test_class = train_test_sizes
 
     warnings.warn("Training was successful")
 
     metric_loc = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro'),
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro'),
                                       Metric("Accuracy", mask='test')])
     print(metric_loc)
 
@@ -523,7 +525,7 @@ def test_attack_defense():
 def test_meta():
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -595,7 +597,7 @@ def test_nettack_evasion():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -724,8 +726,8 @@ def test_qattack():
     my_device = device('cpu')
 
     # Load dataset
-    # full_name = ("single-graph", "Planetoid", 'Cora')
-    full_name = ('single-graph', 'pytorch-geometric-other', 'KarateClub')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
+    full_name = ('Homogeneous', 'pytorch-geometric-other', 'KarateClub')
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -831,10 +833,10 @@ def test_jaccard():
 
     full_name = None
 
-    # full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    # full_name = ("multiple-graphs", "TUDataset", 'PROTEINS')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
+    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
@@ -842,25 +844,25 @@ def test_jaccard():
     )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
+    #     full_name=("example", "single-graph", "example",),
+    #     features=FeatureConfig(node_attr=['a', 'b']),
     #     labeling='threeClasses',
     #     dataset_ver_ind=0
     # )
 
     # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
+    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
+    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
     #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
+    #     features={'attr': {
     #         # "('personal', 'political')": 'one_hot',
     #         # "('occupation', 'type')": 'one_hot', # Don't work now
     #         # "('relation',)": 'one_hot',
     #         # "('age',)": 'one_hot',
     #         "('sex',)": 'one_hot',
     #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
+    #     # features=FeatureConfig(node_attr=['sex']),
     #     labeling='sex1',
     #     dataset_ver_ind=0
     # )
@@ -978,7 +980,7 @@ def test_jaccard():
 
 def test_adv_training():
     my_device = device('cpu')
-    # full_name = ("single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     full_name = ("single-graph", "Amazon", 'Photo')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
@@ -1019,7 +1021,7 @@ def test_adv_training():
         }
     )
     from defenses.evasion_defense import EvasionDefender
-    from src.aux.utils import all_subclasses
+    from aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
 
@@ -1055,7 +1057,7 @@ def test_pgd():
     my_device = device('cuda')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1148,7 +1150,7 @@ def test_pgd():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1252,7 +1254,7 @@ def test_pgd_structure():
     my_device = device('cuda')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1342,7 +1344,7 @@ def test_pgd_structure():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1443,7 +1445,7 @@ def test_fgsm():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1533,7 +1535,7 @@ def test_fgsm():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1634,7 +1636,7 @@ def test_rewatt():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", "Cora")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1724,7 +1726,7 @@ def test_rewatt():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("multiple-graphs", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
@@ -1824,13 +1826,13 @@ if __name__ == '__main__':
     import random
 
     random.seed(10)
-    test_attack_defense_small()
-    # test_attack_defense()
+    # test_attack_defense_small()
+    test_attack_defense()
     # test_nettack_evasion()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
-    test_pgd()
+    # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
     # test_rewatt()

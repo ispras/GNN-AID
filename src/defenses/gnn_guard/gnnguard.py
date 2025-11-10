@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 # from defenses.GNNGuard.base_model import BaseModel
 from defenses.poison_defense import PoisonDefender
 
@@ -62,7 +62,7 @@ class GNNGuard(PoisonDefender):
             )
             gnn_model_manager_surrogate = FrameworkGNNModelManager(
                 gnn=self.model,
-                dataset_path=gen_dataset,
+                dataset_path=gen_dataset.prepared_dir,
                 modification=default_config,
                 manager_config=manager_config,
             )
@@ -172,7 +172,7 @@ class GNNGuard(PoisonDefender):
             gen_dataset: GeneralDataset,
             model_manager: GNNModelManager
     ):
-        if gen_dataset.dataset.data.edge_weight is None:
+        if gen_dataset.data.edge_weight is None:
             return True
         else:
             return False

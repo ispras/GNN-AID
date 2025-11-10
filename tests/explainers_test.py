@@ -1,8 +1,4 @@
-import collections
 import collections.abc
-
-# from experiments.SubgraphX_MultiGraph_Example import dataset
-
 collections.Callable = collections.abc.Callable
 import sys
 import os
@@ -10,71 +6,41 @@ sys.path.append(f"{os.getcwd()}/src")
 
 import unittest
 import warnings
-import shutil
-import signal
-from time import time
 
-from aux import utils
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories()
+
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, import_all_from_package
-from base.datasets_processing import DatasetManager
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import FeatureConfig
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, ExplainerRunConfig, \
-    ExplainerInitConfig, ConfigPattern, ModelModificationConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
 from models_builder.models_zoo import model_configs_zoo
-import explainers
-import_all_from_package(explainers)  # to import all subclasses properly
-
-tmp_dir = utils.EXPLANATIONS_DIR / (utils.EXPLANATIONS_DIR.name + str(time()))
-utils.EXPLANATIONS_DIR = tmp_dir
-
-
-def my_ctrlc_handler(signal, frame):
-    if tmp_dir.exists():
-        shutil.rmtree(tmp_dir)
-    raise KeyboardInterrupt
-
-
-signal.signal(signal.SIGINT, my_ctrlc_handler)
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases
 
 class ExplainersTest(unittest.TestCase):
-    @classmethod
-    def tearDownClass(cls) -> None:
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
-
     def setUp(self) -> None:
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
         gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(("example", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
         gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.dataset_sg_example = gen_dataset_sg_example
-        results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+        results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
         #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora"),
+            full_name=("Homogeneous", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
@@ -86,39 +52,28 @@ class ExplainersTest(unittest.TestCase):
         #     DatasetVarConfig(dataset_ver_ind=0)
         # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
 
         # Multi-graphs - Small
-        self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "custom", "small",),
-            features={'attr': {'a': 'as_is'}},
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
-        gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="multiple-graphs",
-                group="custom",
-                graph="small"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+        self.dataset_mg_small = DatasetManager.get_by_config(
+            DatasetConfig(('example', 'example8')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
-        gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        dataset_mg_small = gen_dataset_mg_small
-        results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
+        self.dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        results_dataset_path_mg_small = self.dataset_mg_small.prepared_dir
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "TUDataset", "MUTAG",),
+            full_name=(LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG"),
             dataset_ver_ind=0
         )
 
         gen_dataset_mg_mutag = self.dataset_mg_mutag
         gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         dataset_mg_mutag = gen_dataset_mg_mutag
-        results_dataset_path_mg_mutag = gen_dataset_mg_mutag.results_dir
+        results_dataset_path_mg_mutag = gen_dataset_mg_mutag.prepared_dir
 
         # Init models
         gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
@@ -142,7 +97,7 @@ class ExplainersTest(unittest.TestCase):
 
         # TODO Kirill, tmp comment work and tests with Prot
         gin3_lin2_prot_mg_small = model_configs_zoo(
-            dataset=dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
         gin3_lin2_prot_mg_mutag = model_configs_zoo(
             dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
         )
@@ -182,21 +137,21 @@ class ExplainersTest(unittest.TestCase):
         # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
 
         best_acc = self.prot_gnn_mm_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=100, metrics=[])
+            gen_dataset=self.dataset_mg_small, steps=100, metrics=[])
 
         # uncomment for ProtGNN big test
         # self.prot_gnn_mm_mutag.train_model(
         #     gen_dataset=gen_dataset_mg_mutag, steps=40, metrics=[])
 
         gin3_lin2_mg_small = model_configs_zoo(
-            dataset=gen_dataset_mg_small, model_name='gin_gin_gin_lin_lin')
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin')
         self.gnn_model_manager_mg_small = FrameworkGNNModelManager(
             gnn=gin3_lin2_mg_small,
             dataset_path=results_dataset_path_mg_small,
             manager_config=gin3_lin2_mg_small_manager_config
         )
         self.gnn_model_manager_mg_small.train_model(
-            gen_dataset=gen_dataset_mg_small, steps=50, save_model_flag=False,
+            gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
             metrics=[Metric("F1", mask='test')])
 
         self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")

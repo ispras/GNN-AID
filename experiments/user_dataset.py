@@ -2,7 +2,7 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 
 
 # Example of local user PTG dataset
@@ -95,10 +95,6 @@ class UserApiDataset(Dataset):
         return Data(x=x, edge_index=edge_index, y=y)
 
 
-# Should be global to be visible for import
-DATASET_TO_EXPORT = UserApiDataset('test_dataset_api')
-
-
 def api():
     gen_dataset = DatasetManager.register_torch_geometric_api(
         DATASET_TO_EXPORT, name='api_random_features', obj_name='DATASET_TO_EXPORT')
@@ -107,7 +103,7 @@ def api():
 
 # This is to register user-defined dataset classes
 def simgnn():
-    # from src.aux.utils import root_dir
+    # from aux.utils import root_dir
     # from external.simgnn_for_mdr.simgnn.data import random_data, src_dst_data
     from simgnn.data import random_data, src_dst_data
 
@@ -121,8 +117,8 @@ def simgnn():
 
 def nx_to_ptg_converter():
     from aux.utils import GRAPHS_DIR
-    from base.dataset_converter import networkx_to_ptg
-    from base.datasets_processing import DatasetManager
+    from datasets.dataset_converter import networkx_to_ptg
+    from datasets.datasets_manager import DatasetManager
     import networkx as nx
 
     nx_path = GRAPHS_DIR / 'networkx-graphs' / 'input' / 'reply_graph.edgelist'

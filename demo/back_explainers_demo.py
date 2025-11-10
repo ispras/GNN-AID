@@ -2,7 +2,7 @@ import warnings
 from torch import device
 from torch.cuda import is_available
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from data_structures.configs import DatasetConfig, DatasetVarConfig, ExplainerInitConfig, ExplainerRunConfig
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
@@ -14,25 +14,25 @@ def explainers_test():
 
     # Init datasets
     dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-        full_name=("multiple-graphs", "custom", "small",),
-        features={'attr': {'a': 'as_is'}},
+        full_name=("example", "example3",),
+        features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0
     )
 
     dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "custom", "example",),
-        features={'attr': {'a': 'as_is'}},
+        full_name=("example", "single-graph", "example",),
+        features=FeatureConfig(node_attr=['a']),
         labeling='binary',
         dataset_ver_ind=0
     )
 
     gen_dataset_mg_small = DatasetManager.get_by_config(
         DatasetConfig(
-            domain="multiple-graphs",
+            domain="Homogeneous",
             group="custom",
             graph="small"),
-        DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )
@@ -41,7 +41,7 @@ def explainers_test():
             domain="single-graph",
             group="custom",
             graph="example"),
-        DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )
@@ -50,10 +50,10 @@ def explainers_test():
 
 
     dataset_mg_small = gen_dataset_mg_small
-    results_dataset_path_mg_small = gen_dataset_mg_small.results_dir
+    results_dataset_path_mg_small = gen_dataset_mg_small.prepared_dir
 
     dataset_sg_example = gen_dataset_sg_example
-    results_dataset_path_sg_example = gen_dataset_sg_example.results_dir
+    results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
     # Init gnns and gnn_model_managers
     # gat2_cora = model_configs_zoo(dataset=dataset_cora, model_name='gat_gat')

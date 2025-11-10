@@ -10,23 +10,23 @@ import torch
 from torch import tensor
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
-from torch_geometric.data import DataLoader
-from torch_geometric.loader import NeighborLoader, LinkNeighborLoader
+from torch_geometric.loader import DataLoader, NeighborLoader, LinkNeighborLoader
 
 from aux.data_info import UserCodeInfo
+from aux.declaration import Declare
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+    MI_ATTACK_PARAMETERS_PATH, \
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
     model_managers_info_by_names_list, hash_data_sha256, \
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, move_to_same_device
-from aux.declaration import Declare
-from base.datasets_processing import GeneralDataset
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
-    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
+    move_to_same_device
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
     CONFIG_CLASS_NAME
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
-from explainers.protgnn.MCTS import mcts_args
+from datasets.gen_dataset import GeneralDataset
 from web_interface.back_front.utils import SocketConnect
 
 
@@ -946,13 +946,14 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
-        task_type = gen_dataset.domain()
+        # FIXME misha it is not task type, change to getting dvc field
+        task_type = "multiple-graphs" if gen_dataset.is_multi() else "single-graph"
         if task_type == "single-graph":
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
                 Iterable,
                 NeighborLoader(
-                    gen_dataset.dataset._data,
+                    gen_dataset.data,
                     num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
                     batch_size=self.batch, shuffle=True
                 )
@@ -970,7 +971,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             loader = cast(
                 Iterable,
                 LinkNeighborLoader(
-                    gen_dataset.dataset._data,
+                    gen_dataset.data,
                     num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
                     batch_size=self.batch, shuffle=True
                 )
@@ -1225,7 +1226,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                         shuffle=False
                     )
                 )
-                full_out = torch.empty(0, device=dataset.data.x.device)
+                full_out = torch.empty(0, device=gen_dataset.data.x.device)
                 # y_true = torch.Tensor()
                 if hasattr(self, 'optimizer'):
                     self.optimizer.zero_grad()
@@ -1236,7 +1237,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     full_out = torch.cat((move_to_same_device(full_out, out)))
                     # y_true = torch.cat((y_true, data.y))
             else:  # single-graph
-                data = gen_dataset.dataset._data  # FIXME what if no data? use .get(0) ?
+                data = gen_dataset.data  # FIXME what if no data? use .get(0) ?
                 ver_ind = [n for n, x in enumerate(mask) if x]
                 mask_size = len(ver_ind)
 
@@ -1255,10 +1256,10 @@ class FrameworkGNNModelManager(GNNModelManager):
                                     batch_ind * self.batch: (batch_ind + 1) * self.batch]:
                         if hasattr(self, 'mask_features'):
                             for feature in self.mask_features:
-                                # features_mask_tensor_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                #                                     gen_dataset.info.node_attr_slices[feature][1]] = False
-                                data_x_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                                      gen_dataset.info.node_attr_slices[feature][1]] = 0
+                                # features_mask_tensor_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                #                                     gen_dataset.node_attr_slices[feature][1]] = False
+                                data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                                      gen_dataset.node_attr_slices[feature][1]] = 0
                         # if self.gnn_mm.train_mask_flag:
                         #     data_x_copy[elem_ind] = torch.zeros(data_x_elem_len)
                         # y_true = torch.masked.masked_tensor(data.y, mask_tensor)
@@ -1443,15 +1444,19 @@ class FrameworkGNNModelManager(GNNModelManager):
         :return: dict with model weights. Also function can add in dict model predictions
          and logits
         """
-        self.stats_data = {}
+        stats_data = {}
 
         # Stats: weights, logits, predictions
         if predictions:  # and hasattr(self.gnn, 'get_predictions'):
             predictions = self.run_model(gen_dataset, mask='all', out='predictions')
-            self.stats_data["predictions"] = predictions.detach().cpu().tolist()
+            stats_data["predictions"] = predictions.detach().cpu().tolist()
         if logits:  # and hasattr(self.gnn, 'forward'):
             logits = self.run_model(gen_dataset, mask='all', out='logits')
-            self.stats_data["embeddings"] = logits.detach().cpu().tolist()
+            stats_data["embeddings"] = logits.detach().cpu().tolist()
+
+        # Note: we update all stats data at once because it can be requested from frontend during
+        # the update
+        self.stats_data = stats_data
 
     def send_data(
             self,
@@ -1570,6 +1575,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         self.save_thrsh = _config_obj.save_thrsh
         # TODO implement other MCTS args too
         # TODO MCTS args via static ?
+        from explainers.protgnn.MCTS import mcts_args
         mcts_args.min_atoms = _config_obj.mcts_min_atoms
         mcts_args.max_atoms = _config_obj.mcts_max_atoms
         self.prot_thrsh = _config_obj.prot_thrsh
@@ -1698,7 +1704,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
         # Prototype projection
         if cur_step > self.proj_epochs and cur_step % self.proj_epochs == 0:
-            self.prot_layer.projection(self.gnn, gen_dataset.dataset, train_ind, gen_dataset.dataset.data,
+            self.prot_layer.projection(self.gnn, gen_dataset.dataset, train_ind, gen_dataset.data,
                                        thrsh=self.prot_thrsh)
         self.gnn.train()
         for p in self.gnn.parameters():

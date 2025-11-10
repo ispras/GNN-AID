@@ -1,19 +1,17 @@
 import torch
 from torch import device
 
+from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+    POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from data_structures.configs import ConfigPattern, ModelModificationConfig
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from datasets.datasets_manager import DatasetManager
 from explainers.explainers_manager import FrameworkExplainersManager
-
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from base.datasets_processing import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
-
-from attacks.clga import CLGA
 
 # Here we perform all actions same way as in multi_attack_pipeline.py
 my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-full_name = ("single-graph", "Planetoid", 'Cora')
+full_name = ("Homogeneous", "Planetoid", 'Cora')
 
 dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
     full_name=full_name,

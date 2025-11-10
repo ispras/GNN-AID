@@ -6,22 +6,22 @@ from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARA
 from explainers.explainers_manager import FrameworkExplainersManager
 
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
 
 def gnnexplainer_test():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
+    full_name = ("Homogeneous", "Planetoid", 'Cora')
+    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
         full_name=full_name,
         dataset_ver_ind=0
     )
-    dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    dataset.dataset.data.to(my_device)
+    gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+    gen_dataset.data.to(my_device)
 
-    gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
+    gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
@@ -41,10 +41,10 @@ def gnnexplainer_test():
     )
     gnn_model_manager.gnn.to(my_device)
 
-    gnn_model_manager.train_model(gen_dataset=dataset, steps=200)
+    gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=200)
 
     metric_loc = gnn_model_manager.evaluate_model(
-        gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro')])
+        gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro')])
     print(metric_loc)
 
     # --- Explain model ---
@@ -62,7 +62,7 @@ def gnnexplainer_test():
     # Define an explainer manager class.
     explainer_GNNExpl = FrameworkExplainersManager(
         init_config=explainer_init_config,
-        dataset=dataset, gnn_manager=gnn_model_manager,
+        dataset=gen_dataset, gnn_manager=gnn_model_manager,
         explainer_name='GNNExplainer(torch-geom)',
     )
     # Here we can specify the run parameters of the explainer, such as the number of the element from the dataset

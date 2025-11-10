@@ -6,17 +6,16 @@ import warnings
 import torch
 
 from aux.custom_decorators import timing_decorator, retry
-from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, root_dir, \
+from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, \
+    root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
+from data_structures.configs import ModelModificationConfig, ConfigPattern
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
-from src.aux.utils import POISON_DEFENSE_PARAMETERS_PATH
-from src.base.datasets_processing import DatasetManager
-from src.models_builder.models_zoo import model_configs_zoo
-from defenses.jaccard_defense import jaccard_def
-from attacks.metattack import meta_gradient_attack
-from defenses.gnn_guard import gnnguard
+from aux.utils import POISON_DEFENSE_PARAMETERS_PATH
+from models_builder.models_zoo import model_configs_zoo
 
 
 def load_result_dict(path):
@@ -165,7 +164,7 @@ def calculate_unprotected_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     if explainer_name == 'GSAT':
         lr = 0.01
@@ -253,7 +252,7 @@ def calculate_jaccard_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(
@@ -342,7 +341,7 @@ def calculate_adversial_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(
@@ -387,7 +386,7 @@ def calculate_adversial_defence_metrics(
     )
 
     from defenses.evasion_defense import EvasionDefender
-    from src.aux.utils import all_subclasses
+    from aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 
@@ -444,7 +443,7 @@ def calculate_gnnguard_defence_metrics(
     save_model_flag = True
     device = torch.device('cpu')
 
-    data, results_dataset_path = dataset.data, dataset.results_dir
+    data, results_dataset_path = dataset.data, dataset.prepared_dir
 
     gnn = get_model_by_name(model_name, dataset)
     manager_config = ConfigPattern(
@@ -906,11 +905,11 @@ if __name__ == '__main__':
     ]
 
     datasets = [
-        # ("single-graph", "Planetoid", 'Cora'),
-        # ("single-graph", "Planetoid", 'CiteSeer'),
-        # ("single-graph", "Planetoid", 'PubMed'),
-        ("single-graph", "Amazon", 'Computers'),
-        # ("single-graph", "Amazon", 'Photo'),
+        # ("Homogeneous", "Planetoid", 'Cora'),
+        # ("Homogeneous", "Planetoid", 'CiteSeer'),
+        # ("Homogeneous", "Planetoid", 'PubMed'),
+        (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Computers'),
+        # ("Homogeneous", "Amazon", 'Photo'),
     ]
     for dataset_full_name in datasets:
         for i in range(3, 13):
@@ -926,5 +925,5 @@ if __name__ == '__main__':
                     except Exception as e:
                         print(f"ERROR: {e}")
                         continue
-    # dataset_full_name = ("single-graph", "Amazon", 'Photo')
+    # dataset_full_name = ("Homogeneous", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)

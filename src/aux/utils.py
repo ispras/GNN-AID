@@ -3,16 +3,19 @@ import json
 import warnings
 from pathlib import Path
 from pydoc import locate
-from typing import Union, Type, Any
+from typing import Union, Type, Any, Tuple
 
 import numpy as np
 import torch
+from torch import tensor, Tensor
+from torch_sparse import SparseTensor
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
 
 SOURCE_DIR = root_dir / 'src'
 GRAPHS_DIR = root_dir / 'data'
+DATASETS_DIR = root_dir / 'datasets'
 MODELS_DIR = root_dir / 'models'
 EXPLANATIONS_DIR = root_dir / 'explanations'
 DATA_INFO_DIR = root_dir / 'data_info'
@@ -44,6 +47,54 @@ IMPORT_INFO_KEY = "import_info"
 TECHNICAL_PARAMETER_KEY = "_technical_parameter"
 
 
+def monkey_patch_directories(include_graphs_dir=False):
+    """ Replace main working directories (datasets, models, explanations) with temporary names.
+    Call this function before other imports to make effect - it is useful for tests.
+    When program ends, all the temporary dirs are removed.
+    """
+    global GRAPHS_DIR
+    global DATASETS_DIR
+    global MODELS_DIR
+    global EXPLANATIONS_DIR
+
+    import signal
+    import atexit
+    import shutil
+    from time import time
+    tmp_suffix = "__tmp_dir_" + str(time())
+
+    tmp_dirs = []
+    if include_graphs_dir:
+        tmp = GRAPHS_DIR.parent / (GRAPHS_DIR.name + tmp_suffix)
+        GRAPHS_DIR = tmp
+        tmp_dirs.append(tmp)
+    tmp = DATASETS_DIR.parent / (DATASETS_DIR.name + tmp_suffix)
+    DATASETS_DIR = tmp
+    tmp_dirs.append(tmp)
+    tmp = MODELS_DIR.parent / (MODELS_DIR.name + tmp_suffix)
+    MODELS_DIR = tmp
+    tmp_dirs.append(tmp)
+    tmp = EXPLANATIONS_DIR.parent / (EXPLANATIONS_DIR.name + tmp_suffix)
+    EXPLANATIONS_DIR = tmp
+    tmp_dirs.append(tmp)
+
+    def cleanup():
+        for tmp in tmp_dirs:
+            if tmp.exists():
+                print(f'removing tmp directory {tmp}')
+                shutil.rmtree(tmp)
+
+    def my_ctrlc_handler(signal, frame):
+        cleanup()
+        raise KeyboardInterrupt
+
+    # Cleanup on Ctrl+C
+    signal.signal(signal.SIGINT, my_ctrlc_handler)
+
+    # Cleanup on exit
+    atexit.register(cleanup)
+
+
 def hash_data_sha256(
         data
 ) -> str:
@@ -68,8 +119,8 @@ def import_by_name(
             klass = locate(f"{pack}.{name}")
             if klass is not None:
                 return klass
-            raise ImportError(f"Unknown {pack} model '{name}', couldn't import.")
-    raise ImportError(f"Unknown {packs} model '{name}', couldn't import.")
+            raise ImportError(f"Cannot import class '{name}' from module {pack}.")
+    raise ImportError(f"Cannot import class '{name}' from modules {packs}.")
 
 
 def model_managers_info_by_names_list(
@@ -101,7 +152,7 @@ def setting_class_default_parameters(
         class_name: str,
         class_kwargs: dict,
         default_parameters_file_path: Union[str, Path]
-) -> [dict, dict]:
+) -> Tuple[dict, dict]:
     """
     :param class_name: class name, should be same in default_parameters_file
     :param class_kwargs: dict with parameters, which needs to be supplemented with default parameters
@@ -201,27 +252,6 @@ def move_to_same_device(
     return moved_args
 
 
-def import_all_from_package(package) -> None:
-    """ Import all modules recursively from a given python package, within the project.
-    All subpackages must contain '__init__.py' to be imported properly.
-    """
-    import pkgutil
-    import os
-    from importlib import import_module
-    for importer, modname, ispkg in pkgutil.walk_packages(
-            path=package.__path__, onerror=lambda x: None):
-
-        # We consider only modules from the project directory
-        if not Path(os.path.commonpath([SOURCE_DIR, importer.path])) == SOURCE_DIR:
-            continue
-
-        full_modname = package.__name__ + '.' + modname
-        module = import_module(full_modname, package.__name__)
-
-        if ispkg:
-            import_all_from_package(module)
-
-
 class tmp_dir():
     """
     Temporary create a directory near the given path. Remove it on exit.
@@ -251,4 +281,43 @@ class tmp_dir():
         try:
             shutil.rmtree(self.tmp_dir)
         except FileNotFoundError:
-            pass
+             pass
+
+
+def short_str(obj, max_len=120):
+    res = str(obj)
+    if len(res) > max_len:
+        res = res[:max_len - 5] + "..." + res[-2:]
+    return res
+
+
+def edge_index_to_edge_list(
+        edge_index: Union[list, tensor],
+        directed: bool = True
+) -> list:
+    if isinstance(edge_index, list):
+        return [edge_index_to_edge_list(x) for x in edge_index]
+
+    assert edge_index.shape[0] == 2
+    edges = list(zip(edge_index[0].tolist(), edge_index[1].tolist()))
+    if directed:
+        return edges
+    else:
+        # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
+        edge_set = set()
+        for i, j in edges:
+            edge_set.add(tuple(sorted((i, j))))
+        return list(edge_set)
+
+
+def shape(
+        x: Union[Tensor, SparseTensor]
+) -> list:
+    if isinstance(x, Tensor):
+        shape = list(x.shape)
+    elif isinstance(x, SparseTensor):
+        shape = x.sizes()
+    else:
+        raise NotImplementedError
+
+    return shape

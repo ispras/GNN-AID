@@ -1,4 +1,5 @@
 from typing import Iterable, Any, Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,9 +11,9 @@ from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from tqdm import tqdm
 
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
+from datasets.gen_dataset import GeneralDataset
+from models_builder.models_zoo import model_configs_zoo
 from defenses.poison_defense import PoisonDefender
-from src.base.datasets_processing import GeneralDataset
-from src.models_builder.models_zoo import model_configs_zoo
 
 
 def feature_smoothing(
@@ -88,13 +89,13 @@ class ProGNNDefender(PoisonDefender):
             **kw
     ) -> GeneralDataset:
 
-        features = gen_dataset.dataset.data.x
-        labels = gen_dataset.dataset.data.y
+        features = gen_dataset.data.x
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.dataset.train_mask
-        # adj = to_torch_coo_tensor(gen_dataset.dataset.data.edge_index)
-        adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze(0)
+        # adj = to_torch_coo_tensor(gen_dataset.data.edge_index)
+        adj = to_dense_adj(gen_dataset.data.edge_index).squeeze(0)
 
-        self.device = gen_dataset.dataset.data.x.device
+        self.device = gen_dataset.data.x.device
 
         self.model = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
         self.optimizer = optim.Adam(self.model.parameters(),
@@ -121,9 +122,9 @@ class ProGNNDefender(PoisonDefender):
                 self.train_gcn_one_epoch(features, labels, idx_train)
 
         new_edge_index = dense_to_sparse(adj)[0]
-        self.remove_edge_index = ProGNNDefender.get_unique_in_first(gen_dataset.dataset.data.edge_index, new_edge_index)
-        self.add_edge_index = ProGNNDefender.get_unique_in_first(new_edge_index, gen_dataset.dataset.data.edge_index)
-        gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
+        self.remove_edge_index = ProGNNDefender.get_unique_in_first(gen_dataset.data.edge_index, new_edge_index)
+        self.add_edge_index = ProGNNDefender.get_unique_in_first(new_edge_index, gen_dataset.data.edge_index)
+        gen_dataset.data.edge_index = dense_to_sparse(adj)[0]
         return gen_dataset
 
     def dataset_diff(

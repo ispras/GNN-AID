@@ -4,14 +4,11 @@ from typing import Union, Type
 
 from data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from aux.declaration import Declare
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, import_all_from_package
-from base.datasets_processing import GeneralDataset
+from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses
+from datasets.gen_dataset import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
 from explainers.explainer_metrics import NodesExplainerMetric
 from models_builder.gnn_models import GNNModelManager
-
-import explainers
-import_all_from_package(explainers)  # to import all subclasses properly
 
 
 class FrameworkExplainersManager:

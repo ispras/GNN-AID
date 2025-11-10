@@ -2,7 +2,7 @@ import numpy as np
 
 from attacks.mi_attacks import MIAttacker
 from aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from data_structures.configs import ModelModificationConfig, ConfigPattern
 from models_builder.models_zoo import model_configs_zoo
@@ -12,13 +12,13 @@ manual_seed(1234)
 
 # Load Cora dataset and GCN_2l model
 dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-    full_name=("single-graph", "Planetoid", "Cora",),
+    full_name=("Homogeneous", "Planetoid", "Cora",),
     dataset_ver_ind=0
 )
 
 gen_dataset_sg_cora = dataset_sg_cora
 gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-results_dataset_path_sg_cora = gen_dataset_sg_cora.results_dir
+results_dataset_path_sg_cora = gen_dataset_sg_cora.prepared_dir
 
 default_config = ModelModificationConfig(
     model_ver_ind=0,
@@ -78,7 +78,7 @@ attack_cnt = 100
 seed = None
 if seed is not None:
     np.random.seed(seed)
-target_list = np.random.choice(gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+target_list = np.random.choice(gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
 
 gnn_model_manager_sg_cora.train_model(gen_dataset=gen_dataset_sg_cora, steps=100,
                                       metrics=[Metric("Accuracy", mask='test')])

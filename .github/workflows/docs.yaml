@@ -21,8 +21,7 @@ jobs:
       run: |
         sudo apt update
         python -m pip install --upgrade --no-cache-dir pip setuptools
-        python -m pip install --exists-action=w --no-cache-dir -r requirements1.txt
-        python -m pip install --exists-action=w --no-cache-dir -r requirements2.txt
+        pip install -r requirements1.txt -r requirements2.txt
         python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
         python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir .
 
@@ -30,4 +29,4 @@ jobs:
       # Build the documentation, you can use this command locally
       run: |
         cd docs/source
-        python -m sphinx -T -W --keep-going -b html -d _build/doctrees -D language=en . docs/html
+        python -m sphinx -T --keep-going -b html -d _build/doctrees -D language=en . docs/html

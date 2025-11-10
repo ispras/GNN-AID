@@ -1,8 +1,9 @@
 import torch
 from torch_geometric.utils import add_self_loops, remove_self_loops, degree, k_hop_subgraph
-from torch_sparse import SparseTensor, matmul
 import math
 import random
+
+from torch_sparse import matmul, SparseTensor
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 

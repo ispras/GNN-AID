@@ -8,7 +8,7 @@ from torch.nn.parameter import Parameter
 from torch import optim
 from tqdm import tqdm
 
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
 from models_builder.models_zoo import model_configs_zoo
 from data_structures.configs import ModelModificationConfig, ConfigPattern
@@ -21,8 +21,10 @@ from attacks.poison_attacks import PoisonAttacker
 class BaseMeta(PoisonAttacker):
     """
     Super class for Metattack on GNNs
+
     Parameters
     ----------
+
     model:
         surrogate model that will be attacked directly
     num_nodes : int
@@ -31,8 +33,8 @@ class BaseMeta(PoisonAttacker):
         number of initial training iterations for surrogate model
     attack_iters: int
         number of training iterations for surrogate model for meta-gradient calc
-    lambda_ : float
-        lambda_ is used to weight the two objectives in Eq. (10) in the paper.
+    ``lambda_`` : float
+        ``lambda_`` is used to weight the two objectives in Eq. (10) in the paper.
     lr: float
         learning rate for surrogate meta-training
     feature_shape : tuple
@@ -119,7 +121,7 @@ class BaseMeta(PoisonAttacker):
         )
         gnn_model_manager_surrogate = FrameworkGNNModelManager(
             gnn=self.model,
-            dataset_path=None,
+            dataset_path=gen_dataset.prepared_dir,
             modification=default_config,
             manager_config=manager_config,
         )
@@ -277,9 +279,9 @@ class MetaAttackFull(BaseMeta):
 
         self._initialize()
 
-        ori_features = gen_dataset.dataset.data.x
-        ori_adj = gen_dataset.dataset.data.edge_index
-        labels = gen_dataset.dataset.data.y
+        ori_features = gen_dataset.data.x
+        ori_adj = gen_dataset.data.edge_index
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.train_mask
         idx_unlabeled = gen_dataset.test_mask
 
@@ -327,9 +329,9 @@ class MetaAttackFull(BaseMeta):
             self.modified_features = self.get_modified_features(ori_features).detach()
 
         if self.attack_structure:
-            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+            gen_dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
         if self.attack_features:
-            gen_dataset.dataset.data.x = self.modified_features
+            gen_dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):
@@ -486,9 +488,9 @@ class MetaAttackApprox(BaseMeta):
         self.optimizer = optim.Adam(self.weights + self.biases, lr=self.lr)  # , weight_decay=5e-4)
         self._initialize()
 
-        ori_features = gen_dataset.dataset.data.x
-        ori_adj = gen_dataset.dataset.data.edge_index
-        labels = gen_dataset.dataset.data.y
+        ori_features = gen_dataset.data.x
+        ori_adj = gen_dataset.data.edge_index
+        labels = gen_dataset.data.y
         idx_train = gen_dataset.train_mask
         idx_unlabeled = gen_dataset.test_mask
 
@@ -535,9 +537,9 @@ class MetaAttackApprox(BaseMeta):
             self.modified_features = self.get_modified_features(ori_features).detach()
 
         if self.attack_structure:
-            gen_dataset.dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
+            gen_dataset.data.edge_index = dense_to_sparse(self.modified_adj.int())[0]
         if self.attack_features:
-            gen_dataset.dataset.data.x = self.modified_features
+            gen_dataset.data.x = self.modified_features
         print("TEST")
 
     def _initialize(self):

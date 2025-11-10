@@ -4,7 +4,7 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.gnn_constructor import GNNStructure
 from explainers.gradcam.GradCAM import GradCAM, GradCAMOut
@@ -16,7 +16,7 @@ def GradCAM_test():
     my_device = device('cuda' if is_available() else 'cpu')
 
     dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "Planetoid", 'Cora'),
+        full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
         dataset_ver_ind=0)
 
     # print(dataset)

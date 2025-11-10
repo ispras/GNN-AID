@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from defenses.poison_defense import PoisonDefender
 
@@ -33,16 +33,16 @@ class JaccardDefender(
         def is_binary_tensor(X: torch.Tensor) -> bool:
             return torch.all((X == 0) | (X == 1)).item()
 
-        assert is_binary_tensor(gen_dataset.dataset.data.x), "The features should be presented in binary form"
+        assert is_binary_tensor(gen_dataset.data.x), "The features should be presented in binary form"
 
         # TODO need to check whether features binary or not. Consistency required - Cora has 'unknown' features e.g.
         # self.drop_edges(batch)
-        edge_index = gen_dataset.dataset.data.edge_index.tolist()
-        #new_edge_mask = torch.zeros_like(gen_dataset.dataset.data.edge_index).bool()
+        edge_index = gen_dataset.data.edge_index.tolist()
+        #new_edge_mask = torch.zeros_like(gen_dataset.data.edge_index).bool()
         new_edge_index = [[],[]]
         self.remove_edge_index = [[], []]
         for i in range(len(edge_index[0])):
-            if self.jaccard_index(gen_dataset.dataset.data.x, edge_index[0][i], edge_index[1][i]) > self.thrsh:
+            if self.jaccard_index(gen_dataset.data.x, edge_index[0][i], edge_index[1][i]) > self.thrsh:
                 # new_edge_mask[0,i] = True
                 # new_edge_mask[1,i] = True
                 new_edge_index[0].append(edge_index[0][i])
@@ -50,8 +50,8 @@ class JaccardDefender(
             else:
                 self.remove_edge_index[0].append(edge_index[0][i])
                 self.remove_edge_index[1].append(edge_index[1][i])
-        # gen_dataset.dataset.data.edge_index *= new_edge_mask.float()
-        gen_dataset.dataset.data.edge_index = torch.tensor(new_edge_index).long()
+        # gen_dataset.data.edge_index *= new_edge_mask.float()
+        gen_dataset.data.edge_index = torch.tensor(new_edge_index).long()
         return gen_dataset
 
     def jaccard_index(

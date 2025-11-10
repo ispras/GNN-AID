@@ -1,11 +1,10 @@
 import json
-from typing import Union
-
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern
-from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
-    SAVE_DIR_STRUCTURE_PATH
 import os
 from pathlib import Path
+from typing import Union, Tuple
+
+from aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
+    SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
 
 
 class Declare:
@@ -21,7 +20,7 @@ class Declare:
     ) -> [Path, list]:
         """
         :param what_save: the path for which object is being built.
-         Now support: data_root, data_prepared, models, explanations
+         Now support: data_root, datasets, models, explanations
         :param previous_path: the path over which you need to add the folder
          structure corresponding to the element being saved
         :param obj_info: information about the object, which must match the dictionary keys
@@ -94,57 +93,80 @@ class Declare:
 
     @staticmethod
     def dataset_root_dir(
-            dataset_config: DatasetConfig
-    ) -> [Path, list]:
+            dataset_config: 'DatasetConfig'
+    ) -> Tuple[Path, list]:
         """
+        Directory where dataset raw files and metainfo are stored.
+
         :param dataset_config: DatasetConfig
-        :return: forms the path to the data folder and adds to it the path to a specific dataset
+        :return: path to the data folder, path to a specific dataset
         """
         path = GRAPHS_DIR
-        dataset_config_val = dataset_config.full_name()
+        obj_info = [
+            dataset_config.path(),
+        ]
         path, files_paths = Declare.obj_info_to_path(previous_path=path, what_save="data_root",
-                                                     obj_info=dataset_config_val)
+                                                     obj_info=obj_info)
         return path, files_paths
 
     @staticmethod
-    def dataset_prepared_dir(
-            dataset_config: Union[ConfigPattern, DatasetConfig],
-            dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
-    ) -> [Path, list]:
+    def dataset_info_path(
+            dataset_config: 'DatasetConfig'
+    ) -> Path:
         """
+        Path to metainfo file for a dataset.
+
         :param dataset_config: DatasetConfig
-        :param dataset_var_config: DatasetVarConfig
-        :return: The path where the data with the described structure will be saved
+        :return: path to metainfo file for a specific dataset
+        """
+        return Declare.dataset_root_dir(dataset_config)[0] / 'metainfo'
+
+    @staticmethod
+    def dataset_prepared_dir(
+            dataset_config: Union['ConfigPattern', 'DatasetConfig'],
+            dataset_var_config: Union['ConfigPattern', 'DatasetVarConfig']
+    ) -> Tuple[Path, list]:
+        """
+        Directory where the var part of a dataset is stored.
+
+        :param dataset_config: :class:`~data_structures.configs.DatasetConfig` object
+        :param dataset_var_config: :class:`~data_structures.configs.DatasetVarConfig` object
+        :return: path to the data folder, extra paths where to save dataset_config and
+         dataset_var_config.
         """
         assert dataset_var_config.features is not None
 
-        path, files_paths = Declare.dataset_root_dir(dataset_config)
+        path = DATASETS_DIR
+
+        obj_info = [
+            dataset_config.hash_for_config(),
+            dataset_var_config.hash_for_config(),
+        ]
 
         # Find minimal free version if not specified
-        # QUE Kirill, maybe we can make it better
         if dataset_var_config["dataset_ver_ind"] is None:
             ix = 0
             while True:
-                dataset_var_config["dataset_ver_ind"] = ix
-                loc_path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                                 obj_info=dataset_var_config.to_savable_dict(
-                                                                     compact=True))
+                dataset_var_config["dataset_ver_ind"] = ix  # FIXME Kirill 'DatasetVarConfig' object does not support item assignment
+                loc_path, files_paths = Declare.obj_info_to_path(what_save="datasets", previous_path=path,
+                                                                 obj_info=obj_info)
                 if not loc_path.exists():  # if name exists, adding number to it
                     break
                 ix += 1
             path = loc_path
         else:
-            path, files_paths = Declare.obj_info_to_path(what_save="data_prepared", previous_path=path,
-                                                         obj_info=dataset_var_config.to_savable_dict(compact=True))
+            path, files_paths = Declare.obj_info_to_path(what_save="datasets", previous_path=path,
+                                                         obj_info=obj_info)
         return path, files_paths
 
     @staticmethod
     def models_path(
             class_obj: 'GNNModelManager'
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         :param class_obj: class base on GNNModelManager
         :return: The path where the model will be saved
+
         Feature of determining versions when saving: if the version is not defined,
         then saves the model with the smallest integer index that is not in the versions folder,
         starting from 0. If the version is defined, then the first save has the specified version,
@@ -153,7 +175,7 @@ class Declare:
         model_ver_ind_none_flag = \
             class_obj.modification.model_ver_ind is None or \
             class_obj.modification.data_change_flag()
-        path = Path(str(class_obj.dataset_path).replace(str(GRAPHS_DIR), str(MODELS_DIR)))
+        path = Path(str(class_obj.dataset_path).replace(str(DATASETS_DIR), str(MODELS_DIR)))
         what_save = "models"
 
         mi_defense_kwargs_hash = class_obj.mi_defense_config.hash_for_config()
@@ -203,10 +225,11 @@ class Declare:
             evasion_attack_hash: str,
             poison_attack_hash: str,
             epochs: Union[int, str] = None,
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
         Formation of the way to save the path of the model in the root of the project
         according to its hyperparameters and features
+
         :param dataset_path: dataset path
         :param GNNModelManager_hash: gnn model manager hash
         :param model_ver_ind: index of explain version
@@ -222,7 +245,7 @@ class Declare:
         """
         if not isinstance(model_ver_ind, int) or model_ver_ind < 0:
             raise Exception("model_ver_ind must be int type and has value >= 0")
-        path = Path(str(dataset_path).replace(str(GRAPHS_DIR), str(MODELS_DIR)))
+        path = Path(str(dataset_path).replace(str(DATASETS_DIR), str(MODELS_DIR)))
         what_save = "models"
         obj_info = {
             "gnn": gnn_name,
@@ -249,14 +272,15 @@ class Declare:
             explainer_run_kwargs: dict = None,
             explainer_init_kwargs: dict = None,
             create_dir_flag: bool = True,
-    ) -> [Path, list]:
+    ) -> Tuple[Path, list]:
         """
+
         :param explainer_init_kwargs: dict with kwargs for explainer class
         :param explainer_run_kwargs:dict with kwargs for run explanation
         :param models_path: model path
         :param explainer_name: explainer name. Example: Zorro
         :param explainer_ver_ind: index of explain version
-        :param create_dir_flag:
+        :param create_dir_flag: whether to save kwargs to file
         :return: path for explanations result file and list with technical files
         """
         explainer_init_kwargs = explainer_init_kwargs.copy()

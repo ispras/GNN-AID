@@ -8,7 +8,7 @@ from aux.data_info import DataInfo
 from aux.declaration import Declare
 from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import GNNModelManager
 from web_interface.back_front.block import Block, WrapperBlock
@@ -106,7 +106,7 @@ class ExplainerLoadBlock(Block):
         """
         path = os.path.relpath(self.gmm.model_path_info(), MODELS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
-            prefix=("data_root", "data_prepared", "models")
+            prefix=("datasets", "models")
         )
         values_info = DataInfo.values_list_by_path_and_keys(path=path,
                                                             full_keys_list=full_keys_list,
@@ -114,7 +114,7 @@ class ExplainerLoadBlock(Block):
         DataInfo.refresh_explanations_dir_structure()
         index, self.info = DataInfo.explainers_parse()
 
-        ps = index.filter(dict(zip(keys_list, values_info)))
+        ps = index.filter(values_info)
         # return [ps.to_json(), json_dumps(self.info)] FIXME misha parsing error on front
         return [ps.to_json(), '{}']
 

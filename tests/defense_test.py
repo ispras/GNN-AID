@@ -1,23 +1,22 @@
 import unittest
+
 import numpy as np
 
-import collections
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
 
-collections.Callable = collections.abc.Callable
+monkey_patch_directories()
 
 from attacks.mi_attacks import MIAttacker
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+    ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 
 from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, \
-    import_all_from_package
-
-import defenses
-
-import_all_from_package(defenses)  # to import all subclasses properly
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 
 
 class DefenseTest(unittest.TestCase):
@@ -26,28 +25,18 @@ class DefenseTest(unittest.TestCase):
 
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="single-graph",
-                group="custom",
-                graph="example"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(("example", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
 
-        # Single-graph - Cora
+        #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora"),
+            full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
@@ -59,7 +48,7 @@ class DefenseTest(unittest.TestCase):
         #     DatasetVarConfig(dataset_ver_ind=0)
         # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
@@ -142,7 +131,7 @@ class DefenseTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.dataset.data.x.shape[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])

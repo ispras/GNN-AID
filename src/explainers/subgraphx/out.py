@@ -9,7 +9,7 @@ from explainers.explainer import Explainer, finalize_decorator
 from data_structures.explanation import AttributionExplanation
 
 
-# FIXME Monkey Patch for SubgraphX until DIG library doesn't support torch-geometric 2.3.1
+# FIXME Monkey Patch for SubgraphX until DIG library supports torch-geometric 2.3.1
 # PATCH BEGIN
 MarginalSubgraphDataset.__abstractmethods__ = frozenset()
 # PATCH END
@@ -335,7 +335,7 @@ class SubgraphXExplainer(Explainer):
             data = self.gen_dataset.dataset.get(self.explained_graph)
             pred = self.model.get_answer(data.x, data.edge_index).item()
         else:
-            data = self.gen_dataset.dataset.data
+            data = self.gen_dataset.data
             pred = self.model.get_answer(data.x, data.edge_index)[self.explained_node].item()
 
         # Getting important nodes

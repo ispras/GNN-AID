@@ -1,8 +1,10 @@
 import warnings
 
-from base.datasets_processing import DatasetManager
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig
+from data_structures.configs import ModelManagerConfig, DatasetConfig, DatasetVarConfig, \
+    FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 
 
@@ -11,48 +13,39 @@ def backend_demo():
 
     # Init datasets VK and Cora
     # dataset_cora, _, results_dataset_path_cora = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "Planetoid", 'Cora'),
+    #     full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
     #     dataset_ver_ind=0)
     # dataset_comp, _, results_dataset_path_comp = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "Amazon", "Computers",),
+    #     full_name=("Homogeneous", "Amazon", "Computers",),
     #     dataset_ver_ind=0
     # )
     # dataset_mg_example, _, results_dataset_path_mg_example = DatasetManager.get_by_full_name(
-    #     full_name=("multiple-graphs", "custom", "example",),
-    #     features={'attr': {'type': 'as_is'}},
+    #     full_name=("Homogeneous", "custom", "example",),
+    #     features=FeatureConfig(node_attr=['type']),
     #     labeling='binary',
     #     dataset_ver_ind=0
     # )
     dataset_cora = DatasetManager.get_by_config(
-        DatasetConfig(
-            domain="single-graph",
-            group="Planetoid",
-            graph="Cora"),
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
     )
     dataset_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    results_dataset_path_cora = dataset_cora.results_dir
+    results_dataset_path_cora = dataset_cora.prepared_dir
 
     dataset_comp = DatasetManager.get_by_config(
-        DatasetConfig(
-            domain="single-graph",
-            group="Amazon",
-            graph="Computers"),
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Amazon", "Computers")),
     )
     dataset_comp.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    results_dataset_path_comp = dataset_comp.results_dir
+    results_dataset_path_comp = dataset_comp.prepared_dir
 
     gen_dataset_mg_example = DatasetManager.get_by_config(
-        DatasetConfig(
-            domain="multiple-graphs",
-            group="custom",
-            graph="example"),
-        DatasetVarConfig(features={'attr': {'type': 'as_is'}},
+        DatasetConfig(("example", "custom", "example")),
+        DatasetVarConfig(features=FeatureConfig(node_attr=['type']),
                          labeling='binary',
                          dataset_ver_ind=0)
     )
     gen_dataset_mg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
     dataset_mg_example = gen_dataset_mg_example
-    results_dataset_path_mg_example = gen_dataset_mg_example.results_dir
+    results_dataset_path_mg_example = gen_dataset_mg_example.prepared_dir
 
     # Init gnns and gnn_model_managers
     gat2_cora = model_configs_zoo(dataset=dataset_cora, model_name='gat_gat')

@@ -1,13 +1,11 @@
 from typing import Any, Literal
-from math import sqrt
 
-import torch
 from torch import Tensor
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import k_hop_subgraph
 
+from data_structures.explanation import AttributionExplanation
 from explainers.explainer import Explainer, finalize_decorator
-from data_structures.explanation import Explanation, AttributionExplanation
 
 
 class GSATExplainer(Explainer):

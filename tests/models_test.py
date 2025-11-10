@@ -1,38 +1,20 @@
-import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 import unittest
-import shutil
-import signal
-from time import time
 
-# Monkey patch MODELS_DIR - before other imports
-from aux import utils
-tmp_dir = utils.MODELS_DIR / (utils.MODELS_DIR.name + str(time()))
-utils.MODELS_DIR = tmp_dir
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories()
 
-from base.datasets_processing import DatasetManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, ConfigPattern
+from datasets.datasets_manager import DatasetManager
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, \
+    GSATModelManager
+from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+    ConfigPattern, FeatureConfig
 from models_builder.models_zoo import model_configs_zoo
 
 
-def my_ctrlc_handler(signal, frame):
-    if tmp_dir.exists():
-        shutil.rmtree(tmp_dir)
-    raise KeyboardInterrupt
-
-
-signal.signal(signal.SIGINT, my_ctrlc_handler)
-
-
 class ModelsTest(unittest.TestCase):
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        if tmp_dir.exists():
-            shutil.rmtree(tmp_dir)
 
     def setUp(self) -> None:
         # Monkey patch
@@ -40,23 +22,18 @@ class ModelsTest(unittest.TestCase):
 
         # Init datasets
         # Single-Graph - Example
-        self.dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "custom", "example",),
-            features={'attr': {'a': 'as_is'}},
-            labeling='binary',
-            dataset_ver_ind=0
+        self.gen_dataset_sg_example = DatasetManager.get_by_config(
+            DatasetConfig(("example", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+                             labeling='binary',
+                             dataset_ver_ind=0)
         )
-
-        self.gen_dataset_sg_example, _, _ = DatasetManager.get_by_full_name(
-        full_name=("single-graph", "Planetoid", 'Cora'),
-        dataset_ver_ind=0
-    )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.results_dir
+        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
 
         #Single-graph - Cora
         self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("single-graph", "Planetoid", "Cora"),
+            full_name=("Homogeneous", "Planetoid", "Cora"),
             dataset_ver_ind=0
         )
 
@@ -68,41 +45,31 @@ class ModelsTest(unittest.TestCase):
         #     DatasetVarConfig(dataset_ver_ind=0)
         # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.results_dir
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
 
         # Multi-graphs - Small
-        self.dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "custom", "small",),
-            features={'attr': {'a': 'as_is'}},
-            labeling='binary',
-            dataset_ver_ind=0
-        )
-
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
-            DatasetConfig(
-                domain="multiple-graphs",
-                group="custom",
-                graph="small"),
-            DatasetVarConfig(features={'attr': {'a': 'as_is'}},
+            DatasetConfig(('example', 'example8')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
         self.gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.2)
-        self.results_dataset_path_mg_small = self.gen_dataset_mg_small.results_dir
+        self.results_dataset_path_mg_small = self.gen_dataset_mg_small.prepared_dir
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
         )
 
         # Multi-graphs - MUTAG
         self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
-            full_name=("multiple-graphs", "TUDataset", "MUTAG",),
+            full_name=("Homogeneous", "TUDataset", "MUTAG",),
             dataset_ver_ind=0
         )
 
         self.gen_dataset_mg_mutag = self.dataset_mg_mutag
         self.gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         # dataset_mg_mutag = gen_dataset_mg_mutag
-        self.results_dataset_path_mg_mutag = self.gen_dataset_mg_mutag.results_dir
+        self.results_dataset_path_mg_mutag = self.gen_dataset_mg_mutag.prepared_dir
 
         self.manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",
@@ -286,7 +253,6 @@ class ModelsTest(unittest.TestCase):
         print(metric_loc)
         sg_cora_model_path = gcn_gcn_mm_sg_cora.model_path_info() / 'model'
         gcn_gcn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
-
 
 
 if __name__ == '__main__':

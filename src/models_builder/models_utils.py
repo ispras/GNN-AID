@@ -1,14 +1,10 @@
-from typing import Any, Union, Optional, List
+from typing import Any, Optional, List
 from typing import Callable
 
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.utils.hooks import RemovableHandle
 from torch_geometric.nn import MessagePassing
-from torch_geometric.typing import OptPairTensor, Adj, Size
-
-from attacks.metattack.utils import add_self_loops
 
 
 def apply_message_gradient_capture(

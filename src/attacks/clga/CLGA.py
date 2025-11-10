@@ -8,7 +8,7 @@ from tqdm import tqdm
 from attacks.clga.differentiable_models.gcn import GCN
 from attacks.clga.differentiable_models.model import GRACE
 from attacks.poison_attacks import PoisonAttacker
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from models_builder.models_utils import apply_decorator_to_graph_layers
 
@@ -166,21 +166,21 @@ class CLGAAttack(PoisonAttacker):
         perturbed_edges = [[], []]
 
         # adj = torch.sparse.FloatTensor(
-        #     gen_dataset.dataset.data.edge_index, torch.ones(gen_dataset.dataset.data.edge_index.shape[1], device=self.device),
+        #     gen_dataset.data.edge_index, torch.ones(gen_dataset.data.edge_index.shape[1], device=self.device),
         #     (self.num_nodes, self.num_nodes)
         # ).to_dense()
 
-        adj = to_dense_adj(gen_dataset.dataset.data.edge_index).squeeze()
+        adj = to_dense_adj(gen_dataset.data.edge_index).squeeze()
 
         edge_index_set = set((int(x), int(y)) for x, y in
-                              zip(gen_dataset.dataset.data.edge_index[0], gen_dataset.dataset.data.edge_index[1]))
+                              zip(gen_dataset.data.edge_index[0], gen_dataset.data.edge_index[1]))
 
         for epoch in tqdm(range(self.num_epochs)):
-            self.train_gcn(gen_dataset.dataset.data)
+            self.train_gcn(gen_dataset.data)
 
-            # grad_1, grad_2 = self.compute_gradient(gen_dataset.dataset.data)
+            # grad_1, grad_2 = self.compute_gradient(gen_dataset.data)
             # grad_sum = grad_1 + grad_2
-            grad_sum, max_edge, edge_index_mutated = self.compute_gradient(gen_dataset.dataset.data)
+            grad_sum, max_edge, edge_index_mutated = self.compute_gradient(gen_dataset.data)
             grad_sum = grad_sum.sum(axis=1)
             grad_sum = grad_sum[:max_edge]
 
@@ -211,7 +211,7 @@ class CLGAAttack(PoisonAttacker):
             #     adj[col, row] = 0
 
             # perturbed_edges.append((row, col))
-            #gen_dataset.dataset.data.edge_index = dense_to_sparse(adj)[0]
+            #gen_dataset.data.edge_index = dense_to_sparse(adj)[0]
 
         self.attack_diff.remove_edges(list(remove_edges))
-        gen_dataset.dataset.data.edge_index = torch.tensor(perturbed_edges)
+        gen_dataset.data.edge_index = torch.tensor(perturbed_edges)

@@ -15,7 +15,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from copy import deepcopy
 
 from attacks.RL_S2V.utils import sum_coo_tensors, norm_adj
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from attacks.RL_S2V.q_learning import NstepReplayMem, NStepQNetNode, node_greedy_actions
 
 
@@ -137,7 +137,7 @@ class NodeAttackEnv(object):
         self.num_mod = num_mod
         self.reward_type = reward_type
         self.gen_dataset = gen_dataset
-        self.num_nodes = gen_dataset.dataset.data.x.shape[0]
+        self.num_nodes = gen_dataset.data.x.shape[0]
         self.gm = gm
 
     def setup(
@@ -162,7 +162,7 @@ class NodeAttackEnv(object):
     ) -> tuple[torch.Tensor, torch.Tensor] | tuple[None, None]:
         """run actions and get rewards
         """
-        data = self.gen_dataset.dataset.data
+        data = self.gen_dataset.data
         if self.first_nodes is None: # pick the first node of edge
             assert self.n_steps % 2 == 0
             self.first_nodes = actions[:]
@@ -181,7 +181,7 @@ class NodeAttackEnv(object):
             loss_list = []
             # for i in tqdm(range(len(self.target_nodes))):
             for i in (range(len(self.target_nodes))):
-                device = self.gen_dataset.dataset.data.y.device
+                device = self.gen_dataset.data.y.device
                 extra_edge_index, extra_edge_weight = self.modified_list[i].get_extra_adj(device=device)
                 modified_edge_index, modified_edge_weight = sum_coo_tensors(data.edge_index, data.edge_weight,
                                                                             extra_edge_index, extra_edge_weight,
@@ -191,7 +191,7 @@ class NodeAttackEnv(object):
 
                 output = self.classifier(data.x, modified_edge_index, modified_edge_weight)
 
-                loss, acc = loss_acc(output, self.gen_dataset.dataset.data.y, self.all_targets, avg_loss=False)
+                loss, acc = loss_acc(output, self.gen_dataset.data.y, self.all_targets, avg_loss=False)
                 # _, loss, acc = self.classifier(self.features, Variable(adj), self.all_targets, self.labels, avg_loss=False)
 
                 cur_idx = self.all_targets.index(self.target_nodes[i])
@@ -322,10 +322,10 @@ class RLS2VAgent(object):
         self.num_mod = num_mod
         self.reward_type = reward_type
         self.batch_size = batch_size
-        self.num_node_features = gen_dataset.dataset.data.x.shape[1]
-        self.orig_edge_index = gen_dataset.dataset.data.edge_index
-        self.orig_edge_weight = gen_dataset.dataset.data.edge_weight
-        self.num_nodes = gen_dataset.dataset.data.x.shape[0]
+        self.num_node_features = gen_dataset.data.x.shape[1]
+        self.orig_edge_index = gen_dataset.data.edge_index
+        self.orig_edge_weight = gen_dataset.data.edge_weight
+        self.num_nodes = gen_dataset.data.x.shape[0]
 
         self.gm = gm
         self.device = device
@@ -335,11 +335,11 @@ class RLS2VAgent(object):
 
         # self.net = QNetNode(features, labels, list_action_space)
         # self.old_net = QNetNode(features, labels, list_action_space)
-        self.net = NStepQNetNode(gen_dataset.dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
+        self.net = NStepQNetNode(gen_dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
                           bilin_q=bilin_q, embed_dim=embed_dim, mlp_hidden=mlp_hidden,
                           max_lv=max_lv, gm=gm, device=device)
 
-        self.old_net = NStepQNetNode(gen_dataset.dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
+        self.old_net = NStepQNetNode(gen_dataset.data.x, 2 * num_mod, self.num_node_features, list_action_space,
                           bilin_q=bilin_q, embed_dim=embed_dim, mlp_hidden=mlp_hidden,
                           max_lv=max_lv, gm=gm, device=device)
 

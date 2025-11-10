@@ -1,12 +1,10 @@
 from typing import Type, Union
 import torch
-import numpy as np
-from skopt import Optimizer
 import copy
 
 from attacks.attack_base import Attacker
 from aux.utils import move_to_same_device
-from base.datasets_processing import GeneralDataset
+from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports
@@ -15,14 +13,12 @@ from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, N
 # PGD imports
 from torch_geometric.utils import k_hop_subgraph
 from models_builder.models_utils import EdgeMaskingWrapper
-from attacks.evasion_attacks_collection.pgd.utils import Projection, random_sampling
-from torch_geometric.nn import MessagePassing
+from attacks.evasion_attacks_collection.pgd.utils import random_sampling
 from data_structures.graph_modification_artifacts import GraphModificationArtifact, GlobalNodeIndexer
 from tqdm import tqdm
 
 # FGSM imports
 from models_builder.models_utils import apply_decorator_to_graph_layers
-from torch_geometric.data import Data
 
 # ReWatt imports
 from attacks.evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
@@ -490,7 +486,7 @@ class NettackAttacker(
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor
     ):
-        data = gen_dataset.dataset.data
+        data = gen_dataset.data
         x, edge_index, y = move_to_same_device(data.x, data.edge_index, data.y, device=torch.device('cpu'))
 
         num_classes = y.max().item() + 1

@@ -47,7 +47,7 @@
 .dropdownmenuitem.has-submenu:hover::after {
     border-left-color: #555; /* Change color on hover if desired */
 }
-.dropdown-submenu {
+.submenu {
     display: none;
     position: absolute;
     left: 100%;

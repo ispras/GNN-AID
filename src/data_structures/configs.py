@@ -1,11 +1,10 @@
-import json
-import logging
-import re
-from json import JSONEncoder
 import copy
 import inspect
+import json
+import logging
+from json import JSONEncoder
 from pathlib import Path
-from typing import Union, Any, Type, Tuple, List, Self
+from typing import Union, Any, Type, Tuple, Self
 
 from aux.utils import setting_class_default_parameters, \
     OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, import_by_name, \
@@ -24,7 +23,7 @@ DATA_CHANGE_FLAG = "__data_change_flag"
 
 # Patch of json.dumps() - classes which implement to_json() can be jsonified
 def _default(
-        self,
+        self: Any,
         obj: Any
 ):
     return getattr(obj.__class__, "to_json", _default.default)(obj)
@@ -48,7 +47,9 @@ _key_path = {
 
 
 class GeneralConfig:
+    """
     # TODO Kirill rename, docs
+    """
     _mutable = False
     _TECHNICAL_KEYS = {"_class_name", "_class_import_info", "_import_path", "_config_class",
                        "_config_kwargs"}
@@ -476,33 +477,88 @@ class DatasetConfig(
     Contains a set of distinguishing characteristics to identify the dataset or family of datasets.
     Determines the path to the file with raw data in the inner storage.
     """
-    domain: str
-    group: str
-    graph: str
 
     def __init__(
             self,
-            domain: str = None,
-            group: str = None,
-            graph: str = None
+            full_name: Tuple[str, ...] = None,
     ):
         """
         """
-        super().__init__(domain=domain, group=group, graph=graph)
+        assert len(full_name) >= 2
+        super().__init__(full_name=full_name)
 
-    def full_name(
+    @property
+    def full_name(self):
+        return self["full_name"]
+
+    def path(
             self
-    ) -> tuple:
-        """ Return all fields as a tuple. """
-        return tuple([self.domain, self.group, self.graph])
+    ) -> str:
+        """ Return all fields as a path part. """
+        import os
+        return os.sep.join(self.full_name)
 
-    @staticmethod
-    def from_full_name(
-            full_name: tuple
-    ) -> object:
-        """ Build DatasetConfig from a name tuple. """
-        res = DatasetConfig(
-            domain=full_name[0], group=full_name[1], graph=full_name[2])
+
+class FeatureConfig(Config):
+    """
+    Instructions how to form features for nodes, edges and graph based on attributes and structure.
+    """
+    one_hot = "one_hot"
+    degree = "degree"
+    clustering = "clustering"
+    ten_ones = "10-ones"
+
+    def __init__(
+            self,
+            node_struct: Union[str, list, dict] = None,
+            node_attr: Union[str, list, dict] = None,
+            edge_attr: Union[str, list, dict] = None,
+            graph_attr: Union[str, list, dict] = None,
+            **kwargs
+    ):
+        super().__init__(node_struct=node_struct,
+                         node_attr=node_attr, edge_attr=edge_attr, graph_attr=graph_attr, **kwargs)
+
+    @property
+    def node_struct(
+            self
+    ) -> Union[str, list, dict]:
+        return self["node_struct"]
+
+    @property
+    def node_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["node_attr"]
+
+    @property
+    def edge_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["edge_attr"]
+
+    @property
+    def graph_attr(
+            self
+    ) -> Union[str, list, dict]:
+        return self["graph_attr"]
+
+    def __len__(
+            self
+    ) -> int:
+        """ Sum of feature elements. NOTE, it is not the length of result feature vector.
+        """
+        res = 0
+        for key in ["node_struct", "node_attr", "edge_attr", "graph_attr"]:
+            item = self[key]
+            if item is None:
+                continue
+            if isinstance(item, str):
+                res += 1
+            elif isinstance(item, list):
+                res += len(item)
+            else:
+                res += len(item)
         return res
 
 
@@ -514,14 +570,33 @@ class DatasetVarConfig(Config):
 
     def __init__(
             self,
-            features: dict = None,
-            labeling: str = None,
-            dataset_ver_ind: int = None
+            features: FeatureConfig = None,
+            labeling: Union[str, dict] = None,
+            # task: str = None,
+            dataset_ver_ind: int = None,
+            **kwargs
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling,
-            dataset_ver_ind=dataset_ver_ind)
+            features=features, labeling=labeling, dataset_ver_ind=dataset_ver_ind, **kwargs)
+
+    @property
+    def features(
+            self
+    ) -> FeatureConfig:
+        return self["features"]
+
+    @property
+    def labeling(
+            self
+    ) -> Union[str, dict]:
+        return self["labeling"]
+
+    @property
+    def dataset_ver_ind(
+            self
+    ) -> int:
+        return self["dataset_ver_ind"]
 
 
 class ModelStructureConfig(
@@ -533,177 +608,194 @@ class ModelStructureConfig(
     Access by key and iterating behave like it is list.
 
     General principle for describing one layer of the network:
-    >>> structure=[
-    >>>     {
-    >>>         'label': 'n' or 'g',
-    >>>         'layer': {
-    >>>             ...
-    >>>         },
-    >>>         'batchNorm': {
-    >>>             ...
-    >>>         },
-    >>>         'activation': {
-    >>>             ...
-    >>>         },
-    >>>         'dropout': {
-    >>>             ...
-    >>>         },
-    >>>         'connections': [
-    >>>             {
-    >>>                 ...
-    >>>             },
-    >>>             ...
-    >>>         ]
-    >>>     },
-    >>>     {
-    >>>         new block
-    >>>     },
-    >>> ]
+
+    .. code-block:: python
+
+        structure=[
+            {
+                'label': 'n' or 'g',
+                'layer': {
+                    ...
+                },
+                'batchNorm': {
+                    ...
+                },
+                'activation': {
+                    ...
+                },
+                'dropout': {
+                    ...
+                },
+                'connections': [
+                    {
+                        ...
+                    },
+                    ...
+                ]
+            },
+            {
+                new block
+            },
+        ]
 
     For connections now support variant connection between layers
     with labels: n -> n, n -> g, g -> g
     Example connections:
-    >>> 'connections': [
-    >>>             {
-    >>>                 'into_layer': 3,
-    >>>                 'connection_kwargs': {
-    >>>                     'pool': {
-    >>>                         'pool_type': 'global_add_pool',
-    >>>                     },
-    >>>                     'aggregation_type': 'cat',
-    >>>                 },
-    >>>             },
-    >>>         ],
+
+    .. code-block:: python
+
+        'connections': [
+            {
+                'into_layer': 3,
+                'connection_kwargs': {
+                    'pool': {
+                        'pool_type': 'global_add_pool',
+                    },
+                    'aggregation_type': 'cat',
+                },
+            },
+        ],
     into_layer: layer (block) index, numeration start from 0
     For aggregation_type now support only cat
     pool_type has taken from torch_geometric.nn, pooling
 
     In the case of using GINConv, it is necessary to write the internal structure nn.Sequential().
     For this case, a universal block logic is provided in the following format:
-    >>> 'layer': {
-    >>>             'layer_name': 'GINConv',
-    >>>             'layer_kwargs': None,
-    >>>             'gin_seq': [
-    >>>                 {
-    >>>                     'layer': {
-    >>>                         'layer_name': 'Linear',
-    >>>                         'layer_kwargs': {
-    >>>                             ...
-    >>>                         },
-    >>>                     },
-    >>>                     'batchNorm': {
-    >>>                         ...
-    >>>                     },
-    >>>                     'activation': {
-    >>>                         ...
-    >>>                     },
-    >>>                 },
-    >>>                 {
-    >>>                     'new block'
-    >>>                 },
-    >>>             ],
-    >>>             ...
-    >>>         },
+
+    .. code-block:: python
+
+        'layer': {
+            'layer_name': 'GINConv',
+            'layer_kwargs': None,
+            'gin_seq': [
+                {
+                    'layer': {
+                        'layer_name': 'Linear',
+                        'layer_kwargs': {
+                            ...
+                        },
+                    },
+                    'batchNorm': {
+                        ...
+                    },
+                    'activation': {
+                        ...
+                    },
+                },
+                {
+                    'new block'
+                },
+            ],
+            ...
+        },
     Examples:
     Example of conv layer:
-    >>> {
-    >>>     'label': 'n',
-    >>>     'layer': {
-    >>>         'layer_name': 'GATConv',
-    >>>         'layer_kwargs': {
-    >>>             'in_channels': dataset.num_node_features,
-    >>>             'out_channels': 16,
-    >>>             'heads': 3,
-    >>>         },
-    >>>     },
-    >>>     'batchNorm': {
-    >>>         'batchNorm_name': 'BatchNorm1d',
-    >>>         'batchNorm_kwargs': {
-    >>>             'num_features': 48,
-    >>>             'eps': 1e-05,
-    >>>         }
-    >>>     },
-    >>>     'activation': {
-    >>>         'activation_name': 'ReLU',
-    >>>         'activation_kwargs': None,
-    >>>     },
-    >>>     'dropout': {
-    >>>         'dropout_name': 'Dropout',
-    >>>         'dropout_kwargs': {
-    >>>             'p': 0.5,
-    >>>         }
-    >>>     },
-    >>> }
-    Example of gin layer:
+
     .. code-block:: python
-    >>> {
-    >>>     'label': 'n',
-    >>>     'layer': {
-    >>>         'layer_name': 'GINConv',
-    >>>         'layer_kwargs': None,
-    >>>         'gin_seq': [
-    >>>             {
-    >>>                 'layer': {
-    >>>                     'layer_name': 'Linear',
-    >>>                     'layer_kwargs': {
-    >>>                         'in_features': dataset.num_node_features,
-    >>>                         'out_features': 16,
-    >>>                     },
-    >>>                 },
-    >>>                 'batchNorm': {
-    >>>                     'batchNorm_name': 'BatchNorm1d',
-    >>>                     'batchNorm_kwargs': {
-    >>>                         'num_features': 16,
-    >>>                         'eps': 1e-05,
-    >>>                     }
-    >>>                 },
-    >>>                 'activation': {
-    >>>                     'activation_name': 'ReLU',
-    >>>                     'activation_kwargs': None,
-    >>>                 },
-    >>>             },
-    >>>             {
-    >>>                 'layer': {
-    >>>                     'layer_name': 'Linear',
-    >>>                     'layer_kwargs': {
-    >>>                         'in_features': 16,
-    >>>                         'out_features': 16,
-    >>>                     },
-    >>>                 },
-    >>>                 'activation': {
-    >>>                     'activation_name': 'ReLU',
-    >>>                     'activation_kwargs': None,
-    >>>                 },
-    >>>             },
-    >>>         ],
-    >>>     },
-    >>>     'connections': [
-    >>>         {
-    >>>             'into_layer': 3,
-    >>>             'connection_kwargs': {
-    >>>                 'pool': {
-    >>>                     'pool_type': 'global_add_pool',
-    >>>                 },
-    >>>                 'aggregation_type': 'cat',
-    >>>             },
-    >>>         },
-    >>>     ],
-    >>> }
+
+        {
+            'label': 'n',
+            'layer': {
+                'layer_name': 'GATConv',
+                'layer_kwargs': {
+                    'in_channels': dataset.num_node_features,
+                    'out_channels': 16,
+                    'heads': 3,
+                },
+            },
+            'batchNorm': {
+                'batchNorm_name': 'BatchNorm1d',
+                'batchNorm_kwargs': {
+                    'num_features': 48,
+                    'eps': 1e-05,
+                }
+            },
+            'activation': {
+                'activation_name': 'ReLU',
+                'activation_kwargs': None,
+            },
+            'dropout': {
+                'dropout_name': 'Dropout',
+                'dropout_kwargs': {
+                    'p': 0.5,
+                }
+            },
+        }
+    Example of gin layer:
+
+    .. code-block:: python
+
+        {
+            'label': 'n',
+            'layer': {
+                'layer_name': 'GINConv',
+                'layer_kwargs': None,
+                'gin_seq': [
+                    {
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': dataset.num_node_features,
+                                'out_features': 16,
+                            },
+                        },
+                        'batchNorm': {
+                            'batchNorm_name': 'BatchNorm1d',
+                            'batchNorm_kwargs': {
+                                'num_features': 16,
+                                'eps': 1e-05,
+                            }
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+                    {
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': 16,
+                                'out_features': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ],
+            },
+            'connections': [
+                {
+                    'into_layer': 3,
+                    'connection_kwargs': {
+                        'pool': {
+                            'pool_type': 'global_add_pool',
+                        },
+                        'aggregation_type': 'cat',
+                    },
+                },
+            ],
+        }
     Example of linear layer:
-    >>> {
-    >>>     'label': 'n',
-    >>>     'layer': {
-    >>>         'layer_name': 'Linear',
-    >>>         'layer_kwargs': {
-    >>>             'in_features': 48,
-    >>>             'out_features': dataset.num_classes,
-    >>>         },
-    >>>     },
-    >>>     'activation': {
-    >>>         'activation_name': 'LogSoftmax',
-    >>>         'activation_kwargs': None,
-    >>>     },
-    >>> }
+
+    .. code-block:: python
+
+        {
+            'label': 'n',
+            'layer': {
+                'layer_name': 'Linear',
+                'layer_kwargs': {
+                    'in_features': 48,
+                    'out_features': dataset.num_classes,
+                },
+            },
+            'activation': {
+                'activation_name': 'LogSoftmax',
+                'activation_kwargs': None,
+            },
+        }
     """
     layers: Any
 

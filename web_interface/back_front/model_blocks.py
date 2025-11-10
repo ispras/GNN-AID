@@ -9,11 +9,12 @@ from torch_geometric.data import Dataset
 from data_structures.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
 from aux.data_info import UserCodeInfo, DataInfo
 from aux.declaration import Declare
-from data_structures.prefix_storage import PrefixStorage
+from data_structures.prefix_storage import FixedKeysPrefixStorage
 from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
     TECHNICAL_PARAMETER_KEY, \
-    IMPORT_INFO_KEY
-from base.datasets_processing import GeneralDataset, VisiblePart
+    IMPORT_INFO_KEY, DATASETS_DIR
+from datasets.gen_dataset import GeneralDataset
+from datasets.visible_part import VisiblePart
 from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
 from models_builder.gnn_models import ModelManagerConfig, GNNModelManager, Metric
 from web_interface.back_front.block import Block, WrapperBlock
@@ -71,6 +72,7 @@ class ModelLoadBlock(Block):
     def _finalize(
             self
     ) -> bool:
+        # fixme
         if set(get_config_keys("models")) != set(self._config.keys()):
             return False
 
@@ -82,7 +84,7 @@ class ModelLoadBlock(Block):
     ) -> None:
         from models_builder.gnn_models import GNNModelManager
         self.model_manager, train_test_split_path = GNNModelManager.from_model_path(
-            model_path=self.model_path, dataset_path=self.gen_dataset.results_dir)
+            model_path=self.model_path, dataset_path=self.gen_dataset.prepared_dir)
         self._load_train_test_mask(train_test_split_path / 'train_test_split')
 
         self._object = self.model_manager
@@ -100,13 +102,14 @@ class ModelLoadBlock(Block):
             self.gen_dataset.dataset_config,
             self.gen_dataset.dataset_var_config
         )
-        path = os.path.relpath(path, GRAPHS_DIR)
+        path = os.path.relpath(path, DATASETS_DIR)
         keys_list, full_keys_list, dir_structure, _ = DataInfo.take_keys_etc_by_prefix(
-            prefix=("data_root", "data_prepared")
+            prefix=("datasets",)
         )
         values_info = DataInfo.values_list_by_path_and_keys(
             path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
-        ps = index.filter(dict(zip(keys_list, values_info)))
+        ps = index.filter(values_info)
+        # ps = index.filter(dict(zip(keys_list, values_info)))
         return [ps.to_json(), json_dumps(info)]
 
     def _load_train_test_mask(
@@ -205,7 +208,7 @@ class ModelCustomBlock(Block):
         """ Get all available models with respect to current dataset
         """
         user_models_obj_dict_info = UserCodeInfo.user_models_list_ref()
-        ps = PrefixStorage(["class", "model"])
+        ps = FixedKeysPrefixStorage(["class", "model"])
         for key, content in user_models_obj_dict_info.items():
             for value in content["obj_names"]:
                 ps.add([key, value])
@@ -240,7 +243,7 @@ class ModelManagerBlock(Block):
 
         mm_set = self.gnn.suitable_model_managers()
         # mm_set.add("_DummyModelManager")
-        if len(mm_set) == 0:  # FIXME is it ik for custom model?
+        if len(mm_set) == 0:  # FIXME is it ok for custom model?
             mm_set.add("FrameworkGNNModelManager")
         mm_info = model_managers_info_by_names_list(mm_set)
         return mm_info
@@ -272,7 +275,7 @@ class ModelManagerBlock(Block):
         self._object = mm_class(
             gnn=self.gnn,
             manager_config=self.model_manager_config,
-            dataset_path=self.gen_dataset.results_dir,
+            dataset_path=self.gen_dataset.prepared_dir,
             modification=ModelModificationConfig(
                 model_ver_ind=0,
                 # FIXME Kirill front attack
@@ -290,20 +293,19 @@ class ModelManagerBlock(Block):
     def get_satellites(
             self,
             part: dict = None
-    ) -> dict:
-        """ Resend model dependent satellites data: train-test mask, embeds, preds
+    ) -> str:
+        """ Get model dependent satellites data: train-test mask, embeds, preds
         """
         visible_part = self.gen_dataset.visible_part if part is None else\
             VisiblePart(self.gen_dataset, **part)
 
         res = {}
         res.update(send_train_test_mask(self.gen_dataset, None, visible_part))
-        # TODO duplicste code
         if self._object.stats_data is not None:
             stats_data = {k: visible_part.filter(v)
                           for k, v in self._object.stats_data.items()}
             res.update(stats_data)
-        return res
+        return json.dumps(res)
 
 
 def send_train_test_mask(
@@ -351,6 +353,7 @@ class ModelTrainerBlock(Block):
         self.gen_dataset = gen_dataset
         self.model_manager = gmm
 
+        # fixme misha do we need it?
         return self.model_manager.get_model_data()
 
     def _finalize(

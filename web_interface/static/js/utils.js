@@ -392,6 +392,15 @@ class Svg {
         item.setAttribute('display', show ? "inline" : "none")
         return item
     }
+
+    static polygon(x, y, r, n, fill=null, stroke=null, show=true) {
+        let item = document.createElementNS("http://www.w3.org/2000/svg", "polygon")
+        item.setAttribute('points', `${x},${y}`)
+        if (fill) item.setAttribute('fill', fill)
+        if (stroke) item.setAttribute('stroke', stroke)
+        item.setAttribute('display', show ? "inline" : "none")
+        return item
+    }
 }
 
 function sleep(ms) {
@@ -513,4 +522,27 @@ function addValueChecker($elem, type, defaultValue, min=null, max=null, on="chan
         if (max !== null && this.value > max)
             this.value = max
     }, true) // true enables capture phase to ensure this event handler runs before others
+}
+
+// [0, 3, 7] 0->0, 1-> 0, 3->1,4->1, 10->2
+function findMaxIndex(arr, x) {
+    // Handle edge cases
+    if (arr.length === 0) return -1
+    if (x < arr[0]) return -1
+    if (x >= arr[arr.length - 1]) return arr.length - 1
+
+    let left = 0
+    let right = arr.length - 1
+
+    while (left <= right) {
+        let mid = left + right >> 1
+        if (arr[mid] <= x) {
+            if (mid === arr.length - 1 || arr[mid + 1] > x)
+                return mid
+            left = mid + 1
+        }
+        else
+            right = mid - 1
+    }
+    return -1
 }
