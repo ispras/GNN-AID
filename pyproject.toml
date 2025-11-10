@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "GNN-AID"
+authors = [
+    {name = "Mikhail Drobyshevskiy", email = "drobyshevsky@ispras.ru"},
+    {name = "Kirill Lukyanov", email = "lukyanov.k@ispras.ru"}, ]
+version = "0.0.1"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

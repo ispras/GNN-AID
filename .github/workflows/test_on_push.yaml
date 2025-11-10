@@ -1,0 +1,46 @@
+name: CI
+
+# Controls when the action will run.
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - develop
+      - main
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+    - name: Upgrade pip
+      run: |
+        python -m pip install --upgrade pip
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
+    - name: Install all dependencies
+      run: |
+        pip install -r requirements1.txt -r requirements2.txt
+        PIP_NO_BUILD_ISOLATION=false pip install -r requirements3.txt
+    - name: Set PYTHONPATH
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+        export PYTHONPATH=$GITHUB_ENV
+    - name: Run tests
+      run: |
+        python3 -m unittest -v -f tests/attacks_test.*
+        python3 -m unittest -v -f tests/defense_test.*
+        python3 -m unittest -v -f tests/explainers_test.*

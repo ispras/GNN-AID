@@ -1,26 +1,32 @@
-import hashlib
 import importlib.util
 import json
-import random
 from math import ceil
+from pathlib import Path
 from types import FunctionType
-import numpy as np
-import torch
-import sklearn, sklearn.metrics
-from torch.nn.utils import clip_grad_norm
-from torch import tensor
-import torch.nn.functional as F
-from torch.cuda import is_available
-from torch_geometric.data import DataLoader
+from typing import Callable, List, Union, Type, Iterable, cast
 
-from aux.configs import ModelManagerConfig, ModelModificationConfig, ModelConfig, CONFIG_CLASS_NAME, ConfigPattern, \
-    CONFIG_OBJ
+import sklearn.metrics
+import torch
+from torch import tensor
+from torch.cuda import is_available
+from torch.nn.utils import clip_grad_norm
+from torch_geometric.loader import DataLoader, NeighborLoader, LinkNeighborLoader
+
 from aux.data_info import UserCodeInfo
-from aux.utils import import_by_name, FRAMEWORK_PARAMETERS_PATH, model_managers_info_by_names_list, hash_data_sha256, \
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from aux.declaration import Declare
-from explainers.explainer import ProgressBar
-from explainers.ProtGNN.MCTS import mcts_args
+from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+    MI_ATTACK_PARAMETERS_PATH, \
+    POISON_DEFENSE_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH, \
+    model_managers_info_by_names_list, hash_data_sha256, \
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
+    move_to_same_device
+from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
+    EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
+    MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
+    CONFIG_CLASS_NAME
+from data_structures.graph_modification_artifacts import GraphModificationArtifact
+from datasets.gen_dataset import GeneralDataset
 from web_interface.back_front.utils import SocketConnect
 
 
@@ -35,7 +41,10 @@ class Metric:
     }
 
     @staticmethod
-    def add_custom(name, compute_function):
+    def add_custom(
+            name: str,
+            compute_function: Callable
+    ) -> None:
         """
         Register a custom metric.
         Example for accuracy:
@@ -51,7 +60,12 @@ class Metric:
             raise NameError(f"Metric '{name}' already registered, use another name")
         Metric.available_metrics[name] = compute_function
 
-    def __init__(self, name, mask, **kwargs):
+    def __init__(
+            self,
+            name: str,
+            mask: Union[str, List[bool], torch.Tensor],
+            **kwargs
+    ):
         """
         :param name: name to refer to this metric
         :param mask: 'train', 'val', 'test', or a bool valued list
@@ -61,48 +75,68 @@ class Metric:
         self.mask = mask
         self.kwargs = kwargs
 
-    def compute(self, y_true, y_pred):
+    def compute(
+            self,
+            y_true,
+            y_pred
+    ):
         if self.name in Metric.available_metrics:
+            if y_true.device != "cpu":
+                y_true = y_true.cpu()
+            if y_pred.device != "cpu":
+                y_pred = y_pred.cpu()
             return Metric.available_metrics[self.name](y_true, y_pred, **self.kwargs)
-
         raise NotImplementedError()
+
+    @staticmethod
+    def create_mask_by_target_list(
+            y_true,
+            target_list: List = None
+    ) -> torch.Tensor:
+        if target_list is None:
+            mask = [True] * len(y_true)
+        else:
+            mask = [False] * len(y_true)
+        for i in target_list:
+            if 0 <= i < len(mask):
+                mask[i] = True
+        return tensor(mask)
 
 
 class GNNModelManager:
     """ class of basic functions over models:
-    training, one-step training, full training, evaluation, save and load principle
+    training, evaluation, save and load principle
     """
-    def __init__(self,
-                 manager_config = None,
-                 modification: ModelModificationConfig = None):
+
+    def __init__(
+            self,
+            manager_config: ModelManagerConfig = None,
+            modification: ModelModificationConfig = None
+    ):
         """
-        :param manager_config: socket to use for sending data to frontend
-        :param modification: socket to use for sending data to frontend
+        :param manager_config: ?
+        :param modification: ?
         """
         if manager_config is None:
             # raise RuntimeError("model manager config must be specified")
             manager_config = ConfigPattern(
-                        _config_class="ModelManagerConfig",
-                        _config_kwargs={},
-                    )
+                _config_class="ModelManagerConfig",
+                _config_kwargs={},
+            )
         elif isinstance(manager_config, ModelManagerConfig):
             manager_config = ConfigPattern(
                 _config_class="ModelManagerConfig",
-                _config_kwargs=manager_config.to_saveable_dict(),
+                _config_kwargs=manager_config.to_savable_dict(),
             )
         # TODO Kirill, write raise Exception
         # else:
         #     raise Exception()
 
-        # if modification is None:
-        #     modification = ModelModificationConfig()
-
         if modification is None:
-            # raise RuntimeError("model manager config must be specified")
             modification = ConfigPattern(
-                        _config_class="ModelModificationConfig",
-                        _config_kwargs={},
-                    )
+                _config_class="ModelModificationConfig",
+                _config_kwargs={},
+            )
         elif isinstance(modification, ModelModificationConfig):
             modification = ConfigPattern(
                 _config_class="ModelModificationConfig",
@@ -117,33 +151,86 @@ class GNNModelManager:
 
         # QUE Kirill do we need to store it? maybe pass when need to
         self.dataset_path = None
+        self.mi_defender = None
+        self.mi_defense_name = None
+        self.mi_defense_config = None
+        self.evasion_defender = None
+        self.evasion_defense_name = None
+        self.evasion_defense_config = None
+        self.poison_defense_name = None
+        self.poison_defense_config = None
+        self.poison_defender = None
+        self.mi_attack_config = None
+        self.mi_attacker = None
+        self.mi_attack_name = None
+        self.evasion_attack_config = None
+        self.evasion_attacker = None
+        self.evasion_attack_name = None
+        self.poison_attack_name = None
+        self.poison_attacker = None
+        self.poison_attack_config = None
+
+        self.poison_attack_flag = False
+        self.evasion_attack_flag = False
+        self.mi_attack_flag = False
+        self.poison_defense_flag = False
+        self.evasion_defense_flag = False
+        self.mi_defense_flag = False
 
         self.gnn = None
-        # We do not want store socket because it is not picklable for a subprocess
-        self.socket = None
-        self.stop_signal = False
+        self.socket = None  # Websocket for sending info to frontend, we avoid to store it since it is not pickleable
         self.stats_data = None  # Stores some stats to be sent to frontend
 
-    def train_model(self, **kwargs):
+        self.set_poison_defender()
+        self.set_poison_attacker()
+        self.set_mi_attacker()
+        self.set_mi_defender()
+        self.set_evasion_attacker()
+        self.set_evasion_defender()
+
+    def train_model(
+            self,
+            **kwargs
+    ):
         pass
 
-    def train_1_step(self, gen_dataset):
-        """ Perform 1 step of model training. Can be called unlimited number of times.
+    def train_1_step(
+            self,
+            gen_dataset: GeneralDataset
+    ):
+        """ Perform 1 step of model training.
         """
         # raise NotImplementedError()
         pass
 
-    def train_full(self, gen_dataset, steps=None, **kwargs):
-        """ Perform full cycle of model training. Can be called only once.
+    def train_complete(
+            self,
+            gen_dataset: GeneralDataset,
+            steps: int = None,
+            **kwargs
+    ) -> None:
+        """
         """
         # raise NotImplementedError()
         pass
 
-    def evaluate_model(self, **kwargs):
+    def train_on_batch(
+            self,
+            batch,
+            **kwargs
+    ):
         pass
 
-    def get_name(self):
-        manager_name = self.manager_config.to_saveable_dict()
+    def evaluate_model(
+            self,
+            **kwargs
+    ):
+        pass
+
+    def get_name(
+            self
+    ) -> str:
+        manager_name = self.manager_config.to_savable_dict()
         # FIXME Kirill, make ModelManagerConfig and remove manager_name[CONFIG_CLASS_NAME]
         manager_name[CONFIG_CLASS_NAME] = self.__class__.__name__
         # for key, value in kwargs.items():
@@ -152,28 +239,42 @@ class GNNModelManager:
         json_str = json.dumps(manager_name, indent=2)
         return json_str
 
-    def load_model(self, path=None, **kwargs):
+    def load_model(
+            self,
+            path: Union[str, Path] = None,
+            **kwargs
+    ) -> Type:
         """
         Load model from torch save format
         """
         raise NotImplementedError()
 
-    def save_model(self, path=None):
+    def save_model(
+            self,
+            path: Union[str, Path] = None
+    ) -> None:
         """
         Save the model in torch format
 
         :param path: path to save the model. By default,
-        the path is compiled based on the global class variables
+         the path is compiled based on the global class variables
         """
         raise NotImplementedError()
 
-    def model_path_info(self):
+    def model_path_info(
+            self
+    ) -> Union[str, Path]:
         path, _ = Declare.models_path(self)
         return path
 
-    def load_model_executor(self, path=None, **kwargs):
+    def load_model_executor(
+            self,
+            path: Union[str, Path, None] = None,
+            **kwargs
+    ) -> Union[str, Path]:
         """
         Load executor. Generates the download model path if no other path is specified.
+
         :param path: path to load the model. By default, the path is compiled based on the global
          class variables
         """
@@ -185,9 +286,14 @@ class GNNModelManager:
                 GNNModelManager_hash=gnn_mm_name_hash,
                 model_ver_ind=kwargs.get('model_ver_ind') if 'model_ver_ind' in kwargs else
                 self.modification.model_ver_ind,
-                model_attack_type=self.modification.model_attack_type,
                 epochs=self.modification.epochs,
-                gnn_name=self.gnn.get_hash()
+                gnn_name=self.gnn.get_hash(),
+                mi_defense_hash=self.mi_defense_config.hash_for_config(),
+                evasion_defense_hash=self.evasion_defense_config.hash_for_config(),
+                poison_defense_hash=self.poison_defense_config.hash_for_config(),
+                mi_attack_hash=self.mi_attack_config.hash_for_config(),
+                evasion_attack_hash=self.evasion_attack_config.hash_for_config(),
+                poison_attack_hash=self.poison_attack_config.hash_for_config(),
             )
             path = model_dir_path / 'model'
         else:
@@ -198,7 +304,9 @@ class GNNModelManager:
         self.gnn.eval()
         return model_dir_path
 
-    def get_hash(self):
+    def get_hash(
+            self
+    ) -> str:
         """
         calculates the hash on behalf of the model manager required for storage. The sha256
         algorithm is used.
@@ -208,35 +316,346 @@ class GNNModelManager:
         gnn_MM_name_hash = hash_data_sha256(json_object.encode('utf-8'))
         return gnn_MM_name_hash
 
-    def save_model_executor(self, path=None, gnn_architecture_path=None):
+    def save_model_executor(
+            self,
+            path: Union[str, Path, None] = None,
+            files_paths: List[Union[str, Path]] = None
+    ) -> Path:
         """
         Save executor, generates paths and prepares all information about the model
         and its parameters for saving
 
-        :param gnn_architecture_path: path to save the architecture of the model,
-        by default it forms the path itself.
         :param path: path to save the model. By default,
-        the path is compiled based on the global class variables
+         the path is compiled based on the global class variables
+        :param files_paths:
         """
         if path is None:
             dir_path, files_paths = Declare.models_path(self)
             dir_path.mkdir(exist_ok=True, parents=True)
             path = dir_path / 'model'
-            gnn_name_file = files_paths[0]
-            gnn_mm_kwargs_file = files_paths[1]
         else:
-            gnn_name_file = gnn_architecture_path / f"gnn={self.gnn.get_hash()}.json"
-            gnn_mm_kwargs_file = gnn_architecture_path.parent / f"gnn_model_manager={self.get_hash()}.json"
+            assert files_paths is not None
+        assert len(files_paths) == 10
+        gnn_name_file = files_paths[0]
+        gnn_mm_kwargs_file = files_paths[1]
+
+        poison_attack_kwargs_file = files_paths[2]
+        poison_attack_diff_file = files_paths[3]
+        poison_defense_kwargs_file = files_paths[4]
+        poison_defense_diff_file = files_paths[5]
+        mi_defense_kwargs_file = files_paths[6]
+        evasion_defense_kwargs_file = files_paths[7]
+        evasion_attack_kwargs_file = files_paths[8]
+        # evasion_attack_diff_file = files_paths[9]
+        mi_attack_kwargs_file = files_paths[9]
         self.save_model(path)
 
         with open(gnn_name_file, "w") as f:
             f.write(self.gnn.get_name(obj_name_flag=True))
         with open(gnn_mm_kwargs_file, "w") as f:
             f.write(self.get_name())
+        with open(poison_attack_kwargs_file, "w") as f:
+            f.write(self.poison_attack_config.json_for_config())
+        if self.poison_attack_flag and self.poison_attacker.attack_diff is not None:
+            with open(poison_attack_diff_file, 'w') as file:
+                json.dump(self.poison_attacker.attack_diff.to_json(), file, indent=2)
+        with open(poison_defense_kwargs_file, "w") as f:
+            f.write(self.poison_defense_config.json_for_config())
+        if self.poison_defense_flag and self.poison_defender.defense_diff is not None:
+            with open(poison_defense_diff_file, 'w') as file:
+                json.dump(self.poison_defender.defense_diff.to_json(), file, indent=2)
+        with open(mi_defense_kwargs_file, "w") as f:
+            f.write(self.mi_defense_config.json_for_config())
+        with open(evasion_defense_kwargs_file, "w") as f:
+            f.write(self.evasion_defense_config.json_for_config())
+        with open(evasion_attack_kwargs_file, "w") as f:
+            f.write(self.evasion_attack_config.json_for_config())
+        # if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
+        #     with open(evasion_attack_diff_file, 'w') as file:
+        #         json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
+        with open(mi_attack_kwargs_file, "w") as f:
+            f.write(self.mi_attack_config.json_for_config())
         return path.parent
 
+    def set_poison_attacker(
+            self,
+            poison_attack_config: Union[ConfigPattern, PoisonAttackConfig] = None,
+            poison_attack_name: str = None
+    ) -> None:
+        if poison_attack_config is None:
+            poison_attack_config = ConfigPattern(
+                _class_name=poison_attack_name or "EmptyPoisonAttacker",
+                _import_path=POISON_ATTACK_PARAMETERS_PATH,
+                _config_class="PoisonAttackConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(poison_attack_config, PoisonAttackConfig):
+            if poison_attack_name is None:
+                raise Exception("if poison_attack_config is None, poison_attack_name must be defined")
+            poison_attack_config = ConfigPattern(
+                _class_name=poison_attack_name,
+                _import_path=POISON_ATTACK_PARAMETERS_PATH,
+                _config_class="PoisonAttackConfig",
+                _config_kwargs=poison_attack_config.to_savable_dict(),
+            )
+        self.poison_attack_config = poison_attack_config
+        if poison_attack_name is None:
+            poison_attack_name = self.poison_attack_config._class_name
+        elif poison_attack_name != self.poison_attack_config._class_name:
+            raise Exception(
+                f"poison_attack_name and self.poison_attack_config._class_name should be equal, "
+                f"but now poison_attack_name is {poison_attack_name}, "
+                f"self.poison_attack_config._class_name is {self.poison_attack_config._class_name}"
+            )
+        self.poison_attack_name = poison_attack_name
+        poison_attack_kwargs = getattr(self.poison_attack_config, CONFIG_OBJ).to_dict()
+
+        # name_klass = {e.name: e for e in PoisonAttacker.__subclasses__()}
+        from attacks.poison_attacks import PoisonAttacker
+        name_klass = {e.name: e for e in all_subclasses(PoisonAttacker)}
+
+        klass = name_klass[self.poison_attack_name]
+        self.poison_attacker = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **poison_attack_kwargs
+        )
+        self.poison_attack_flag = True
+
+    def set_evasion_attacker(
+            self,
+            evasion_attack_config: Union[ConfigPattern, EvasionAttackConfig] = None,
+            evasion_attack_name: str = None
+    ) -> None:
+        if evasion_attack_config is None:
+            evasion_attack_config = ConfigPattern(
+                _class_name=evasion_attack_name or "EmptyEvasionAttacker",
+                _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+                _config_class="EvasionAttackConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(evasion_attack_config, EvasionAttackConfig):
+            if evasion_attack_name is None:
+                raise Exception("if evasion_attack_config is None, evasion_attack_name must be defined")
+            evasion_attack_config = ConfigPattern(
+                _class_name=evasion_attack_name,
+                _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+                _config_class="EvasionAttackConfig",
+                _config_kwargs=evasion_attack_config.to_savable_dict(),
+            )
+        self.evasion_attack_config = evasion_attack_config
+        if evasion_attack_name is None:
+            evasion_attack_name = self.evasion_attack_config._class_name
+        elif evasion_attack_name != self.evasion_attack_config._class_name:
+            raise Exception(
+                f"evasion_attack_name and self.evasion_attack_config._class_name should be equal, "
+                f"but now evasion_attack_name is {evasion_attack_name}, "
+                f"self.evasion_attack_config._class_name is {self.evasion_attack_config._class_name}"
+            )
+        self.evasion_attack_name = evasion_attack_name
+        evasion_attack_kwargs = getattr(self.evasion_attack_config, CONFIG_OBJ).to_dict()
+
+        from attacks.evasion_attacks import EvasionAttacker
+        name_klass = {e.name: e for e in EvasionAttacker.__subclasses__()}
+        klass = name_klass[self.evasion_attack_name]
+        self.evasion_attacker = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **evasion_attack_kwargs
+        )
+        self.evasion_attack_flag = True
+
+    def set_mi_attacker(
+            self,
+            mi_attack_config: Union[ConfigPattern, MIAttackConfig] = None,
+            mi_attack_name: str = None
+    ) -> None:
+        if mi_attack_config is None:
+            mi_attack_config = ConfigPattern(
+                _class_name=mi_attack_name or "EmptyMIAttacker",
+                _import_path=MI_ATTACK_PARAMETERS_PATH,
+                _config_class="MIAttackConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(mi_attack_config, MIAttackConfig):
+            if mi_attack_name is None:
+                raise Exception("if mi_attack_config is None, mi_attack_name must be defined")
+            mi_attack_config = ConfigPattern(
+                _class_name=mi_attack_name,
+                _import_path=MI_ATTACK_PARAMETERS_PATH,
+                _config_class="MIAttackConfig",
+                _config_kwargs=mi_attack_config.to_savable_dict(),
+            )
+        self.mi_attack_config = mi_attack_config
+        if mi_attack_name is None:
+            mi_attack_name = self.mi_attack_config._class_name
+        elif mi_attack_name != self.mi_attack_config._class_name:
+            raise Exception(
+                f"mi_attack_name and self.mi_attack_config._class_name should be equal, "
+                f"but now mi_attack_name is {mi_attack_name}, "
+                f"self.mi_attack_config._class_name is {self.mi_attack_config._class_name}"
+            )
+        self.mi_attack_name = mi_attack_name
+        mi_attack_kwargs = getattr(self.mi_attack_config, CONFIG_OBJ).to_dict()
+
+        from attacks.mi_attacks import MIAttacker
+        name_klass = {e.name: e for e in MIAttacker.__subclasses__()}
+        klass = name_klass[self.mi_attack_name]
+        self.mi_attacker = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **mi_attack_kwargs
+        )
+        self.mi_attack_flag = True
+
+    def set_poison_defender(
+            self,
+            poison_defense_config: Union[ConfigPattern, PoisonDefenseConfig] = None,
+            poison_defense_name: str = None
+    ) -> None:
+        if poison_defense_config is None:
+            poison_defense_config = ConfigPattern(
+                _class_name=poison_defense_name or "EmptyPoisonDefender",
+                _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+                _config_class="PoisonDefenseConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(poison_defense_config, PoisonDefenseConfig):
+            if poison_defense_name is None:
+                raise Exception("if poison_defense_config is None, poison_defense_name must be defined")
+            poison_defense_config = ConfigPattern(
+                _class_name=poison_defense_name,
+                _import_path=POISON_DEFENSE_PARAMETERS_PATH,
+                _config_class="PoisonDefenseConfig",
+                _config_kwargs=poison_defense_config.to_savable_dict(),
+            )
+        self.poison_defense_config = poison_defense_config
+        if poison_defense_name is None:
+            poison_defense_name = self.poison_defense_config._class_name
+        elif poison_defense_name != self.poison_defense_config._class_name:
+            raise Exception(
+                f"poison_defense_name and self.poison_defense_config._class_name should be equal, "
+                f"but now poison_defense_name is {poison_defense_name}, "
+                f"self.poison_defense_config._class_name is {self.poison_defense_config._class_name}"
+            )
+        self.poison_defense_name = poison_defense_name
+        poison_defense_kwargs = getattr(self.poison_defense_config, CONFIG_OBJ).to_dict()
+
+        from defenses.poison_defense import PoisonDefender
+        name_klass = {e.name: e for e in all_subclasses(PoisonDefender)}
+        klass = name_klass[self.poison_defense_name]
+        self.poison_defender = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **poison_defense_kwargs
+        )
+        self.poison_defense_flag = True
+
+    def set_evasion_defender(
+            self,
+            evasion_defense_config: Union[ConfigPattern, EvasionDefenseConfig] = None,
+            evasion_defense_name: str = None
+    ) -> None:
+        if evasion_defense_config is None:
+            evasion_defense_config = ConfigPattern(
+                _class_name=evasion_defense_name or "EmptyEvasionDefender",
+                _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+                _config_class="EvasionDefenseConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(evasion_defense_config, EvasionDefenseConfig):
+            if evasion_defense_name is None:
+                raise Exception("if evasion_defense_config is None, evasion_defense_name must be defined")
+            evasion_defense_config = ConfigPattern(
+                _class_name=evasion_defense_name,
+                _import_path=EVASION_DEFENSE_PARAMETERS_PATH,
+                _config_class="EvasionDefenseConfig",
+                _config_kwargs=evasion_defense_config.to_savable_dict(),
+            )
+        self.evasion_defense_config = evasion_defense_config
+        if evasion_defense_name is None:
+            evasion_defense_name = self.evasion_defense_config._class_name
+        elif evasion_defense_name != self.evasion_defense_config._class_name:
+            raise Exception(
+                f"evasion_defense_name and self.evasion_defense_config._class_name should be equal, "
+                f"but now evasion_defense_name is {evasion_defense_name}, "
+                f"self.evasion_defense_config._class_name is {self.evasion_defense_config._class_name}"
+            )
+        self.evasion_defense_name = evasion_defense_name
+        evasion_defense_kwargs = getattr(self.evasion_defense_config, CONFIG_OBJ).to_dict()
+
+        from defenses.evasion_defense import EvasionDefender
+        name_klass = {e.name: e for e in EvasionDefender.__subclasses__()}
+        klass = name_klass[self.evasion_defense_name]
+        self.evasion_defender = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **evasion_defense_kwargs
+        )
+        self.evasion_defense_flag = True
+
+    def set_mi_defender(
+            self,
+            mi_defense_config: Union[ConfigPattern, MIDefenseConfig] = None,
+            mi_defense_name: str = None
+    ) -> None:
+        """
+
+        """
+        if mi_defense_config is None:
+            mi_defense_config = ConfigPattern(
+                _class_name=mi_defense_name or "EmptyMIDefender",
+                _import_path=MI_DEFENSE_PARAMETERS_PATH,
+                _config_class="MIDefenseConfig",
+                _config_kwargs={}
+            )
+        elif isinstance(mi_defense_config, MIDefenseConfig):
+            if mi_defense_name is None:
+                raise Exception("if mi_defense_config is None, mi_defense_name must be defined")
+            mi_defense_config = ConfigPattern(
+                _class_name=mi_defense_name,
+                _import_path=MI_DEFENSE_PARAMETERS_PATH,
+                _config_class="MIDefenseConfig",
+                _config_kwargs=mi_defense_config.to_savable_dict(),
+            )
+        self.mi_defense_config = mi_defense_config
+        if mi_defense_name is None:
+            mi_defense_name = self.mi_defense_config._class_name
+        elif mi_defense_name != self.mi_defense_config._class_name:
+            raise Exception(
+                f"mi_defense_name and self.mi_defense_config._class_name should be equal, "
+                f"but now mi_defense_name is {mi_defense_name}, "
+                f"self.mi_defense_config._class_name is {self.mi_defense_config._class_name}"
+            )
+        self.mi_defense_name = mi_defense_name
+        mi_defense_kwargs = getattr(self.mi_defense_config, CONFIG_OBJ).to_dict()
+
+        from defenses.mi_defense import MIDefender
+        name_klass = {e.name: e for e in MIDefender.__subclasses__()}
+        klass = name_klass[self.mi_defense_name]
+        self.mi_defender = klass(
+            # device=self.device,
+            # device=device("cpu"),
+            **mi_defense_kwargs
+        )
+        self.mi_defense_flag = True
+
     @staticmethod
-    def from_model_path(model_path, dataset_path, **kwargs):
+    def available_attacker(
+    ):
+        pass
+
+    @staticmethod
+    def available_defender(
+    ):
+        pass
+
+    @staticmethod
+    def from_model_path(
+            model_path: dict,
+            dataset_path: Union[str, Path],
+            **kwargs
+    ) -> [Type, Path]:
         """
         Use information about model and model manager take gnn model,
         create gnn model manager object and load weights to the save model
@@ -251,8 +670,13 @@ class GNNModelManager:
             GNNModelManager_hash=str(model_path['gnn_model_manager']),
             epochs=int(model_path['epochs']) if model_path['epochs'] != 'None' else None,
             model_ver_ind=int(model_path['model_ver_ind']),
-            model_attack_type=model_path['model_attack_type'],
             gnn_name=model_path['gnn'],
+            poison_attack_hash=model_path['poison_attacker'],
+            poison_defense_hash=model_path['poison_defender'],
+            evasion_defense_hash=model_path['evasion_defender'],
+            mi_defense_hash=model_path['mi_defender'],
+            evasion_attack_hash=model_path['evasion_attacker'],
+            mi_attack_hash=model_path['mi_attacker'],
         )
 
         gnn_mm_file = files_paths[1]
@@ -262,7 +686,6 @@ class GNNModelManager:
 
         modification_config = ModelModificationConfig(
             epochs=int(model_path['epochs']) if model_path['epochs'] != 'None' else None,
-            model_attack_type=model_path['model_attack_type'],
             model_ver_ind=int(model_path['model_ver_ind']),
         )
 
@@ -293,20 +716,24 @@ class GNNModelManager:
 
         return gnn_model_manager_obj, model_dir_path
 
-    def get_full_info(self):
+    def get_full_info(
+            self
+    ) -> dict:
         """
         Get available info about model for frontend
         """
         result = {}
         if hasattr(self, 'manager_config'):
-            result["manager"] = self.manager_config.to_saveable_dict()
+            result["manager"] = self.manager_config.to_savable_dict()
         if hasattr(self, 'modification'):
-            result["modification"] = self.modification.to_saveable_dict()
+            result["modification"] = self.modification.to_savable_dict()
         if hasattr(self, 'epochs'):
             result["epochs"] = f"Epochs={self.epochs}"
         return result
 
-    def get_model_data(self):
+    def get_model_data(
+            self
+    ) -> dict:
         """
         :return: dict with the available functions of the model manager by the 'functions' key.
         """
@@ -321,7 +748,9 @@ class GNNModelManager:
         return model_data
 
     @staticmethod
-    def take_gnn_obj(gnn_file):
+    def take_gnn_obj(
+            gnn_file: Union[str, Path]
+    ) -> Type:
         with open(gnn_file) as f:
             params = json.load(f)
             class_name = params.pop(CONFIG_CLASS_NAME)
@@ -350,11 +779,44 @@ class GNNModelManager:
                                                            obj_name)
         return gnn
 
+    def before_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
+        """ This hook is called before training the next training epoch
+        """
+        pass
+
+    def after_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
+        """ This hook is called after training the next training epoch
+        """
+        pass
+
+    def before_batch(
+            self,
+            batch
+    ):
+        """ This hook is called before training the next training batch
+        """
+        pass
+
+    def after_batch(
+            self,
+            batch
+    ):
+        """ This hook is called after training the next training batch
+        """
+        pass
+
 
 class FrameworkGNNModelManager(GNNModelManager):
     """
     GNN model control class. Have methods: train_model, save_model, load_model
     """
+    gnn: torch.nn.Module
     additional_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -388,8 +850,8 @@ class FrameworkGNNModelManager(GNNModelManager):
     to prevent leakage of the response during training.
     """
 
-    def __init__(self, gnn=None,
-                 dataset_path=None,
+    def __init__(self, gnn: torch.nn.Module = None,
+                 dataset_path: Union[str, Path] = None,
                  **kwargs
                  ):
         """
@@ -403,21 +865,19 @@ class FrameworkGNNModelManager(GNNModelManager):
 
         # TODO Kirill, add train_test_split in default parameters gnnMM
         super().__init__(**kwargs)
-
         # Fulfill absent fields from default configs
         with open(FRAMEWORK_PARAMETERS_PATH, 'r') as f:
             params = json.load(f)
             class_name = type(self).__name__
             if class_name in params:
                 self.manager_config = ConfigPattern(
-                        _config_class="ModelManagerConfig",
-                        _config_kwargs={k: v[2] for k, v in params[class_name].items()},
-                    ).merge(self.manager_config)
+                    _config_class="ModelManagerConfig",
+                    _config_kwargs={k: v[2] for k, v in params[class_name].items()},
+                ).merge(self.manager_config)
 
         # Add fields from additional config
-        self.manager_config = self.manager_config.merge(self.additional_config)
+        self.manager_config = self.additional_config.merge(self.manager_config)
 
-        self.stop_signal = False  # TODO misha do we need it?
         self.gnn = gnn
 
         if self.modification.epochs is None:
@@ -434,7 +894,9 @@ class FrameworkGNNModelManager(GNNModelManager):
         if self.gnn is not None:
             self.init()
 
-    def init(self):
+    def init(
+            self
+    ) -> None:
         """
         Initialize optimizer and loss function.
         """
@@ -449,138 +911,226 @@ class FrameworkGNNModelManager(GNNModelManager):
         if "loss_function" in getattr(self.manager_config, CONFIG_OBJ):
             self.loss_function = getattr(self.manager_config, CONFIG_OBJ).loss_function.create_obj()
 
-    def train_1_step(self, gen_dataset):
-        train_1_step = self.train_1_step_mul if gen_dataset.is_multi() else self.train_1_step_single
-        return train_1_step(gen_dataset)
+    def train_complete(
+            self,
+            gen_dataset: GeneralDataset,
+            steps: int = None,
+            pbar: Union['tqdm', None] = None,
+            metrics: Union[List[Metric], Metric] = None,
+            **kwargs
+    ) -> None:
+        for _ in range(steps):
+            self.before_epoch(gen_dataset)
+            print("epoch", self.modification.epochs)
+            train_loss = self.train_1_step(gen_dataset)
+            self.after_epoch(gen_dataset)
+            early_stopping_flag = self.early_stopping(train_loss=train_loss, gen_dataset=gen_dataset,
+                                                      metrics=metrics, steps=steps)
+            if self.socket:
+                self.report_results(train_loss=train_loss, gen_dataset=gen_dataset,
+                                    metrics=metrics)
+            pbar.update(1)
+            if early_stopping_flag:
+                break
 
-    def train_1_step_single(self, gen_dataset):
-        """ Version of train for a single graph
-        """
-        # TODO Kirill think can we create DataLoader instead of gen_dataset ?
-        #  pass DataLoader to train_1_step_single and train_1_step_mul
+    def early_stopping(
+            self,
+            train_loss,
+            gen_dataset: GeneralDataset,
+            metrics: Union[List[Metric], Metric],
+            steps: int
+    ) -> bool:
+        return False
 
-        data = gen_dataset.dataset._data
-        train_ver_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
-        train_mask_size = len(train_ver_ind)
-        random.shuffle(train_ver_ind)
-
-        number_of_batches = ceil(train_mask_size / self.batch)
-        # data_x_elem_len = data.x.size()[1]
-
-        # For torch model: Sets the module in training mode
-        self.gnn.train()
+    def train_1_step(
+            self,
+            gen_dataset: GeneralDataset
+    ) -> List[Union[float, int]]:
+        # FIXME misha it is not task type, change to getting dvc field
+        task_type = "multiple-graphs" if gen_dataset.is_multi() else "single-graph"
+        if task_type == "single-graph":
+            # FIXME Kirill, add data_x_copy mask
+            loader = cast(
+                Iterable,
+                NeighborLoader(
+                    gen_dataset.data,
+                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
+                    batch_size=self.batch, shuffle=True
+                )
+            )
+        elif task_type == "multiple-graphs":
+            train_dataset = gen_dataset.dataset.index_select(gen_dataset.train_mask)
+            loader = cast(
+                Iterable,
+                DataLoader(
+                    train_dataset, batch_size=self.batch, shuffle=True
+                )
+            )
+        # TODO Kirill, remove False when release edge recommendation task
+        elif task_type == "edge" and False:
+            loader = cast(
+                Iterable,
+                LinkNeighborLoader(
+                    gen_dataset.data,
+                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
+                    batch_size=self.batch, shuffle=True
+                )
+            )
+        else:
+            raise ValueError("Unsupported task type")
         loss = 0
-
-        # features_mask_tensor = torch.full(size=data.x.size(), fill_value=True)
-
-        for batch_ind in range(number_of_batches):
-            data_x_copy = torch.clone(data.x)
-            train_mask_copy = [False] * data.x.size()[0]
-
-            # features_mask_tensor_copy = torch.clone(features_mask_tensor)
-
-            train_batch = train_ver_ind[batch_ind * self.batch: (batch_ind + 1) * self.batch]
-            for elem_ind in train_batch:
-                for feature in self.mask_features:
-                    # features_mask_tensor_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                    #                                     gen_dataset.info.node_attr_slices[feature][1]] = False
-                    data_x_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                          gen_dataset.info.node_attr_slices[feature][1]] = 0
-                # if self.gnn_mm.train_mask_flag:
-                #     data_x_copy[elem_ind] = torch.zeros(data_x_elem_len)
-                # y_true = torch.masked.masked_tensor(data.y, mask_tensor)
-                train_mask_copy[elem_ind] = True
-
-            # mask_x_tensor = torch.masked.masked_tensor(data.x, features_mask_tensor_copy)
-
-            self.optimizer.zero_grad()
-            logits = self.gnn(data_x_copy, data.edge_index)
-            batch_loss = self.loss_function(logits[train_mask_copy], gen_dataset.labels[train_mask_copy])
-            if self.clip is not None:
-                clip_grad_norm(self.gnn.parameters(), self.clip)
-
-            loss += batch_loss * len(train_batch)
-            # print("batch_loss %.8f" % batch_loss)
-
-            # Backward
-            self.optimizer.zero_grad()
-            batch_loss.backward()
-            self.optimizer.step()
-
-        loss /= train_mask_size
+        for batch in loader:
+            self.before_batch(batch)
+            loss += self.train_on_batch_full(batch, task_type)
+            self.after_batch(batch)
         print("loss %.8f" % loss)
         self.modification.epochs += 1
         self.gnn.eval()
         return loss.cpu().detach().numpy().tolist()
 
-    def train_1_step_mul(self, gen_dataset):
-        """ Version of train for a multiple graph
-        """
-        # train_mask = data.train_mask
-        # train_ver_ind = [n for n, x in enumerate(train_mask) if x]
-        # train_mask_size = len(train_ver_ind)
+    def train_on_batch_full(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        if self.mi_defender and self.mi_defense_flag:
+            self.mi_defender.pre_batch()
+        if self.evasion_defender and self.evasion_defense_flag:
+            self.evasion_defender.pre_batch(model_manager=self, batch=batch, task_type=task_type)
+        loss = self.train_on_batch(batch=batch, task_type=task_type)
+        mi_defender_dict = None
+        if self.mi_defender and self.mi_defense_flag:
+            mi_defender_dict = self.mi_defender.post_batch(model_manager=self, batch=batch)
+        if mi_defender_dict and "loss" in mi_defender_dict:
+            loss = mi_defender_dict["loss"]
+        evasion_defender_dict = None
+        if self.evasion_defender and self.evasion_defense_flag:
+            evasion_defender_dict = self.evasion_defender.post_batch(
+                model_manager=self, batch=batch, loss=loss,
+            )
+        if evasion_defender_dict and "loss" in evasion_defender_dict:
+            loss = evasion_defender_dict["loss"]
+        loss = self.optimizer_step(loss=loss)
+        return loss
 
-        # number_of_batches = ceil(train_mask_size / self.batch)
-        # data_x_elem_len = data.x.size()[1]
+    def optimizer_step(
+            self,
+            loss: torch.Tensor
+    ) -> torch.Tensor:
+        loss.backward()
+        self.optimizer.step()
+        return loss
 
-        # FIXME Kirill this is done at each step - can we optimize?
-        #  e.g. before_train()
-        dataset = gen_dataset.dataset
-        train_dataset = dataset.index_select(gen_dataset.train_mask)
-        train_loader = DataLoader(train_dataset, batch_size=self.batch, shuffle=False)
-
-        # For torch model: Sets the module in training mode
-        self.gnn.train()
-        total_loss = 0
-
-        # Train on batches
-        for data in train_loader:
+    def train_on_batch(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        loss = None
+        if hasattr(batch, "edge_weight"):
+            weight = batch.edge_weight
+        else:
+            weight = None
+        if task_type == "single-graph":
             self.optimizer.zero_grad()
-            logits = self.gnn(data.x, data.edge_index, data.batch)
-            batch_loss = self.loss_function(logits, data.y)
-            total_loss += batch_loss / len(train_loader)
-            batch_loss.backward()
-            self.optimizer.step()
+            logits = self.gnn(batch.x, batch.edge_index, weight)
+            # Take only predictions and labels of seed nodes
 
-        # loss /= train_mask_size
-        print("loss %.8f" % total_loss)
-        self.modification.epochs += 1
+            loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
+            if self.clip is not None:
+                clip_grad_norm(self.gnn.parameters(), self.clip)
+            self.optimizer.zero_grad()
+            # loss.backward()
+            # self.optimizer.step()
+        elif task_type == "multiple-graphs":
+            self.optimizer.zero_grad()
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
+            loss = self.loss_function(*move_to_same_device(logits, batch.y))
+            # loss.backward()
+            # self.optimizer.step()
+        # TODO Kirill, remove False when release edge recommendation task
+        elif task_type == "edge" and False:
+            self.optimizer.zero_grad()
+            edge_index = batch.edge_index
+            pos_edge_index = edge_index[:, batch.y == 1]
+            neg_edge_index = edge_index[:, batch.y == 0]
 
-        self.gnn.eval()
+            pos_out = self.gnn(batch.x, pos_edge_index, weight)
+            neg_out = self.gnn(batch.x, neg_edge_index, weight)
 
-        return total_loss.cpu().detach().numpy().tolist()
+            # TODO check if we need to take out[:batch.batch_size]
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
-    def get_name(self, **kwargs):
+            loss = pos_loss + neg_loss
+            # loss.backward()
+        else:
+            raise ValueError("Unsupported task type")
+        return loss
+
+    def get_name(
+            self,
+            **kwargs
+    ) -> str:
         json_str = super().get_name()
         return json_str
 
-    def load_model(self, path=None, **kwargs):
+    def load_model(
+            self,
+            path: Union[str, Path, None] = None,
+            **kwargs
+    ) -> torch.nn.Module:
         """
         Load model from torch save format
+
         :param path: path to load the model. By default, the path is compiled based on the global
          class variables
         """
         if not is_available():
-            self.gnn.load_state_dict(torch.load(path, map_location=torch.device('cpu'),))
+            self.gnn.load_state_dict(torch.load(path, map_location=torch.device('cpu'), ))
             # self.gnn = torch.load(path, map_location=torch.device('cpu'))
         else:
-            self.gnn.load_state_dict(torch.load(path,))
+            self.gnn.load_state_dict(torch.load(path, ))
             # self.gnn = torch.load(path)
         if self.optimizer is None:
             self.init()
         return self.gnn
 
-    def save_model(self, path=None):
+    def save_model(
+            self,
+            path: Union[str, Path] = None
+    ) -> None:
         """
         Save the model in torch format
 
         :param path: path to save the model. By default,
-        the path is compiled based on the global class variables
+         the path is compiled based on the global class variables
         """
         torch.save(self.gnn.state_dict(), path)
 
-    def train_model(self, gen_dataset, save_model_flag=True, mode=None, steps=None, metrics=None,
-                    socket=None):
+    def report_results(
+            self,
+            train_loss,
+            gen_dataset: GeneralDataset,
+            metrics: List[Metric]
+    ) -> None:
+        metrics_values = self.evaluate_model(gen_dataset=gen_dataset, metrics=metrics)
+        self.compute_stats_data(gen_dataset, predictions=True, logits=True)
+        self.send_epoch_results(
+            metrics_values=metrics_values,
+            stats_data={k: gen_dataset.visible_part.filter(v)
+                        for k, v in self.stats_data.items()},
+            weights={"weights": self.gnn.get_weights()}, loss=train_loss)
+
+    def train_model(
+            self,
+            gen_dataset: GeneralDataset,
+            save_model_flag: bool = True,
+            mode: Union[str, None] = None,
+            steps=None,
+            metrics: List[Metric] = None,
+            socket: SocketConnect = None
+    ) -> Union[str, Path]:
         """
         Convenient train method.
 
@@ -591,6 +1141,14 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
         """
+        from explainers.explainer import ProgressBar
+        gen_dataset = self.load_or_execute_poisoning_attack(
+            gen_dataset=gen_dataset
+        )
+        gen_dataset = self.load_or_execute_poisoning_defense(
+            gen_dataset=gen_dataset
+        )
+
         self.socket = socket
         pbar = ProgressBar(self.socket, "mt")
 
@@ -598,24 +1156,10 @@ class FrameworkGNNModelManager(GNNModelManager):
         assert issubclass(type(self), GNNModelManager)
 
         assert mode in ['1_step', 'full', None]
-        if mode is None:
-            has_1_step = self.train_1_step != super(type(self), self).train_1_step
-            has_full = self.train_full != super(type(self), self).train_full
-            assert has_1_step or has_full
-            do_1_step = has_1_step
-        elif mode == '1_step':
-            do_1_step = True
-        else:
-            do_1_step = False
-
-        def report_results(train_loss):
-            metrics_values = self.evaluate_model(gen_dataset=gen_dataset, metrics=metrics)
-            self.compute_stats_data(gen_dataset, predictions=True, logits=True)
-            self.send_epoch_results(
-                metrics_values=metrics_values,
-                stats_data={k: gen_dataset.visible_part.filter(v)
-                            for k, v in self.stats_data.items()},
-                weights={"weights": self.gnn.get_weights()}, loss=train_loss)
+        # TODO Kirill what is this? Outdated?
+        # has_complete = self.train_complete != super(type(self), self).train_complete
+        # assert has_complete
+        do_1_step = True
 
         try:
             if do_1_step:
@@ -623,28 +1167,13 @@ class FrameworkGNNModelManager(GNNModelManager):
                 pbar.total = self.modification.epochs + steps
                 pbar.n = self.modification.epochs
                 pbar.update(0)
-                for _ in range(steps):
-                    print("epoch", self.modification.epochs)
-                    train_loss = self.train_1_step(gen_dataset)
-                    if self.socket:
-                        report_results(train_loss)
-                    pbar.update(1)
+                self.train_complete(gen_dataset=gen_dataset, steps=steps,
+                                    pbar=pbar, metrics=metrics)
                 pbar.close()
                 self.send_data("mt", {"status": "OK"})
 
             else:
-                print("Starting full cycle training")
-                pbar.reset(total=steps)
-                train_loss = self.train_full(gen_dataset, steps=steps, metrics=metrics)
-                print("Training finished")
-                if self.socket:
-                    try:
-                        report_results(train_loss)
-                    except Exception: pass
-                # TODO Misha can we pass pbar into self.train_full ?
-                pbar.update(steps)
-                pbar.close()
-                self.send_data("mt", {"status": "FINISHED"})
+                raise Exception
 
             if save_model_flag:
                 return self.save_model_executor()
@@ -655,14 +1184,19 @@ class FrameworkGNNModelManager(GNNModelManager):
         finally:
             self.socket = None
 
-    def run_model(self, gen_dataset, mask='test', out='answers'):
+    def run_model(
+            self,
+            gen_dataset: GeneralDataset,
+            mask: Union[str, List[bool], torch.Tensor] = 'test',
+            out: str = 'answers'
+    ) -> torch.Tensor:
         """
         Run the model on a part of dataset specified with a mask.
 
         :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
         :param mask: 'train', 'val', 'test', 'all' -- part of the dataset on which the output will be obtained
         :param out: 'answers', 'predictions', 'logits' -- what output format will be calculated,
-        availability depends on which methods have been overridden in the parent class
+         availability depends on which methods have been overridden in the parent class
         :return:
         """
         try:
@@ -684,9 +1218,15 @@ class FrameworkGNNModelManager(GNNModelManager):
         with torch.no_grad():  # Turn off gradients computation
             if gen_dataset.is_multi():
                 dataset = gen_dataset.dataset
-                part_loader = DataLoader(
-                    dataset.index_select(mask), batch_size=self.batch, shuffle=False)
-                full_out = torch.Tensor()
+                part_loader = cast(
+                    Iterable,
+                    DataLoader(
+                        dataset.index_select(mask),
+                        batch_size=self.batch,
+                        shuffle=False
+                    )
+                )
+                full_out = torch.empty(0, device=gen_dataset.data.x.device)
                 # y_true = torch.Tensor()
                 if hasattr(self, 'optimizer'):
                     self.optimizer.zero_grad()
@@ -694,16 +1234,16 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # logits_batch = self.gnn(data.x, data.edge_index, data.batch)
                     # pred_batch = logits_batch.argmax(dim=1)
                     out = run_func(data.x, data.edge_index, data.batch)
-                    full_out = torch.cat((full_out, out))
+                    full_out = torch.cat((move_to_same_device(full_out, out)))
                     # y_true = torch.cat((y_true, data.y))
             else:  # single-graph
-                data = gen_dataset.dataset._data  # FIXME what if no data? use .get(0) ?
+                data = gen_dataset.data  # FIXME what if no data? use .get(0) ?
                 ver_ind = [n for n, x in enumerate(mask) if x]
                 mask_size = len(ver_ind)
 
                 number_of_batches = ceil(mask_size / self.batch)
                 # data_x_elem_len = data.x.size()[1]
-                full_out = torch.Tensor()
+                full_out = torch.empty(0, device=data.x.device)
                 # features_mask_tensor = torch.full(size=data.x.size(), fill_value=True)
 
                 for batch_ind in range(number_of_batches):
@@ -716,10 +1256,10 @@ class FrameworkGNNModelManager(GNNModelManager):
                                     batch_ind * self.batch: (batch_ind + 1) * self.batch]:
                         if hasattr(self, 'mask_features'):
                             for feature in self.mask_features:
-                                # features_mask_tensor_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                #                                     gen_dataset.info.node_attr_slices[feature][1]] = False
-                                data_x_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                                      gen_dataset.info.node_attr_slices[feature][1]] = 0
+                                # features_mask_tensor_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                #                                     gen_dataset.node_attr_slices[feature][1]] = False
+                                data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                                      gen_dataset.node_attr_slices[feature][1]] = 0
                         # if self.gnn_mm.train_mask_flag:
                         #     data_x_copy[elem_ind] = torch.zeros(data_x_elem_len)
                         # y_true = torch.masked.masked_tensor(data.y, mask_tensor)
@@ -733,12 +1273,88 @@ class FrameworkGNNModelManager(GNNModelManager):
                     # logits_batch = self.gnn(data_x_copy, data.edge_index)
                     # pred_batch = logits_batch.argmax(dim=1)
                     out = run_func(data_x_copy, data.edge_index)
-                    full_out = torch.cat((full_out, out[mask_copy]))
+                    full_out = torch.cat((move_to_same_device(full_out, out[mask_copy])))
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
 
         return full_out
 
-    def evaluate_model(self, gen_dataset, metrics):
+    def load_or_execute_poisoning_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_attack_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        """
+        Loads and applies poisoning attack artifacts to the dataset if available; otherwise, executes the attack
+        and generates the necessary artifacts.
+
+        Parameters
+        ----------
+        gen_dataset : GeneralDataset
+            Object containing dataset data and configuration metadata.
+        poison_attack_diff_file_path : str, optional
+            Path to precomputed poisoning artifacts. If None, the default path from the dataset configuration is used.
+
+        Returns
+        -------
+        GeneralDataset
+            A modified dataset with the poisoning attack applied.
+        """
+        if poison_attack_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_attack_diff_file_path = files_paths[3]
+        if self.poison_attacker and self.poison_attack_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_attack_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_attacker.attack(gen_dataset=gen_dataset)
+                self.poison_attacker.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
+
+    def load_or_execute_poisoning_defense(
+            self,
+            gen_dataset: GeneralDataset,
+            poison_defense_diff_file_path: Union[str, Path] = None,
+    ) -> GeneralDataset:
+        """
+        Loads and applies defense artifacts against poisoning attacks if available; otherwise, executes the defense
+        method and generates the necessary artifacts.
+
+        Parameters
+        ----------
+        gen_dataset : GeneralDataset
+            Object containing dataset data and configuration metadata.
+        poison_defense_diff_file_path : str, optional
+            Path to precomputed defense artifacts. If None, the default path from the dataset configuration is used.
+
+        Returns
+        -------
+        GeneralDataset
+            A modified dataset with the poisoning defense applied.
+        """
+        if poison_defense_diff_file_path is None:
+            _, files_paths = Declare.models_path(self)
+            poison_defense_diff_file_path = files_paths[5]
+        if self.poison_defender and self.poison_defense_flag:
+            try:
+                artifact = GraphModificationArtifact.from_json(poison_defense_diff_file_path)
+                gen_dataset = gen_dataset.apply_modification(artifact=artifact)
+            except Exception as e:
+                print(f"An error occurred: {type(e).__name__} - {e}")
+                loc = self.poison_defender.defense(gen_dataset=gen_dataset)
+                self.poison_defender.dataset_diff()
+                if loc is not None:
+                    gen_dataset = loc
+        return gen_dataset
+
+    def evaluate_model(
+            self,
+            gen_dataset: GeneralDataset,
+            metrics: Union[List[Metric], Metric, torch.Tensor]
+    ) -> dict:
         """
         Compute metrics for a model result on a part of dataset specified by the metric mask.
 
@@ -755,8 +1371,6 @@ class FrameworkGNNModelManager(GNNModelManager):
 
         metrics_values = {}
         for mask, ms in mask_metrics.items():
-            metrics_values[mask] = {}
-            y_pred = self.run_model(gen_dataset, mask=mask)
             try:
                 mask_tensor = {
                     'train': gen_dataset.train_mask.tolist(),
@@ -765,38 +1379,93 @@ class FrameworkGNNModelManager(GNNModelManager):
                     'all': [True] * len(gen_dataset.labels),
                 }[mask]
             except KeyError:
-                assert isinstance(mask, list)
+                assert isinstance(mask, torch.Tensor)
                 mask_tensor = mask
-            y_true = torch.tensor([y for m, y in zip(mask_tensor, gen_dataset.labels) if m])
+            if self.evasion_attacker and self.evasion_attack_flag:
+                self.call_evasion_attack(
+                    gen_dataset=gen_dataset,
+                    mask=mask,
+                )
+            metrics_values[mask] = {}
+            y_pred = self.run_model(gen_dataset, mask=mask)
+            y_true = gen_dataset.labels[mask_tensor]
 
             for metric in ms:
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
-
+        if self.mi_attacker and self.mi_attack_flag:
+            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
         return metrics_values
 
-    def compute_stats_data(self, gen_dataset, predictions=False, logits=False):
+    def call_evasion_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            mask: Union[str, List[bool], torch.Tensor] = 'test',
+    ):
+        if self.evasion_attacker:
+            try:
+                mask_tensor = {
+                    'train': gen_dataset.train_mask.tolist(),
+                    'val': gen_dataset.val_mask.tolist(),
+                    'test': gen_dataset.test_mask.tolist(),
+                    'all': [True] * len(gen_dataset.labels),
+                }[mask]
+            except KeyError:
+                assert isinstance(mask, torch.Tensor)
+                mask_tensor = mask
+            self.evasion_attacker.attack(
+                model_manager=self,
+                gen_dataset=gen_dataset,
+                mask_tensor=mask_tensor
+            )
+
+    def call_mi_attack(
+            self,
+            gen_dataset: GeneralDataset,
+            model: torch.nn.Module,
+            mask_tensor: Union[str, List[bool], torch.Tensor] = 'test'
+    ):
+        if self.mi_attacker:
+            self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
+
+    def compute_stats_data(
+            self,
+            gen_dataset: GeneralDataset,
+            predictions: bool = False,
+            logits: bool = False
+    ):
         """
         :param gen_dataset: wrapper over the dataset, stores the dataset
-        and all meta-information about the dataset
+         and all meta-information about the dataset
         :param predictions: boolean flag that indicates the need to enter model predictions
-        in the statistics for the front
+         in the statistics for the front
         :param logits: boolean flag that indicates the need to enter model logits
-        in the statistics for the front
+         in the statistics for the front
         :return: dict with model weights. Also function can add in dict model predictions
-        and logits
+         and logits
         """
-        self.stats_data = {}
+        stats_data = {}
 
         # Stats: weights, logits, predictions
         if predictions:  # and hasattr(self.gnn, 'get_predictions'):
             predictions = self.run_model(gen_dataset, mask='all', out='predictions')
-            self.stats_data["predictions"] = predictions.detach().cpu().tolist()
+            stats_data["predictions"] = predictions.detach().cpu().tolist()
         if logits:  # and hasattr(self.gnn, 'forward'):
             logits = self.run_model(gen_dataset, mask='all', out='logits')
-            self.stats_data["embeddings"] = logits.detach().cpu().tolist()
+            stats_data["embeddings"] = logits.detach().cpu().tolist()
 
-    def send_data(self, block, msg, tag='model', obligate=True, socket=None):
+        # Note: we update all stats data at once because it can be requested from frontend during
+        # the update
+        self.stats_data = stats_data
+
+    def send_data(
+            self,
+            block,
+            msg,
+            tag='model',
+            obligate=True,
+            socket=None
+    ):
         """
         Send data to the frontend.
 
@@ -812,10 +1481,23 @@ class FrameworkGNNModelManager(GNNModelManager):
         socket = socket or self.socket
         if socket is None:
             return False
-        socket.send(block=block, msg=msg, tag=tag, obligate=obligate)
+        socket.send(
+            block=block,
+            msg=msg,
+            tag=tag,
+            obligate=obligate
+        )
         return True
 
-    def send_epoch_results(self, metrics_values=None, stats_data=None, weights=None, loss=None, obligate=False, socket=None):
+    def send_epoch_results(
+            self,
+            metrics_values=None,
+            stats_data=None,
+            weights=None,
+            loss=None,
+            obligate=False,
+            socket=None
+    ):
         """
         Send updates to the frontend after a training epoch: epoch, metrics, logits, loss.
 
@@ -837,7 +1519,10 @@ class FrameworkGNNModelManager(GNNModelManager):
         if stats_data:
             self.send_data("mt", stats_data, tag='model_stats', obligate=obligate, socket=socket)
 
-    def load_train_test_split(self, gen_dataset):
+    def load_train_test_split(
+            self,
+            gen_dataset: GeneralDataset
+    ) -> GeneralDataset:
         path = self.model_path_info()
         path = path / 'train_test_split'
         gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask, _ = torch.load(path)[:]
@@ -845,24 +1530,17 @@ class FrameworkGNNModelManager(GNNModelManager):
 
 
 class ProtGNNModelManager(FrameworkGNNModelManager):
-    """
-    Prot layer needs a special training procedure.
-    """
-    # additional_config = ModelManagerConfig(
-    #     loss_function={CONFIG_CLASS_NAME: "CrossEntropyLoss"},
-    #     mask_features=[],
-    # )
     additional_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
             "mask_features": [],
-            # "optimizer": {
-            #     "_config_class": "Config",
-            #     "_class_name": "Adam",
-            #     "_import_path": OPTIMIZERS_PARAMETERS_PATH,
-            #     "_class_import_info": ["torch.optim"],
-            #     "_config_kwargs": {},
-            # },
+            "optimizer": {
+                "_config_class": "Config",
+                "_class_name": "Adam",
+                "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.optim"],
+                "_config_kwargs": {},
+            },
             # FUNCTIONS_PARAMETERS_PATH,
             "loss_function": {
                 "_config_class": "Config",
@@ -874,345 +1552,332 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
         }
     )
 
-    def save_model(self, path=None):
+    def __init__(
+            self,
+            gnn: Type = None,
+            dataset_path: Union[str, Path] = None,
+            **kwargs
+    ):
+        super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
+
+        # Get prot layer and its params
+        self.is_best = None
+        self.cur_acc = None
+        self.prot_layer = getattr(self.gnn, self.gnn.prot_layer_name)
+        _config_obj = getattr(self.manager_config, CONFIG_OBJ)
+        self.clst = _config_obj.clst
+        self.sep = _config_obj.sep
+        # lr = _config_obj.lr
+        self.early_stopping_marker = _config_obj.early_stopping
+        self.proj_epochs = _config_obj.proj_epochs
+        self.warm_epoch = _config_obj.warm_epoch
+        self.save_epoch = _config_obj.save_epoch
+        self.save_thrsh = _config_obj.save_thrsh
+        # TODO implement other MCTS args too
+        # TODO MCTS args via static ?
+        from explainers.protgnn.MCTS import mcts_args
+        mcts_args.min_atoms = _config_obj.mcts_min_atoms
+        mcts_args.max_atoms = _config_obj.mcts_max_atoms
+        self.prot_thrsh = _config_obj.prot_thrsh
+        self.early_stop_count = 0
+        self.gnn.best_prots = self.prot_layer.prototype_graphs
+        self.best_acc = 0.0
+
+    def save_model(
+            self,
+            path: Union[str, Path, None] = None
+    ) -> None:
         """
         Save the model in torch format
 
         :param path: path to save the model. By default,
-        the path is compiled based on the global class variables
+         the path is compiled based on the global class variables
         """
         torch.save({"model_state_dict": self.gnn.state_dict(),
                     "best_prots": self.gnn.best_prots,
                     }, path)
 
-    def load_model(self, path=None, **kwargs):
+    def load_model(
+            self,
+            path: Union[str, Path, None] = None,
+            **kwargs
+    ) -> torch.nn.Module:
         """
         Load model from torch save format
+
         :param path: path to load the model. By default, the path is compiled based on the global
          class variables
         """
         if not is_available():
             checkpoint = torch.load(path, map_location=torch.device('cpu'), )
         else:
-            checkpoint =torch.load(path)
+            checkpoint = torch.load(path)
         self.gnn.load_state_dict(checkpoint["model_state_dict"])
         self.gnn.best_prots = checkpoint["best_prots"]
         if self.optimizer is None:
             self.init()
         return self.gnn
 
-    def evaluate_model(self, gen_dataset, metrics):
-        """
-        Compute metrics for a model result on a part of dataset specified by the metric mask.
+    def train_on_batch(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        if task_type == "multiple-graphs":
+            self.optimizer.zero_grad()
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            min_distances = self.gnn.min_distances
 
-        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
-        :param metrics: list of metrics ot compute
-        :return: dict {metric -> value}
-        """
-        mask_metrics = {}
-        for metric in metrics:
-            mask = metric.mask
-            if mask not in mask_metrics:
-                mask_metrics[mask] = []
-            mask_metrics[mask].append(metric)
+            # cluster loss
+            self.prot_layer.prototype_class_identity = self.prot_layer.prototype_class_identity
+            prototypes_of_correct_class = torch.t(
+                self.prot_layer.prototype_class_identity[:, batch.y].bool())
 
-        metrics_values = {}
-        for mask, ms in mask_metrics.items():
-            metrics_values[mask] = {}
-            y_pred = self.run_model(gen_dataset, mask=mask)
-            try:
-                mask_tensor = {
-                    'train': gen_dataset.train_mask.tolist(),
-                    'val': gen_dataset.val_mask.tolist(),
-                    'test': gen_dataset.test_mask.tolist(),
-                    'all': [True] * len(gen_dataset.labels),
-                }[mask]
-            except KeyError:
-                assert isinstance(mask, list)
-            y_true = torch.tensor([y for m, y in zip(mask_tensor, gen_dataset.labels) if m])
+            cluster_cost = torch.mean(
+                torch.min(min_distances[prototypes_of_correct_class]
+                          .reshape(-1, self.prot_layer.num_prototypes_per_class), dim=1)[0])
 
-            for metric in ms:
-                metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
-                # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
+            # seperation loss
+            separation_cost = -torch.mean(
+                torch.min(min_distances[~prototypes_of_correct_class].reshape(-1, (
+                        self.prot_layer.output_dim - 1) * self.prot_layer.num_prototypes_per_class),
+                          dim=1)[0])
 
-        return metrics_values
+            # sparsity loss
+            l1_mask = 1 - torch.t(self.prot_layer.prototype_class_identity)
+            l1 = (self.prot_layer.last_layer.weight * l1_mask).norm(p=1)
 
-    # def train_model(self, gen_dataset, save_model_flag=True, mode=None, steps=None, metrics=None):
-    def train_full(self, gen_dataset, steps=None, metrics=None):
-        """
-        Train ProtGNN model for Graph classification
-        """
-        metrics = metrics or []
-        # TODO Misha can we split into 1-step funcs?
-        #  do we need steps here?
+            # diversity loss
+            ld = 0
+            # TODO expreriments required. With zero coeff - meaningless
+            # for k in range(prot_layer.output_dim):
+            #     p = prot_layer.prototype_vectors[
+            #         k * prot_layer.num_prototypes_per_class:
+            #         (k + 1) * prot_layer.num_prototypes_per_class]
+            #     p = F.normalize(p, p=2, dim=1)
+            #     matrix1 = torch.mm(p, torch.t(p)) - torch.eye(p.shape[0]) - 0.3
+            #     matrix2 = torch.zeros(matrix1.shape)
+            #     ld += torch.sum(torch.where(matrix1 > 0, matrix1, matrix2))
 
-        # Get prot layer and its params
-        prot_layer = getattr(self.gnn, self.gnn.prot_layer_name)
-        _config_obj = getattr(self.manager_config, CONFIG_OBJ)
-        clst = _config_obj.clst
-        sep = _config_obj.sep
-        lr = _config_obj.lr
-        early_stopping = _config_obj.early_stopping
-        proj_epochs = _config_obj.proj_epochs
-        warm_epoch = _config_obj.warm_epoch
-        save_epoch = _config_obj.save_epoch
-        save_thrsh = _config_obj.save_thrsh
-        # TODO implement other MCTS args too
-        mcts_args.min_atoms = _config_obj.mcts_min_atoms
-        mcts_args.max_atoms = _config_obj.mcts_max_atoms
-        prot_thrsh = _config_obj.prot_thrsh
+            loss = self.loss_function(*move_to_same_device(logits, batch.y))
+            loss += self.clst * cluster_cost + self.sep * separation_cost + 5e-4 * l1 + 0.00 * ld
+            if self.clip is not None:
+                clip_grad_norm(self.gnn.parameters(), self.clip)
+            self.optimizer.zero_grad()
+        elif task_type == "signle-graph":
+            self.optimizer.zero_grad()
+            logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
+        # TODO Kirill, remove False when release edge recommendation task
+        elif task_type == "edge" and False:
+            self.optimizer.zero_grad()
+            edge_index = batch.edge_index
+            pos_edge_index = edge_index[:, batch.y == 1]
+            neg_edge_index = edge_index[:, batch.y == 0]
 
-        print(f"cluster loss cost: {clst}", f"separation loss cost: {sep}", sep='\n')
+            pos_out = self.gnn(batch.x, pos_edge_index)
+            neg_out = self.gnn(batch.x, neg_edge_index)
 
-        # TODO Misha use save_model_flag and other params
-        # TODO Misha add checkpoint
+            # TODO check if we need to take out[:batch.batch_size]
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
-        # criterion = torch.nn.CrossEntropyLoss()
-        # FIXME use optimizer from manager_config and its LR
-        self.optimizer = torch.optim.Adam(self.gnn.parameters(), lr=lr)
+            loss = pos_loss + neg_loss
+        else:
+            raise ValueError("Unsupported task type")
+        return loss
 
-        dataset = gen_dataset.dataset
-        data = gen_dataset.data
-        train_dataset = dataset.index_select(gen_dataset.train_mask)
-        train_loader = DataLoader(train_dataset, batch_size=self.batch, shuffle=False)
+    def optimizer_step(
+            self,
+            loss: torch.Tensor
+    ) -> torch.Tensor:
+        loss.backward()
+        torch.nn.utils.clip_grad_value_(self.gnn.parameters(), clip_value=2.0)
+        self.optimizer.step()
+        return loss
+
+    def before_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
+        cur_step = self.modification.epochs + 1
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
-        # val_ind = [n for n, x in enumerate(gen_dataset.val_mask) if x]
-
-        # data.x = data.x.float()
-
-        avg_nodes = 0.0
-        avg_edge_index = 0.0
-        for i in range(len(dataset)):
-            avg_nodes += dataset[i].x.shape[0]
-            avg_edge_index += dataset[i].edge_index.shape[1]
-        avg_nodes /= len(dataset)
-        avg_edge_index /= len(dataset)
-        print(
-            f"graphs {len(dataset)}, avg_nodes{avg_nodes :.4f}, avg_edge_index_{avg_edge_index / 2 :.4f}")
-
-        best_acc = 0.0
-        data_size = len(dataset)
-        print(f'The total num of dataset is {data_size}')
-
-        early_stop_count = 0
-        best_prots = prot_layer.prototype_graphs
-        # data_indices = train_loader.dataset.indices
-        for step in range(steps):
-            acc = []
-            precision = []
-            recall = []
-            loss_list = []
-            ld_loss_list = []
-
-            # Prototype projection
-            if step > proj_epochs and step % proj_epochs == 0:
-                prot_layer.projection(self.gnn, dataset, train_ind, data, thrsh=prot_thrsh)
-            self.gnn.train()
-            for p in self.gnn.parameters():
+        # Prototype projection
+        if cur_step > self.proj_epochs and cur_step % self.proj_epochs == 0:
+            self.prot_layer.projection(self.gnn, gen_dataset.dataset, train_ind, gen_dataset.data,
+                                       thrsh=self.prot_thrsh)
+        self.gnn.train()
+        for p in self.gnn.parameters():
+            p.requires_grad = True
+        self.prot_layer.prototype_vectors.requires_grad = True
+        if cur_step < self.warm_epoch:
+            for p in self.prot_layer.last_layer.parameters():
+                p.requires_grad = False
+        else:
+            for p in self.prot_layer.last_layer.parameters():
                 p.requires_grad = True
-            prot_layer.prototype_vectors.requires_grad = True
-            if step < warm_epoch:
-                for p in prot_layer.last_layer.parameters():
-                    p.requires_grad = False
-            else:
-                for p in prot_layer.last_layer.parameters():
-                    p.requires_grad = True
 
-            for batch in train_loader:
-                logits = self.gnn(batch.x, batch.edge_index, batch.batch)
-                min_distances = self.gnn.min_distances
-                loss = self.loss_function(logits, batch.y)
-                # cluster loss
-                prot_layer.prototype_class_identity = prot_layer.prototype_class_identity
-                prototypes_of_correct_class = torch.t(
-                    prot_layer.prototype_class_identity[:, batch.y].bool())
-                cluster_cost = torch.mean(
-                    torch.min(min_distances[prototypes_of_correct_class]
-                              .reshape(-1, prot_layer.num_prototypes_per_class), dim=1)[0])
+    def after_epoch(
+            self,
+            gen_dataset: GeneralDataset
+    ):
+        # TODO compare is_best with different metrics to be implemented
 
-                # seperation loss
-                separation_cost = -torch.mean(
-                    torch.min(min_distances[~prototypes_of_correct_class].reshape(-1, (
-                            prot_layer.output_dim - 1) * prot_layer.num_prototypes_per_class),
-                              dim=1)[0])
+        # check if best model
+        metrics_values = self.evaluate_model(
+            gen_dataset, metrics=[
+                Metric("Accuracy", mask='val'),
+                Metric("Precision", mask='val'),
+                Metric("Recall", mask='val')
+            ]
+        )
+        self.cur_acc = metrics_values['val']["Accuracy"]
+        self.is_best = (self.cur_acc - self.best_acc >= 0.01)
 
-                # sparsity loss
-                l1_mask = 1 - torch.t(prot_layer.prototype_class_identity)
-                l1 = (prot_layer.last_layer.weight * l1_mask).norm(p=1)
+        if self.is_best:
+            self.best_acc = self.cur_acc
+            self.early_stop_count = 0
+            self.gnn.best_prots = self.prot_layer.prototype_graphs
 
-                # diversity loss
-                ld = 0
-                for k in range(prot_layer.output_dim):
-                    p = prot_layer.prototype_vectors[
-                        k * prot_layer.num_prototypes_per_class:
-                        (k + 1) * prot_layer.num_prototypes_per_class]
-                    p = F.normalize(p, p=2, dim=1)
-                    matrix1 = torch.mm(p, torch.t(p)) - torch.eye(p.shape[0]) - 0.3
-                    matrix2 = torch.zeros(matrix1.shape)
-                    ld += torch.sum(torch.where(matrix1 > 0, matrix1, matrix2))
+    def early_stopping(
+            self,
+            train_loss,
+            gen_dataset: GeneralDataset,
+            metrics: Union[List[Metric], Metric],
+            steps: int
+    ) -> bool:
+        step = self.modification.epochs
+        if self.is_best:
+            self.early_stop_count = 0
+        else:
+            self.early_stop_count += 1
+        last_projection = (step % self.proj_epochs == 0 and step + self.proj_epochs >= steps)
 
-                loss = loss + clst * cluster_cost + sep * separation_cost + 5e-4 * l1 + 0.00 * ld
+        return self.early_stop_count >= self.early_stopping_marker or last_projection
 
-                # optimization
-                self.optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_value_(self.gnn.parameters(), clip_value=2.0)
-                self.optimizer.step()
 
-                # record
-                _, prediction = torch.max(logits, -1)
-                loss_list.append(loss.item())
-                ld_loss_list.append(ld.item())
-                acc.append(prediction.eq(batch.y).cpu().numpy())
-                precision.append(
-                    prediction[prediction == 1].eq(batch.y[prediction == 1]).cpu().numpy())
-                recall.append(prediction[batch.y == 1].eq(batch.y[batch.y == 1]).cpu().numpy())
+class GSATModelManager(FrameworkGNNModelManager):
+    additional_config = ConfigPattern(  # TODO check config
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "mask_features": [],
+            "optimizer": {
+                "_config_class": "Config",
+                "_class_name": "Adam",
+                "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.optim"],
+                "_config_kwargs": {},
+            },
+            # FUNCTIONS_PARAMETERS_PATH,
+            "loss_function": {
+                "_config_class": "Config",
+                "_class_name": "CrossEntropyLoss",
+                "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.nn"],
+                "_config_kwargs": {},
+            },
+        }
+    )
 
-            # if best_prots == 0:
-            #    best_prots = model.prototype_graphs
+    def __init__(
+            self,
+            gnn: Type = None,
+            dataset_path: Union[str, Path] = None,
+            learn_edge_features: bool = False,
+            decay_int: int = 10,
+            decay_r: float = 0.1,
+            init_r: float = 0.9,
+            final_r: float = 0.1,
+            fix_r: bool = False,
+            pred_loss_coef: float = 1,
+            info_loss_coef: float = 1,
+            **kwargs
+    ):
+        super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
+        self.learn_edge_features = learn_edge_features
+        # TODO check if learn_edge_features == True then model -> GINEConv or other compatible
+        self.decay_int = decay_int
+        self.decay_r = decay_r
+        self.init_r = init_r
+        self.final_r = final_r
+        self.pred_loss_coef = pred_loss_coef
+        self.info_loss_coef = info_loss_coef
+        self.fix_r = fix_r
+        self.gsat_layer = getattr(self.gnn, self.gnn.gsat_layer_name)
+        # apply_decorator_to_graph_layers(self.gnn, apply_attention)
 
-            # report train msg
-            print(
-                f"Train Epoch:{step}  |Loss: {np.average(loss_list):.3f} | Ld: {np.average(ld_loss_list):.3f} | "
-                f"Acc: {np.concatenate(acc, axis=0).mean():.3f} | "
-                f"Precision: {np.concatenate(precision, axis=0).mean():.3f} | "
-                f"Recall: {np.concatenate(recall, axis=0).mean():.3f}")
+    def train_on_batch(
+            self,
+            batch,
+            task_type: str = None
+    ) -> torch.Tensor:
+        if task_type == "multiple-graphs":
+            self.optimizer.zero_grad()
+            clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
+            att = self.gsat_layer.edge_att
+            loss = self.gsat_loss(*move_to_same_device(att, clf_logits, batch.y, self.modification.epochs))
+            # loss = self.loss_function(clf_logits, batch.y)
+            self.optimizer.zero_grad()
+            # del self.gsat_layer.att
+        elif task_type == "single-graph":
+            self.optimizer.zero_grad()
+            clf_logits = self.gnn(batch.x, batch.edge_index)  # TODO check weight param
+            att = self.gsat_layer.edge_att
+            # att = torch.zeros_like(clf_logits)
+            # Take only predictions and labels of seed nodes
+            loss = self.gsat_loss(*move_to_same_device(att, clf_logits[:batch.batch_size], batch.y[:batch.batch_size], self.modification.epochs))
+            if self.clip is not None:
+                clip_grad_norm(self.gnn.parameters(), self.clip)
+            self.optimizer.zero_grad()
+        elif task_type == "edge" and False:  # TODO Kirill, remove False when release edge recommendation task
+            self.optimizer.zero_grad()
+            edge_index = batch.edge_index
+            pos_edge_index = edge_index[:, batch.y == 1]
+            neg_edge_index = edge_index[:, batch.y == 0]
 
-            # report eval msg
-            # eval_state = self.evaluate(val_loader)
+            pos_out = self.gnn(batch.x, pos_edge_index)
+            neg_out = self.gnn(batch.x, neg_edge_index)
 
-            metrics_values = self.evaluate_model(
-                gen_dataset, metrics=[Metric("Accuracy", mask='val'),
-                                      Metric("Precision", mask='val'),
-                                      Metric("Recall", mask='val')] + metrics)
-            # model_data = self.get_stats_data(gen_dataset, predictions=True, logits=True)
-            # self.send_epoch_results(metrics_values, model_data, loss=np.average(loss_list))
-            acc = metrics_values['val']["Accuracy"]
-            print(
-                f"Eval Epoch: {step} | Acc: {acc:.3f} | "
-                f"Precision: {metrics_values['val']['Precision']:.3f} | "
-                f"Recall: {metrics_values['val']['Recall']:.3f}")
+            # TODO check if we need to take out[:batch.batch_size]
+            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
+            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
 
-            # only save the best model
-            is_best = (acc - best_acc >= 0.01)
+            loss = pos_loss + neg_loss
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+        return loss
 
-            if is_best:
-                early_stop_count = 0
-            else:
-                early_stop_count += 1
+    def gsat_loss(
+            self,
+            att: torch.Tensor,
+            logits: torch.Tensor,
+            labels: torch.Tensor,
+            epoch: int
+    ) -> torch.Tensor:
+        pred_loss = self.loss_function(logits, labels)
 
-            if early_stop_count > early_stopping:
-                break
+        r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r,
+                                                     init_r=self.init_r)
+        info_loss = (att * torch.log(att / r + 1e-6) + (1 - att) * torch.log((1 - att) / (1 - r + 1e-6) + 1e-6)).mean()
 
-            if is_best:
-                best_acc = acc
-                early_stop_count = 0
-                best_prots = prot_layer.prototype_graphs
-            if is_best or step % save_epoch == 0:
-                # save_best(ckpt_dir, epoch, gnnNets, model_args.model_name, acc, is_best)
-                pass
+        pred_loss = pred_loss * self.pred_loss_coef
+        # self.info_loss_coef = 0
+        info_loss = info_loss * self.info_loss_coef
+        print(self.pred_loss_coef, self.info_loss_coef, pred_loss, info_loss)
+        loss = pred_loss + info_loss
+        return loss
 
-            if acc > save_thrsh:
-                if best_prots == 0:
-                    prot_layer.projection(dataset, train_ind, data, thrsh=prot_thrsh)
-                best_prots = prot_layer.prototype_graphs
-                best_acc = acc
-                break
+    def get_r(
+            self,
+            decay_interval: float,
+            decay_r: float,
+            current_epoch: int,
+            init_r=0.9,
+            final_r=0.5
+    ) -> float:
+        r = init_r - current_epoch // decay_interval * decay_r
+        if r < final_r:
+            r = final_r
+        return r
 
-            """
-            if best_acc >= save_thrsh and projected:
-                break
-            """
-            self.modification.epochs = step + 1
 
-        print(f"The best validation accuracy is {best_acc}.")
-        # report test msg
-        # checkpoint = torch.load(os.path.join(ckpt_dir, f'{model_args.model_name}_best.pth'))
-        # gnnNets.update_state_dict(checkpoint['net'])
-        # test_state, _, _ = test_GC(dataloader['test'], model, criterion)
-        # print(f"Test: | Loss: {test_state['loss']:.3f} | Acc: {test_state['acc']:.3f}")
-        print("End(for breakpoint)")
-        self.gnn.best_prots = best_prots
-
-        return best_acc
-
-    def run_model(self, gen_dataset, mask='test', out='answers'):
-        """
-        Run the model on a part of dataset specified with a mask.
-
-        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
-        :param mask: 'train', 'val', 'test', or a bool valued list
-        :param out: if 'answers' return answers, otherwise predictions
-        :return: y_pred, y_true
-        """
-        try:
-            mask = {
-                'train': gen_dataset.train_mask,
-                'val': gen_dataset.val_mask,
-                'test': gen_dataset.test_mask,
-                'all': tensor([True] * len(gen_dataset.labels)),
-            }[mask]
-        except KeyError:
-            assert isinstance(mask, torch.Tensor)
-
-        run_func = {
-            'answers': self.gnn.get_answer,
-            'predictions': self.gnn.get_predictions,
-            'logits': self.gnn.__call__,
-        }[out]
-        self.gnn.eval()
-        with torch.no_grad():  # Turn off gradients computation
-            if gen_dataset.is_multi():
-                dataset = gen_dataset.dataset
-                part_loader = DataLoader(
-                    dataset.index_select(mask), batch_size=self.batch, shuffle=False)
-                full_out = torch.Tensor()
-                # y_true = torch.Tensor()
-                if hasattr(self, 'optimizer'):
-                    self.optimizer.zero_grad()
-                for data in part_loader:
-                    # logits_batch = self.gnn(data.x, data.edge_index, data.batch)
-                    # pred_batch = logits_batch.argmax(dim=1)
-                    out = run_func(data.x, data.edge_index, data.batch)
-                    full_out = torch.cat((full_out, out))
-                    # y_true = torch.cat((y_true, data.y))
-            else:  # single-graph
-                data = gen_dataset.dataset.data
-                ver_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
-                mask_size = len(ver_ind)
-                random.shuffle(ver_ind)
-
-                number_of_batches = ceil(mask_size / self.batch)
-                # data_x_elem_len = data.x.size()[1]
-                full_out = torch.Tensor()
-
-                for batch_ind in range(number_of_batches):
-                    data_x_copy = torch.clone(data.x)
-                    mask_copy = [False] * data.x.size()[0]
-
-                    # features_mask_tensor_copy = torch.clone(features_mask_tensor)
-
-                    train_batch = ver_ind[batch_ind * self.batch: (batch_ind + 1) * self.batch]
-                    for elem_ind in train_batch:
-                        for feature in self.mask_features:
-                            # features_mask_tensor_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                            #                                     gen_dataset.info.node_attr_slices[feature][1]] = False
-                            data_x_copy[elem_ind][gen_dataset.info.node_attr_slices[feature][0]:
-                                                  gen_dataset.info.node_attr_slices[feature][1]] = 0
-                        # if self.gnn_mm.train_mask_flag:
-                        #     data_x_copy[elem_ind] = torch.zeros(data_x_elem_len)
-                        # y_true = torch.masked.masked_tensor(data.y, mask_tensor)
-                        mask_copy[elem_ind] = True
-
-                    # mask_x_tensor = torch.masked.masked_tensor(data.x, features_mask_tensor_copy)
-
-                    # FIXME Kirill what to do if no optimizer, train_mask_flag, batch?
-                    if hasattr(self, 'optimizer'):
-                        self.optimizer.zero_grad()
-                    # logits_batch = self.gnn(data_x_copy, data.edge_index)
-                    # pred_batch = logits_batch.argmax(dim=1)
-                    out = run_func(data_x_copy, data.edge_index, data.batch)
-                    full_out = torch.cat((full_out, out[mask_copy]))
-                    # y_true = torch.cat((y_true, data.y[mask_copy]))
-
-        return full_out

@@ -2,19 +2,28 @@ import time
 from functools import wraps
 import logging
 import functools
+from typing import Callable
 
 logging.basicConfig(level=logging.INFO)
 
 
-def retry(max_tries=3, delay_seconds=1):
+def retry(
+        max_tries: int = 3,
+        delay_seconds: int = 1
+):
     """
     Allows you to re-execute the program after the Nth amount of time
     :param max_tries: number of restart attempts
     :param delay_seconds: time interval between attempts
     """
-    def decorator_retry(func):
+    def decorator_retry(
+            func: Callable
+    ) -> Callable:
         @wraps(func)
-        def wrapper_retry(*args, **kwargs):
+        def wrapper_retry(
+                *args,
+                **kwargs
+        ):
             tries = 0
             while tries < max_tries:
                 try:
@@ -30,13 +39,17 @@ def retry(max_tries=3, delay_seconds=1):
     return decorator_retry
 
 
-def memoize(func):
+def memoize(
+        func: Callable
+) -> Callable:
     """
     Caching function
     """
     cache = {}
 
-    def wrapper(*args):
+    def wrapper(
+            *args
+    ):
         if args in cache:
             return cache[args]
         else:
@@ -47,11 +60,16 @@ def memoize(func):
     return wrapper
 
 
-def timing_decorator(func):
+def timing_decorator(
+        func: Callable
+) -> Callable:
     """
     Timing functions
     """
-    def wrapper(*args, **kwargs):
+    def wrapper(
+            *args,
+            **kwargs
+    ):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
@@ -61,7 +79,9 @@ def timing_decorator(func):
     return wrapper
 
 
-def log_execution(func):
+def log_execution(
+        func: Callable
+) -> Callable:
     """
     Function call logging
     """

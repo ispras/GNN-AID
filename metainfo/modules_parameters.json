@@ -10,7 +10,7 @@
 		{
 			"import_info":  ["GCNConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
  "SAGEConv": {
@@ -53,7 +53,7 @@
 		{
 			"import_info":  ["SGConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
   "GINConv": {
@@ -74,7 +74,7 @@
 		{
 			"import_info":  ["TAGConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
   "ARMAConv": {
@@ -88,7 +88,7 @@
 		{
 			"import_info":  ["ARMAConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
   "SSGConv": {
@@ -102,7 +102,7 @@
 		{
 			"import_info":  ["SSGConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
  "GMM": {
@@ -130,7 +130,7 @@
 		{
 			"import_info":  ["CGConv", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
  "APPNP": {
@@ -144,7 +144,7 @@
 		{
 			"import_info":  ["APPNP", ["torch_geometric.nn"]],
             "need_full_gnn_flag": false,
-            "forward_parameters": "x=x, edge_index=edge_index"
+            "forward_parameters": "x=x, edge_index=edge_index, edge_weight=edge_weight"
 		}
  },
  "Linear": {
@@ -166,5 +166,23 @@
             "need_full_gnn_flag": true,
             "forward_parameters": "x=x, full_gnn_id=id(self)"
 		}
- }
+ },
+  "GSAT": {
+    "learn_edge_features": ["Edge-based attention of node-based", "bool", false, null, "If set to True, edge_attr expected in layers"],
+    "extractor_dropout_p": ["Dropout rate for GSAT MLP", "float", 0.5, {"min": 0, "max": 1, "step": 0.01}, "Probability for dropout in GSAT MLP"],
+    "_technical_parameter":
+		{
+			"import_info":  ["GSATLayer", ["models_builder.custom_layers"]],
+            "need_full_gnn_flag": true,
+            "forward_parameters": "x=x, edge_index=edge_index, full_gnn_id=id(self)"
+		}
+  },
+  "DummyLayer": {
+        "_technical_parameter":
+		{
+			"import_info":  ["DummyLayer", ["models_builder.custom_layers"]],
+            "need_full_gnn_flag": false,
+            "forward_parameters": "x=x"
+		}
+  }
 }

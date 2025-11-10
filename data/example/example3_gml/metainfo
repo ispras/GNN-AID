@@ -1,0 +1,81 @@
+{
+ "class_name": "KnownFormatDataset",
+ "import_from": "datasets.known_format_datasets",
+ "format": "gml",
+ "name": "example of multiple graphs in gml format",
+ "count": 3,
+ "directed": false,
+ "hetero": false,
+ "nodes": [
+  4,
+  4,
+  5
+ ],
+ "remap": true,
+ "node_attributes": {
+  "names": [
+   "a",
+   "b"
+  ],
+  "types": [
+   "continuous",
+   "categorical"
+  ],
+  "values": [
+   [
+    0,
+    100
+   ],
+   [
+    "alpha",
+    "beta",
+    "gamma",
+    "delta"
+   ]
+  ]
+ },
+ "edge_attributes": {
+  "names": [
+   "weight",
+   "type"
+  ],
+  "types": [
+   "continuous",
+   "categorical"
+  ],
+  "values": [
+   [
+    0,
+    5
+   ],
+   [
+    "mixed",
+    "complex",
+    "hybrid"
+   ]
+  ]
+ },
+ "labelings": {
+  "binary": 2
+ },
+ "node_attr_slices": {
+  "a": [
+   0,
+   1
+  ],
+  "b": [
+   1,
+   5
+  ]
+ },
+ "edge_attr_slices": {
+  "weight": [
+   0,
+   1
+  ],
+  "type": [
+   1,
+   4
+  ]
+ }
+}

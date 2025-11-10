@@ -1,0 +1,6 @@
+## These reqs need to be installed separately before the others
+
+networkx==3.0  # For explainers
+docutils==0.18.1  # from sphinx==7.1.2
+
+torch==2.0.0

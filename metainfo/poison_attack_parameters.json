@@ -1,0 +1,36 @@
+{
+ "EmptyPoisonAttacker": {
+ },
+ "RandomPoisonAttack": {
+  "n_edges_percent": ["n_edges_percent", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
+ },
+ "MetaAttackFull":{
+  "lambda_": ["Lambda", "float", 0.5, {"min":  0, "max":  1, "step": 0.05}, "lambda coefficient from the paper"],
+  "train_iters": ["Train iters (surrogate)", "int", 200, {"min": 0, "step": 1}, "Trainig iterations for surrogate model"],
+  "attack_iters": ["Attack iters", "int", 100, {"min": 0, "step": 1}, "Attack iterations for surrogate model"],
+  "attack_structure": ["Attack structure", "bool", true, {}, "whether change graph structure with attack or not"],
+  "attack_features": ["Attack features", "bool", false, {}, "whether change node features with attack or not"],
+  "attack_budget": ["Attack budget", "int", 1, {"min": 0, "step":  1}, "Amount of elements to modify"]
+ },
+ "MetaAttackApprox":{
+  "lambda_": ["Lambda", "float", 0.5, {"min":  0, "max":  1, "step": 0.05}, "lambda coefficient from the paper"],
+  "train_iters": ["Train iters (surrogate)", "int", 100, {"min": 0, "step": 1}, "Trainig iterations for surrogate model"],
+  "attack_structure": ["Attack structure", "bool", true, {}, "whether change graph structure with attack or not"],
+  "attack_features": ["Attack features", "bool", false, {}, "whether change node features with attack or not"],
+  "attack_budget": ["Attack budget", "int", 500, {"min": 0, "step":  1}, "Amount of elements to modify"]
+ },
+ "CLGAAttack": {
+  "learning_rate": ["Learning Rate", "float", 0.01, {"min": 0.0001, "max": 0.1, "step": 0.001}, "Learning rate for model optimization"],
+  "num_hidden": ["Hidden Units", "int", 256, {"min": 16, "max": 1024, "step": 16}, "Number of hidden units in the GCN encoder"],
+  "num_proj_hidden": ["Projection Units", "int", 32, {"min": 16, "max": 128, "step": 16}, "Number of units in the projection head"],
+  "activation": ["Activation Function", "string", "prelu", ["prelu", "relu", "tanh", "sigmoid"], "Activation function for the GCN encoder"],
+  "drop_edge_rate_1": ["Drop Edge Rate (View 1)", "float", 0.3, {"min": 0.0, "max": 1.0, "step": 0.01}, "Probability of dropping edges in the first augmented view"],
+  "drop_edge_rate_2": ["Drop Edge Rate (View 2)", "float", 0.4, {"min": 0.0, "max": 1.0, "step": 0.01}, "Probability of dropping edges in the second augmented view"],
+  "tau": ["Temperature coeff", "float", 0.4, {"min": 0.1, "max": 1.0, "step": 0.1}, "Temperature parameter for contrastive loss"],
+  "num_epochs": ["Number of Epochs", "int", 3000, {"min": 100, "max": 10000, "step": 100}, "Number of training epochs for the attack"],
+  "weight_decay": ["Weight Decay", "float", 1e-5, {"min": 1e-6, "max": 1e-3, "step": 1e-5}, "Weight decay (L2 regularization) coefficient"],
+  "drop_scheme": ["Drop Scheme", "string", "degree", ["degree", "pr", "evc", "uniform"], "Scheme for dropping edges or features"]
+}
+}
+
+

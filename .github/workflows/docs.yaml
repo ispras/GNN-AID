@@ -1,0 +1,32 @@
+name: Build documentation
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        python -m pip install --upgrade --no-cache-dir pip setuptools
+        pip install -r requirements1.txt -r requirements2.txt
+        python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+        python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir .
+
+    - name: Build documentation
+      # Build the documentation, you can use this command locally
+      run: |
+        cd docs/source
+        python -m sphinx -T --keep-going -b html -d _build/doctrees -D language=en . docs/html

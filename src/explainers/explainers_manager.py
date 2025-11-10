@@ -1,31 +1,14 @@
 import json
-from torch import device
-from torch.cuda import is_available
+from socket import SocketIO
+from typing import Union, Type
 
-from aux.configs import ExplainerInitConfig, ExplainerModificationConfig, ExplainerRunConfig, \
-    CONFIG_CLASS_NAME, CONFIG_OBJ, ConfigPattern
+from data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from aux.declaration import Declare
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH
+from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses
+from datasets.gen_dataset import GeneralDataset
 from explainers.explainer import Explainer, ProgressBar
-
-# TODO misha can we do it not manually?
-# Need to import all modules with subclasses of Explainer, otherwise python can't see them
-
-for pack in [
-    'explainers.GNNExplainer.torch_geom_our',
-    'explainers.GNNExplainer.dig_our',
-    'explainers.PGExplainer.dig',
-    'explainers.PGMExplainer',
-    'explainers.SubgraphX',
-    'explainers.Zorro',
-    'explainers.graphmask',
-    'explainers.ProtGNN',
-    'explainers.NeuralAnalysis.our'
-]:
-    try:
-        __import__(pack + '.out')
-    except ImportError:
-        print(f"Couldn't import Explainer from {pack}")
+from explainers.explainer_metrics import NodesExplainerMetric
+from models_builder.gnn_models import GNNModelManager
 
 
 class FrameworkExplainersManager:
@@ -34,15 +17,21 @@ class FrameworkExplainersManager:
     interpretation methods built into the framework
     Currently supports 6 explainers
     """
-    supported_explainers = [e.name for e in Explainer.__subclasses__()]
+    supported_explainers = [e.name for e in all_subclasses(Explainer)]
 
     def __init__(
             self,
-            dataset, gnn_manager,
-            init_config=None,
-            explainer_name: str=None,
-            modification_config: ExplainerModificationConfig=None,
+            dataset: GeneralDataset,
+            gnn_manager: Type,
+            init_config: Union[ConfigPattern, ExplainerInitConfig] = None,
+            explainer_name: str = None,
+            modification_config: Union[ConfigPattern, ExplainerModificationConfig] = None,
+            device: str = None
     ):
+        self.files_paths = None
+        if device is None:
+            device = "cpu"
+        self.device = device
         if init_config is None:
             if explainer_name is None:
                 raise Exception("if init_config is None, explainer_name must be defined")
@@ -59,7 +48,7 @@ class FrameworkExplainersManager:
                 _class_name=explainer_name,
                 _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
                 _config_class="ExplainerInitConfig",
-                _config_kwargs=init_config.to_saveable_dict(),
+                _config_kwargs=init_config.to_savable_dict(),
             )
         self.init_config = init_config
         if modification_config is None:
@@ -70,7 +59,7 @@ class FrameworkExplainersManager:
         elif isinstance(modification_config, ExplainerModificationConfig):
             modification_config = ConfigPattern(
                 _config_class="ExplainerModificationConfig",
-                _config_kwargs=modification_config.to_saveable_dict(),
+                _config_kwargs=modification_config.to_savable_dict(),
             )
         self.modification_config = modification_config
 
@@ -99,26 +88,33 @@ class FrameworkExplainersManager:
                 f"{FrameworkExplainersManager.supported_explainers}")
 
         print("Creating explainer")
-        name_klass = {e.name: e for e in Explainer.__subclasses__()}
+        name_klass = {e.name: e for e in all_subclasses(Explainer)}
         klass = name_klass[self.explainer_name]
         self.explainer = klass(
             self.gen_dataset, model=self.gnn,
-            device=device('cuda' if is_available() else 'cpu'),
+            device=self.device,
             # device=device("cpu"),
-            **init_kwargs)
+            **init_kwargs
+        )
 
         self.explanation = None
         self.explanation_data = None
         self.running = False
 
-    def save_explanation(self, run_config):
+    def save_explanation(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig]
+    ) -> None:
         """ Save explanation to file.
         """
         self.explanation_result_path(run_config)
         self.explainer.save(self.explainer_result_file_path)
         print("Saved explanation")
 
-    def load_explanation(self, run_config):
+    def load_explanation(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig]
+    ) -> dict:
         if self.modification_config.explainer_ver_ind is None:
             raise RuntimeError("explainer_ver_ind should not be None")
         self.explanation_result_path(run_config)
@@ -131,18 +127,26 @@ class FrameworkExplainersManager:
                                     f"{self.explainer_result_file_path}")
         return explanation
 
-    def explanation_result_path(self, run_config):
+    def explanation_result_path(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            create_dir_flag: bool = True,
+    ) -> None:
         # TODO pass configs
         self.explainer_result_file_path, self.files_paths = Declare.explanation_file_path(
             models_path=self.gnn_model_path,
             explainer_name=self.explainer_name,
             explainer_ver_ind=self.modification_config.explainer_ver_ind,
-            explainer_attack_type=self.modification_config.explainer_attack_type,
-            explainer_init_kwargs=self.init_config.to_saveable_dict(),
-            explainer_run_kwargs=run_config.to_saveable_dict(),
+            explainer_init_kwargs=self.init_config.to_savable_dict(),
+            explainer_run_kwargs=run_config.to_savable_dict(),
+            create_dir_flag=create_dir_flag,
         )
 
-    def conduct_experiment(self, run_config, socket=None):
+    def conduct_experiment(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            socket: SocketIO = None
+    ) -> dict:
         """
         Runs the full cycle of the interpretation experiment
         """
@@ -167,6 +171,77 @@ class FrameworkExplainersManager:
             # TODO what if save_explanation_flag=False?
             if self.save_explanation_flag:
                 self.save_explanation(run_config)
+                path = self.model_manager.save_model_executor()
+                self.gen_dataset.save_train_test_mask(path)
+        except Exception as e:
+            if socket:
+                socket.send("er", {"status": "FAILED"})
+            raise e
+
+        return result
+
+    def conduct_experiment_by_dataset(
+            self,
+            run_config: Union[ConfigPattern, ExplainerRunConfig],
+            dataset: GeneralDataset,
+            socket: SocketIO = None,
+            save_explanation_flag=False
+    ) -> dict:
+        init_kwargs = getattr(self.init_config, CONFIG_OBJ).to_dict()
+        if self.explainer_name not in FrameworkExplainersManager.supported_explainers:
+            raise ValueError(
+                f"Explainer {self.explainer_name} is not supported. Choose one of "
+                f"{FrameworkExplainersManager.supported_explainers}")
+        print("Creating explainer")
+        name_klass = {e.name: e for e in all_subclasses(Explainer)}
+        klass = name_klass[self.explainer_name]
+        self.explainer = klass(
+            dataset, model=self.gnn,
+            device=self.device,
+            # device=device("cpu"),
+            **init_kwargs
+        )
+        old_save_explanation_flag = self.save_explanation_flag
+        self.save_explanation_flag = save_explanation_flag
+        result = self.conduct_experiment(run_config, socket)
+        self.save_explanation_flag = old_save_explanation_flag
+        return result
+
+    def evaluate_metrics(
+            self,
+            node_id_to_explainer_run_config: dict[int, ConfigPattern],
+            explaining_metrics_params: Union[dict, None] = None,
+            socket: SocketIO = None
+    ) -> dict:
+        """
+        Evaluates explanation metrics between given node indices
+        """
+        self.explainer.pbar = ProgressBar(
+            socket, "er", desc=f'{self.explainer.name} explaining metrics calculation'
+        )  # progress bar
+        try:
+            print("Evaluating explanation metrics...")
+            if self.gen_dataset.is_multi():
+                raise NotImplementedError("Explanation metrics for graph classification")
+            else:
+
+                explanation_metrics_calculator = NodesExplainerMetric(
+                    self,
+                    explaining_metrics_params
+                )
+                result = explanation_metrics_calculator.evaluate(node_id_to_explainer_run_config)
+            print("Explanation metrics are ready")
+
+            if socket:
+                # TODO: Handle this on frontend
+                socket.send("er", {
+                    "status": "OK",
+                    "explanation_metrics": result
+                })
+
+            # TODO what if save_explanation_flag=False?
+            if self.save_explanation_flag:
+                # self.save_explanation_metrics(run_config)
                 self.model_manager.save_model_executor()
         except Exception as e:
             if socket:
@@ -176,10 +251,13 @@ class FrameworkExplainersManager:
         return result
 
     @staticmethod
-    def available_explainers(gen_dataset, model_manager):
+    def available_explainers(
+            gen_dataset: GeneralDataset,
+            model_manager: GNNModelManager
+    ) -> list:
         """ Get a list of explainers applicable for current model and dataset.
         """
         return [
-            e.name for e in Explainer.__subclasses__()
+            e.name for e in all_subclasses(Explainer)
             if e.check_availability(gen_dataset, model_manager)
         ]

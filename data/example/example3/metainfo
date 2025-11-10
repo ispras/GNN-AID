@@ -1,0 +1,27 @@
+{
+ "class_name": "KnownFormatDataset",
+ "import_from": "datasets.known_format_datasets",
+ "name": "example",
+ "count": 3,
+ "nodes": [3, 4, 5],
+ "directed": false,
+ "node_attributes": {
+  "names": [
+   "type"
+  ],
+  "types": [
+   "categorical"
+  ],
+  "values": [
+   [
+    "alpha",
+    "beta",
+    "gamma"
+   ]
+  ]
+ },
+ "labelings": {
+  "binary": 2,
+  "threeClasses": 3
+ }
+}

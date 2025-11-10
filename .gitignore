@@ -9,6 +9,8 @@
 *__pycache__*
 *.py[cod]
 *$py.class
+*PTGDataset*
+*experiments/explainers_metrics*
 
 .cache
 .idea
@@ -20,14 +22,16 @@ config
 pics
 results
 sphinx_docs
+*explainers_metrics*
+experiments/explainers_metrics/**/*_metrics.json
 
 data
 explanations
+<base.ptg_datasets.PTGDataset object*
 models
 models_exp
 results
 data_info
-explanations
 #user_models_obj
 #user_models_managers
 user_datasets
@@ -46,3 +50,7 @@ data__DatasetsTest_tmp/
 
 # Mac OS extentions
 *.DS_Store
+
+# Sphinx documentation
+docs/_build/
+

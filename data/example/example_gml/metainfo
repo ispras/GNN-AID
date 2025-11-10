@@ -1,0 +1,77 @@
+{
+ "class_name": "KnownFormatDataset",
+ "import_from": "datasets.known_format_datasets",
+ "name": "example_gml",
+ "format": "gml",
+ "count": 1,
+ "directed": true,
+ "hetero": false,
+ "nodes": [
+  8
+ ],
+ "remap": true,
+ "node_attributes": {
+  "names": [
+   "a",
+   "b"
+  ],
+  "types": [
+   "continuous",
+   "continuous"
+  ],
+  "values": [
+   [
+    0,
+    1
+   ],
+   [
+    0,
+    200
+   ]
+  ]
+ },
+ "edge_attributes": {
+  "names": [
+   "weight",
+   "type"
+  ],
+  "types": [
+   "continuous",
+   "categorical"
+  ],
+  "values": [
+   [
+    1,
+    6
+   ],
+   [
+    "small",
+    "medium",
+    "big"
+   ]
+  ]
+ },
+ "labelings": {
+  "binary": 2
+ },
+ "node_attr_slices": {
+  "a": [
+   0,
+   1
+  ],
+  "b": [
+   1,
+   2
+  ]
+ },
+ "edge_attr_slices": {
+  "weight": [
+   0,
+   1
+  ],
+  "type": [
+   1,
+   4
+  ]
+ }
+}

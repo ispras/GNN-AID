@@ -1,0 +1,22 @@
+{
+ "EmptyEvasionDefender": {
+ }, 
+ "GradientRegularizationDefender": {
+  "regularization_strength": ["regularization_strength", "float", 50, {"min": 0.0001, "step": 0.01}, "?"]
+ }, 
+ "QuantizationDefender": {
+  "num_levels": ["num_levels", "int", 8, {"min": 2, "step": 1}, "?"]
+ },
+ "DistillationDefender": {
+  "temperature": ["temperature", "float", 5.0, {"min": 1, "step": 0.01}, "?"]
+ },
+ "AutoEncoderDefender": {
+  "hidden_dim": ["hidden_dim", "int", 7, {"min": 3, "step": 1}, "?"],
+  "bottleneck_dim": ["bottleneck_dim", "int", 5, {"min": 1, "step": 1}, "?"],
+  "reconstruction_loss_weight": ["reconstruction_loss_weight", "float", 0.1, {"min": 0.0001, "step": 0.01}, "?"]
+ },
+ "AdvTraining": {
+  "attack_name": ["attack_name", "dynamic", null, {"params_type": "AD-ea", "result_to": "attack_config", "possible": ["PGD", "FGSM", "QAttack"]}, "Name of evasion attack used to build adversarial examples. Select one to set its parameters."]
+ }
+}
+

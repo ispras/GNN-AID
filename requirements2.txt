@@ -1,0 +1,18 @@
+## These are reqs needed for documentation
+
+# For front-end
+python-socketio==5.13.0
+aiohttp==3.12.11
+aiohttp-jinja2==1.6
+
+numpy==1.26.3
+tqdm==4.67.1
+scipy==1.12.0
+scikit-learn==1.4.0
+python-dateutil
+statsmodels==0.14.4
+pandas==2.2.0
+pylint==3.3.7
+scikit-optimize==0.10.2
+
+torch_geometric==2.3.1

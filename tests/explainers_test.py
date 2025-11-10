@@ -1,0 +1,546 @@
+import collections.abc
+collections.Callable = collections.abc.Callable
+import sys
+import os
+sys.path.append(f"{os.getcwd()}/src")
+
+import unittest
+import warnings
+
+# Monkey patch main dirs - before other imports
+from aux.utils import monkey_patch_directories
+monkey_patch_directories()
+
+from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
+from explainers.explainers_manager import FrameworkExplainersManager
+from data_structures.configs import FeatureConfig
+from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
+from models_builder.models_zoo import model_configs_zoo
+
+
+# TODO PGM,PGE tests + test re-work -> more use-cases
+
+class ExplainersTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Init datasets
+        # Single-Graph - Example
+        gen_dataset_sg_example = DatasetManager.get_by_config(
+            DatasetConfig(("example", "example")),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+                             labeling='binary',
+                             dataset_ver_ind=0)
+        )
+        gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.dataset_sg_example = gen_dataset_sg_example
+        results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
+
+        #Single-graph - Cora
+        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
+            full_name=("Homogeneous", "Planetoid", "Cora"),
+            dataset_ver_ind=0
+        )
+
+        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+        #     DatasetConfig(
+        #         domain="single-graph",
+        #         group="Planetoid",
+        #         graph="Cora"),
+        #     DatasetVarConfig(dataset_ver_ind=0)
+        # )
+        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
+
+        # Multi-graphs - Small
+        self.dataset_mg_small = DatasetManager.get_by_config(
+            DatasetConfig(('example', 'example8')),
+            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+                             labeling='binary',
+                             dataset_ver_ind=0)
+        )
+        self.dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        results_dataset_path_mg_small = self.dataset_mg_small.prepared_dir
+
+        # Multi-graphs - MUTAG
+        self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
+            full_name=(LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG"),
+            dataset_ver_ind=0
+        )
+
+        gen_dataset_mg_mutag = self.dataset_mg_mutag
+        gen_dataset_mg_mutag.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+        dataset_mg_mutag = gen_dataset_mg_mutag
+        results_dataset_path_mg_mutag = gen_dataset_mg_mutag.prepared_dir
+
+        # Init models
+        gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
+
+        gnn_model_manager_sg_example_manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "batch": 10000,
+                "mask_features": []
+            }
+        )
+        self.gnn_model_manager_sg_example = FrameworkGNNModelManager(
+            gnn=gcn2_sg_example,
+            dataset_path=results_dataset_path_sg_example,
+            manager_config=gnn_model_manager_sg_example_manager_config
+        )
+
+        self.gnn_model_manager_sg_example.train_model(gen_dataset=gen_dataset_sg_example, steps=50,
+                                                      save_model_flag=False,
+                                                      metrics=[Metric("F1", mask='test')])
+
+        # TODO Kirill, tmp comment work and tests with Prot
+        gin3_lin2_prot_mg_small = model_configs_zoo(
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin_prot')
+        gin3_lin2_prot_mg_mutag = model_configs_zoo(
+            dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin_lin_prot'
+        )
+        gin3_lin1_mg_mutag = model_configs_zoo(
+            dataset=dataset_mg_mutag, model_name='gin_gin_gin_lin')
+
+        gnn_model_manager_mg_mutag_manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "batch": 24,
+                "mask_features": []
+            }
+        )
+        self.gnn_model_manager_mg_mutag = FrameworkGNNModelManager(
+            gnn=gin3_lin1_mg_mutag,
+            dataset_path=results_dataset_path_mg_mutag,
+            manager_config=gnn_model_manager_mg_mutag_manager_config
+        )
+
+        self.gnn_model_manager_mg_mutag.train_model(
+            gen_dataset=dataset_mg_mutag, steps=50, save_model_flag=False,
+            metrics=[Metric("F1", mask='test')])
+
+        gin3_lin2_mg_small_manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "batch": 10000,
+                "mask_features": []
+            }
+        )
+
+        self.prot_gnn_mm_mg_small = ProtGNNModelManager(
+            gnn=gin3_lin2_prot_mg_small, dataset_path=results_dataset_path_mg_small,
+            # manager_config=gin3_lin2_mg_small_manager_config,
+        )
+        self.prot_gnn_mm_mutag = ProtGNNModelManager(gnn=gin3_lin2_prot_mg_mutag, dataset_path=results_dataset_path_mg_mutag)
+        # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
+
+        best_acc = self.prot_gnn_mm_mg_small.train_model(
+            gen_dataset=self.dataset_mg_small, steps=100, metrics=[])
+
+        # uncomment for ProtGNN big test
+        # self.prot_gnn_mm_mutag.train_model(
+        #     gen_dataset=gen_dataset_mg_mutag, steps=40, metrics=[])
+
+        gin3_lin2_mg_small = model_configs_zoo(
+            dataset=self.dataset_mg_small, model_name='gin_gin_gin_lin_lin')
+        self.gnn_model_manager_mg_small = FrameworkGNNModelManager(
+            gnn=gin3_lin2_mg_small,
+            dataset_path=results_dataset_path_mg_small,
+            manager_config=gin3_lin2_mg_small_manager_config
+        )
+        self.gnn_model_manager_mg_small.train_model(
+            gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
+            metrics=[Metric("F1", mask='test')])
+
+        self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
+        # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
+
+
+        self.gsat_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    # "_config_class": "Config",
+                    "_class_name": "Adam",
+                    # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
+                    # "_class_import_info": ["torch.optim"],
+                    "_config_kwargs": {
+                        "lr": 0.01
+                    },
+                }
+            }
+        )
+        # self.gsat_config = ConfigPattern(
+        #     _config_class="ModelManagerConfig",
+        #     _config_kwargs={
+        #         "mask_features": [],
+        #     }
+        # )
+
+        self.default_config = ModelModificationConfig(
+            model_ver_ind=0,
+        )
+
+        self.gsat_gnn_mm_sg_cora = GSATModelManager(
+            gnn=self.dummy_gcn_2_gsat,
+            manager_config=self.gsat_config,
+            modification=self.default_config,
+            dataset_path=self.results_dataset_path_sg_cora
+        )
+
+        # gsat_gnn_mm_sg_cora = FrameworkGNNModelManager(
+        #     gnn=dummy_gcn_2_gsat,
+        #     manager_config=self.manager_config,
+        #     modification=self.default_config,
+        #     dataset_path=self.results_dataset_path_sg_cora
+        # )
+
+        self.gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        metric_loc = self.gsat_gnn_mm_sg_cora.evaluate_model(
+            gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
+        print(metric_loc)
+        sg_cora_model_path = self.gsat_gnn_mm_sg_cora.model_path_info() / 'model'
+        self.gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
+    def test_PGE_SG(self):
+        # FIXME not working with another tests
+        warnings.warn("Start PGExplainer(dig)")
+        explainer_init_config = ConfigPattern(
+            _class_name="PGExplainer(dig)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "PGExplainer(dig)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+                        'element_idx': 0,
+                    },
+                }
+            }
+        )
+        explainer_PGE = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            explainer_name='PGExplainer(dig)',
+        )
+        explainer_PGE.conduct_experiment(explainer_run_config)
+
+    def test_PGE_MG(self):
+        warnings.warn("Start PGExplainer(dig)")
+        explainer_init_config = ConfigPattern(
+            _class_name="PGExplainer(dig)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "PGExplainer(dig)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_PGE = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_mutag, gnn_manager=self.gnn_model_manager_mg_mutag,
+            explainer_name='PGExplainer(dig)',
+        )
+        explainer_PGE.conduct_experiment(explainer_run_config)
+
+    def test_PGM_SG(self):
+        warnings.warn("Start PGMExplainer")
+        explainer_init_config = ConfigPattern(
+            _class_name="PGMExplainer",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "PGMExplainer",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_PGM = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            explainer_name='PGMExplainer',
+        )
+        explainer_PGM.conduct_experiment(explainer_run_config)
+
+    def test_PGM_MG(self):
+        warnings.warn("Start PGMExplainer")
+        explainer_init_config = ConfigPattern(
+            _class_name="PGMExplainer",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "PGMExplainer",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_PGM = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_mutag, gnn_manager=self.gnn_model_manager_mg_mutag,
+            explainer_name='PGMExplainer',
+        )
+        explainer_PGM.conduct_experiment(explainer_run_config)
+
+    def test_Zorro(self):
+        warnings.warn("Start Zorro")
+        explainer_init_config = ConfigPattern(
+            _class_name="Zorro",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "Zorro",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_Zorro = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            explainer_name='Zorro',
+        )
+        explainer_Zorro.conduct_experiment(explainer_run_config)
+
+    def test_ProtGNN(self):
+        warnings.warn("Start ProtGNN")
+        explainer_init_config = ConfigPattern(
+            _class_name="ProtGNN",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "global",
+                "kwargs": {
+                    "_class_name": "ProtGNN",
+                    "_import_path": EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_Prot = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_small, gnn_manager=self.prot_gnn_mm_mg_small,
+            explainer_name='ProtGNN',
+        )
+
+        explainer_Prot.conduct_experiment(explainer_run_config)
+
+    def test_ProtGNN_big(self):
+        # uncomment model train for this test - big one
+
+        warnings.warn("Start ProtGNN")
+        explainer_init_config = ConfigPattern(
+            _class_name="ProtGNN",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "global",
+                "kwargs": {
+                    "_class_name": "ProtGNN",
+                    "_import_path": EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_Prot = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_mutag, gnn_manager=self.prot_gnn_mm_mutag,
+            explainer_name='ProtGNN',
+        )
+
+        explainer_Prot.conduct_experiment(explainer_run_config)
+
+
+    def test_GNNExpl_PYG_SG(self):
+        warnings.warn("Start GNNExplainer_PYG")
+        explainer_init_config = ConfigPattern(
+            _class_name="GNNExplainer(torch-geom)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GNNExplainer(torch-geom)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_GNNExpl = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            explainer_name='GNNExplainer(torch-geom)',
+        )
+        explainer_GNNExpl.conduct_experiment(explainer_run_config)
+
+    def test_GNNExpl_PYG_MG(self):
+        warnings.warn("Start GNNExplainer_PYG")
+        explainer_init_config = ConfigPattern(
+            _class_name="GNNExplainer(torch-geom)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GNNExplainer(torch-geom)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+
+                    },
+                }
+            }
+        )
+        explainer_GNNExpl = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.dataset_mg_small, gnn_manager=self.gnn_model_manager_mg_small,
+            explainer_name='GNNExplainer(torch-geom)',
+        )
+        explainer_GNNExpl.conduct_experiment(explainer_run_config)
+
+    # def test_NeuralAnalysis_MG(self):
+    #     warnings.warn("Start Neural Analysis")
+    #     explainer_init_config = ConfigPattern(
+    #         _class_name="NeuralAnalysis",
+    #         _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+    #         _config_class="ExplainerInitConfig",
+    #         _config_kwargs={
+    #         }
+    #     )
+    #     explainer_run_config = ConfigPattern(
+    #         _config_class="ExplainerRunConfig",
+    #         _config_kwargs={
+    #             "mode": "global",
+    #             "kwargs": {
+    #                 "_class_name": "NeuralAnalysis",
+    #                 "_import_path": EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH,
+    #                 "_config_class": "Config",
+    #                 "_config_kwargs": {
+    #
+    #                 },
+    #             }
+    #         }
+    #     )
+    #     explainer = FrameworkExplainersManager(
+    #         init_config=explainer_init_config,
+    #         dataset=self.dataset_mg_mutag, gnn_manager=self.gnn_model_manager_mg_mutag,
+    #         explainer_name='NeuralAnalysis',
+    #     )
+    #     explainer.conduct_experiment(explainer_run_config)
+
+    def test_GSAT_SG(self):
+        warnings.warn("Start GSATExplainer")
+        explainer_init_config = ConfigPattern(
+            _class_name="GSAT",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GSAT",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+                        'element_idx': 0,
+                    },
+                }
+            }
+        )
+        explainer_GSAT = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.gen_dataset_sg_cora, gnn_manager=self.gsat_gnn_mm_sg_cora,
+            explainer_name='GSAT',
+        )
+        explanation = explainer_GSAT.conduct_experiment(explainer_run_config)
+
+
+if __name__ == '__main__':
+    unittest.main()

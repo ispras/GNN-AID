@@ -1,141 +1,91 @@
 {
-  "keys": [
-    "domain",
-    "group",
-    "graph"
-  ],
-  "content": {
-    "single-graph": {
-      "pytorch-geometric-other": [
-        "Actor",
-        "BAShapes",
-        "Flickr",
-        "KarateClub",
-        "Reddit2"
-      ],
-      "Planetoid": [
-        "CiteSeer",
-        "Cora",
-        "PubMed"
-      ],
-      "Coauthor": [
-        "CS",
-        "Physics"
-      ],
-      "Amazon": [
-        "Computers",
-        "Photo"
-      ]
+  "Homogeneous": {
+    "KarateClub": [null],
+    "TUDataset": {
+      "AIDS": [null],
+      "BZR": [null],
+      "MUTAG": [null],
+      "Mutagenicity": [null],
+      "TRIANGLES": [null],
+      "Yeast": [null]
     },
-    "multiple-graphs": {
-      "TUDataset": [
-        "AIDS",
-        "BZR",
-        "BZR_MD",
-        "COIL-DEL",
-        "COX2",
-        "COX2_MD",
-        "Cuneiform",
-        "DHFR",
-        "DHFR_MD",
-        "ENZYMES",
-        "ER_MD",
-        "FIRSTMM_DB",
-        "KKI",
-        "MCF-7H",
-        "MOLT-4",
-        "MOLT-4H",
-        "MSRC_21",
-        "MSRC_21C",
-        "MSRC_9",
-        "MUTAG",
-        "Mutagenicity",
-        "NCI-H23",
-        "NCI-H23H",
-        "NCI1",
-        "NCI109",
-        "OHSU",
-        "OVCAR-8",
-        "OVCAR-8H",
-        "P388",
-        "P388H",
-        "PC-3",
-        "PC-3H",
-        "PROTEINS",
-        "PROTEINS_full",
-        "PTC_FM",
-        "PTC_FR",
-        "PTC_MM",
-        "PTC_MR",
-        "Peking_1",
-        "SF-295",
-        "SF-295H",
-        "SN12C",
-        "SN12CH",
-        "SW-620",
-        "SW-620H",
-        "SYNTHETIC",
-        "TWITTER-Real-Graph-Partial",
-        "Tox21_AR-LBD_evaluation",
-        "Tox21_AR-LBD_testing",
-        "Tox21_AR-LBD_training",
-        "Tox21_ARE_evaluation",
-        "Tox21_ARE_testing",
-        "Tox21_ARE_training",
-        "Tox21_AR_evaluation",
-        "Tox21_AR_testing",
-        "Tox21_AR_training",
-        "Tox21_ATAD5_evaluation",
-        "Tox21_ATAD5_testing",
-        "Tox21_ATAD5_training",
-        "Tox21_AhR_evaluation",
-        "Tox21_AhR_testing",
-        "Tox21_AhR_training",
-        "Tox21_ER-LBD_evaluation",
-        "Tox21_ER-LBD_testing",
-        "Tox21_ER-LBD_training",
-        "Tox21_ER_evaluation",
-        "Tox21_ER_testing",
-        "Tox21_ER_training",
-        "Tox21_HSE_evaluation",
-        "Tox21_HSE_testing",
-        "Tox21_HSE_training",
-        "Tox21_MMP_evaluation",
-        "Tox21_MMP_testing",
-        "Tox21_MMP_training",
-        "Tox21_PPAR-gamma_evaluation",
-        "Tox21_PPAR-gamma_testing",
-        "Tox21_PPAR-gamma_training",
-        "Tox21_aromatase_evaluation",
-        "Tox21_aromatase_testing",
-        "Tox21_aromatase_training",
-        "Tox21_p53_evaluation",
-        "Tox21_p53_testing",
-        "Tox21_p53_training",
-        "UACC257",
-        "UACC257H",
-        "Yeast",
-        "YeastH",
-        "ZINC_full",
-        "ZINC_test",
-        "ZINC_train",
-        "ZINC_val",
-        "alchemy_full",
-        "aspirin",
-        "benzene",
-        "malonaldehyde",
-        "naphthalene",
-        "salicylic_acid",
-        "toluene",
-        "uracil"
-      ],
-      "MoleculeNet": [
-        "MUV",
-        "PCBA",
-        "SIDER",
-        "Tox21",
-        "ToxCast"
-      ]
-    }
+    "GNNBenchmarkDataset": {
+      "PATTERN": [null],
+      "CLUSTER": [null],
+      "MNIST": [null],
+      "CIFAR10": [null]
+    },
+    "Planetoid": {
+      "Cora": [null],
+      "CiteSeer": [null],
+      "PubMed": [null]
+    },
+    "CitationFull": {
+      "Cora": [null],
+      "Cora_ML": [null],
+      "CiteSeer": [null],
+      "DBLP": [null],
+      "PubMed": [null]
+    },
+    "CoraFull": [null],
+    "Coauthor": {
+      "CS": [null],
+      "Physics": [null]
+    },
+    "Amazon": {
+      "Computers": [null],
+      "Photo": [null]
+    },
+    "PPI": [null],
+    "Reddit": [null],
+    "MoleculeNet": {
+      "esol": [null],
+      "FreeSolv": [null],
+      "BBBP": [null]
+    },
+    "WebKB": {
+      "Cornell": [null],
+      "Texas": [null],
+      "Wisconsin": [null]
+    },
+    "HeterophilousGraphDataset": {
+      "Roman-empire": [null],
+      "Amazon-ratings": [null],
+      "Minesweeper": [null],
+      "Tolokers": [null],
+      "Questions": [null]
+    },
+    "Actor":  [null],
+    "Airports": {
+      "USA": [null],
+      "Brazil": [null],
+      "Europe": [null]
+    },
+    "TAGDataset":  [null]
+  },
+  "Heterogeneous": {
+    "DBP15K": [null],
+    "AMiner": [null],
+    "OGB_MAG": [null],
+    "DBLP": {
+    },
+    "MovieLens": [null],
+    "MovieLens100K": [null],
+    "MovieLens1M": [null],
+    "IMDB": [null],
+    "LastFM": [null],
+    "HGBDataset": [null],
+    "Taobao": [null],
+    "IGMCDataset": [null],
+    "AmazonBook": [null],
+    "HM": [null],
+    "OSE_GVCS": [null],
+    "RCDD": [null],
+    "OPFDataset": [null]
+  },
+  "Synthetic": {
+    "BA2MotifDataset": [null],
+    "BAMultiShapesDataset": [null],
+    "BAShapes": [null]
   }
 }
