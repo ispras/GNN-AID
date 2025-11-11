@@ -18,6 +18,7 @@
  },
  "labelings": {
   "binary": 2,
-  "threeClasses": 3
+  "threeClasses": 3,
+  "regression": 0
  }
 }

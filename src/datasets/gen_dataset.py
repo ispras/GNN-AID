@@ -10,7 +10,8 @@ from torch_geometric.data.collate import collate
 
 from aux.declaration import Declare
 from aux.utils import root_dir
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+    Task
 from datasets.dataset_info import DatasetInfo
 from datasets.visible_part import VisiblePart
 
@@ -297,25 +298,33 @@ class GeneralDataset(ABC):
 
         if percent_val_class < -1.1e-15:
             raise RuntimeError("percent_train_class + percent_test_class > 1")
-        train_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
-        val_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
-        test_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
 
-        labeled_nodes_numbers = [n for n, y in enumerate(self.labels) if y != -1]
-        num_train = int(percent_train_class * len(labeled_nodes_numbers))
-        num_test = int(percent_test_class * len(labeled_nodes_numbers))
-        num_eval = len(labeled_nodes_numbers) - num_train - num_test
-        if percent_val_class <= 0 and num_eval > 0:
-            num_test += num_eval
-            num_eval = 0
-        split = randperm(num_train + num_eval + num_test, generator=default_generator).tolist()
+        task_type = self.dataset_var_config.task
+        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION, Task.GRAPH_CLASSIFICATION]:
+            train_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
+            val_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
+            test_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
 
-        for elem in split[:num_train]:
-            train_mask[labeled_nodes_numbers[elem]] = True
-        for elem in split[num_train: num_train + num_eval]:
-            val_mask[labeled_nodes_numbers[elem]] = True
-        for elem in split[num_train + num_eval:]:
-            test_mask[labeled_nodes_numbers[elem]] = True
+            labeled_nodes_numbers = [n for n, y in enumerate(self.labels) if y != -1]
+            num_train = int(percent_train_class * len(labeled_nodes_numbers))
+            num_test = int(percent_test_class * len(labeled_nodes_numbers))
+            num_eval = len(labeled_nodes_numbers) - num_train - num_test
+            if percent_val_class <= 0 and num_eval > 0:
+                num_test += num_eval
+                num_eval = 0
+            split = randperm(num_train + num_eval + num_test, generator=default_generator).tolist()
+
+            for elem in split[:num_train]:
+                train_mask[labeled_nodes_numbers[elem]] = True
+            for elem in split[num_train: num_train + num_eval]:
+                val_mask[labeled_nodes_numbers[elem]] = True
+            for elem in split[num_train + num_eval:]:
+                test_mask[labeled_nodes_numbers[elem]] = True
+
+        elif task_type == Task.LINK_PREDICTION:
+            raise NotImplementedError
+        else:
+            raise ValueError(f"Unsupported task type {task_type}")
 
         self.train_mask = train_mask
         self.test_mask = test_mask

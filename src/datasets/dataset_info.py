@@ -143,7 +143,7 @@ class DatasetInfo:
             labelings = list(self.labelings.items())
         for k, v in labelings:
             assert isinstance(k, str)
-            assert isinstance(v, int) and v >= 1  # 1 stands for regression
+            assert isinstance(v, int) and v >= 0  # 1 stands for regression
 
     def check_consistency(
             self

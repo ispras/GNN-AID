@@ -2,6 +2,7 @@ import copy
 import inspect
 import json
 import logging
+from enum import Enum
 from json import JSONEncoder
 from pathlib import Path
 from typing import Union, Any, Type, Tuple, Self
@@ -15,6 +16,13 @@ CONFIG_SAVE_KWARGS_KEY = '__save_kwargs_to_be_used_for_saving'
 CONFIG_OBJ = "config_obj"
 CONFIG_CLASS_NAME = 'class_name'
 DATA_CHANGE_FLAG = "__data_change_flag"
+
+
+class Task(str, Enum):
+    NODE_CLASSIFICATION = "NODE_CLASSIFICATION"
+    GRAPH_CLASSIFICATION = "GRAPH_CLASSIFICATION"
+    NODE_REGRESSION = "NODE_REGRESSION"
+    LINK_PREDICTION = "LINK_PREDICTION"
 
 
 # TECHNICAL_KEYS_SET_FOR_CONFIGS = {CONFIG_PARAMS_PATH_KEY, CONFIG_CLASS_NAME,
@@ -572,13 +580,13 @@ class DatasetVarConfig(Config):
             self,
             features: FeatureConfig = None,
             labeling: Union[str, dict] = None,
-            # task: str = None,
+            task: Task = None,
             dataset_ver_ind: int = None,
             **kwargs
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling, dataset_ver_ind=dataset_ver_ind, **kwargs)
+            features=features, labeling=labeling, task=task, dataset_ver_ind=dataset_ver_ind, **kwargs)
 
     @property
     def features(
@@ -591,6 +599,12 @@ class DatasetVarConfig(Config):
             self
     ) -> Union[str, dict]:
         return self["labeling"]
+
+    @property
+    def task(
+            self
+    ) -> Union[str, dict]:
+        return self["task"]
 
     @property
     def dataset_ver_ind(
@@ -873,7 +887,7 @@ class ModelModificationConfig(
 
     def __init__(
             self,
-            model_ver_ind: [int, None] = None,
+            model_ver_ind: int | None = None,
             epochs=None,
             **kwargs
     ):

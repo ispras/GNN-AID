@@ -24,7 +24,7 @@ from aux.utils import import_by_name, all_subclasses, FRAMEWORK_PARAMETERS_PATH,
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, CONFIG_OBJ, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, \
     MIDefenseConfig, ModelManagerConfig, ModelModificationConfig, ModelConfig, \
-    CONFIG_CLASS_NAME
+    CONFIG_CLASS_NAME, Task
 from data_structures.graph_modification_artifacts import GraphModificationArtifact
 from datasets.gen_dataset import GeneralDataset
 from web_interface.back_front.utils import SocketConnect
@@ -946,9 +946,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
-        # FIXME misha it is not task type, change to getting dvc field
-        task_type = "multiple-graphs" if gen_dataset.is_multi() else "single-graph"
-        if task_type == "single-graph":
+        task_type = gen_dataset.dataset_var_config.task
+        if task_type == Task.NODE_CLASSIFICATION:
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
                 Iterable,
@@ -958,7 +957,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch, shuffle=True
                 )
             )
-        elif task_type == "multiple-graphs":
+        elif task_type == Task.GRAPH_CLASSIFICATION:
             train_dataset = gen_dataset.dataset.index_select(gen_dataset.train_mask)
             loader = cast(
                 Iterable,
@@ -967,7 +966,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 )
             )
         # TODO Kirill, remove False when release edge recommendation task
-        elif task_type == "edge" and False:
+        elif task_type == Task.LINK_PREDICTION:
             loader = cast(
                 Iterable,
                 LinkNeighborLoader(
@@ -976,8 +975,10 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch, shuffle=True
                 )
             )
+        elif task_type == Task.NODE_REGRESSION:
+            raise NotImplementedError
         else:
-            raise ValueError("Unsupported task type")
+            raise ValueError(f"Unsupported task type {task_type}")
         loss = 0
         for batch in loader:
             self.before_batch(batch)
@@ -1623,6 +1624,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             batch,
             task_type: str = None
     ) -> torch.Tensor:
+        # FIXME misha it is not task type, change to getting dvc field task
         if task_type == "multiple-graphs":
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
