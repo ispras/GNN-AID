@@ -5,6 +5,8 @@ from typing import Union
 
 from torch_geometric.data import Dataset, Data
 
+from data_structures.configs import Task
+
 
 class DatasetInfo:
     """
@@ -141,9 +143,15 @@ class DatasetInfo:
                 labelings.extend(list(kv.items()))
         else:
             labelings = list(self.labelings.items())
-        for k, v in labelings:
-            assert isinstance(k, str)
-            assert isinstance(v, int) and v >= 0  # 1 stands for regression
+        for t, lab in labelings:
+            assert t in Task
+            # assert Task.has_member(t)
+            for name, info in lab.items():
+                assert isinstance(name, str)
+                if t.endswith("regression"):
+                    assert isinstance(info, list) and len(info) == 2
+                if t.endswith("classification"):
+                    assert isinstance(info, int) and info > 1
 
     def check_consistency(
             self
@@ -190,16 +198,17 @@ class DatasetInfo:
     ) -> None:
         """ Check if metainfo fields are consistent with PTG dataset. """
         assert self.count == len(dataset)
-        assert self.directed == is_graph_directed(dataset.get(0))
+        assert self.directed == is_graph_directed(dataset[0])
         assert self.remap is False
         if self.hetero:
             from torch_geometric.data import HeteroData
-            assert isinstance(dataset.get(0), HeteroData)
+            assert isinstance(dataset[0], HeteroData)
             # TODO misha hetero
         else:
             assert len(self.node_attributes["names"]) == 1
             assert self.node_attributes["types"][0] == "vector"
         # TODO check features values range
+        # TODO check labels classes and values range
 
     def check(
             self

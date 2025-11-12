@@ -10,7 +10,8 @@ from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
 
 from aux.declaration import Declare
 from aux.utils import import_by_name, TORCH_GEOM_GRAPHS_PATH, shape
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+    Task
 from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import GeneralDataset, LocalDataset
 
@@ -118,7 +119,7 @@ class PTGDataset(GeneralDataset):
         res = DatasetInfo()
         res.count = len(self.dataset)
         # from datasets.ptg_datasets import is_graph_directed
-        # res.directed = is_graph_directed(dataset.get(0))
+        # res.directed = is_graph_directed(dataset[0])
         msg = ""
         data0 = self.dataset[0]
         if data0.edge_index is not None:
@@ -158,7 +159,8 @@ class PTGDataset(GeneralDataset):
             if hasattr(self.dataset, 'num_classes'):
                 if self.dataset.num_classes == 0:
                     raise NotImplementedError("Datasets without classes are not supported")
-                res.labelings = {"origin": self.dataset.num_classes}
+                task = Task.NODE_CLASSIFICATION if len(self.dataset) == 1 else Task.GRAPH_CLASSIFICATION
+                res.labelings = {task: {"origin": self.dataset.num_classes}}
             else:
                 res.labelings = "?"
                 msg += f"Cannot get num_classes Dataset of type {self.dataset.__class__}. "

@@ -9,7 +9,7 @@ from typing import Union, Any, Type, Tuple, Self
 
 from aux.utils import setting_class_default_parameters, \
     OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, import_by_name, \
-    deep_update, hash_data_sha256
+    deep_update, hash_data_sha256, MetaEnum
 
 CONFIG_SAVE_KWARGS_KEY = '__save_kwargs_to_be_used_for_saving'
 # CONFIG_PARAMS_PATH_KEY = '__default_parameters_file_path'
@@ -18,11 +18,17 @@ CONFIG_CLASS_NAME = 'class_name'
 DATA_CHANGE_FLAG = "__data_change_flag"
 
 
-class Task(str, Enum):
-    NODE_CLASSIFICATION = "NODE_CLASSIFICATION"
-    GRAPH_CLASSIFICATION = "GRAPH_CLASSIFICATION"
-    NODE_REGRESSION = "NODE_REGRESSION"
-    LINK_PREDICTION = "LINK_PREDICTION"
+class Task(str, Enum, metaclass=MetaEnum):
+    NODE_CLASSIFICATION = "node-classification"
+    NODE_REGRESSION = "node-regression"
+    GRAPH_CLASSIFICATION = "graph-classification"
+    GRAPH_REGRESSION = "graph-regression"
+    EDGE_PREDICTION = "edge-prediction"
+    EDGE_CLASSIFICATION = "edge-classification"
+    EDGE_REGRESSION = "edge-regression"
+
+    def __str__(self):
+        return self.value
 
 
 # TECHNICAL_KEYS_SET_FOR_CONFIGS = {CONFIG_PARAMS_PATH_KEY, CONFIG_CLASS_NAME,
@@ -578,21 +584,21 @@ class DatasetVarConfig(Config):
 
     def __init__(
             self,
-            features: FeatureConfig = None,
-            labeling: Union[str, dict] = None,
             task: Task = None,
+            labeling: Union[str, dict] = None,
+            features: FeatureConfig = None,
             dataset_ver_ind: int = None,
             **kwargs
     ):
         """ """
         super().__init__(
-            features=features, labeling=labeling, task=task, dataset_ver_ind=dataset_ver_ind, **kwargs)
+            task=task, labeling=labeling, features=features, dataset_ver_ind=dataset_ver_ind, **kwargs)
 
     @property
-    def features(
+    def task(
             self
-    ) -> FeatureConfig:
-        return self["features"]
+    ) -> Union[str, dict]:
+        return self["task"]
 
     @property
     def labeling(
@@ -601,10 +607,10 @@ class DatasetVarConfig(Config):
         return self["labeling"]
 
     @property
-    def task(
+    def features(
             self
-    ) -> Union[str, dict]:
-        return self["task"]
+    ) -> FeatureConfig:
+        return self["features"]
 
     @property
     def dataset_ver_ind(

@@ -56,7 +56,9 @@
   ]
  },
  "labelings": {
-  "binary": 2
+  "graph-classification": {
+   "binary": 2
+  }
  },
  "node_attr_slices": {
   "a": [

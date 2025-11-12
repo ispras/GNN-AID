@@ -200,7 +200,7 @@ class DatasetStats:
         Result could be: a number, a string, a distribution, a dict of ones.
         """
         # assert self.info.count == 1
-        # data: Data = self.dataset.get(0)
+        # data: Data = self.dataset[0]
         edges = edge_index_to_edge_list(self.gen_dataset.edges[0])
         num_nodes = self.gen_dataset.info.nodes[0]
 

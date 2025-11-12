@@ -947,7 +947,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
         task_type = gen_dataset.dataset_var_config.task
-        if task_type == Task.NODE_CLASSIFICATION:
+        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
                 Iterable,
@@ -957,7 +957,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch, shuffle=True
                 )
             )
-        elif task_type == Task.GRAPH_CLASSIFICATION:
+        elif task_type in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
             train_dataset = gen_dataset.dataset.index_select(gen_dataset.train_mask)
             loader = cast(
                 Iterable,
@@ -965,8 +965,12 @@ class FrameworkGNNModelManager(GNNModelManager):
                     train_dataset, batch_size=self.batch, shuffle=True
                 )
             )
-        # TODO Kirill, remove False when release edge recommendation task
-        elif task_type == Task.LINK_PREDICTION:
+        elif task_type == Task.EDGE_PREDICTION:
+            # DEBUG - these are edge indices
+            print(gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask)
+
+            # TODO Kirill
+            raise NotImplementedError
             loader = cast(
                 Iterable,
                 LinkNeighborLoader(
@@ -975,8 +979,6 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch, shuffle=True
                 )
             )
-        elif task_type == Task.NODE_REGRESSION:
-            raise NotImplementedError
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         loss = 0
@@ -992,7 +994,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     def train_on_batch_full(
             self,
             batch,
-            task_type: str = None
+            task_type: Task
     ) -> torch.Tensor:
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.pre_batch()
@@ -1025,14 +1027,14 @@ class FrameworkGNNModelManager(GNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: str = None
+            task_type: Task
     ) -> torch.Tensor:
         loss = None
         if hasattr(batch, "edge_weight"):
             weight = batch.edge_weight
         else:
             weight = None
-        if task_type == "single-graph":
+        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, weight)
             # Take only predictions and labels of seed nodes
@@ -1043,14 +1045,14 @@ class FrameworkGNNModelManager(GNNModelManager):
             self.optimizer.zero_grad()
             # loss.backward()
             # self.optimizer.step()
-        elif task_type == "multiple-graphs":
+        elif task_type in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
             loss = self.loss_function(*move_to_same_device(logits, batch.y))
             # loss.backward()
             # self.optimizer.step()
         # TODO Kirill, remove False when release edge recommendation task
-        elif task_type == "edge" and False:
+        elif task_type == Task.EDGE_PREDICTION:
             self.optimizer.zero_grad()
             edge_index = batch.edge_index
             pos_edge_index = edge_index[:, batch.y == 1]
@@ -1066,7 +1068,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             loss = pos_loss + neg_loss
             # loss.backward()
         else:
-            raise ValueError("Unsupported task type")
+            raise ValueError(f"Unsupported task type {task_type}")
         return loss
 
     def get_name(

@@ -131,7 +131,7 @@ class GeneralDataset(ABC):
                     from warnings import warn
                     warn("The ptg dataset is not InMemoryDataset. "
                          "Getting its data might consume too much resources if the dataset is "
-                         "large. Consider using dataset.get(i) to get Data for i graph.")
+                         "large. Consider using dataset[i] to get Data for i graph.")
 
                     # transform is applied within __get_item__
                     data_list = [self.dataset[i] for i in range(self.info.count)]
@@ -321,14 +321,26 @@ class GeneralDataset(ABC):
             for elem in split[num_train + num_eval:]:
                 test_mask[labeled_nodes_numbers[elem]] = True
 
-        elif task_type == Task.LINK_PREDICTION:
-            raise NotImplementedError
+        elif task_type in [Task.EDGE_PREDICTION]:
+            # Split all edges to train/val/test
+            # TODO If graph is undirected, should find and mask both i-j and j-i
+            from torch_geometric.transforms import RandomLinkSplit
+
+            rls = RandomLinkSplit(
+                num_val=percent_val_class, num_test=percent_test_class,
+                is_undirected=not self.info.directed,
+                neg_sampling_ratio=0)
+            train_data, val_data, test_data = rls(self.data)
+
+            train_mask = train_data.edge_label_index
+            val_mask = val_data.edge_label_index
+            test_mask = test_data.edge_label_index
         else:
             raise ValueError(f"Unsupported task type {task_type}")
 
         self.train_mask = train_mask
-        self.test_mask = test_mask
         self.val_mask = val_mask
+        self.test_mask = test_mask
 
     def save_train_test_mask(
             self,

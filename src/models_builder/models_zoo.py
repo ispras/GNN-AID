@@ -1271,228 +1271,229 @@ def model_configs_zoo(
         )
     )
 
-    gin_gin_gin_lin_lin_prot = FrameworkGNNConstructor(
-        model_config=ModelConfig(
-            structure=ModelStructureConfig(
-                [
-                    {
-                        'label': 'n',
-                        'layer': {
-                            'layer_name': 'GINConv',
-                            'layer_kwargs': None,
-                            'gin_seq': [
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': dataset.num_node_features,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'batchNorm': {
-                                        'batchNorm_name': 'BatchNorm1d',
-                                        'batchNorm_kwargs': {
-                                            'num_features': 16,
-                                            'eps': 1e-05,
-                                        }
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': 16,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                            ],
-                        },
-                        'connections': [
-                            {
-                                'into_layer': 3,
-                                'connection_kwargs': {
-                                    'pool': {
-                                        'pool_type': 'global_add_pool',
-                                    },
-                                    'aggregation_type': 'cat',
-                                },
-                            },
-                        ],
-                    },
-
-                    {
-                        'label': 'n',
-                        'layer': {
-                            'layer_name': 'GINConv',
-                            'layer_kwargs': None,
-                            'gin_seq': [
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': 16,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'batchNorm': {
-                                        'batchNorm_name': 'BatchNorm1d',
-                                        'batchNorm_kwargs': {
-                                            'num_features': 16,
-                                            'eps': 1e-05,
-                                        }
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': 16,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                            ],
-                        },
-                        'connections': [
-                            {
-                                'into_layer': 3,
-                                'connection_kwargs': {
-                                    'pool': {
-                                        'pool_type': 'global_add_pool',
-                                    },
-                                    'aggregation_type': 'cat',
-                                },
-                            },
-                        ],
-                    },
-
-                    {
-                        'label': 'n',
-                        'layer': {
-                            'layer_name': 'GINConv',
-                            'layer_kwargs': None,
-                            'gin_seq': [
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': 16,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'batchNorm': {
-                                        'batchNorm_name': 'BatchNorm1d',
-                                        'batchNorm_kwargs': {
-                                            'num_features': 16,
-                                            'eps': 1e-05,
-                                        }
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                                {
-                                    'layer': {
-                                        'layer_name': 'Linear',
-                                        'layer_kwargs': {
-                                            'in_features': 16,
-                                            'out_features': 16,
-                                        },
-                                    },
-                                    'activation': {
-                                        'activation_name': 'ReLU',
-                                        'activation_kwargs': None,
-                                    },
-                                },
-                            ],
-                        },
-                        'connections': [
-                            {
-                                'into_layer': 3,
-                                'connection_kwargs': {
-                                    'pool': {
-                                        'pool_type': 'global_add_pool',
-                                    },
-                                    'aggregation_type': 'cat',
-                                },
-                            },
-                        ],
-                    },
-
-                    {
-                        'label': 'g',
-                        'layer': {
-                            'layer_name': 'Linear',
-                            'layer_kwargs': {
-                                'in_features': 16 * 3,
-                                'out_features': 16,
-                            },
-                        },
-                        'activation': {
-                            'activation_name': 'ReLU',
-                            'activation_kwargs': None,
-                        },
-                        'dropout': {
-                            'dropout_name': 'Dropout',
-                            'dropout_kwargs': {
-                                'p': 0.5,
-                            }
-                        },
-                    },
-
-                    {
-                        'label': 'g',
-                        'layer': {
-                            'layer_name': 'Linear',
-                            'layer_kwargs': {
-                                'in_features': 16,
-                                'out_features': 16,
-                            },
-                        },
-                        'activation': {
-                            'activation_name': 'ReLU',
-                            'activation_kwargs': None,
-                        },
-                    },
-
-                    {
-                        'label': 'g',
-                        'layer': {
-                            'layer_name': 'Prot',
-                            'layer_kwargs': {
-                                'in_features': 16,
-                                'num_prototypes_per_class': 3,
-                                'num_classes': dataset.num_classes,
-                            },
-                        },
-                        'activation': {
-                            'activation_name': 'LogSoftmax',
-                            'activation_kwargs': None,
-                        },
-                    },
-
-                ]
-            )
-        )
-    )
+    # FIXME tmp - assert (self.num_prototypes % num_classes == 0) fails
+    # gin_gin_gin_lin_lin_prot = FrameworkGNNConstructor(
+    #     model_config=ModelConfig(
+    #         structure=ModelStructureConfig(
+    #             [
+    #                 {
+    #                     'label': 'n',
+    #                     'layer': {
+    #                         'layer_name': 'GINConv',
+    #                         'layer_kwargs': None,
+    #                         'gin_seq': [
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': dataset.num_node_features,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'batchNorm': {
+    #                                     'batchNorm_name': 'BatchNorm1d',
+    #                                     'batchNorm_kwargs': {
+    #                                         'num_features': 16,
+    #                                         'eps': 1e-05,
+    #                                     }
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': 16,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                         ],
+    #                     },
+    #                     'connections': [
+    #                         {
+    #                             'into_layer': 3,
+    #                             'connection_kwargs': {
+    #                                 'pool': {
+    #                                     'pool_type': 'global_add_pool',
+    #                                 },
+    #                                 'aggregation_type': 'cat',
+    #                             },
+    #                         },
+    #                     ],
+    #                 },
+    #
+    #                 {
+    #                     'label': 'n',
+    #                     'layer': {
+    #                         'layer_name': 'GINConv',
+    #                         'layer_kwargs': None,
+    #                         'gin_seq': [
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': 16,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'batchNorm': {
+    #                                     'batchNorm_name': 'BatchNorm1d',
+    #                                     'batchNorm_kwargs': {
+    #                                         'num_features': 16,
+    #                                         'eps': 1e-05,
+    #                                     }
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': 16,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                         ],
+    #                     },
+    #                     'connections': [
+    #                         {
+    #                             'into_layer': 3,
+    #                             'connection_kwargs': {
+    #                                 'pool': {
+    #                                     'pool_type': 'global_add_pool',
+    #                                 },
+    #                                 'aggregation_type': 'cat',
+    #                             },
+    #                         },
+    #                     ],
+    #                 },
+    #
+    #                 {
+    #                     'label': 'n',
+    #                     'layer': {
+    #                         'layer_name': 'GINConv',
+    #                         'layer_kwargs': None,
+    #                         'gin_seq': [
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': 16,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'batchNorm': {
+    #                                     'batchNorm_name': 'BatchNorm1d',
+    #                                     'batchNorm_kwargs': {
+    #                                         'num_features': 16,
+    #                                         'eps': 1e-05,
+    #                                     }
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                             {
+    #                                 'layer': {
+    #                                     'layer_name': 'Linear',
+    #                                     'layer_kwargs': {
+    #                                         'in_features': 16,
+    #                                         'out_features': 16,
+    #                                     },
+    #                                 },
+    #                                 'activation': {
+    #                                     'activation_name': 'ReLU',
+    #                                     'activation_kwargs': None,
+    #                                 },
+    #                             },
+    #                         ],
+    #                     },
+    #                     'connections': [
+    #                         {
+    #                             'into_layer': 3,
+    #                             'connection_kwargs': {
+    #                                 'pool': {
+    #                                     'pool_type': 'global_add_pool',
+    #                                 },
+    #                                 'aggregation_type': 'cat',
+    #                             },
+    #                         },
+    #                     ],
+    #                 },
+    #
+    #                 {
+    #                     'label': 'g',
+    #                     'layer': {
+    #                         'layer_name': 'Linear',
+    #                         'layer_kwargs': {
+    #                             'in_features': 16 * 3,
+    #                             'out_features': 16,
+    #                         },
+    #                     },
+    #                     'activation': {
+    #                         'activation_name': 'ReLU',
+    #                         'activation_kwargs': None,
+    #                     },
+    #                     'dropout': {
+    #                         'dropout_name': 'Dropout',
+    #                         'dropout_kwargs': {
+    #                             'p': 0.5,
+    #                         }
+    #                     },
+    #                 },
+    #
+    #                 {
+    #                     'label': 'g',
+    #                     'layer': {
+    #                         'layer_name': 'Linear',
+    #                         'layer_kwargs': {
+    #                             'in_features': 16,
+    #                             'out_features': 16,
+    #                         },
+    #                     },
+    #                     'activation': {
+    #                         'activation_name': 'ReLU',
+    #                         'activation_kwargs': None,
+    #                     },
+    #                 },
+    #
+    #                 {
+    #                     'label': 'g',
+    #                     'layer': {
+    #                         'layer_name': 'Prot',
+    #                         'layer_kwargs': {
+    #                             'in_features': 16,
+    #                             'num_prototypes_per_class': 3,
+    #                             'num_classes': dataset.num_classes,
+    #                         },
+    #                     },
+    #                     'activation': {
+    #                         'activation_name': 'LogSoftmax',
+    #                         'activation_kwargs': None,
+    #                     },
+    #                 },
+    #
+    #             ]
+    #         )
+    #     )
+    # )
 
     dummy_gin_gin_gin_gsat_lin_lin = FrameworkGNNConstructor(
         model_config=ModelConfig(

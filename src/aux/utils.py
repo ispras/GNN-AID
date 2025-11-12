@@ -1,6 +1,7 @@
 import hashlib
 import json
 import warnings
+from enum import EnumMeta
 from pathlib import Path
 from pydoc import locate
 from typing import Union, Type, Any, Tuple
@@ -321,3 +322,15 @@ def shape(
         raise NotImplementedError
 
     return shape
+
+
+class MetaEnum(EnumMeta):
+    """
+    A helper class which allows us to do "x in XEnum" if XEnum extends this class
+    """
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        return True

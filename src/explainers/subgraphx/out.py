@@ -318,7 +318,7 @@ class SubgraphXExplainer(Explainer):
         if self.gen_dataset.is_multi():
             self.explained_graph = idx
             kwargs['node_idx'] = None  # default value 0 leads to an error
-            data = self.gen_dataset.dataset.get(idx)
+            data = self.gen_dataset.dataset[idx]
             _, self.raw_explanation, _ = self(data.x, data.edge_index, **kwargs)
         else:
             _, self.raw_explanation, _ = self(
@@ -332,7 +332,7 @@ class SubgraphXExplainer(Explainer):
         self.explanation = AttributionExplanation(local=mode, nodes="binary", edges="binary")
 
         if self.gen_dataset.is_multi():
-            data = self.gen_dataset.dataset.get(self.explained_graph)
+            data = self.gen_dataset.dataset[self.explained_graph]
             pred = self.model.get_answer(data.x, data.edge_index).item()
         else:
             data = self.gen_dataset.data

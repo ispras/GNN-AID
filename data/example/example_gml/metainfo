@@ -52,7 +52,9 @@
   ]
  },
  "labelings": {
-  "binary": 2
+  "node-classification": {
+   "binary": 2
+  }
  },
  "node_attr_slices": {
   "a": [

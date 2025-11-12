@@ -2,13 +2,13 @@ import json
 import os
 import shutil
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Any, Generator
 
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
 
-from data_structures.configs import DatasetConfig, ConfigPattern, FeatureConfig
+from data_structures.configs import DatasetConfig, ConfigPattern, FeatureConfig, Task
 from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import LocalDataset, GeneralDataset
 
@@ -221,13 +221,14 @@ class KnownFormatDataset(
                         set(self.info.edge_attributes["values"][ix]))
 
         # Check labels
-        for labelling, _ in self.info.labelings.items():
-            with open(self.labels_dir / labelling, 'r') as f:
-                labels = json.load(f)
-            if self.is_multi():  # graph labels
-                assert set(range(count)) == set(map(int, labels.keys()))
-            else:  # nodes labels
-                assert all_nodes[0] == set(map(int, labels.keys()))
+        for task, lab in self.info.labelings.items():
+            for labelling, _ in lab.items():
+                with open(self.labels_dir / task / labelling, 'r') as f:
+                    labels = json.load(f)
+                if self.is_multi():  # graph labels
+                    assert set(range(count)) == set(map(int, labels.keys()))
+                else:  # nodes labels
+                    assert all_nodes[0] == set(map(int, labels.keys()))
 
     def _convert_to_ij(
             self
@@ -415,12 +416,14 @@ class KnownFormatDataset(
         data_list = []
         for ix in range(self.info.count):
             node_features = self._feature_tensor(ix)
-            labels = self._labeling_tensor(ix)
             x = torch.tensor(node_features, dtype=torch.float)
-            y = torch.tensor(labels)
+            labels = self._labeling_tensor(ix)
+            y = torch.tensor(labels) if labels else None
             data = Data(
                 x=x, edge_index=self._ptg_edge_index[ix], y=y,
-                num_classes=self.info.labelings[self.dataset_var_config.labeling]
+                # FIXME misha do we need it?
+                # num_classes=self.info.labelings[
+                #     self.dataset_var_config.task][self.dataset_var_config.labeling]
             )
             data_list.append(data)
 
@@ -431,8 +434,22 @@ class KnownFormatDataset(
     def _iter_nodes(
             self,
             graph: int = None
-    ) -> [int, str]:
+    ) -> Generator[tuple[int, str], Any, None]:
         """ Iterate over nodes according to mapping. Yields pairs of (node_index, original_id)
+        """
+        if self.node_map is not None:
+            node_map = self.node_map[graph] if self.is_multi() else self.node_map
+            for ix, orig in enumerate(node_map):
+                yield ix, str(orig)
+        else:
+            for n in range(self.info.nodes[graph or 0]):
+                yield n, str(n)
+
+    def _iter_edges(
+            self,
+            graph: int = None
+    ) -> Generator[tuple[int, str], Any, None]:
+        """ Iterate over edges according to mapping. Yields pairs of (node_index, original_id)
         """
         if self.node_map is not None:
             node_map = self.node_map[graph] if self.is_multi() else self.node_map
@@ -445,25 +462,33 @@ class KnownFormatDataset(
     def _labeling_tensor(
             self,
             g_ix: int = None
-    ) -> list:
+    ) -> list[int] | None:
         """ Returns list of labels (not tensors) """
         y = []
+        if self.dataset_var_config.labeling is None:  # e.g. link prediction
+            return None
         # Read labels
-        labeling_path = self.labels_dir / self.dataset_var_config.labeling
+        task = self.dataset_var_config.task
+        labeling_path = self.labels_dir / task / self.dataset_var_config.labeling
         with open(labeling_path, 'r') as f:
             labeling_dict = json.load(f)
 
-        if self.is_multi():
+        if task in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
             if labeling_dict[str(g_ix)] is not None:
                 y.append(labeling_dict[str(g_ix)])
             else:
                 y.append(-1)
-        else:
+        elif task in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
             for _, orig in self._iter_nodes():
                 if labeling_dict[orig] is not None:
                     y.append(labeling_dict[orig])
                 else:
                     y.append(-1)
+        elif task in [Task.EDGE_CLASSIFICATION, Task.EDGE_REGRESSION]:
+            # TODO misha
+            raise NotImplementedError
+        else:
+            raise NotImplementedError(f"Task {task} is not supported")
 
         return y
 
@@ -538,7 +563,11 @@ class KnownFormatDataset(
         node_attributes_info = self.info.node_attributes
         self.node_attr_slices = {}
         for attr in node_attr:
-            ix = node_attributes_info["names"].index(attr)
+            try:
+                ix = node_attributes_info["names"].index(attr)
+            except ValueError:
+                raise ValueError(f"Dataset {self.dataset_config} has no node attribute '{attr}'."
+                                 f" Select one from {node_attributes_info['names']}")
             _type = node_attributes_info["types"][ix]
 
             if _type == "categorical":

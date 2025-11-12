@@ -16,6 +16,8 @@
   ]
  },
  "labelings": {
-  "binary": 2
+  "graph-classification": {
+   "binary": 2
+  }
  }
 }

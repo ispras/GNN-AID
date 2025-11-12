@@ -17,8 +17,12 @@
   "values": [[0,1]]
  },
  "labelings": {
-  "binary": 2,
-  "threeClasses": 3,
-  "regression": 0
+  "node-classification": {
+   "binary": 2,
+   "threeClasses": 3
+  },
+  "node-regression": {
+   "regression": [0, 3]
+  }
  }
 }

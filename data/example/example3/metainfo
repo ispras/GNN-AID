@@ -21,7 +21,9 @@
   ]
  },
  "labelings": {
-  "binary": 2,
-  "threeClasses": 3
+  "graph-classification": {
+   "binary": 2,
+   "threeClasses": 3
+  }
  }
 }

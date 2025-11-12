@@ -72,7 +72,8 @@
     border-bottom: 2px solid;
     padding: 4px;
     font-size: 14pt;
-    display: flex;
+    /*display: flex;*/
+    display: grid;
     align-items: center;
 }
 
