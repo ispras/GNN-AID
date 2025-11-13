@@ -26,6 +26,7 @@ sphinx_docs
 experiments/explainers_metrics/**/*_metrics.json
 
 data
+datasets
 explanations
 <base.ptg_datasets.PTGDataset object*
 models
