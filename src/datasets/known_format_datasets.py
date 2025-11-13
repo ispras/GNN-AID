@@ -42,7 +42,8 @@ class KnownFormatDataset(
         >>> ]
 
         # Define var config and build tensors
-        dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a', 'b']),
+        dvc = DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                               features=FeatureConfig(node_attr=['a', 'b']),
                                labeling='binary', dataset_ver_ind=0)
         dataset.build(dvc)
 

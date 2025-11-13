@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from data_structures.configs import Task, DatasetConfig
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
@@ -33,7 +35,7 @@ def test_prot(i=None, conv=None, batch_size=24, seed=5,
     print('start loading data======================')
     """
     dataset, data, results_dataset_path = Datasets.get_pytorch_geometric(
-        full_name=("Homogeneous", "TUDataset", 'MUTAG'),
+        full_name=(LibPTGDataset.data_folder, "Homogeneous", , "TUDataset", 'MUTAG'),
         dataset_ver_ind=0)
     """
 
@@ -46,13 +48,11 @@ def test_prot(i=None, conv=None, batch_size=24, seed=5,
     #     raise NotImplementedError
 
     # my_device = device('cuda' if is_available() else 'cpu')
-    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
     )
-
-    # data = dataset[0]
+    data = dataset.data
 
     data.x = data.x.float()
     dataset.train_test_split(percent_train_class=percent_train_class, percent_test_class=percent_test_class)
@@ -113,7 +113,7 @@ def test_prot(i=None, conv=None, batch_size=24, seed=5,
     print("PROTOTYPE VECTORS RANDOMIZED")
     """
     prot_gnn_mm = ProtGNNModelManager(gnn=model,
-                                      dataset_path=results_dataset_path, )
+                                      dataset_path=dataset.prepared_dir, )
     # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
     best_acc = prot_gnn_mm.train_model(gen_dataset=dataset, steps=100,
                                        metrics=[Metric("F1", mask='train', average=None)])

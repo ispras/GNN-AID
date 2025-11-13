@@ -3,8 +3,14 @@
  "import_from": "datasets.known_format_datasets",
  "name": "example",
  "count": 3,
- "nodes": [3, 4, 5],
  "directed": false,
+ "hetero": false,
+ "nodes": [
+  3,
+  4,
+  5
+ ],
+ "remap": false,
  "node_attributes": {
   "names": [
    "type"
@@ -24,6 +30,12 @@
   "graph-classification": {
    "binary": 2,
    "threeClasses": 3
+  },
+  "graph-regression": {
+   "regression": [
+    0.2,
+    0.4
+   ]
   }
  }
 }

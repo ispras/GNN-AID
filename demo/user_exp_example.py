@@ -4,8 +4,10 @@ import warnings
 
 from aux.data_info import UserCodeInfo
 from aux.utils import import_by_name, model_managers_info_by_names_list, TECHNICAL_PARAMETER_KEY
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import Metric
-from data_structures.configs import CONFIG_CLASS_NAME
+from data_structures.configs import CONFIG_CLASS_NAME, DatasetConfig, FeatureConfig, Task, \
+    DatasetVarConfig
 from datasets.datasets_manager import DatasetManager
 
 
@@ -17,15 +19,16 @@ def test_Konst_model():
     # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
     # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
     full_name = ("example", "single-graph", "example",)
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        features=FeatureConfig(node_attr=['a', 'b']),
-        labeling='threeClasses',
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        DatasetVarConfig(
+            task=Task.NODE_CLASSIFICATION, features=FeatureConfig(node_attr=['a', 'b']),
+            labeling='threeClasses', dataset_ver_ind=0)
     )
+    data = dataset.data
 
     user_model_class = 'SimGNN'
     user_model_obj = 'model_3'

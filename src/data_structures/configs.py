@@ -18,7 +18,11 @@ CONFIG_CLASS_NAME = 'class_name'
 DATA_CHANGE_FLAG = "__data_change_flag"
 
 
-class Task(str, Enum, metaclass=MetaEnum):
+class Task(
+    str,
+    Enum,
+    metaclass=MetaEnum
+):
     NODE_CLASSIFICATION = "node-classification"
     NODE_REGRESSION = "node-regression"
     GRAPH_CLASSIFICATION = "graph-classification"
@@ -29,6 +33,21 @@ class Task(str, Enum, metaclass=MetaEnum):
 
     def __str__(self):
         return self.value
+
+    def is_node_level(self) -> bool:
+        return self in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]
+
+    def is_edge_level(self) -> bool:
+        return self in [Task.EDGE_CLASSIFICATION, Task.EDGE_REGRESSION, Task.EDGE_PREDICTION]
+
+    def is_graph_level(self) -> bool:
+        return self in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]
+
+    def is_classification(self) -> bool:
+        return self in [Task.NODE_CLASSIFICATION, Task.EDGE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION]
+
+    def is_regression(self) -> bool:
+        return self in [Task.NODE_REGRESSION, Task.EDGE_REGRESSION, Task.GRAPH_REGRESSION]
 
 
 # TECHNICAL_KEYS_SET_FOR_CONFIGS = {CONFIG_PARAMS_PATH_KEY, CONFIG_CLASS_NAME,
@@ -436,7 +455,7 @@ class Config(
 
     def copy(
             self
-    ) -> object:
+    ) -> 'GeneralConfig':
         res = type(self)()
         # res.__dict__ = self.__dict__.copy()
         for k, v in self.__dict__.items():

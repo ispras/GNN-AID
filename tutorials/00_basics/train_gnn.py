@@ -2,8 +2,9 @@ import torch
 from pathlib import Path
 from torch import device
 
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ConfigPattern
+from data_structures.configs import ConfigPattern, DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
 from models_builder.models_zoo import model_configs_zoo
 
@@ -15,10 +16,9 @@ def train_gnn():
     # Here you can upload your own dataset, specified in the basic input data format.
     # It is also possible to use most of the existing datasets in the PyG.
     # You can see all supported datasets in the ./metainfo/torch_geom_index_all.json
-    full_name = ("Homogeneous", "Planetoid", 'Cora')
-    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    gen_dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
     gen_dataset.data.to(my_device)
@@ -47,7 +47,7 @@ def train_gnn():
     # Create a class object that allows us to train our model.
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
     )
     gnn_model_manager.gnn.to(my_device)

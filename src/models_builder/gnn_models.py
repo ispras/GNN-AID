@@ -1624,10 +1624,10 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: str = None
+            task_type: Task = None
     ) -> torch.Tensor:
         # FIXME misha it is not task type, change to getting dvc field task
-        if task_type == "multiple-graphs":
+        if task_type == Task.GRAPH_CLASSIFICATION:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             min_distances = self.gnn.min_distances
@@ -1668,12 +1668,14 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-        elif task_type == "signle-graph":
+        elif task_type == Task.NODE_CLASSIFICATION:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
-        # TODO Kirill, remove False when release edge recommendation task
-        elif task_type == "edge" and False:
+
+        elif task_type == Task.EDGE_PREDICTION:
+            # TODO Kirill
+
             self.optimizer.zero_grad()
             edge_index = batch.edge_index
             pos_edge_index = edge_index[:, batch.y == 1]
@@ -1688,7 +1690,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
 
             loss = pos_loss + neg_loss
         else:
-            raise ValueError("Unsupported task type")
+            raise ValueError(f"Unsupported task type {task_type}")
         return loss
 
     def optimizer_step(
@@ -1815,7 +1817,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             batch,
             task_type: str = None
     ) -> torch.Tensor:
-        if task_type == "multiple-graphs":
+        if task_type == Task.GRAPH_CLASSIFICATION:
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
             att = self.gsat_layer.edge_att
@@ -1823,7 +1825,7 @@ class GSATModelManager(FrameworkGNNModelManager):
             # loss = self.loss_function(clf_logits, batch.y)
             self.optimizer.zero_grad()
             # del self.gsat_layer.att
-        elif task_type == "single-graph":
+        elif task_type == Task.NODE_CLASSIFICATION:
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index)  # TODO check weight param
             att = self.gsat_layer.edge_att
@@ -1833,7 +1835,8 @@ class GSATModelManager(FrameworkGNNModelManager):
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-        elif task_type == "edge" and False:  # TODO Kirill, remove False when release edge recommendation task
+        elif task_type == Task.EDGE_PREDICTION:
+            # TODO Kirill
             self.optimizer.zero_grad()
             edge_index = batch.edge_index
             pos_edge_index = edge_index[:, batch.y == 1]

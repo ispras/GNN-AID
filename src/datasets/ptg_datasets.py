@@ -26,6 +26,7 @@ class PTGDataset(GeneralDataset):
 
     """
     default_dataset_var_config = DatasetVarConfig(
+        task=None,  # not defined
         features=FeatureConfig(node_attr=[PTG_FEATURE_NAME]),
         # features=FeatureConfig(),
         labeling="origin",
@@ -86,7 +87,11 @@ class PTGDataset(GeneralDataset):
     def _compute_dataset_var_data(
             self
     ) -> None:
-        pass  # PTG graphs have tensors by default
+        # PTG graphs have tensors by default
+        # Only different task is allowed
+        # assert self.dataset_var_config.features == PTGDataset.default_dataset_var_config.features
+        assert self.dataset_var_config.task in [
+            Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION, Task.EDGE_PREDICTION]
 
     def _define_ptg_dataset(
             self

@@ -10,7 +10,7 @@ from torch_geometric.data import Dataset
 
 from aux.declaration import Declare
 from aux.utils import edge_index_to_edge_list
-from data_structures.configs import DatasetVarConfig, FeatureConfig
+from data_structures.configs import DatasetVarConfig, FeatureConfig, Task
 from datasets.gen_dataset import GeneralDataset
 from datasets.known_format_datasets import KnownFormatDataset
 
@@ -93,7 +93,7 @@ class DatasetStats:
             # Can't call prepared_dir.parent since dataset_var_config may be None
             _, [_, dvc_path] = Declare.dataset_prepared_dir(
                 self.gen_dataset.dataset_config, DatasetVarConfig(
-                    features=FeatureConfig(), dataset_ver_ind=0)
+                    task=None, features=FeatureConfig(), dataset_ver_ind=0)
             )
             directory = dvc_path.parent / 'stats'
         elif stat in DatasetStats.var_stats:

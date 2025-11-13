@@ -323,7 +323,7 @@ class GeneralDataset(ABC):
 
         elif task_type in [Task.EDGE_PREDICTION]:
             # Split all edges to train/val/test
-            # TODO If graph is undirected, should find and mask both i-j and j-i
+            # No negative sampling - it will be done in LinkLoader while model training
             from torch_geometric.transforms import RandomLinkSplit
 
             rls = RandomLinkSplit(

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Tuple
 
@@ -5,7 +6,7 @@ import torch_geometric
 
 from aux.declaration import Declare
 from aux.utils import import_by_name
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from datasets.dataset_info import DatasetInfo
 from datasets.gen_dataset import GeneralDataset
 from datasets.ptg_datasets import LibPTGDataset
@@ -61,47 +62,56 @@ class DatasetManager:
         return dataset
 
     @staticmethod
-    def get_by_full_name(
-            full_name: Tuple[str, ...] = None,
-            **dvc_kwargs
-    ) -> Tuple[GeneralDataset, torch_geometric.data.Data, Path]:
+    def add_labeling(
+            dataset_config: DatasetConfig,
+            task: Task,
+            labeling_name: str,
+            labeling_dict: dict,
+            value: int | list | None = None,
+            force_rewrite = False
+    ) -> None:
         """
-        Get built `PTGDataset` by its full name and additional kwargs for dataset var config.
-        Starts the creation of an object from raw data or takes already saved datasets in prepared
-        form. NOTE: works only for `PTGDataset`.
+        Adds a new labeling to datasets with a specified dataset_config.
 
         Args:
-            full_name: full name of graph data as a tuple of strings
-            **dvc_kwargs: kwargs for `DatasetVarConfig`, optional.
-             If given, try to create var config and call dataset.build()
-
-        Returns: GeneralDataset, a list of tensors with data, and
-        the path where the dataset is saved.
-
+            dataset_config (DatasetConfig):
+            task (Task):
+            labeling_name (str): name for a new labeling
+            labeling_dict (dict): dictionary with labels {node/edge/graph -> value}
+            value (int | list | None, optional): possible value depending on the task:
+             number of classes or regression value bounds. Will be induced if omitted
+            force_rewrite (bool): if True, will rewrite labeling if exists
         """
-        from datasets.ptg_datasets import PTGDataset
-        if full_name[0] != LibPTGDataset.data_folder:
-            full_name = tuple([LibPTGDataset.data_folder] + list(full_name))
-        dc = DatasetConfig(full_name=full_name)
-        dataset = DatasetManager.get_by_config(dc)
-        # if not isinstance(dataset, PTGDataset):
-        #     raise RuntimeError(f"get_by_full_name suits only for {PTGDataset.__name__} datasets."
-        #                        f" You are trying to get {dataset.__class__.__name__}."
-        #                        f" Use get_by_config() instead.")
+        info = DatasetInfo.read(Declare.dataset_info_path(dataset_config))
 
-        if dvc_kwargs:
-            features = dvc_kwargs.get('features', FeatureConfig())
-            # features = FeatureConfig(**dvc_kwargs.get('features', {}))
-            dvc_kwargs['features'] = features
+        if task in info.labelings and labeling_name in info.labelings[task] and not force_rewrite:
+            raise NameError(f"Labeling '{labeling_name}' for task {task} already exists for dataset"
+                            f" {dataset_config}.")
 
-        cfg = PTGDataset.default_dataset_var_config.to_savable_dict()
-        cfg.update(**dvc_kwargs)
-        dataset_var_config = DatasetVarConfig(**cfg)
+        # Some checks
+        if task.is_node_level():
+            assert info.count == 1
+            assert len(labeling_dict) == info.nodes[0]
+        elif task.is_edge_level():
+            assert info.count == 1
+        elif task.is_graph_level():
+            assert len(labeling_dict) == info.count
+        else:
+            raise ValueError(f"Adding labelings for task {task} is not supported.")
 
-        dataset.build(dataset_var_config=dataset_var_config)
+        if value is None:
+            if task.is_classification():
+                value = max(labeling_dict.values()) + 1
+            if task.is_regression():
+                value = [min(labeling_dict.values()), max(labeling_dict.values())]
 
-        dataset.train_test_split(percent_train_class=dvc_kwargs.get("percent_train_class", 0.8),
-                                 percent_test_class=dvc_kwargs.get("percent_test_class", 0.2))
+        # Save labeling_dict to file and update metainfo
+        path = Declare.dataset_root_dir(dataset_config)[0] / 'raw' / 'labels' / task / labeling_name
+        path.parent.mkdir(parents=True)
+        with open(path, 'w') as f:
+            json.dump(labeling_dict, f, indent=1)
 
-        # IMP Kirill suggest to return only dataset, else is its parts
-        return dataset, dataset.data, dataset.prepared_dir
+        if task not in info.labelings:
+            info.labelings[task] = {}
+        info.labelings[task][labeling_name] = value
+        info.save(Declare.dataset_info_path(dataset_config))

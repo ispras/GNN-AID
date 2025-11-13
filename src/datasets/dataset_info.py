@@ -144,7 +144,7 @@ class DatasetInfo:
         else:
             labelings = list(self.labelings.items())
         for t, lab in labelings:
-            assert t in Task
+            assert t in Task, f"Task '{t}' is not a valid Task"
             # assert Task.has_member(t)
             for name, info in lab.items():
                 assert isinstance(name, str)

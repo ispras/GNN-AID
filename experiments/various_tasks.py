@@ -54,6 +54,10 @@ def node_regression():
 
 def graph_regression():
     dc = DatasetConfig(('example', 'example3'))
+
+    labeling_dict = {"0": 0.3, "1": 0.4, "2": 0.2}
+    DatasetManager.add_labeling(dc, Task.GRAPH_REGRESSION, "regression", labeling_dict)
+
     dvc = DatasetVarConfig(task=Task.GRAPH_REGRESSION, labeling='regression',
                            features=FeatureConfig(node_attr=['type']), dataset_ver_ind=0)
 
@@ -65,6 +69,20 @@ def graph_regression():
 
 def edge_regression():
     dc = DatasetConfig(('example', 'example'))
+
+    labeling_dict = {
+        "10,11": 0.32,
+        "11,12": 0.25,
+        "11,13": 0.13,
+        "11,15": 0.1,
+        "12,13": 0.3,
+        "12,17": 0.22,
+        "15,14": 0.35,
+        "15,16": 0.40
+    }
+
+    DatasetManager.add_labeling(dc, Task.EDGE_REGRESSION, "regression", labeling_dict)
+
     dvc = DatasetVarConfig(task=Task.EDGE_REGRESSION, labeling="regression",
                            features=FeatureConfig(node_attr=['a']), dataset_ver_ind=0)
 
@@ -74,13 +92,15 @@ def edge_regression():
 
 
 def link_prediction():
-    dc = DatasetConfig(('example', 'example'))
-    dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
-                           task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
+    # dc = DatasetConfig(('example', 'example'))
+    # dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+    #                        task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
+
+    dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
+    dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
 
     gen_dataset = DatasetManager.get_by_config(dc, dvc)
     print(gen_dataset.data)
-
     gen_dataset.train_test_split()
 
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')

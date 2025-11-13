@@ -8,16 +8,13 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-# Monkey patch main dirs - before other imports
-from aux.utils import monkey_patch_directories
-monkey_patch_directories(include_graphs_dir=True)
-
 from aux.declaration import Declare
 from datasets.dataset_converter import networkx_to_ptg
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
+from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from datasets.datasets_manager import DatasetManager
 from datasets.known_format_datasets import KnownFormatDataset
 from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
+from tests.utils import monkey_patch_dirs, cleanup_patches
 
 
 def _create_single_ij(dc: DatasetConfig):
@@ -45,14 +42,16 @@ def _create_single_ij(dc: DatasetConfig):
                 "values": [[0, 1]]
             },
             "labelings": {
-                "binary": 2,
-                "threeClasses": 3
+                "node-classification": {
+                    "binary": 2,
+                    "threeClasses": 3
+                }
             }
         }, f)
-    (raw / 'labels').mkdir()
-    with open(raw / 'labels' / 'binary', 'w') as f:
+    (raw / 'labels' / 'node-classification').mkdir(parents=True)
+    with open(raw / 'labels' / 'node-classification' / 'binary', 'w') as f:
         json.dump({"10": 0, "11": 1, "12": 1}, f)
-    with open(raw / 'labels' / 'threeClasses', 'w') as f:
+    with open(raw / 'labels' / 'node-classification' / 'threeClasses', 'w') as f:
         json.dump({"10": 0, "11": 1, "12": 2}, f)
 
     (raw / 'node_attributes').mkdir()
@@ -102,12 +101,13 @@ def _create_single2_ij(dc: DatasetConfig):
                 "values": [[0, 1]]
             },
             "labelings": {
-                "binary": 2,
-                "threeClasses": 3
+                "node-classification": {
+                    "binary": 2,
+                    "threeClasses": 3}
             }
         }, f)
-    (raw / 'labels').mkdir()
-    with open(raw / 'labels' / 'binary', 'w') as f:
+    (raw / 'labels' / 'node-classification').mkdir(parents=True)
+    with open(raw / 'labels' / 'node-classification' / 'binary', 'w') as f:
         json.dump({"10": 1, "11": 1, "12": 1, "13": 1, "14": 0, "15": 0, "16": 0, "17": 0}, f)
 
     (raw / 'node_attributes').mkdir()
@@ -157,14 +157,16 @@ def _create_multi_ij(dc: DatasetConfig):
                 "values": [[0, 1]]
             },
             "labelings": {
-                "binary": 2,
-                "threeClasses": 3
+                "graph-classification": {
+                    "binary": 2,
+                    "threeClasses": 3
+                }
             }
         }, f)
-    (raw / 'labels').mkdir()
-    with open(raw / 'labels' / 'binary', 'w') as f:
+    (raw / 'labels' / 'graph-classification').mkdir(parents=True)
+    with open(raw / 'labels' / 'graph-classification' / 'binary', 'w') as f:
         json.dump({"0": 1, "1": 0, "2": 0}, f)
-    with open(raw / 'labels' / 'threeClasses', 'w') as f:
+    with open(raw / 'labels' / 'graph-classification' / 'threeClasses', 'w') as f:
         json.dump({"0": 0, "1": 1, "2": 2}, f)
 
     (raw / 'node_attributes').mkdir()
@@ -205,6 +207,8 @@ class DatasetsTest(unittest.TestCase):
             return Data(x=x, edge_index=edge_index, y=y)
 
     def setUp(self) -> None:
+        monkey_patch_dirs()
+
         # Example of local user PTG dataset
         class UserLocalDataset(InMemoryDataset):
             def __init__(self, root, data_list, transform=None):
@@ -222,7 +226,9 @@ class DatasetsTest(unittest.TestCase):
 
         self.UserLocalDataset = UserLocalDataset
 
-        # DatasetsTest.UserApiDataset = UserApiDataset
+    def tearDown(self):
+        # Clean up patches and tmp dirs
+        cleanup_patches()
 
     # def test_converted_local_ptg(self):
     #     """ """
@@ -297,6 +303,7 @@ class DatasetsTest(unittest.TestCase):
 
         # Build
         dvc1 = DatasetVarConfig(
+            task=Task.NODE_CLASSIFICATION,
             features=FeatureConfig(node_attr=['a', 'b', 'c']),
             labeling='binary',
             dataset_ver_ind=0)
@@ -310,6 +317,7 @@ class DatasetsTest(unittest.TestCase):
 
         # Build another way
         dvc2 = DatasetVarConfig(
+            task=Task.NODE_CLASSIFICATION,
             features=FeatureConfig(node_struct=[FeatureConfig.one_hot],
                                    node_attr=['a', 'b', 'c']),
             labeling='threeClasses',
@@ -329,6 +337,7 @@ class DatasetsTest(unittest.TestCase):
 
         # Build
         dvc1 = DatasetVarConfig(
+            task=Task.GRAPH_CLASSIFICATION,
             features=FeatureConfig(node_attr=['type']),
             labeling='binary',
             dataset_ver_ind=0)
@@ -407,17 +416,18 @@ class DatasetsTest(unittest.TestCase):
                         "types": ["continuous", "categorical"],
                         "values": [[1, 6], ['small', 'medium', 'big']]
                     },
-                    "labelings": {"binary": 2}
+                    "labelings": {"node-classification":{"binary": 2}}
                 }, f)
 
-            (raw / 'labels').mkdir()
-            with open(raw / 'labels' / 'binary', 'w') as f:
+            (raw / 'labels' / "node-classification").mkdir(parents=True)
+            with open(raw / 'labels' / "node-classification" / 'binary', 'w') as f:
                 json.dump(node_labels, f)
 
             # Convert from the format
             gen_dataset = KnownFormatDataset(dc)
 
             dataset_var_config = DatasetVarConfig(
+                task=Task.NODE_CLASSIFICATION,
                 features=FeatureConfig(node_attr=['a', 'b']),
                 labeling='binary', dataset_ver_ind=0)
             gen_dataset.build(dataset_var_config)
@@ -435,14 +445,16 @@ class DatasetsTest(unittest.TestCase):
         # Create files
         dc = DatasetConfig(('single-graph', 'example'))
         dvc = DatasetVarConfig(
-            features=FeatureConfig(node_attr=['a']), labeling='binary', dataset_ver_ind=0)
+            task=Task.NODE_CLASSIFICATION, features=FeatureConfig(node_attr=['a']),
+            labeling='binary', dataset_ver_ind=0)
         _create_single2_ij(dc)
         single = DatasetManager.get_by_config(dc)
         single.build(dvc)
 
         dc = DatasetConfig(('multi-graph', 'test'))
         dvc = DatasetVarConfig(
-            features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
+            task=Task.GRAPH_CLASSIFICATION, features=FeatureConfig(node_attr=['type']),
+            labeling='binary', dataset_ver_ind=0)
         _create_multi_ij(dc)
         multi = DatasetManager.get_by_config(dc)
         multi.build(dvc)
@@ -478,14 +490,16 @@ class DatasetsTest(unittest.TestCase):
 
         dc = DatasetConfig(('single-graph', 'test_stats'))
         dvc = DatasetVarConfig(
-            features=FeatureConfig(node_attr=['a']), labeling='binary', dataset_ver_ind=0)
+            task=Task.NODE_CLASSIFICATION, features=FeatureConfig(node_attr=['a']),
+            labeling='binary', dataset_ver_ind=0)
         _create_single2_ij(dc)
         single = DatasetManager.get_by_config(dc)
         single.build(dvc)
 
         dc = DatasetConfig(('multi-graph', 'test_stats'))
         dvc = DatasetVarConfig(
-            features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
+            task=Task.GRAPH_CLASSIFICATION, features=FeatureConfig(node_attr=['type']),
+            labeling='binary', dataset_ver_ind=0)
         _create_multi_ij(dc)
         multi = DatasetManager.get_by_config(dc)
         multi.build(dvc)
@@ -646,6 +660,33 @@ class DatasetsTest(unittest.TestCase):
         if len(errors) > 0:
             self.assertFalse(1)
             print(f"{len(errors)} Errors", '\n'.join(errors))
+
+    def test_various_tasks(self):
+        """
+        All types of task should be available for all datasets (where appropriate)
+        """
+        from data_structures.configs import Task
+
+        dc = DatasetConfig(('vartasks', 'single'))
+        _create_single_ij(dc)
+        single = KnownFormatDataset(dc)
+
+        dc = DatasetConfig(('vartasks', 'multi-graph'))
+        _create_multi_ij(dc)
+        dvc = DatasetVarConfig(
+            task=Task.GRAPH_CLASSIFICATION,
+            features=FeatureConfig(node_attr=['type']), labeling='binary', dataset_ver_ind=0)
+        multi = KnownFormatDataset(dc)
+
+        task = Task.NODE_REGRESSION
+        labeling_dict = {"10": 0.1, "11": 0.4, "12": 0.2}
+        DatasetManager.add_labeling(
+            single.dataset_config, task, "regression", labeling_dict)
+        dvc = DatasetVarConfig(task=task, features=FeatureConfig(node_attr=['a']),
+                               labeling='regression', dataset_ver_ind=0)
+        single.build(dvc)
+        single.train_test_split()
+
 
 
 if __name__ == '__main__':
