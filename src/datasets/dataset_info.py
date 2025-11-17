@@ -192,7 +192,7 @@ class DatasetInfo:
             if attr is None:
                 raise ValueError(f"Attribute '{attr}' of metainfo should be defined.")
 
-    def check_consistency_with_dataset(
+    def check_consistency_with_ptg_dataset(
             self,
             dataset: Dataset
     ) -> None:

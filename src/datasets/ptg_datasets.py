@@ -164,8 +164,11 @@ class PTGDataset(GeneralDataset):
             if hasattr(self.dataset, 'num_classes'):
                 if self.dataset.num_classes == 0:
                     raise NotImplementedError("Datasets without classes are not supported")
-                task = Task.NODE_CLASSIFICATION if len(self.dataset) == 1 else Task.GRAPH_CLASSIFICATION
-                res.labelings = {task: {"origin": self.dataset.num_classes}}
+                classification_task = Task.NODE_CLASSIFICATION if len(self.dataset) == 1 else Task.GRAPH_CLASSIFICATION
+                # TODO if edges have attributes, add edge classification
+                res.labelings = {
+                    classification_task: {"origin": self.dataset.num_classes},
+                }
             else:
                 res.labelings = "?"
                 msg += f"Cannot get num_classes Dataset of type {self.dataset.__class__}. "

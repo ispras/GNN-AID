@@ -149,7 +149,7 @@ class KnownFormatDataset(
     def check_validity(
             self
     ) -> None:
-        """ Check that dataset files (graph and attributes) are valid and consistent with .info.
+        """ Check that dataset files (graph and attributes) are valid and consistent with metainfo.
         """
         # Assuming info is OK
         count = self.info.count
@@ -286,6 +286,8 @@ class KnownFormatDataset(
         node_index = 0
         with open(self.edges_path, 'r') as f:
             for line in f.readlines():
+                if line.startswith('#'):
+                    continue
                 node_index = self._read_edge(line, node_index, node_map, ptg_edge_index)
 
         self._ptg_edge_index = [torch.tensor(np.asarray(ptg_edge_index))]
@@ -304,7 +306,7 @@ class KnownFormatDataset(
             self.node_map = list(node_map.keys())
             # self.info.node_info = {"id": self.node_map}
 
-        assert node_index == self.info.nodes[0]
+        assert node_index == self.info.nodes[0], f"Number of nodes in file {node_index} != {self.info.nodes[0]} - number of nodes in metainfo"
         assert len(self._ptg_edge_index) == self.info.count
 
     def _read_multi(
@@ -465,11 +467,11 @@ class KnownFormatDataset(
             g_ix: int = None
     ) -> list[int] | None:
         """ Returns list of labels (not tensors) """
-        y = []
-        if self.dataset_var_config.labeling is None:  # e.g. link prediction
+        task = self.dataset_var_config.task
+        if task == Task.EDGE_PREDICTION:
             return None
         # Read labels
-        task = self.dataset_var_config.task
+        y = []
         labeling_path = self.labels_dir / task / self.dataset_var_config.labeling
         with open(labeling_path, 'r') as f:
             labeling_dict = json.load(f)

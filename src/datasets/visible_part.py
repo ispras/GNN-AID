@@ -324,10 +324,12 @@ class VisiblePart:
         dataset_var_data.labels = {}
 
         node_features = self.gen_dataset.node_features
-        labels = self.gen_dataset.labels.tolist()
-
         for ix in index.ixes:
             dataset_var_data.node_features[ix] = node_features[ix].tolist()
-            dataset_var_data.labels[ix] = labels[ix]
+
+        if self.gen_dataset.labels:
+            labels = self.gen_dataset.labels.tolist()
+            for ix in index.ixes:
+                dataset_var_data.labels[ix] = labels[ix]
 
         return dataset_var_data

@@ -114,6 +114,7 @@ class DatasetVarBlock(Block):
         features = FeatureConfig(**kwargs.pop('features'))
         kwargs['features'] = features
         self.dataset_var_config = DatasetVarConfig(**kwargs)
+        # print(self.dataset_var_config.to_dict())
         return True
 
     def _submit(
