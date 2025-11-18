@@ -11,6 +11,7 @@ from torch import tensor
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
 from torch_geometric.loader import DataLoader, NeighborLoader, LinkNeighborLoader
+from torch_geometric.utils import negative_sampling
 
 from aux.data_info import UserCodeInfo
 from aux.declaration import Declare
@@ -966,19 +967,47 @@ class FrameworkGNNModelManager(GNNModelManager):
                 )
             )
         elif task_type == Task.EDGE_PREDICTION:
-            # DEBUG - these are edge indices
-            print(gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask)
+            edge_label_index = getattr(gen_dataset, 'edge_label_index', None)
+            if edge_label_index is None:
+                raise ValueError("data.edge_label_index is out")
 
-            # TODO Kirill
-            raise NotImplementedError
+            train_mask = getattr(gen_dataset, 'train_mask', None)
+            if train_mask is None:
+                raise ValueError("data.train_mask is out")
+
+            pos_edge_index = edge_label_index[:, train_mask]
+            pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long, device=gen_dataset.dataset.edge_index.device)
+
+            neg_edge_index = negative_sampling(
+                edge_index=gen_dataset.data.edge_index,
+                num_nodes=gen_dataset.data.num_nodes,
+                num_neg_samples=pos_edge_index.size(1),
+                method='sparse'
+            )
+            neg_label = torch.zeros(neg_edge_index.size(1), dtype=torch.long, device=gen_dataset.dataset.edge_index.device)
+
+            device = gen_dataset.dataset.edge_index.device
+            pos_edge_index = pos_edge_index.to(device)
+            neg_edge_index = neg_edge_index.to(device)
+            edge_label_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
+            edge_label = torch.cat([pos_label, neg_label], dim=0)
+
+            train_data = gen_dataset.data.clone()
+            train_data.edge_label_index = edge_label_index
+            train_data.edge_label = edge_label
+
             loader = cast(
                 Iterable,
                 LinkNeighborLoader(
-                    gen_dataset.data,
-                    num_neighbors=[-1], input_nodes=gen_dataset.train_mask,
-                    batch_size=self.batch, shuffle=True
+                    data=train_data,
+                    num_neighbors=[-1],
+                    batch_size=self.batch,
+                    edge_label_index=edge_label_index,
+                    edge_label=edge_label,
+                    shuffle=True,
                 )
             )
+
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         loss = 0
@@ -1027,7 +1056,7 @@ class FrameworkGNNModelManager(GNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: Task
+            task_type: Task = None
     ) -> torch.Tensor:
         loss = None
         if hasattr(batch, "edge_weight"):
@@ -1037,36 +1066,30 @@ class FrameworkGNNModelManager(GNNModelManager):
         if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, weight)
-            # Take only predictions and labels of seed nodes
 
             loss = self.loss_function(*move_to_same_device(logits[:batch.batch_size], batch.y[:batch.batch_size]))
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-            # loss.backward()
-            # self.optimizer.step()
         elif task_type in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
             loss = self.loss_function(*move_to_same_device(logits, batch.y))
-            # loss.backward()
-            # self.optimizer.step()
-        # TODO Kirill, remove False when release edge recommendation task
         elif task_type == Task.EDGE_PREDICTION:
             self.optimizer.zero_grad()
-            edge_index = batch.edge_index
-            pos_edge_index = edge_index[:, batch.y == 1]
-            neg_edge_index = edge_index[:, batch.y == 0]
+            device = batch.x.device
 
-            pos_out = self.gnn(batch.x, pos_edge_index, weight)
-            neg_out = self.gnn(batch.x, neg_edge_index, weight)
+            x = batch.x.to(device)
+            edge_index = batch.edge_index.to(device)
+            edge_label_index = batch.edge_label_index.to(device)
+            edge_label = batch.edge_label.to(device).float()
+            node_embeddings = self.gnn(x, edge_index, weight=weight if 'weight' in locals() else None)
 
-            # TODO check if we need to take out[:batch.batch_size]
-            pos_loss = self.loss_function(*move_to_same_device(pos_out, torch.ones_like(pos_out)))
-            neg_loss = self.loss_function(*move_to_same_device(neg_out, torch.zeros_like(neg_out)))
+            src = node_embeddings[edge_label_index[0]]
+            dst = node_embeddings[edge_label_index[1]]
+            out = (src * dst).sum(dim=-1)
 
-            loss = pos_loss + neg_loss
-            # loss.backward()
+            loss = self.loss_function(out, edge_label)
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         return loss

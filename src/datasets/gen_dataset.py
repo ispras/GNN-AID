@@ -327,14 +327,32 @@ class GeneralDataset(ABC):
             from torch_geometric.transforms import RandomLinkSplit
 
             rls = RandomLinkSplit(
-                num_val=percent_val_class, num_test=percent_test_class,
+                num_val=percent_val_class,
+                num_test=percent_test_class,
                 is_undirected=not self.info.directed,
-                neg_sampling_ratio=0)
+                neg_sampling_ratio=0
+            )
+
             train_data, val_data, test_data = rls(self.data)
 
-            train_mask = train_data.edge_label_index
-            val_mask = val_data.edge_label_index
-            test_mask = test_data.edge_label_index
+            full_edge_label_index = torch.cat([
+                train_data.edge_label_index,
+                val_data.edge_label_index,
+                test_data.edge_label_index
+            ], dim=1)
+            self.edge_label_index = full_edge_label_index
+
+            total_edges = full_edge_label_index.size(1)
+
+            train_mask = torch.zeros(total_edges, dtype=torch.bool)
+            train_mask[:train_data.edge_label_index.size(1)] = True
+
+            val_mask = torch.zeros(total_edges, dtype=torch.bool)
+            val_mask[train_data.edge_label_index.size(1):
+                     train_data.edge_label_index.size(1) + val_data.edge_label_index.size(1)] = True
+
+            test_mask = torch.zeros(total_edges, dtype=torch.bool)
+            test_mask[-test_data.edge_label_index.size(1):] = True
         else:
             raise ValueError(f"Unsupported task type {task_type}")
 

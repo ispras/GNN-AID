@@ -135,7 +135,6 @@ def link_prediction():
     print("Training was successful")
 
 
-
 if __name__ == '__main__':
     # node_regression()
     # graph_regression()
