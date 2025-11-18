@@ -8,12 +8,12 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from aux.declaration import Declare
-from datasets.dataset_converter import networkx_to_ptg
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
-from datasets.datasets_manager import DatasetManager
-from datasets.known_format_datasets import KnownFormatDataset
-from datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
+from gnn_aid.aux.declaration import Declare
+from gnn_aid.datasets.dataset_converter import networkx_to_ptg
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
+from gnn_aid.datasets.ptg_datasets import LocalPTGDataset, LibPTGDataset
 from tests.utils import monkey_patch_dirs, cleanup_patches
 
 
@@ -84,7 +84,7 @@ def _create_single2_ij(dc: DatasetConfig):
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "class_name": "KnownFormatDataset",
-            "import_from": "datasets.known_format_datasets",
+            "import_from": "gnn_aid.datasets.known_format_datasets",
             "name": "example",
             "count": 1,
             "directed": False,
@@ -141,7 +141,7 @@ def _create_multi_ij(dc: DatasetConfig):
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "class_name": "KnownFormatDataset",
-            "import_from": "datasets.known_format_datasets",
+            "import_from": "gnn_aid.datasets.known_format_datasets",
             "count": 3,
             "directed": False,
             "nodes": [3, 4, 5],
@@ -352,7 +352,7 @@ class DatasetsTest(unittest.TestCase):
 
     def test_custom_other_single(self):
         """ """
-        from datasets.dataset_converter import DatasetConverter
+        from gnn_aid.datasets.dataset_converter import DatasetConverter
         import networkx as nx
 
         g = nx.Graph()
@@ -486,7 +486,7 @@ class DatasetsTest(unittest.TestCase):
     def test_stats(self):
         """ Statistics
         """
-        from datasets.dataset_stats import DatasetStats
+        from gnn_aid.datasets.dataset_stats import DatasetStats
 
         dc = DatasetConfig(('single-graph', 'test_stats'))
         dvc = DatasetVarConfig(
@@ -517,8 +517,8 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from data_structures.prefix_storage import TuplePrefixStorage
-        from aux.utils import TORCH_GEOM_GRAPHS_PATH
+        from gnn_aid.aux.prefix_storage import TuplePrefixStorage
+        from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = TuplePrefixStorage.from_json(f.read(), )
@@ -652,7 +652,7 @@ class DatasetsTest(unittest.TestCase):
 
             # Remove
             finally:
-                from aux.declaration import Declare
+                from gnn_aid.aux.declaration import Declare
                 root_dir, files_paths = Declare.dataset_root_dir(dc)
                 if root_dir.exists():
                     shutil.rmtree(root_dir)
@@ -665,7 +665,7 @@ class DatasetsTest(unittest.TestCase):
         """
         All types of task should be available for all datasets (where appropriate)
         """
-        from data_structures.configs import Task
+        from gnn_aid.data_structures.configs import Task
 
         dc = DatasetConfig(('vartasks', 'single'))
         _create_single_ij(dc)

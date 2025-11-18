@@ -1,12 +1,14 @@
 import torch
 from torch import device
 
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task, \
+from gnn_aid.attacks import Attacker
+from gnn_aid.aux.utils import FUNCTIONS_PARAMETERS_PATH, all_subclasses
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task, \
     ConfigPattern, ModelModificationConfig
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 
 def node_regression():
@@ -107,15 +109,23 @@ def link_prediction():
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
+            "batch": 64,
             "mask_features": [],
             "optimizer": {
                 "_class_name": "Adam",
                 "_config_kwargs": {},
-            }
+            },
+            "loss_function": {
+                "_config_class": "Config",
+                "_class_name": "CrossEntropyLoss",
+                "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.nn"],
+                "_config_kwargs": {},
+            },
         }
     )
 
-    steps_epochs = 10
+    steps_epochs = 30
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
@@ -127,6 +137,7 @@ def link_prediction():
     gnn_model_manager.gnn.to(my_device)
     gen_dataset.data.to(my_device)
 
+    gnn_model_manager.modification.epochs = 0
     gnn_model_manager.train_model(
         gen_dataset=gen_dataset, steps=steps_epochs,
         save_model_flag=False,
@@ -140,4 +151,7 @@ if __name__ == '__main__':
     # graph_regression()
 
     # edge_regression()
-    link_prediction()
+    # link_prediction()
+
+    for c in all_subclasses(Attacker):
+        print(c)

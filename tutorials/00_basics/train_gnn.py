@@ -25,7 +25,7 @@ def train_gnn():
 
     # --- Construct model ---
     # Here you can use your own model, or quickly construct a gnn using the GNN-AID functionality for constructing
-    # models. Examples of model configurations can be found in ./src/models_builder/models_zoo
+    # models. Examples of model configurations can be found in ./gnn_aid/models_builder/models_zoo
     # As an example we will use a simple two-layer GNN.
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 

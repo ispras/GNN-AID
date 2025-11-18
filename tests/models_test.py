@@ -1,16 +1,14 @@
 import collections.abc
-
-from datasets.ptg_datasets import LibPTGDataset
-
 collections.Callable = collections.abc.Callable
 import unittest
 
-from datasets.datasets_manager import DatasetManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, \
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, \
     GSATModelManager
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig, Task
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
 

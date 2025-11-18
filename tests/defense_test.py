@@ -2,15 +2,15 @@ import unittest
 
 import numpy as np
 
-from attacks.mi_attacks import MIAttacker
-from aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
+from gnn_aid.attacks.mi_attacks import MIAttacker
+from gnn_aid.aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig, Task
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
 
@@ -60,7 +60,7 @@ class DefenseTest(unittest.TestCase):
 
     def test_gnnguard(self):
         poison_defense_config = ConfigPattern(
-            _class_name="GNNGuard",
+            _class_name="GNNGuardDefender",
             _import_path=POISON_DEFENSE_PARAMETERS_PATH,
             _config_class="PoisonDefenseConfig",
             _config_kwargs={

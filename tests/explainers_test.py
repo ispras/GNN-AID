@@ -3,15 +3,15 @@ collections.Callable = collections.abc.Callable
 import unittest
 import warnings
 
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from explainers.explainers_manager import FrameworkExplainersManager
-from data_structures.configs import FeatureConfig, Task
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.data_structures.configs import FeatureConfig, Task
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
 

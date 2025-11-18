@@ -9,10 +9,10 @@ def monkey_patch_dirs() -> None:
     """
     Patcher of directories imported in other modules. Useful for tests.
     """
-    from aux.utils import GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR
+    from gnn_aid.aux.utils import GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR
     dirs = [GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR]
 
-    modules = ['aux.utils', 'aux.data_info', 'aux.declaration']
+    modules = ['gnn_aid.aux.utils', 'gnn_aid.aux.data_info', 'gnn_aid.aux.declaration']
 
     l = locals()
     g = globals()
@@ -49,9 +49,9 @@ def cleanup_patches():
 
 
 if __name__ == '__main__':
-    from aux.utils import GRAPHS_DIR
+    from gnn_aid.aux.utils import GRAPHS_DIR
 
-    monkey_patch_dirs([GRAPHS_DIR])
+    monkey_patch_dirs()
 
-    from aux.declaration import GRAPHS_DIR
+    from gnn_aid.aux.declaration import GRAPHS_DIR
     print(GRAPHS_DIR)

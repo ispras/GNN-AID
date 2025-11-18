@@ -6,20 +6,20 @@ from typing import Union
 import torch
 from torch_geometric.data import Dataset
 
-from data_structures.configs import ModelStructureConfig, ModelConfig, ModelModificationConfig
-from aux.data_info import UserCodeInfo, DataInfo
-from aux.declaration import Declare
-from data_structures.prefix_storage import FixedKeysPrefixStorage
-from aux.utils import import_by_name, model_managers_info_by_names_list, GRAPHS_DIR, \
-    TECHNICAL_PARAMETER_KEY, \
-    IMPORT_INFO_KEY, DATASETS_DIR
-from datasets.gen_dataset import GeneralDataset
-from datasets.visible_part import VisiblePart
-from models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
-from models_builder.gnn_models import ModelManagerConfig, GNNModelManager, Metric
-from web_interface.back_front.block import Block, WrapperBlock
-from web_interface.back_front.utils import WebInterfaceError, json_dumps, get_config_keys, \
-    SocketConnect
+from gnn_aid.aux.data_info import UserCodeInfo, DataInfo
+from gnn_aid.aux.declaration import Declare
+from gnn_aid.aux.prefix_storage import FixedKeysPrefixStorage
+from gnn_aid.aux.utils import (
+    import_by_name, model_managers_info_by_names_list,
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, DATASETS_DIR)
+from gnn_aid.data_structures.configs import (
+    ModelStructureConfig, ModelConfig, ModelModificationConfig)
+from gnn_aid.datasets.gen_dataset import GeneralDataset
+from gnn_aid.datasets.visible_part import VisiblePart
+from gnn_aid.models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
+from gnn_aid.models_builder.gnn_models import ModelManagerConfig, GNNModelManager, Metric
+from .block import Block, WrapperBlock
+from .utils import WebInterfaceError, json_dumps, get_config_keys, SocketConnect
 
 TENSOR_SIZE_LIMIT = 1024  # Max size of weights tensor we sent to frontend
 
@@ -82,7 +82,7 @@ class ModelLoadBlock(Block):
     def _submit(
             self
     ) -> None:
-        from models_builder.gnn_models import GNNModelManager
+        from gnn_aid.models_builder.gnn_models import GNNModelManager
         self.model_manager, train_test_split_path = GNNModelManager.from_model_path(
             model_path=self.model_path, dataset_path=self.gen_dataset.prepared_dir)
         self._load_train_test_mask(train_test_split_path / 'train_test_split')
@@ -264,7 +264,7 @@ class ModelManagerBlock(Block):
         # Import correct class
         from web_interface.back_front.frontend_client import FrontendClient
         if self.klass in FrontendClient.get_parameters("FW"):
-            mm_class = import_by_name(self.klass, ["models_builder.gnn_models"])
+            mm_class = import_by_name(self.klass, ["gnn_aid.models_builder.gnn_models"])
 
         else:  # Custom MM
             mm_info = model_managers_info_by_names_list({self.klass})
@@ -426,7 +426,7 @@ class ModelTrainerBlock(Block):
         """ Runs model to compute predictions and logits """
         # TODO add set of nodes
         assert self.model_manager
-        from models_builder.gnn_models import Metric
+        from gnn_aid.models_builder.gnn_models import Metric
         metrics_values = self.model_manager.evaluate_model(
             self.gen_dataset, metrics=self.metrics)
         self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)

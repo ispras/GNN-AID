@@ -2,22 +2,23 @@ import unittest
 import numpy as np
 import torch
 
-from attacks.mi_attacks import MIAttacker
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+from gnn_aid.attacks.mi_attacks import MIAttacker
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     ConfigPattern, FeatureConfig, Task
-from models_builder.models_zoo import model_configs_zoo
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH
-from tests.utils import monkey_patch_dirs, cleanup_patches
+from .utils import monkey_patch_dirs, cleanup_patches
 
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
         # os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Monkey for home coding
 
+        from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
         print('setup')
         self.my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

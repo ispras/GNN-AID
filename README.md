@@ -40,10 +40,10 @@ Suppose you are at the project root folder. Activate virtual environment
 source venv/bin/activate
 ```
 
-Go to `src` folder and add it to python dependencies
+Go to `gnn_aid` folder and add it to python dependencies
 
 ```text
-cd src
+cd gnn_aid
 export PYTHONPATH=.
 ```
 

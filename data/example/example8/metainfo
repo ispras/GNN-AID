@@ -1,6 +1,6 @@
 {
  "class_name": "KnownFormatDataset",
- "import_from": "datasets.known_format_datasets",
+ "import_from": "gnn_aid.datasets.known_format_datasets",
  "count": 8,
  "nodes": [5, 4, 4, 8, 6, 7, 7, 9],
  "directed": true,

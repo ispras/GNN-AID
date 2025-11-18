@@ -9,7 +9,6 @@
 *__pycache__*
 *.py[cod]
 *$py.class
-*PTGDataset*
 *experiments/explainers_metrics*
 
 .cache
@@ -20,15 +19,14 @@ _static
 build
 config
 pics
+pic
 results
 sphinx_docs
 *explainers_metrics*
 experiments/explainers_metrics/**/*_metrics.json
 
-data
 datasets
 explanations
-<base.ptg_datasets.PTGDataset object*
 models
 models_exp
 results
@@ -46,8 +44,7 @@ venv_new
 
 gnn
 torch_install
-src/.vscode
-data__DatasetsTest_tmp/
+gnn_aid/.vscode
 
 # Mac OS extentions
 *.DS_Store

@@ -1,15 +1,15 @@
 import json
 
-from data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
+from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
     EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     MI_DEFENSE_PARAMETERS_PATH
-from datasets.gen_dataset import GeneralDataset
-from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
-from models_builder.gnn_models import GNNModelManager
-from web_interface.back_front.block import Block
-from web_interface.back_front.utils import WebInterfaceError
+from gnn_aid.datasets.gen_dataset import GeneralDataset
+from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefenseManager
+from gnn_aid.models_builder.gnn_models import GNNModelManager
+from .block import Block
+from .utils import WebInterfaceError
 
 NAME_TO_PATH = {
     "AD-pa": POISON_ATTACK_PARAMETERS_PATH,

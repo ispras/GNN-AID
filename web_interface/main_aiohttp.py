@@ -11,7 +11,7 @@ import socketio
 import jinja2
 import aiohttp_jinja2
 
-from aux.data_info import DataInfo
+from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import WebInterfaceError, json_loads, json_dumps, SocketConnect
 

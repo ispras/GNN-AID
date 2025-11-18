@@ -1,7 +1,7 @@
 import types
 import functools
 
-from web_interface.back_front.utils import SocketConnect
+from .utils import SocketConnect
 
 
 class BlockConfig(dict):

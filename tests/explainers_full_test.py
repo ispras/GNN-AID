@@ -1,8 +1,4 @@
-
 import collections.abc
-
-from datasets.ptg_datasets import LibPTGDataset
-
 collections.Callable = collections.abc.Callable
 import unittest
 import warnings
@@ -10,14 +6,15 @@ import warnings
 import torch
 from torch import device
 
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
     Task
-from datasets.datasets_manager import DatasetManager
-from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
 

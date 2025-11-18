@@ -1,6 +1,6 @@
 from typing import Union
 
-from web_interface.back_front.block import WrapperBlock, Block
+from .block import WrapperBlock, Block
 
 
 class Diagram:

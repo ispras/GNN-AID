@@ -1,16 +1,15 @@
 from gevent import monkey; monkey.patch_all()  # Must go before other imports
 
-import json
 import logging
 import gevent.queue
 from gevent import Greenlet
-from multiprocessing import Pipe, Queue
+from multiprocessing import Queue
 
 from flask import Flask, render_template, request, session
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import uuid
 
-from aux.data_info import DataInfo
+from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import FrontendClient, ClientMode
 from web_interface.back_front.utils import WebInterfaceError, json_dumps, json_loads, SocketConnect
 

@@ -1,13 +1,13 @@
 import json
 
-from aux.data_info import DataInfo
-from aux.utils import TORCH_GEOM_GRAPHS_PATH
-from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
-from datasets.datasets_manager import DatasetManager
-from datasets.gen_dataset import GeneralDataset
-from datasets.visible_part import DatasetVarData, DatasetData
-from web_interface.back_front.block import Block
-from web_interface.back_front.utils import json_dumps, get_config_keys
+from gnn_aid.aux.data_info import DataInfo
+from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.gen_dataset import GeneralDataset
+from gnn_aid.datasets.visible_part import DatasetVarData, DatasetData
+from .block import Block
+from .utils import json_dumps, get_config_keys
 
 
 class DatasetBlock(Block):
@@ -20,7 +20,7 @@ class DatasetBlock(Block):
 
         self.dataset_config = None
 
-        from data_structures.prefix_storage import TuplePrefixStorage
+        from gnn_aid.aux.prefix_storage import TuplePrefixStorage
         self._index = None
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             self._torch_geom_index = TuplePrefixStorage.from_json(f.read())
@@ -58,7 +58,7 @@ class DatasetBlock(Block):
         self._index = DataInfo.data_parse()
 
         # Add torch_geom
-        from datasets.ptg_datasets import LibPTGDataset
+        from gnn_aid.datasets.ptg_datasets import LibPTGDataset
         # assert len(index.keys) == 3
         for key, value in self._torch_geom_index:
             if key[0] == "Heterogeneous":
