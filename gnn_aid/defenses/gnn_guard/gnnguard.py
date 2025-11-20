@@ -14,7 +14,7 @@ from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPatte
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 # from defenses.GNNGuard.base_model import BaseModel
 from gnn_aid.defenses.poison_defense import PoisonDefender
-from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager, FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 

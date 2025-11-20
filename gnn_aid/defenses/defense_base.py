@@ -1,6 +1,6 @@
 from gnn_aid.data_structures.graph_modification_artifacts import GraphModificationArtifact
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 
 
 class Defender:

@@ -158,10 +158,15 @@ class GNNConstructor:
 
         return result
 
-    def get_weights(self, tensor_size_limit):
+    def get_weights(
+            self,
+            tensor_size_limit
+    ) -> dict:
         pass
 
-    def get_neurons(self):
+    def get_neurons(
+            self
+    ) -> list:
         pass
 
 
@@ -191,7 +196,7 @@ class GNNConstructorTorch(
 
     def get_neurons(
             self
-    ):
+    ) -> list:
         """ Return number of neurons of each convolution layer as list: [n_1, n_2, ..., n_k]
         """
         neurons = []
@@ -213,7 +218,7 @@ class GNNConstructorTorch(
     def get_weights(
             self,
             tensor_size_limit: Union[int, torch.Tensor] = None
-    ):
+    ) -> dict:
         """
         Get model weights calling torch.nn.Module.state_dict() to draw them on the frontend.
         """

@@ -6,7 +6,9 @@ from typing import Union, Callable, Any, Type
 from tqdm import tqdm
 
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
+
+
 # from web_interface.back_front.utils import SocketConnect
 
 

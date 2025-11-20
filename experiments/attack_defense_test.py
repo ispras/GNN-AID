@@ -4,20 +4,21 @@ import warnings
 
 from torch import device
 
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.models_utils import apply_decorator_to_graph_layers
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.models_utils import apply_decorator_to_graph_layers
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
-from datasets.datasets_manager import DatasetManager
-from models_builder.models_zoo import model_configs_zoo
-from attacks.qattack import qattack
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.models_builder.models_utils import Metric
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from gnn_aid.attacks.qattack import qattack
 # from attacks.RL_S2V.rl_s2v import RLS2VAttacker
-from defenses.jaccard_defense import jaccard_def
-from attacks.metattack import meta_gradient_attack
-from defenses.gnn_guard import gnnguard
-from defenses.pro_gnn.prognn import ProGNNDefender
+from gnn_aid.defenses.jaccard_defense import jaccard_def
+from gnn_aid.attacks.metattack import meta_gradient_attack
+from gnn_aid.defenses.gnn_guard import gnnguard
+from gnn_aid.defenses.pro_gnn.prognn import ProGNNDefender
 
 
 def test_attack_defense_small():
@@ -206,7 +207,7 @@ def test_attack_defense_small():
 
 
 def test_attack_defense():
-    from attacks.clga import CLGA
+    from gnn_aid.attacks.clga import CLGA
 
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -980,8 +981,8 @@ def test_adv_training():
             # "num_nodes": dataset.dataset.x.shape[0]
         }
     )
-    from defenses.evasion_defense import EvasionDefender
-    from aux.utils import all_subclasses
+    from gnn_aid.defenses.evasion_defense import EvasionDefender
+    from gnn_aid.aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
 

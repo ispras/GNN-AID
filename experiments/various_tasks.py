@@ -7,7 +7,8 @@ from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, Fea
     ConfigPattern, ModelModificationConfig
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
-from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.models_builder.models_utils import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 

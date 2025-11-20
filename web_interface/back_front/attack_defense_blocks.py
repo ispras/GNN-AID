@@ -7,7 +7,7 @@ from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARA
     MI_DEFENSE_PARAMETERS_PATH
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefenseManager
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 from .block import Block
 from .utils import WebInterfaceError
 

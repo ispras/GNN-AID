@@ -4,15 +4,15 @@ import warnings
 import torch
 from torch import device
 
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
-from models_builder.attack_defense_metric import AttackMetric, DefenseMetric
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefenseManager
+from gnn_aid.models_builder.attack_defense_metric import AttackMetric, DefenseMetric
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
-from models_builder.gnn_models import FrameworkGNNModelManager
-from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 
 def attack_defense_metrics():
