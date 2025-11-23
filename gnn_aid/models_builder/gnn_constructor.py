@@ -2,7 +2,7 @@ import copy
 import json
 import warnings
 from collections import OrderedDict
-from typing import Dict, Callable, Union, Iterator, Type
+from typing import Dict, Callable, Union, Iterator, Type, Tuple
 import torch
 from torch.nn.parameter import UninitializedParameter
 from torch.utils import hooks
@@ -12,6 +12,7 @@ from torch_geometric.nn import MessagePassing
 from gnn_aid.aux.utils import import_by_name, CUSTOM_LAYERS_INFO_PATH, MODULES_PARAMETERS_PATH, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY
 from gnn_aid.data_structures.configs import ModelConfig, CONFIG_CLASS_NAME, ModelStructureConfig, ConfigPattern
+from .models_utils import GNNConstructorError
 
 
 class GNNConstructor:
@@ -37,6 +38,12 @@ class GNNConstructor:
             self
     ):
         raise NotImplementedError("forward can't be called, because it is not implemented")
+
+    def decode(
+            self
+    ):
+        """ Used for edge tasks, takes as input embeddings of two nodes. """
+        raise NotImplementedError("decode can't be called, because it is not implemented")
 
     def get_all_layer_embeddings(
             self
@@ -267,11 +274,11 @@ class FrameworkGNNConstructor(
         """
         super().__init__()
 
-        self.model_info = None
+        self.model_info = None  # Indices of first and last layers at node, graph, and decoder levels
         self.model_config = model_config
         self.structure = self.model_config.structure
         self.n_layers = len(self.structure)
-        self.conn_dict = {}
+        self.conn_dict = {}  # skip-connections
         self.embedding_levels_by_layers = []
         self.num_hops = None
         self._save_emb_flag = False
@@ -279,68 +286,87 @@ class FrameworkGNNConstructor(
         # Hooks can be used for operations graph construction
         self._my_forward_hooks: Dict[int, Callable] = OrderedDict()
 
+        self._parse_structure()
+        self._check_model_structure(self.structure)
+
+    def _parse_structure(
+            self
+    ):
+        """
+        Parse structure layer by layer and assign attributes to torch.nn.Module
+        """
         with open(MODULES_PARAMETERS_PATH) as f:
             self.modules_info = json.load(f)
 
         for i, elem in enumerate(self.structure):
             self.embedding_levels_by_layers.append(elem['label'])
             # print(elem['layer']['layer_name'])
+            if 'function' in elem:
+                assert not 'layer' in elem, "Model structure item can be either 'function' or 'layer', not both"
+                function_name = elem['function']['function_name']
+                function_kwargs = elem['function']['function_kwargs'] or {}
+                function_class = import_by_name(
+                    self.modules_info[function_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
+                    self.modules_info[function_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
+                )
+                function_init_class = function_class(**function_kwargs)
+                setattr(self, f"decoder_{function_name}_{i}", function_init_class)
 
-            if 'GINConv' == elem['layer']['layer_name']:
-                gin_seq = torch.nn.Sequential()
-                for j, gin_elem in enumerate(elem['layer']['gin_seq']):
-                    layer_class = import_by_name(
-                        self.modules_info[gin_elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
-                        self.modules_info[gin_elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
+            else:  # layer
+                layer_name = elem['layer']['layer_name']
+                layer_kwargs = elem['layer']['layer_kwargs'] or {}
+                if 'GINConv' == layer_name:
+                    gin_seq = torch.nn.Sequential()
+                    for j, gin_elem in enumerate(elem['layer']['gin_seq']):
+                        layer_class = import_by_name(
+                            self.modules_info[gin_elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
+                            self.modules_info[gin_elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
+                        )
+                        layer_init_class = layer_class(**gin_elem['layer']['layer_kwargs'])
+                        gin_seq.add_module(f"{gin_elem['layer']['layer_name']}{i}_{j}", layer_init_class)
+                        if 'batchNorm' in gin_elem:
+                            batch_norm_class = import_by_name(gin_elem['batchNorm']['batchNorm_name'],
+                                                              ["torch.nn"])
+                            if gin_elem['batchNorm']['batchNorm_kwargs'] is not None:
+                                batch_norm = batch_norm_class(
+                                    **gin_elem['batchNorm']['batchNorm_kwargs'])
+                            else:
+                                batch_norm = batch_norm_class()
+                            gin_seq.add_module(f'batchNorm{i}_{j}', batch_norm)
+                        if 'activation' in gin_elem:
+                            activation_class = import_by_name(gin_elem['activation']['activation_name'],
+                                                              ["torch.nn"])
+                            if gin_elem['activation']['activation_kwargs'] is not None:
+                                activation = activation_class(
+                                    **gin_elem['activation']['activation_kwargs'])
+                            else:
+                                activation = activation_class()
+                            gin_seq.add_module(f'activation{i}_{j}', activation)
+                    gin_class = import_by_name(
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
                     )
-                    layer_init_class = layer_class(**gin_elem['layer']['layer_kwargs'])
-                    gin_seq.add_module(f"{gin_elem['layer']['layer_name']}{i}_{j}", layer_init_class)
-                    if 'batchNorm' in gin_elem:
-                        batch_norm_class = import_by_name(gin_elem['batchNorm']['batchNorm_name'],
-                                                          ["torch.nn"])
-                        if gin_elem['batchNorm']['batchNorm_kwargs'] is not None:
-                            batch_norm = batch_norm_class(
-                                **gin_elem['batchNorm']['batchNorm_kwargs'])
-                        else:
-                            batch_norm = batch_norm_class()
-                        gin_seq.add_module(f'batchNorm{i}_{j}', batch_norm)
-                    if 'activation' in gin_elem:
-                        activation_class = import_by_name(gin_elem['activation']['activation_name'],
-                                                          ["torch.nn"])
-                        if gin_elem['activation']['activation_kwargs'] is not None:
-                            activation = activation_class(
-                                **gin_elem['activation']['activation_kwargs'])
-                        else:
-                            activation = activation_class()
-                        gin_seq.add_module(f'activation{i}_{j}', activation)
-                gin_class = import_by_name(
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
-                )
-                if elem['layer']['layer_kwargs'] is not None:
-                    gin = gin_class(nn=gin_seq, **elem['layer']['layer_kwargs'])
-                else:
-                    gin = gin_class(nn=gin_seq)
-                setattr(self, f"{elem['layer']['layer_name']}_{i}", gin)
-            elif self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY]["need_full_gnn_flag"]:
-                layer_class = import_by_name(
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
-                )
-                custom_layer = layer_class(id(self), f"{elem['layer']['layer_name']}_{i}",
-                                           **elem['layer']['layer_kwargs'])
-                setattr(self, f"{elem['layer']['layer_name']}_{i}", custom_layer)
-            else:
-                layer_class = import_by_name(
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
-                    self.modules_info[elem['layer']['layer_name']][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
-                )
-                if elem['layer']['layer_kwargs'] is None:
-                    layer_init_class = layer_class()
-                else:
-                    layer_init_class = layer_class(**elem['layer']['layer_kwargs'])
-                setattr(self, f"{elem['layer']['layer_name']}_{i}", layer_init_class)
+                    gin = gin_class(nn=gin_seq, **layer_kwargs)
+                    setattr(self, f"{layer_name}_{i}", gin)
 
+                # Not GINConv
+                elif self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY]["need_full_gnn_flag"]:
+                    layer_class = import_by_name(
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
+                    )
+                    custom_layer = layer_class(id(self), f"{layer_name}_{i}", **layer_kwargs)
+                    setattr(self, f"{layer_name}_{i}", custom_layer)
+
+                else:
+                    layer_class = import_by_name(
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][0],
+                        self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
+                    )
+                    layer_init_class = layer_class(**layer_kwargs)
+                    setattr(self, f"{layer_name}_{i}", layer_init_class)
+
+            # FIXME can we have function + batchNorm etc ?
             if 'batchNorm' in elem:
                 batch_norm_class = import_by_name(elem['batchNorm']['batchNorm_name'], ["torch.nn"])
                 if elem['batchNorm']['batchNorm_kwargs'] is not None:
@@ -375,31 +401,32 @@ class FrameworkGNNConstructor(
                         self.conn_dict[(i, con['into_layer'])].append(
                             copy.deepcopy(con['connection_kwargs']))
         self.model_manager_restrictions = set()
-        self._check_model_structure(self.structure)
 
     def _check_model_structure(
             self,
             structure: Union[dict, ModelStructureConfig],
     ):
         with open(CUSTOM_LAYERS_INFO_PATH) as f:
-            information_check_correctness_models = json.load(f)
-        allowable_transitions = set(information_check_correctness_models["allowable_transitions"])
+            correctness_info = json.load(f)
+        allowable_transitions = set(correctness_info["allowable_transitions"])
         for key, elem in self.conn_dict.items():
             if f"{self.embedding_levels_by_layers[key[0]]}{self.embedding_levels_by_layers[key[1]]}" \
                     not in allowable_transitions:
-                raise Exception(f"Not allowable transitions in connection between layers {key}")
+                raise GNNConstructorError(f"Not allowable transitions in connection between layers {key}")
         self.model_info = {
             "first_node_layer_ind": None,
             "last_node_layer_ind": None,
             "first_graph_layer_ind": None,
             "last_graph_layer_ind": None,
+            "first_decoder_layer_ind": None,
+            "last_decoder_layer_ind": None,
         }
         for i, elem in enumerate(self.embedding_levels_by_layers):
             if i != len(
                     self.embedding_levels_by_layers) - 1 and \
                     f"{self.embedding_levels_by_layers[i]}{self.embedding_levels_by_layers[i + 1]}" \
                     not in allowable_transitions:
-                raise Exception(f"Not allowable transitions between layers ({i}, {i + 1})")
+                raise GNNConstructorError(f"Not allowable transitions between layers ({i}, {i + 1})")
             if elem == 'n' and self.model_info["first_node_layer_ind"] is None:
                 self.model_info["first_node_layer_ind"] = i
                 if i == len(self.embedding_levels_by_layers) - 1:
@@ -413,53 +440,77 @@ class FrameworkGNNConstructor(
                     self.model_info["last_graph_layer_ind"] = i
             elif elem == 'g' and i == len(self.embedding_levels_by_layers) - 1:
                 self.model_info["last_graph_layer_ind"] = i
-        model_strong_restrictions = set()
-        model_manager_restrictions = set()
+            elif elem == 'd' and self.model_info["first_decoder_layer_ind"] is None:
+                self.model_info["first_decoder_layer_ind"] = i
+                self.model_info["last_node_layer_ind"] = i - 1
+            if elem == 'd' and i == len(self.embedding_levels_by_layers) - 1:
+                self.model_info["last_decoder_layer_ind"] = i
+
+        _model_strong_restrictions = set()
+        _model_manager_restrictions = set()
         for i, elem in enumerate(structure):
-            layer_name = elem['layer']['layer_name']
-            if layer_name not in information_check_correctness_models["layers_restrictions"].keys():
-                raise Exception(f"An invalid layer {layer_name} is used in the model structure.\n{elem}")
+            if 'function' in elem:
+                layer_name = elem['function']['function_name']
             else:
-                if len(information_check_correctness_models["layers_restrictions"][layer_name]
-                       ["model_manager_restrictions"]) > 0:
-                    if len(model_manager_restrictions) > 0:
-                        model_manager_restrictions = model_manager_restrictions.intersection(
-                            information_check_correctness_models["layers_restrictions"][layer_name]
-                            ["model_manager_restrictions"])
-                        if len(model_manager_restrictions) == 0:
-                            raise Exception(f"Model structure cannot use layer {layer_name}, because there is no "
-                                            f"suitable model manager for such a model. Write a new model manager "
-                                            f"and/or add an appropriate model manager to the {layer_name} "
-                                            f"layer restrictions")
-                    else:
-                        model_manager_restrictions = set(information_check_correctness_models["layers_restrictions"]
-                                                         [layer_name]["model_manager_restrictions"])
-                if not model_strong_restrictions.isdisjoint(
-                        information_check_correctness_models["layers_restrictions"][layer_name]["strong_restrictions"]):
-                    raise Exception(f"Model structure cannot use layers with the same strong constraints. "
-                                    f"{model_strong_restrictions.intersection(information_check_correctness_models['layers_restrictions'][layer_name]['strong_restrictions'])}")
+                layer_name = elem['layer']['layer_name']
+
+            # Check if layer is known (listed in restrictions file)
+            if layer_name not in correctness_info["layers_restrictions"].keys():
+                raise GNNConstructorError(
+                    f"An invalid layer {layer_name} is used in the model structure:\n{elem}")
+
+            layers_restrictions = correctness_info["layers_restrictions"][layer_name]
+
+            # Check if layer requires a specified model manager
+            if len(layers_restrictions["model_manager_restrictions"]) > 0:
+                if len(_model_manager_restrictions) > 0:
+                    _model_manager_restrictions = _model_manager_restrictions.intersection(
+                        layers_restrictions["model_manager_restrictions"])
+                    if len(_model_manager_restrictions) == 0:
+                        raise GNNConstructorError(
+                            f"Model structure cannot use layer {layer_name}, because there is no "
+                            f"suitable model manager for such a model. Write a new model manager "
+                            f"and/or add an appropriate model manager to the {layer_name} "
+                            f"layer restrictions")
                 else:
-                    layer_strong_restrictions = information_check_correctness_models["layers_restrictions"][layer_name][
-                        "strong_restrictions"]
-                    layer_valid_label = information_check_correctness_models["layers_restrictions"][layer_name][
-                        "valid_label"]
-                    if elem['label'] not in layer_valid_label:
-                        raise Exception(f"Invalid label {elem['label']} for layer {layer_name}")
-                    if len(layer_strong_restrictions) > 0:
-                        if 'first_model' in layer_strong_restrictions and i != 0:
-                            raise Exception(f"Layer {layer_name} must be the first in the model")
-                        if 'last_model' in layer_strong_restrictions and i != len(self.embedding_levels_by_layers) - 1:
-                            raise Exception(f"Layer {layer_name} must be the last in the model")
-                        if 'first_node' in layer_strong_restrictions and i != self.model_info["first_node_layer_ind"]:
-                            raise Exception(f"Layer {layer_name} must be the first in the model node level")
-                        if 'last_node' in layer_strong_restrictions and i != self.model_info["last_node_layer_ind"]:
-                            raise Exception(f"Layer {layer_name} must be the last in the model node level")
-                        if 'first_graph' in layer_strong_restrictions and i != self.model_info["first_graph_layer_ind"]:
-                            raise Exception(f"Layer {layer_name} must be the first in the model graph level")
-                        if 'last_graph' in layer_strong_restrictions and i != self.model_info["last_graph_layer_ind"]:
-                            raise Exception(f"Layer {layer_name} must be the last in the model graph level")
-                        model_strong_restrictions.update(layer_strong_restrictions)
-        self.model_manager_restrictions = model_manager_restrictions
+                    _model_manager_restrictions = set(layers_restrictions["model_manager_restrictions"])
+
+            # Check if model structure restrictions do not contradict
+            if not _model_strong_restrictions.isdisjoint(layers_restrictions["strong_restrictions"]):
+                # FIXME Kirill, _model_strong_restrictions is always empty - how can we get here?
+                raise GNNConstructorError(
+                    f"Model structure cannot use layers with the same strong constraints. "
+                    f"{_model_strong_restrictions.intersection(layers_restrictions['strong_restrictions'])}")
+
+            # Check that layer label is allowed
+            if elem['label'] not in layers_restrictions["valid_label"]:
+                raise GNNConstructorError(f"Invalid label {elem['label']} for layer {layer_name}")
+
+            # Check that restrictions on first and last node/graph/decoder layers are met
+            layer_strong_restrictions = layers_restrictions["strong_restrictions"]
+            if len(layer_strong_restrictions) > 0:
+                if 'first_model' in layer_strong_restrictions and i != 0:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the first in the model")
+                if 'last_model' in layer_strong_restrictions and i != len(self.embedding_levels_by_layers) - 1:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the last in the model")
+
+                if 'first_node' in layer_strong_restrictions and i != self.model_info["first_node_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the first in the model node level")
+                if 'last_node' in layer_strong_restrictions and i != self.model_info["last_node_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the last in the model node level")
+
+                if 'first_graph' in layer_strong_restrictions and i != self.model_info["first_graph_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the first in the model graph level")
+                if 'last_graph' in layer_strong_restrictions and i != self.model_info["last_graph_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the last in the model graph level")
+
+                if 'first_decoder' in layer_strong_restrictions and i != self.model_info["first_decoder_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the first in the model decoder level")
+                if 'last_decoder' in layer_strong_restrictions and i != self.model_info["last_decoder_layer_ind"]:
+                    raise GNNConstructorError(f"Layer {layer_name} must be the last in the model decoder level")
+
+                _model_strong_restrictions.update(layer_strong_restrictions)
+        self.model_manager_restrictions = _model_manager_restrictions
 
     def get_all_layer_embeddings(
             self,
@@ -503,6 +554,8 @@ class FrameworkGNNConstructor(
         feat = x
         # print(list(self.__dict__['_modules'].items()))
         for elem in list(self.__dict__['_modules'].items()):
+            if elem[0].startswith('decoder_'):  # Omit decoder layers
+                continue
             layer_name, curr_layer_ind = elem[0].split('_')
             curr_layer_ind = int(curr_layer_ind)
             inp = x
@@ -544,7 +597,7 @@ class FrameworkGNNConstructor(
                                         connection_tensor = torch.cat((connection_tensor, tensor_after_pool), 1)
                                         dim_cat = 1
                                     else:
-                                        raise Exception(
+                                        raise GNNConstructorError(
                                             f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
                                             f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
                                         )
@@ -562,7 +615,7 @@ class FrameworkGNNConstructor(
                                     tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
                                     x_dict[f'skip_{key[0]}'] = tensor_after_pool
                                 else:
-                                    raise Exception(
+                                    raise GNNConstructorError(
                                         f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
                                         f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
                                     )
@@ -597,6 +650,119 @@ class FrameworkGNNConstructor(
             # layer_emb_dict[layer_ind] = torch.clone(x)
             return layer_emb_dict
         return x
+
+    def decode(
+            self,
+            src: torch.Tensor,
+            dst: torch.Tensor,
+            batch
+    ) -> torch.Tensor:
+        layer_ind = -1
+        # tensor_storage = {}
+        # dim_cat = 0
+        layer_emb_dict = {}
+        save_emb_flag = self._save_emb_flag
+
+        # TODO what about device
+
+        for elem in list(self.__dict__['_modules'].items()):
+            if not elem[0].startswith('decoder_'):  # Omit non-decoder layers
+                continue
+            _, layer_name, curr_layer_ind = elem[0].split('_')
+            curr_layer_ind = int(curr_layer_ind)
+            loc_flag = False
+            if curr_layer_ind != layer_ind:
+                if save_emb_flag:
+                    loc_flag = True
+                zeroing_x_flag = False
+                # for key, value in self.conn_dict.items():
+                #     if key[0] == layer_ind and layer_ind not in tensor_storage:
+                #         tensor_storage[layer_ind] = torch.clone(x)
+                layer_ind = curr_layer_ind
+                # TODO how to handle skip connections?
+                # x_copy = torch.clone(x)
+                # connection_tensor = torch.empty(0, device=x_copy.device)
+                # x_dict = {}
+                # for key, value in self.conn_dict.items():
+                #     if key[1] == curr_layer_ind:
+                #         if key[1] - key[0] == 1:
+                #             zeroing_x_flag = True
+                #         for con in value:
+                #             aggregation_type = con.get('aggregation_type', 'cat')
+                #
+                #             if aggregation_type == 'cat':
+                #                 if connection_tensor is None:
+                #                     connection_tensor = tensor_storage[key[0]]
+                #                 else:
+                #                     if self.embedding_levels_by_layers[key[1]] == 'n' and \
+                #                             self.embedding_levels_by_layers[key[0]] == 'n':
+                #                         connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 1)
+                #                         dim_cat = 1
+                #                     elif self.embedding_levels_by_layers[key[1]] == 'g' and \
+                #                             self.embedding_levels_by_layers[key[0]] == 'g':
+                #                         connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 0)
+                #                         dim_cat = 0
+                #                     elif self.embedding_levels_by_layers[key[1]] == 'g' and \
+                #                             self.embedding_levels_by_layers[key[0]] == 'n':
+                #                         con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
+                #                         tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
+                #                         connection_tensor = torch.cat((connection_tensor, tensor_after_pool), 1)
+                #                         dim_cat = 1
+                #                     else:
+                #                         raise GNNConstructorError(
+                #                             f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
+                #                             f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
+                #                         )
+                #
+                #             elif aggregation_type == 'stack':
+                #                 if self.embedding_levels_by_layers[key[1]] == 'n' and self.embedding_levels_by_layers[
+                #                                                                                         key[0]] == 'n':
+                #                     x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
+                #                 elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
+                #                                                                                         key[0]] == 'g':
+                #                     x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
+                #                 elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
+                #                                                                                         key[0]] == 'n':
+                #                     con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
+                #                     tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
+                #                     x_dict[f'skip_{key[0]}'] = tensor_after_pool
+                #                 else:
+                #                     raise GNNConstructorError(
+                #                         f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
+                #                         f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
+                #                     )
+                #             else:
+                #                 raise ValueError(f"Unknown aggregation type: {aggregation_type}")
+                # if len(x_dict) > 0:  # stack
+                #     x_dict[f'prev_{curr_layer_ind - 1}'] = x_copy
+                #     x = x_dict
+                # else:  # cat
+                #     if zeroing_x_flag:
+                #         x = connection_tensor
+                #     else:
+                #         x = torch.cat((x_copy, connection_tensor), dim_cat)
+
+            # QUE Kirill, maybe we should not off UserWarning
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning)
+                # mid = x
+                if layer_name in self.modules_info:
+                    code_str = f"getattr(self, elem[0])({self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY]['forward_parameters']})"
+                    x = eval(f"{code_str}")
+                else:
+                    x = getattr(self, elem[0])(src, dst)
+            if loc_flag:
+                layer_emb_dict[layer_ind] = torch.clone(x)
+
+            # out = x
+            # if self._my_forward_hooks:
+            #     for hook in self._my_forward_hooks.values():
+            #         hook(self, curr_layer_ind, feat, edge_index, inp, mid, out)
+        if save_emb_flag:
+            # layer_emb_dict[layer_ind] = torch.clone(x)
+            return layer_emb_dict
+        return x
+
 
     def reset_parameters(
             self
@@ -658,7 +824,7 @@ class FrameworkGNNConstructor(
             batch: Type = None,
             edge_weight: torch.Tensor = None,
             device: torch.device = None
-    ) -> [torch.Tensor, torch.Tensor, Type, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, Type, torch.Tensor]:
         if device is None:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -675,7 +841,7 @@ class FrameworkGNNConstructor(
     @staticmethod
     def arguments_read(
             *args, **kwargs
-    ) -> [torch.Tensor, torch.Tensor, Type, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, Type, torch.Tensor]:
         """
         The method is launched when the forward is executed extracts from the variable data or kwargs
         the data necessary to pass the forward: x, edge_index, batch

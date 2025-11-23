@@ -1,12 +1,18 @@
 {
- "allowable_transitions": ["nn", "ng", "gg"],
+ "allowable_transitions": ["nn", "ng", "gg", "nd", "dd"],
  "allowable_strong_restrictions": [
   "first_model", "last_model",
   "first_node", "last_node",
-  "first_graph", "last_graph"
+  "first_graph", "last_graph",
+  "first_decoder", "last_decoder"
  ],
 
  "layers_restrictions": {
+   "CosineSimilarity": {
+     "valid_label" : ["d"],
+     "strong_restrictions": ["first_decoder", "last_decoder"],
+     "model_manager_restrictions": []
+   },
   "GCNConv": {
    "valid_label" : ["n"],
    "strong_restrictions": [],
@@ -63,7 +69,7 @@
    "model_manager_restrictions": []
   },
   "Linear": {
-   "valid_label" : ["n", "g"],
+   "valid_label" : ["n", "g", "e"],
    "strong_restrictions": [],
    "model_manager_restrictions": []
   },
@@ -78,7 +84,7 @@
    "model_manager_restrictions": ["GSATModelManager"]
   },
   "DummyLayer": {
-   "valid_label": ["n", "g"],
+   "valid_label": ["n", "g", "e"],
    "strong_restrictions": ["first_model"],
    "model_manager_restrictions": []
   }

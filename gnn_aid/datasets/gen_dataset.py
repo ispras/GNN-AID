@@ -76,6 +76,8 @@ class GeneralDataset(ABC):
         self.train_mask = None
         self.val_mask = None
         self.test_mask = None
+        self.edge_label_index = None  # [train, val, test] edges indices concatenated
+        self.edge_labels = None  # labels of edges corresponding to edge_label_index
 
         # Build graph structure
         self._compute_dataset_data()
@@ -167,11 +169,16 @@ class GeneralDataset(ABC):
     @property
     def labels(
             self
-    ) -> tensor:
-        if self.is_multi():
+    ) -> torch.Tensor:
+        task = self.dataset_var_config.task
+        if task.is_node_level():
+            return self.data.y
+        elif task.is_graph_level():
             return tensor([data.y for data in self.dataset])
+        elif task.is_edge_level():
+            return self.edge_labels
         else:
-            return self.dataset[0].y
+            raise ValueError(f"Unsupported task type {task}")
 
     @property
     def num_classes(
@@ -341,6 +348,13 @@ class GeneralDataset(ABC):
                 test_data.edge_label_index
             ], dim=1)
             self.edge_label_index = full_edge_label_index
+
+            # TODO if edges have labels, use them. otherwise - all edges are 1s
+            self.edge_labels = torch.cat([
+                train_data.edge_label,
+                val_data.edge_label,
+                test_data.edge_label
+            ])
 
             total_edges = full_edge_label_index.size(1)
 

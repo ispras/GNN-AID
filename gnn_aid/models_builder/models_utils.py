@@ -204,3 +204,20 @@ class Metric:
             if 0 <= i < len(mask):
                 mask[i] = True
         return tensor(mask)
+
+
+class GNNConstructorError(Exception):
+    def __init__(
+            self,
+            *args
+    ):
+        self.message = args[0] if args else None
+
+    def __str__(
+            self
+    ):
+        if self.message:
+            return f"GNNConstructorError: {self.message}"
+        else:
+            return "GNNConstructorError has been raised!"
+

@@ -18,13 +18,14 @@ from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
 from . import GNNModelManager
 from gnn_aid.models_builder.models_utils import Metric
+from .. import GNNConstructor
 
 
 class FrameworkGNNModelManager(GNNModelManager):
     """
     GNN model control class. Have methods: train_model, save_model, load_model
     """
-    gnn: torch.nn.Module
+    gnn: torch.nn.Module  # FIXME kirill, what is it for?
     additional_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -58,10 +59,13 @@ class FrameworkGNNModelManager(GNNModelManager):
     to prevent leakage of the response during training.
     """
 
-    def __init__(self, gnn: torch.nn.Module = None,
-                 dataset_path: Union[str, Path] = None,
-                 **kwargs
-                 ):
+    def __init__(
+            self,
+            gnn: torch.nn.Module = None,  # QUE kirill, do we want GNNConstructor here?
+            # gnn: GNNConstructor = None,
+            dataset_path: Union[str, Path] = None,
+            **kwargs
+    ):
         """
         :param gnn: graph neural network model based on the GNNConstructor class
         :param manager_config:
@@ -155,7 +159,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
         task_type = gen_dataset.dataset_var_config.task
-        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
+        if task_type.is_node_level():
             # FIXME Kirill, add data_x_copy mask
             loader = cast(
                 Iterable,
@@ -165,7 +169,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch, shuffle=True
                 )
             )
-        elif task_type in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
+        elif task_type.is_graph_level():
             train_dataset = gen_dataset.dataset.index_select(gen_dataset.train_mask)
             loader = cast(
                 Iterable,
@@ -173,17 +177,10 @@ class FrameworkGNNModelManager(GNNModelManager):
                     train_dataset, batch_size=self.batch, shuffle=True
                 )
             )
-        elif task_type == Task.EDGE_PREDICTION:
-            edge_label_index = getattr(gen_dataset, 'edge_label_index', None)
-            if edge_label_index is None:
-                raise ValueError("data.edge_label_index is out")
-
-            train_mask = getattr(gen_dataset, 'train_mask', None)
-            if train_mask is None:
-                raise ValueError("data.train_mask is out")
-
-            pos_edge_index = edge_label_index[:, train_mask]
-            pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long, device=gen_dataset.dataset.edge_index.device)
+        elif task_type.is_edge_level():
+            pos_edge_index = gen_dataset.edge_label_index[:, gen_dataset.train_mask]
+            pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long,
+                                   device=gen_dataset.dataset.edge_index.device)
 
             # TODO num_neg_samples as MM parameter
             neg_edge_index = negative_sampling(
@@ -233,11 +230,16 @@ class FrameworkGNNModelManager(GNNModelManager):
             batch,
             task_type: Task
     ) -> torch.Tensor:
+        # Apply defenses before training on a batch
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.pre_batch()
         if self.evasion_defender and self.evasion_defense_flag:
             self.evasion_defender.pre_batch(model_manager=self, batch=batch, task_type=task_type)
+
+        # Perform training on a batch
         loss = self.train_on_batch(batch=batch, task_type=task_type)
+
+        # Apply defenses after training on a batch
         mi_defender_dict = None
         if self.mi_defender and self.mi_defense_flag:
             # TODO pass decoder
@@ -252,6 +254,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             )
         if evasion_defender_dict and "loss" in evasion_defender_dict:
             loss = evasion_defender_dict["loss"]
+
         loss = self.optimizer_step(loss=loss)
         return loss
 
@@ -266,14 +269,14 @@ class FrameworkGNNModelManager(GNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: Task = None
+            task_type: Task
     ) -> torch.Tensor:
         loss = None
         if hasattr(batch, "edge_weight"):
             weight = batch.edge_weight
         else:
             weight = None
-        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION]:
+        if task_type.is_node_level():
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, weight)
 
@@ -281,11 +284,13 @@ class FrameworkGNNModelManager(GNNModelManager):
             if self.clip is not None:
                 clip_grad_norm(self.gnn.parameters(), self.clip)
             self.optimizer.zero_grad()
-        elif task_type in [Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
+
+        elif task_type.is_graph_level():
             self.optimizer.zero_grad()
             logits = self.gnn(batch.x, batch.edge_index, batch.batch, weight)
             loss = self.loss_function(*move_to_same_device(logits, batch.y))
-        elif task_type == Task.EDGE_PREDICTION:
+
+        elif task_type.is_edge_level():
             self.optimizer.zero_grad()
             device = batch.x.device
 
@@ -297,8 +302,8 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             src = node_embeddings[edge_label_index[0]]
             dst = node_embeddings[edge_label_index[1]]
-            # TODO make decoder - returns 2 numbers
-            out = (src * dst).sum(dim=-1)
+
+            out = self.gnn.decode(src, dst, batch)
 
             # FIXME loss must be for edge prediction
             loss = self.loss_function(out, edge_label)
@@ -368,7 +373,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             steps=None,
             metrics: List[Metric] = None,
             socket: 'SocketConnect' = None
-    ) -> Union[str, Path]:
+    ) -> Path | None:
         """
         Convenient train method.
 
@@ -452,14 +457,16 @@ class FrameworkGNNModelManager(GNNModelManager):
             'predictions': self.gnn.get_predictions,
             'logits': self.gnn.__call__,
         }[out]
+
         self.gnn.eval()
         with torch.no_grad():  # Turn off gradients computation
-            if gen_dataset.is_multi():
-                dataset = gen_dataset.dataset
+            task_type = gen_dataset.dataset_var_config.task
+            if task_type.is_graph_level():
+                # QUE Kirill, why we need batches here?
                 part_loader = cast(
                     Iterable,
                     DataLoader(
-                        dataset.index_select(mask),
+                        gen_dataset.dataset.index_select(mask),
                         batch_size=self.batch,
                         shuffle=False
                     )
@@ -471,14 +478,16 @@ class FrameworkGNNModelManager(GNNModelManager):
                 for data in part_loader:
                     # logits_batch = self.gnn(data.x, data.edge_index, data.batch)
                     # pred_batch = logits_batch.argmax(dim=1)
-                    out = run_func(data.x, data.edge_index, data.batch)
-                    full_out = torch.cat((move_to_same_device(full_out, out)))
+                    part_out = run_func(data.x, data.edge_index, data.batch)
+                    full_out = torch.cat((move_to_same_device(full_out, part_out)))
                     # y_true = torch.cat((y_true, data.y))
-            else:  # single-graph
-                data = gen_dataset.data  # FIXME what if no data? use .get(0) ?
-                ver_ind = [n for n, x in enumerate(mask) if x]
-                mask_size = len(ver_ind)
 
+            elif task_type.is_node_level() or task_type.is_edge_level():
+                data = gen_dataset.data
+                node_ind = [n for n, x in enumerate(mask) if x]
+                mask_size = len(node_ind)
+
+                # QUE Kirill, why we need batches here?
                 number_of_batches = ceil(mask_size / self.batch)
                 # data_x_elem_len = data.x.size()[1]
                 full_out = torch.empty(0, device=data.x.device)
@@ -490,7 +499,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
                     # features_mask_tensor_copy = torch.clone(features_mask_tensor)
 
-                    for elem_ind in ver_ind[
+                    for elem_ind in node_ind[
                                     batch_ind * self.batch: (batch_ind + 1) * self.batch]:
                         if hasattr(self, 'mask_features'):
                             for feature in self.mask_features:
@@ -510,9 +519,28 @@ class FrameworkGNNModelManager(GNNModelManager):
                         self.optimizer.zero_grad()
                     # logits_batch = self.gnn(data_x_copy, data.edge_index)
                     # pred_batch = logits_batch.argmax(dim=1)
-                    out = run_func(data_x_copy, data.edge_index)
-                    full_out = torch.cat((move_to_same_device(full_out, out[mask_copy])))
+                    if task_type.is_edge_level():
+                        part_out = self.gnn(data_x_copy, data.edge_index)
+                    else:
+                        part_out = run_func(data_x_copy, data.edge_index)
+                    full_out = torch.cat((move_to_same_device(full_out, part_out[mask_copy])))
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
+
+                if task_type.is_edge_level():
+                    edge_label_index = gen_dataset.edge_label_index[:, mask]
+
+                    src = full_out[edge_label_index[0]]
+                    dst = full_out[edge_label_index[1]]
+
+                    edge_out = self.gnn.decode(src, dst)
+                    # TODO need analogue for edges
+                    # 'answers': self.gnn.get_answer,
+                    # 'predictions': self.gnn.get_predictions,
+                    # 'logits': self.gnn.__call__,
+
+                    full_out = edge_out
+            else:
+                raise ValueError(f"Unsupported task type {task_type}")
 
         return full_out
 

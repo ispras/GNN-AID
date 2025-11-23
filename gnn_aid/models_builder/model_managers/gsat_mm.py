@@ -64,7 +64,7 @@ class GSATModelManager(FrameworkGNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: str = None
+            task_type: Task
     ) -> torch.Tensor:
         if task_type == Task.GRAPH_CLASSIFICATION:
             self.optimizer.zero_grad()

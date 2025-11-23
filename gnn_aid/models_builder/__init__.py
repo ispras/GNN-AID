@@ -1,7 +1,7 @@
 from .gnn_constructor import FrameworkGNNConstructor, GNNConstructor, GNNConstructorTorch
 from .models_utils import (
     apply_attention_to_messages, attention_message_hook, apply_message_gradient_capture,
-    apply_decorator_to_graph_layers, EdgeMaskingWrapper, Metric)
+    apply_decorator_to_graph_layers, EdgeMaskingWrapper, Metric, GNNConstructorError)
 from .models_zoo import model_configs_zoo
 from .custom_layers import GSATLayer, ProtLayer, ExtractorMLP, GSATMLP
 
@@ -24,5 +24,6 @@ __all__ = [
     'apply_decorator_to_graph_layers',
     'EdgeMaskingWrapper',
     'Metric',
+    'GNNConstructorError',
     'model_configs_zoo',
 ]

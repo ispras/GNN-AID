@@ -11,13 +11,13 @@ from gnn_aid.aux.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, a
     import_by_name, model_managers_info_by_names_list, TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY
 from gnn_aid.data_structures import ModelManagerConfig, ModelModificationConfig, PoisonAttackConfig, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig, \
-    ModelConfig
+    ModelConfig, Task
 from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_CLASS_NAME, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor
 # from web_interface.back_front.utils import SocketConnect
 
-
+# TODO misha, Kirill add comments to class and all functions
 class GNNModelManager:
     """ class of basic functions over models:
     training, evaluation, save and load principle
@@ -132,6 +132,7 @@ class GNNModelManager:
     def train_on_batch(
             self,
             batch,
+            task_type: Task,
             **kwargs
     ):
         pass

@@ -106,7 +106,7 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
     def train_on_batch(
             self,
             batch,
-            task_type: Task = None
+            task_type: Task
     ) -> torch.Tensor:
         # FIXME misha it is not task type, change to getting dvc field task
         if task_type == Task.GRAPH_CLASSIFICATION:
