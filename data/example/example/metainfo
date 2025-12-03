@@ -1,23 +1,65 @@
 {
  "class_name": "KnownFormatDataset",
- "import_from": "datasets.known_format_datasets",
+ "import_from": "gnn_aid.datasets.known_format_datasets",
  "name": "example",
  "count": 1,
  "directed": false,
- "nodes": [8],
+ "hetero": false,
+ "nodes": [
+  8
+ ],
  "remap": true,
  "node_attributes": {
-  "names": ["a","b"],
-  "types": ["continuous","categorical"],
-  "values": [[0,1],["A","B","C"]]
+  "names": [
+   "a",
+   "b"
+  ],
+  "types": [
+   "continuous",
+   "categorical"
+  ],
+  "values": [
+   [
+    0,
+    1
+   ],
+   [
+    "A",
+    "B",
+    "C"
+   ]
+  ]
  },
  "edge_attributes": {
-  "names": ["weight"],
-  "types": ["continuous"],
-  "values": [[0,1]]
+  "names": [
+   "weight"
+  ],
+  "types": [
+   "continuous"
+  ],
+  "values": [
+   [
+    0,
+    1
+   ]
+  ]
  },
  "labelings": {
-  "binary": 2,
-  "threeClasses": 3
+  "node-classification": {
+   "binary": 2,
+   "threeClasses": 3
+  },
+  "node-regression": {
+   "regression": [
+    0,
+    3
+   ]
+  },
+  "edge-regression": {
+   "regression": [
+    0.1,
+    0.4
+   ]
+  }
  }
 }

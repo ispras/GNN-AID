@@ -2,7 +2,7 @@
  "EmptyMIDefender": {
  },
  "NoiseMIDefender": {
-  "noise_type": ["Noise type", "str", "reverse_sigmoid", ["reverse_sigmoid", "random", "none"], "Type of noise to apply"],
+  "noise_type": ["Noise type", "string", "reverse_sigmoid", ["reverse_sigmoid", "random", "none"], "Type of noise to apply"],
   "beta": ["Beta", "float", 0.5, {"min": 0, "max": 10, "step": 0.1}, "Beta for reverse sigmoid"],
   "gamma": ["Gamma", "float", 1.0, {"min": 0, "max": 10, "step": 0.1}, "Gamma for reverse sigmoid"],
   "noise_scale": ["Noise scale", "float", 0.1, {"min": 0, "max": 1, "step": 0.01}, "Uniform noise magnitude"],

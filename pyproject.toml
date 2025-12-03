@@ -10,7 +10,7 @@ authors = [
 version = "0.0.1"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "gnn_aid"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["gnn_aid"]

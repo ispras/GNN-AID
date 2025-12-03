@@ -3,16 +3,16 @@ import os
 from pathlib import Path
 from typing import Union
 
-from data_structures.configs import ExplainerModificationConfig, ConfigPattern
-from aux.data_info import DataInfo
-from aux.declaration import Declare
-from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
+from gnn_aid.data_structures.configs import ExplainerModificationConfig, ConfigPattern
+from gnn_aid.aux.data_info import DataInfo
+from gnn_aid.aux.declaration import Declare
+from gnn_aid.aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets.gen_dataset import GeneralDataset
-from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import GNNModelManager
-from web_interface.back_front.block import Block, WrapperBlock
-from web_interface.back_front.utils import json_loads, get_config_keys
+from gnn_aid.datasets.gen_dataset import GeneralDataset
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.models_builder.gnn_models import GNNModelManager
+from .block import Block, WrapperBlock
+from .utils import json_loads, get_config_keys
 
 
 class ExplainerWBlock(WrapperBlock):
@@ -86,7 +86,7 @@ class ExplainerLoadBlock(Block):
             explainer_ver_ind=self.explainer_path["explainer_ver_ind"],
         )
 
-        from explainers.explainers_manager import FrameworkExplainersManager
+        from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
         self._object = FrameworkExplainersManager(
             init_config=init_config,
             modification_config=modification_config,

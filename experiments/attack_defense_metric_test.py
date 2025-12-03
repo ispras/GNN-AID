@@ -4,13 +4,14 @@ import warnings
 import torch
 from torch import device
 
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.attack_defense_manager import FrameworkAttackDefenseManager
 from models_builder.attack_defense_metric import AttackMetric, DefenseMetric
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from models_builder.gnn_models import FrameworkGNNModelManager
-from data_structures.configs import ModelModificationConfig, ConfigPattern
-from base.datasets_processing import DatasetManager
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from models_builder.models_zoo import model_configs_zoo
 
 
@@ -23,14 +24,15 @@ def attack_defense_metrics():
     # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
     # full_name = ("single-graph", "custom", 'karate')
     full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
-    # full_name = ("Homogeneous", "Amazon", 'Photo')
-    # full_name = ("Homogeneous", "Planetoid", 'CiteSeer')
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Photo')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'CiteSeer')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
+    data = dataset.data
 
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
@@ -50,7 +52,7 @@ def attack_defense_metrics():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -70,7 +72,7 @@ def attack_defense_metrics():
     )
 
     gnnguard_poison_defense_config = ConfigPattern(
-        _class_name="GNNGuard",
+        _class_name="GNNGuardDefender",
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={

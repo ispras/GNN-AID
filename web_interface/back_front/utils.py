@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from aux.utils import SAVE_DIR_STRUCTURE_PATH
+from gnn_aid.aux.utils import SAVE_DIR_STRUCTURE_PATH
 
 
 class WebInterfaceError(Exception):

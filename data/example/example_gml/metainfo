@@ -1,6 +1,6 @@
 {
  "class_name": "KnownFormatDataset",
- "import_from": "datasets.known_format_datasets",
+ "import_from": "gnn_aid.datasets.known_format_datasets",
  "name": "example_gml",
  "format": "gml",
  "count": 1,
@@ -52,7 +52,9 @@
   ]
  },
  "labelings": {
-  "binary": 2
+  "node-classification": {
+   "binary": 2
+  }
  },
  "node_attr_slices": {
   "a": [

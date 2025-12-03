@@ -3,20 +3,20 @@ import numpy as np
 from attacks.mi_attacks import MIAttacker
 from aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from models_builder.models_zoo import model_configs_zoo
 from torch import manual_seed
 
 manual_seed(1234)
 
 # We load Cora dataset and GCN_2l model as we did it in 01/02 tutorials
-dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-    full_name=("Homogeneous", "Planetoid", "Cora",),
-    dataset_ver_ind=0
+gen_dataset_sg_cora = DatasetManager.get_by_config(
+    DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+    LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
 )
 
-gen_dataset_sg_cora = dataset_sg_cora
 gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
 results_dataset_path_sg_cora = gen_dataset_sg_cora.prepared_dir
 

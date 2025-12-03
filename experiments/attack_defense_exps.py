@@ -3,8 +3,9 @@ import warnings
 import torch
 from torch import device
 
-from data_structures.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
@@ -17,43 +18,22 @@ def test_attack_defense():
 
     full_name = None
 
-    # full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("Homogeneous", "Planetoid", 'Cora')
-    # full_name = ("Homogeneous", "Amazon", 'Photo')
-    # full_name = ("Homogeneous", "Planetoid", 'CiteSeer')
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Photo')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'CiteSeer')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    gen_dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
-
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
-    #     labeling='threeClasses',
-    #     dataset_ver_ind=0
+    # gen_dataset = DatasetManager.get_by_config(
+    #     DatasetConfig(full_name),
+    #     LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     # )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
-    #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
-    #         # "('personal', 'political')": 'one_hot',
-    #         # "('occupation', 'type')": 'one_hot', # Don't work now
-    #         # "('relation',)": 'one_hot',
-    #         # "('age',)": 'one_hot',
-    #         "('sex',)": 'one_hot',
-    #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
-    #     labeling='sex1',
-    #     dataset_ver_ind=0
-    # )
 
-    # print(data.train_mask)
 
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gat_gcn_sage_gcn_gcn')
@@ -92,7 +72,7 @@ def test_attack_defense():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -141,7 +121,7 @@ def test_attack_defense():
     )
 
     gnnguard_poison_defense_config = ConfigPattern(
-        _class_name="GNNGuard",
+        _class_name="GNNGuardDefender",
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
@@ -327,11 +307,11 @@ def test_attack_defense():
 def test_meta():
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     manager_config = ConfigPattern(
@@ -350,7 +330,7 @@ def test_meta():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -399,10 +379,10 @@ def test_nettack_evasion():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     # Train model on original dataset and remember the model metric and node predicted probability
@@ -421,7 +401,7 @@ def test_nettack_evasion():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -508,11 +488,11 @@ def test_qattack():
     my_device = device('cpu')
 
     # Load dataset
-    # full_name = ("single-graph", "Planetoid", 'Cora')
-    full_name = ('single-graph', 'pytorch-geometric-other', 'KarateClub')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'KarateClub')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     # Train model on original dataset and remember the model metric and node predicted probability
@@ -531,7 +511,7 @@ def test_qattack():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -615,41 +595,17 @@ def test_jaccard():
 
     full_name = None
 
-    # full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "custom", 'karate')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
-    #     labeling='threeClasses',
-    #     dataset_ver_ind=0
-    # )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
-    #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
-    #         # "('personal', 'political')": 'one_hot',
-    #         # "('occupation', 'type')": 'one_hot', # Don't work now
-    #         # "('relation',)": 'one_hot',
-    #         # "('age',)": 'one_hot',
-    #         "('sex',)": 'one_hot',
-    #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
-    #     labeling='sex1',
-    #     dataset_ver_ind=0
-    # )
-
-    # print(data.train_mask)
 
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
@@ -687,7 +643,7 @@ def test_jaccard():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -762,12 +718,12 @@ def test_jaccard():
 
 def test_adv_training():
     my_device = device('cpu')
-    # full_name = ("single-graph", "Planetoid", 'Cora')
-    full_name = ("single-graph", "Amazon", 'Photo')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Amazon", 'Photo')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     manager_config = ConfigPattern(
@@ -786,7 +742,7 @@ def test_adv_training():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -839,10 +795,10 @@ def test_pgd():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
@@ -860,7 +816,7 @@ def test_pgd():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -931,10 +887,10 @@ def test_pgd():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
@@ -952,7 +908,7 @@ def test_pgd():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1034,10 +990,10 @@ def test_pgd_structure():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
@@ -1055,7 +1011,7 @@ def test_pgd_structure():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1123,10 +1079,10 @@ def test_pgd_structure():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
@@ -1144,7 +1100,7 @@ def test_pgd_structure():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1223,10 +1179,10 @@ def test_fgsm():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1245,7 +1201,7 @@ def test_fgsm():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1313,10 +1269,10 @@ def test_fgsm():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1335,7 +1291,7 @@ def test_fgsm():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1414,10 +1370,10 @@ def test_rewatt():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1436,7 +1392,7 @@ def test_rewatt():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1504,10 +1460,10 @@ def test_rewatt():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1526,7 +1482,7 @@ def test_rewatt():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )

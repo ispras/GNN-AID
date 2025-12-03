@@ -1,30 +1,24 @@
 import unittest
-
 import numpy as np
 import torch
 
-# Monkey patch main dirs - before other imports
-from aux.utils import monkey_patch_directories
-
-monkey_patch_directories()
-
-from attacks.mi_attacks import MIAttacker
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
-    ConfigPattern, FeatureConfig
-from models_builder.models_zoo import model_configs_zoo
-
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.attacks.mi_attacks import MIAttacker
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
+    ConfigPattern, FeatureConfig, Task
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH
-
+from .utils import monkey_patch_dirs, cleanup_patches
 
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
         # os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Monkey for home coding
 
+        from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
         print('setup')
         self.my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -32,7 +26,8 @@ class AttacksTest(unittest.TestCase):
         # Multi-Graphs - Example
         self.gen_dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.GRAPH_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -45,23 +40,21 @@ class AttacksTest(unittest.TestCase):
         # Single-Graph - Example
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
             DatasetConfig(("example", "example")),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_example = self.gen_dataset_sg_example.prepared_dir
         self.gen_dataset_sg_example.data.to(self.my_device)
 
         # Single-graph - Cora
-        self.dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora",),
-            dataset_ver_ind=0
+        self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+            DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+            LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
         )
-
-        self.gen_dataset_sg_cora = self.dataset_sg_cora
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
+        self.gen_dataset_sg_cora.data.to(self.my_device)
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
@@ -81,22 +74,12 @@ class AttacksTest(unittest.TestCase):
             }
         )
 
-        # Single-graph - Cora
-        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
-            dataset_ver_ind=0
-        )
+        monkey_patch_dirs()
 
-        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
-        #     DatasetConfig(
-        #         domain="single-graph",
-        #         group="Planetoid",
-        #         graph="Cora"),
-        #     DatasetVarConfig(dataset_ver_ind=0)
-        # )
-        self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
-        self.gen_dataset_sg_cora.data.to(self.my_device)
+    def tearDown(self):
+        # Clean up patches and tmp dirs
+        cleanup_patches()
+
 
     def test_metattack_full(self):
         poison_attack_config = ConfigPattern(
@@ -112,7 +95,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gat_gat_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -141,7 +124,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gcn_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -170,7 +153,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gat_gat_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -191,7 +174,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_cora,
-            dataset_path=self.results_dataset_path_sg_cora,
+            dataset_path=self.gen_dataset_sg_cora.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -218,7 +201,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -255,7 +238,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -296,7 +279,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_example,
-            dataset_path=self.results_dataset_path_sg_cora,
+            dataset_path=self.gen_dataset_sg_cora.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -338,7 +321,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager = FrameworkGNNModelManager(
             gnn=gcn_gcn,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             manager_config=manager_config,
             modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
         )
@@ -462,7 +445,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager = FrameworkGNNModelManager(
             gnn=gcn_gcn,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             manager_config=manager_config,
             modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
         )
@@ -580,7 +563,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gat_gat_sg_example,
-            dataset_path=self.results_dataset_path_sg_example,
+            dataset_path=self.gen_dataset_sg_example.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -645,7 +628,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_cora,
-            dataset_path=self.results_dataset_path_sg_cora,
+            dataset_path=self.gen_dataset_sg_cora.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )
@@ -685,7 +668,7 @@ class AttacksTest(unittest.TestCase):
 
         gnn_model_manager_sg_cora = FrameworkGNNModelManager(
             gnn=gcn_gcn_sg_cora,
-            dataset_path=self.results_dataset_path_sg_cora,
+            dataset_path=self.gen_dataset_sg_cora.prepared_dir,
             modification=self.default_config,
             manager_config=self.manager_config,
         )

@@ -1,9 +1,11 @@
 import warnings
+
 from torch import device
 from torch.cuda import is_available
 
+from data_structures.configs import DatasetConfig, DatasetVarConfig, ExplainerInitConfig, \
+    ExplainerRunConfig, FeatureConfig, Task
 from datasets.datasets_manager import DatasetManager
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ExplainerInitConfig, ExplainerRunConfig
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
@@ -13,47 +15,31 @@ def explainers_test():
     my_device = device('cuda' if is_available() else 'cpu')
 
     # Init datasets
-    dataset_mg_small, _, results_dataset_path_mg_small = DatasetManager.get_by_full_name(
-        full_name=("example", "example3",),
-        features=FeatureConfig(node_attr=['a']),
-        labeling='binary',
-        dataset_ver_ind=0
+    dataset_mg_small = DatasetManager.get_by_config(
+        DatasetConfig(("example", "example3",)),
+        DatasetVarConfig(
+            task=Task.GRAPH_CLASSIFICATION, features=FeatureConfig(node_attr=['a']),
+            labeling='binary', dataset_ver_ind=0)
     )
 
-    dataset_sg_example, _, results_dataset_path_sg_example = DatasetManager.get_by_full_name(
-        full_name=("example", "single-graph", "example",),
-        features=FeatureConfig(node_attr=['a']),
-        labeling='binary',
-        dataset_ver_ind=0
+    dataset_sg_example = DatasetManager.get_by_config(
+        DatasetConfig(("example", "example",)),
+        DatasetVarConfig(
+            task=Task.GRAPH_CLASSIFICATION, features=FeatureConfig(node_attr=['a']),
+            labeling='binary', dataset_ver_ind=0)
     )
+    dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
 
     gen_dataset_mg_small = DatasetManager.get_by_config(
-        DatasetConfig(
-            domain="Homogeneous",
-            group="custom",
-            graph="small"),
-        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
-                         labeling='binary',
-                         dataset_ver_ind=0)
-    )
-    gen_dataset_sg_example = DatasetManager.get_by_config(
-        DatasetConfig(
-            domain="single-graph",
-            group="custom",
-            graph="example"),
-        DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
-                         labeling='binary',
-                         dataset_ver_ind=0)
+        DatasetConfig(("example","example8")),
+        DatasetVarConfig(
+            task=Task.GRAPH_CLASSIFICATION, features=FeatureConfig(node_attr=['a']),
+            labeling='binary', dataset_ver_ind=0)
     )
     gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
 
 
     dataset_mg_small = gen_dataset_mg_small
-    results_dataset_path_mg_small = gen_dataset_mg_small.prepared_dir
-
-    dataset_sg_example = gen_dataset_sg_example
-    results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
     # Init gnns and gnn_model_managers
     # gat2_cora = model_configs_zoo(dataset=dataset_cora, model_name='gat_gat')
@@ -64,7 +50,7 @@ def explainers_test():
 
     gnn_model_manager_mg_small = FrameworkGNNModelManager(
         gnn=gin3_lin2_mg_small,
-        dataset_path=results_dataset_path_mg_small,
+        dataset_path=dataset_mg_small.prepared_dir,
     )
 
     # gin3_lin2_sg_example = model_configs_zoo(dataset=dataset_sg_example, model_name='gin_gin_gin_lin_lin')
@@ -72,7 +58,7 @@ def explainers_test():
 
     gnn_model_manager_sg_example = FrameworkGNNModelManager(
         gnn=gin3_lin2_sg_example,
-        dataset_path=results_dataset_path_sg_example,
+        dataset_path=dataset_sg_example.prepared_dir,
     )
 
     # Train models

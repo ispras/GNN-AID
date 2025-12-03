@@ -26,16 +26,19 @@ jobs:
           python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir .
       - name: Set PYTHONPATH
         run: |
-          echo "PYTHONPATH=$PYTHONPATH:$(pwd)/src" >> $GITHUB_ENV
+          echo "PYTHONPATH=$PYTHONPATH:$(pwd)/gnn_aid" >> $GITHUB_ENV
 
-      - name: Run Pylint Models
-        run: pylint models_builder --fail-under=9.5
-#      - name: Run Pylint defense
-#        run: pylint defenses --fail-under=9.0
-      - name: Run Pylint attacks
-        run: pylint attacks --fail-under=9.0
       - name: Run Pylint aux
         run: pylint aux --fail-under=9.5
+      - name: Run Pylint datasets
+        run: pylint datasets --fail-under=9.75
+      - name: Run Pylint data_structures
+        run: pylint data_structures --fail-under=9.75
+      - name: Run Pylint Models
+        run: pylint models_builder --fail-under=9.5
       - name: Run Pylint explainers
         run: pylint explainers --fail-under=9.0
-
+      - name: Run Pylint attacks
+        run: pylint attacks --fail-under=9.0
+      - name: Run Pylint defenses
+        run: pylint defenses --fail-under=8.75

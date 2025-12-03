@@ -1,25 +1,18 @@
 import collections.abc
 collections.Callable = collections.abc.Callable
-import sys
-import os
-sys.path.append(f"{os.getcwd()}/src")
-
 import unittest
 import warnings
 
-# Monkey patch main dirs - before other imports
-from aux.utils import monkey_patch_directories
-monkey_patch_directories()
-
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from explainers.explainers_manager import FrameworkExplainersManager
-from data_structures.configs import FeatureConfig
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.data_structures.configs import FeatureConfig, Task
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric, GSATModelManager
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from tests.utils import cleanup_patches, monkey_patch_dirs
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases
@@ -30,7 +23,8 @@ class ExplainersTest(unittest.TestCase):
         # Single-Graph - Example
         gen_dataset_sg_example = DatasetManager.get_by_config(
             DatasetConfig(("example", "example")),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -39,25 +33,19 @@ class ExplainersTest(unittest.TestCase):
         results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
 
         #Single-graph - Cora
-        self.gen_dataset_sg_cora, _, results_dataset_path_sg_cora = DatasetManager.get_by_full_name(
-            full_name=("Homogeneous", "Planetoid", "Cora"),
-            dataset_ver_ind=0
+        self.gen_dataset_sg_cora = DatasetManager.get_by_config(
+            DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+            LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
         )
 
-        # self.gen_dataset_sg_cora = DatasetManager.get_by_config(
-        #     DatasetConfig(
-        #         domain="single-graph",
-        #         group="Planetoid",
-        #         graph="Cora"),
-        #     DatasetVarConfig(dataset_ver_ind=0)
-        # )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_sg_cora = self.gen_dataset_sg_cora.prepared_dir
 
         # Multi-graphs - Small
         self.dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.GRAPH_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -65,9 +53,9 @@ class ExplainersTest(unittest.TestCase):
         results_dataset_path_mg_small = self.dataset_mg_small.prepared_dir
 
         # Multi-graphs - MUTAG
-        self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
-            full_name=(LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG"),
-            dataset_ver_ind=0
+        self.dataset_mg_mutag = DatasetManager.get_by_config(
+            DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")),
+            LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
         )
 
         gen_dataset_mg_mutag = self.dataset_mg_mutag
@@ -204,6 +192,12 @@ class ExplainersTest(unittest.TestCase):
         print(metric_loc)
         sg_cora_model_path = self.gsat_gnn_mm_sg_cora.model_path_info() / 'model'
         self.gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
+        monkey_patch_dirs()
+
+    def tearDown(self):
+        # Clean up patches and tmp dirs
+        cleanup_patches()
 
     def test_PGE_SG(self):
         # FIXME not working with another tests

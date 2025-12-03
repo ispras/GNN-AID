@@ -1,36 +1,35 @@
 import collections.abc
+collections.Callable = collections.abc.Callable
+import unittest
+import warnings
 
 import torch
 from torch import device
 
-collections.Callable = collections.abc.Callable
-
-import unittest
-import warnings
-
-# Monkey patch main dirs - before other imports
-from aux.utils import monkey_patch_directories
-monkey_patch_directories()
-
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets.datasets_manager import DatasetManager
-from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
-from data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+    Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, ProtGNNModelManager, Metric
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from tests.utils import cleanup_patches, monkey_patch_dirs
 
 
 # TODO PGM,PGE tests + test re-work -> more use-cases
 
 class ExplainersTest(unittest.TestCase):
     def setUp(self) -> None:
+        monkey_patch_dirs()
         my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
         # Init datasets
         # Single-Graph - Example
         self.dataset_sg_example = DatasetManager.get_by_config(
             DatasetConfig(("example", "example")),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -40,7 +39,8 @@ class ExplainersTest(unittest.TestCase):
         # Multi-graphs - Small
         self.dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
-            DatasetVarConfig(features=FeatureConfig(node_attr=['a']),
+            DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                             features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)
         )
@@ -48,9 +48,9 @@ class ExplainersTest(unittest.TestCase):
         results_dataset_path_mg_small = self.dataset_mg_small.prepared_dir
 
         # Multi-graphs - MUTAG
-        self.dataset_mg_mutag, _, results_dataset_path_mg_mutag = DatasetManager.get_by_full_name(
-            full_name=("Homogeneous", "TUDataset", "MUTAG",),
-            dataset_ver_ind=0
+        self.dataset_mg_mutag = DatasetManager.get_by_config(
+            DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")),
+            LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
         )
 
         gen_dataset_mg_mutag = self.dataset_mg_mutag
@@ -127,6 +127,10 @@ class ExplainersTest(unittest.TestCase):
         self.gnn_model_manager_mg_small.train_model(
             gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
             metrics=[Metric("F1", mask='test')])
+
+    def tearDown(self):
+        # Clean up patches and tmp dirs
+        cleanup_patches()
 
     def test_SubgraphX_SG(self):
         warnings.warn("Start SubgraphX")

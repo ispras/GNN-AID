@@ -1,21 +1,22 @@
 import json
 from enum import Enum
-from multiprocessing.queues import Queue
 from typing import Union
 
-from aux.utils import FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH, \
-    EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, \
-    POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from web_interface.back_front.attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
-from web_interface.back_front.explainer_blocks import ExplainerRunBlock, ExplainerInitBlock, \
-    ExplainerWBlock, ExplainerLoadBlock
-from web_interface.back_front.model_blocks import ModelWBlock, ModelManagerBlock, ModelLoadBlock, \
-    ModelConstructorBlock, ModelCustomBlock, ModelTrainerBlock
-from web_interface.back_front.dataset_blocks import DatasetBlock, DatasetVarBlock
-from web_interface.back_front.diagram import Diagram
-from web_interface.back_front.utils import WebInterfaceError, SocketConnect
+from gnn_aid.aux.utils import (
+    FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH,
+    EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH,
+    POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH,
+    EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH)
+from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
+from .dataset_blocks import DatasetBlock, DatasetVarBlock
+from .diagram import Diagram
+from .explainer_blocks import (
+    ExplainerRunBlock, ExplainerInitBlock, ExplainerWBlock, ExplainerLoadBlock)
+from .model_blocks import (
+    ModelWBlock, ModelManagerBlock, ModelLoadBlock, ModelConstructorBlock, ModelCustomBlock,
+    ModelTrainerBlock)
+from .utils import WebInterfaceError, SocketConnect
 
 
 class ClientMode(Enum):

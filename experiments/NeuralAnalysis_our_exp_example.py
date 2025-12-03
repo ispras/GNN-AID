@@ -1,4 +1,6 @@
+from data_structures.configs import DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.models_zoo import model_configs_zoo
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from explainers.explainers_manager import FrameworkExplainersManager
@@ -12,11 +14,11 @@ def test_neural_analysis(percent_train_class: float = 0.8, percent_test_class: f
     my_device = device('cuda' if is_available() else 'cpu')
 
     print('start loading data======================')
-    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
     )
+    data = dataset.data
 
     dataset.train_test_split(percent_train_class=percent_train_class, percent_test_class=percent_test_class)
 
@@ -26,7 +28,7 @@ def test_neural_analysis(percent_train_class: float = 0.8, percent_test_class: f
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         batch=24
     )
 

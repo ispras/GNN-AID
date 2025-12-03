@@ -1,6 +1,6 @@
 {
  "class_name": "KnownFormatDataset",
- "import_from": "datasets.known_format_datasets",
+ "import_from": "gnn_aid.datasets.known_format_datasets",
  "count": 1,
  "name": "Zachary karate club",
  "nodes": [34],
@@ -12,9 +12,11 @@
   "values": []
  },
  "labelings": {
-  "0 and 33 nodes": 2,
-  "2comms": 2,
-  "3comms": 3,
-  "4comms": 4
+  "node-classification": {
+   "0 and 33 nodes": 2,
+   "2comms": 2,
+   "3comms": 3,
+   "4comms": 4
+  }
  }
 }

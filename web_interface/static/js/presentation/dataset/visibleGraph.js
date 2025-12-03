@@ -3,7 +3,8 @@ const PREDICTION_COLORMAP = 'binary'
 const EMBEDDING_COLORMAP = 'bwr'
 const CORRELATION_COLORMAP = 'bwr'
 const EDGE_MINIBATCH_SIZE = 10000 // Not necessary
-const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 50 // When Scale < THR, light mode is on to improve visibility (for single graph)
+// todo make customizable
+const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 5 // When Scale < THR, light mode is on to improve visibility (for single graph)
 const LIGHT_MODE_SCALE_THRESHOLD_MULTI = 20 // When Scale < THR, light mode is on to improve visibility (for multiple graph)
 const EXPLANATION_EDGE_IMPORTANCE_THRESHOLD = 0.5 // When edge importance < THR, it is not drawn
 
@@ -448,7 +449,8 @@ class VisibleGraph {
         else if (satellite in this.datasetVar) {
             let values = this.datasetVar[satellite]
             if (satellite === 'labels') {
-                let numClasses = this.datasetInfo["labelings"][this.labeling]
+                // FIXME tmp
+                let numClasses = this.datasetInfo["labelings"]["node-classification"][this.labeling]
                 for (const [i, node] of Object.entries(this.nodePrimitives)) {
                     node.setLabels(values[i], numClasses)
                     for (const e of node.satellites[satellite].blocks)
