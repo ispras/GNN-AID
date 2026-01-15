@@ -42,7 +42,9 @@ class GNNConstructor:
     def decode(
             self
     ):
-        """ Used for edge tasks, takes as input embeddings of two nodes. """
+        """ Used for edge tasks, takes as input embeddings of two nodes.
+        Returns an unnormalized score in general case.
+        """
         raise NotImplementedError("decode can't be called, because it is not implemented")
 
     def get_all_layer_embeddings(
@@ -655,7 +657,7 @@ class FrameworkGNNConstructor(
             self,
             src: torch.Tensor,
             dst: torch.Tensor,
-            batch
+            # batch
     ) -> torch.Tensor:
         layer_ind = -1
         # tensor_storage = {}
@@ -808,9 +810,14 @@ class FrameworkGNNConstructor(
     def get_answer(
             self,
             *args,
-            **kwargs
+            edge_out: torch.Tensor=None,
+            **kwargs,
     ) -> torch.Tensor:
-        return self.get_predictions(*args, **kwargs).argmax(dim=1)
+        if edge_out is not None:
+            # Edge prediction task. Apply threshold
+            return edge_out > 0.5  # FIXME use parameter
+        else:
+            return self.get_predictions(*args, **kwargs).argmax(dim=1)
 
     def suitable_model_managers(
             self

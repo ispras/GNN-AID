@@ -303,7 +303,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             src = node_embeddings[edge_label_index[0]]
             dst = node_embeddings[edge_label_index[1]]
 
-            out = self.gnn.decode(src, dst, batch)
+            out = self.gnn.decode(src, dst)
 
             # FIXME loss must be for edge prediction
             loss = self.loss_function(out, edge_label)
@@ -406,7 +406,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
         try:
             if do_1_step:
-                assert steps > 0
+                # assert steps > 0
                 pbar.total = self.modification.epochs + steps
                 pbar.n = self.modification.epochs
                 pbar.update(0)
@@ -436,12 +436,19 @@ class FrameworkGNNModelManager(GNNModelManager):
         """
         Run the model on a part of dataset specified with a mask.
 
-        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
-        :param mask: 'train', 'val', 'test', 'all' -- part of the dataset on which the output will be obtained
+        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information
+         about the dataset
+        :param mask: part of the dataset on which the output will be obtained.
+         'train', 'val', 'test', 'all', or Tensor of specific nodes/edges
         :param out: 'answers', 'predictions', 'logits' -- what output format will be calculated,
          availability depends on which methods have been overridden in the parent class
-        :return:
+        :return: tensor of outputs
         """
+        task_type = gen_dataset.dataset_var_config.task
+        if mask == 'all' and task_type.is_edge_level():
+            # TODO all means we compare all node pairs. Try use faiss for approximate eval
+            raise NotImplementedError
+
         try:
             mask = {
                 'train': gen_dataset.train_mask,
@@ -460,7 +467,6 @@ class FrameworkGNNModelManager(GNNModelManager):
 
         self.gnn.eval()
         with torch.no_grad():  # Turn off gradients computation
-            task_type = gen_dataset.dataset_var_config.task
             if task_type.is_graph_level():
                 # QUE Kirill, why we need batches here?
                 part_loader = cast(
@@ -482,7 +488,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     full_out = torch.cat((move_to_same_device(full_out, part_out)))
                     # y_true = torch.cat((y_true, data.y))
 
-            elif task_type.is_node_level() or task_type.is_edge_level():
+            elif task_type.is_node_level():
                 data = gen_dataset.data
                 node_ind = [n for n, x in enumerate(mask) if x]
                 mask_size = len(node_ind)
@@ -519,26 +525,66 @@ class FrameworkGNNModelManager(GNNModelManager):
                         self.optimizer.zero_grad()
                     # logits_batch = self.gnn(data_x_copy, data.edge_index)
                     # pred_batch = logits_batch.argmax(dim=1)
-                    if task_type.is_edge_level():
-                        part_out = self.gnn(data_x_copy, data.edge_index)
-                    else:
-                        part_out = run_func(data_x_copy, data.edge_index)
+                    part_out = run_func(data_x_copy, data.edge_index)
                     full_out = torch.cat((move_to_same_device(full_out, part_out[mask_copy])))
                     # y_true = torch.cat((y_true, data.y[mask_copy]))
 
-                if task_type.is_edge_level():
-                    edge_label_index = gen_dataset.edge_label_index[:, mask]
+            elif task_type.is_edge_level():
+                data = gen_dataset.data
+                edge_label_index = mask
+                # edge_label_index = gen_dataset.edge_label_index[:, mask]
 
-                    src = full_out[edge_label_index[0]]
-                    dst = full_out[edge_label_index[1]]
+                node_ind = torch.unique(edge_label_index)
+                mask_size = len(node_ind)
 
-                    edge_out = self.gnn.decode(src, dst)
-                    # TODO need analogue for edges
-                    # 'answers': self.gnn.get_answer,
-                    # 'predictions': self.gnn.get_predictions,
-                    # 'logits': self.gnn.__call__,
+                # data_x_elem_len = data.x.size()[1]
+                full_out = torch.empty(0, device=data.x.device)
+                # features_mask_tensor = torch.full(size=data.x.size(), fill_value=True)
 
+                data_x_copy = torch.clone(data.x)
+
+                for elem_ind in node_ind:
+                    # FIXME misha check, test
+                    if hasattr(self, 'mask_features'):
+                        for feature in self.mask_features:
+                            data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
+                                                  gen_dataset.node_attr_slices[feature][1]] = 0
+
+                # FIXME Kirill what to do if no optimizer, train_mask_flag, batch?
+                if hasattr(self, 'optimizer'):
+                    self.optimizer.zero_grad()
+                # logits_batch = self.gnn(data_x_copy, data.edge_index)
+                # pred_batch = logits_batch.argmax(dim=1)
+
+                # get logits for nodes
+                node_out = self.gnn(data_x_copy, data.edge_index)
+
+                src = node_out[edge_label_index[0]]
+                dst = node_out[edge_label_index[1]]
+
+                edge_out = self.gnn.decode(src, dst)
+                full_out = None
+                if out == 'logits':
                     full_out = edge_out
+                elif out == 'predictions':
+                    if task_type == Task.EDGE_PREDICTION:
+                        # TODO misha
+                        raise NotImplementedError
+                    elif task_type == Task.EDGE_CLASSIFICATION:
+                        full_out = edge_out.softmax(dim=-1)
+                    elif task_type == Task.EDGE_REGRESSION:
+                        raise ValueError(f"'predictions' output is not available for edge regression task")
+
+                elif out == 'answers':
+                    if task_type == Task.EDGE_PREDICTION:
+                        # TODO misha thresholded(thr - параметр)
+                        full_out = self.gnn.get_answer(edge_out=edge_out)
+                        # full_out = self.gnn.get_answer(edge_out, task_type)
+                    elif task_type == Task.EDGE_CLASSIFICATION:
+                        full_out = edge_out.softmax(dim=-1)
+                    elif task_type == Task.EDGE_REGRESSION:
+                        full_out = edge_out
+
             else:
                 raise ValueError(f"Unsupported task type {task_type}")
 
@@ -654,12 +700,42 @@ class FrameworkGNNModelManager(GNNModelManager):
                     mask=mask,
                 )
             metrics_values[mask] = {}
-            y_pred = self.run_model(gen_dataset, mask=mask)
-            y_true = gen_dataset.labels[mask_tensor]
 
+            # Get model predictions
+            task_type = gen_dataset.dataset_var_config.task
+            if task_type == Task.EDGE_PREDICTION:
+                if mask == 'all':
+                    raise NotImplementedError
+
+                pos_edge_index = gen_dataset.edge_label_index[:, mask_tensor]
+                # TODO num_neg_samples as MM parameter
+                neg_edge_index = negative_sampling(
+                    edge_index=gen_dataset.data.edge_index,
+                    num_nodes=gen_dataset.data.num_nodes,
+                    num_neg_samples=pos_edge_index.size(1),
+                    method='sparse'
+                )
+                pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long,
+                                       device=gen_dataset.dataset.edge_index.device)
+                neg_label = torch.zeros(neg_edge_index.size(1), dtype=torch.long,
+                                        device=gen_dataset.dataset.edge_index.device)
+
+                device = gen_dataset.dataset.edge_index.device
+                pos_edge_index = pos_edge_index.to(device)
+                neg_edge_index = neg_edge_index.to(device)
+                edge_mask = torch.cat([pos_edge_index, neg_edge_index], dim=1)
+
+                y_pred = self.run_model(gen_dataset, mask=edge_mask, out='answers')
+                y_true = torch.cat([pos_label, neg_label], dim=0)
+
+            else:
+                y_pred = self.run_model(gen_dataset, mask=mask, out='answers')
+                y_true = gen_dataset.labels[mask_tensor]
+
+            # Compute metrics
             for metric in ms:
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
-                # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
+
         if self.mi_attacker and self.mi_attack_flag:
             # TODO pass decoder
             self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)

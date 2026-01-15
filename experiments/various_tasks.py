@@ -134,7 +134,6 @@ def link_prediction():
                 ]
             )))
 
-
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -154,7 +153,7 @@ def link_prediction():
         }
     )
 
-    steps_epochs = 1
+    steps_epochs = 3
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
@@ -174,6 +173,10 @@ def link_prediction():
     )
     print("Training was successful")
 
+    res = gnn_model_manager.run_model(
+        gen_dataset=gen_dataset,
+        mask='all'
+    )
     res = gnn_model_manager.evaluate_model(
         gen_dataset=gen_dataset,
         metrics=[Metric("Accuracy", mask="test")]
