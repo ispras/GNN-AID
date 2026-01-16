@@ -124,7 +124,41 @@ def link_prediction():
                             },
                         },
                     },
-                    {
+                    ## Decoder
+                    ## var.1) 2-layer perceptron
+                    # {
+                    #     'label': 'd',
+                    #     'function': {
+                    #         'function_name': 'Concat',
+                    #         'function_kwargs': None
+                    #     }
+                    # },
+                    # {
+                    #     'label': 'd',
+                    #     'layer': {
+                    #         'layer_name': 'Linear',
+                    #         'layer_kwargs': {
+                    #             'in_features': 16 * 2,
+                    #             'out_features': 16,
+                    #         },
+                    #     },
+                    #     'activation': {
+                    #         'activation_name': 'ReLU',
+                    #         'activation_kwargs': None,
+                    #     },
+                    # },
+                    # {
+                    #     'label': 'd',
+                    #     'layer': {
+                    #         'layer_name': 'Linear',
+                    #         'layer_kwargs': {
+                    #             'in_features': 16,
+                    #             'out_features': 1,
+                    #         },
+                    #     },
+                    # },
+                    ## var.2) cosine sim
+                    {  #
                         'label': 'd',
                         'function': {
                             'function_name': 'CosineSimilarity',
@@ -173,20 +207,43 @@ def link_prediction():
     )
     print("Training was successful")
 
-    res = gnn_model_manager.run_model(
-        gen_dataset=gen_dataset,
-        mask='all'
-    )
+    # res = gnn_model_manager.run_model(
+    #     gen_dataset=gen_dataset,
+    #     mask='all'
+    # )
     res = gnn_model_manager.evaluate_model(
         gen_dataset=gen_dataset,
-        metrics=[Metric("Accuracy", mask="test")]
+        metrics=[
+            Metric("Accuracy", mask='all'),
+            Metric("AUC", mask='test'),
+            # Metric("Precision@k", mask='test', k=50),
+            # Metric("Precision@k", mask='test', k=500000),
+            # Metric("Recall@k", mask='test', k=500000),
+        ]
     )
     print(json.dumps(res, indent=2))
 
-    # gnn.eval()
-    # z = gnn.encode(data.x, data.edge_index)
-    # out = gnn.decode(z, data.edge_label_index).view(-1).sigmoid()
-    # return roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy())
+    # Example how to get prediction for specific node pair (5,6)
+    data = gen_dataset.data
+    edge_label_index = torch.tensor([[5], [6]])
+
+    # get embeddings for all nodes
+    node_out = gnn(data.x, data.edge_index)
+
+    # Get embeddings for our nodes
+    src = node_out[edge_label_index[0]]
+    dst = node_out[edge_label_index[1]]
+
+    # Pass to decoder and get the output
+    edge_out = gnn.decode(src, dst)
+
+    # 'logits':
+    full_out = edge_out
+    print(f"Logits: {full_out}")
+
+    # 'answers':
+    full_out = gnn.get_answer(edge_out=edge_out)
+    print(f"Answers: {full_out}")
 
 
 def ptg_example():

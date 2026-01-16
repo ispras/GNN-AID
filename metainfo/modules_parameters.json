@@ -5,6 +5,12 @@
       "forward_parameters": "x1=src, x2=dst"
     }
   },
+  "Concat": {
+    "_technical_parameter": {
+      "import_info":  ["Concat", ["gnn_aid.models_builder.models_utils"]],
+      "forward_parameters": "(src, dst)"
+    }
+  },
  "GCNConv": {
   "out_channels": ["Output size", "int", 16, {"min": 1}, "Size of output sample"],
   "aggr": ["Aggregation", "string", "add", ["add", "mean", "min", "max", "mul", "None"], "The aggregation scheme to use"],

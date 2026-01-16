@@ -132,6 +132,66 @@ class EdgeMaskingWrapper(nn.Module):
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
 
+# ================================================
+# ================ Metrics
+# ================================================
+
+
+def top_k_metric(true_edges, pred_edges, k, metric='precision') -> float:
+    """
+    Calculate precision@k, recall@k, or f1@k metric for edge prediction
+
+    Precision@k = (number of correctly predicted edges in top-k) / k
+    Recall@k = (number of correctly predicted edges in top-k) / (total true edges)
+    F1@k = 2 * (Precision@k * Recall@k) / (Precision@k + Recall@k)
+
+    Args:
+        true_edges: torch.Tensor shape (2, N) - ground truth edges
+        pred_edges: torch.Tensor shape (2, M) - predicted edges (M >= k)
+        k: int - number of top predictions to evaluate
+        metric: str - metric to calculate: 'precision', 'recall', or 'f1'
+
+    Returns:
+        score: float - metric value in range [0, 1]
+    """
+    if pred_edges.size(1) == 0 or k == 0 or true_edges.size(1) == 0:
+        return 0.0
+
+    # Take only top-k predictions
+    k_actual = min(k, pred_edges.size(1))
+    pred_edges_top_k = pred_edges[:, :k_actual]
+
+    # Convert true edges to set for fast lookup
+    true_set = set(zip(
+        true_edges[0].cpu().tolist(),
+        true_edges[1].cpu().tolist()
+    ))
+    pred_set = set(zip(
+        pred_edges_top_k[0].cpu().tolist(),
+        pred_edges_top_k[1].cpu().tolist()
+    ))
+    correct_predictions = len(true_set & pred_set)
+
+    # Calculate requested metric
+    if metric == 'precision':
+        return correct_predictions / k_actual
+
+    elif metric == 'recall':
+        total_true = true_edges.size(1)
+        return correct_predictions / total_true
+
+    elif metric == 'f1':
+        precision = correct_predictions / k_actual
+        total_true = true_edges.size(1)
+        recall = correct_predictions / total_true
+
+        if precision + recall == 0:
+            return 0.0
+        return 2 * (precision * recall) / (precision + recall)
+
+    else:
+        raise ValueError(f"Unknown metric: {metric}. Use 'precision', 'recall', or 'f1'")
+
 
 class Metric:
     available_metrics = {
@@ -141,6 +201,13 @@ class Metric:
         'Recall': sklearn.metrics.recall_score,
         'Precision': sklearn.metrics.precision_score,
         'Jaccard': sklearn.metrics.jaccard_score,
+
+        'AUC': sklearn.metrics.roc_auc_score,
+    }
+    edge_prediction_metrics = {
+        'Precision@k': lambda *a, **k: top_k_metric(*a, **k, metric='precision'),
+        'Recall@k': lambda *a, **k: top_k_metric(*a, **k, metric='recall'),
+        'F1@k': lambda *a, **k: top_k_metric(*a, **k, metric='f1'),
     }
 
     @staticmethod
@@ -174,22 +241,56 @@ class Metric:
         :param mask: 'train', 'val', 'test', or a bool valued list
         :param kwargs: params used in compute function
         """
-        self.name = name
+        self._name = name
         self.mask = mask
         self.kwargs = kwargs
+
+    def name(
+            self
+    ) -> str:
+        """ Name including kwargs """
+        res = self._name
+        kwargs = ",".join(f"{k}={v}" for k, v in self.kwargs.items())
+        if len(kwargs) > 0:
+            res += '{' + kwargs + '}'
+        return res
 
     def compute(
             self,
             y_true,
             y_pred
     ):
-        if self.name in Metric.available_metrics:
-            if y_true.device != "cpu":
-                y_true = y_true.cpu()
-            if y_pred.device != "cpu":
-                y_pred = y_pred.cpu()
-            return Metric.available_metrics[self.name](y_true, y_pred, **self.kwargs)
-        raise NotImplementedError()
+        if y_true.device != "cpu":
+            y_true = y_true.cpu()
+        if y_pred.device != "cpu":
+            y_pred = y_pred.cpu()
+
+        if self._name in Metric.available_metrics:
+            func = Metric.available_metrics[self._name]
+        elif self._name in Metric.edge_prediction_metrics:
+            func = Metric.edge_prediction_metrics[self._name]
+        else:
+            raise NotImplementedError()
+
+        return func(y_true, y_pred, **self.kwargs)
+
+    def needs_logits(
+            self
+    ) -> bool:
+        """ Whether the metric accepts logits as predictions not labels. """
+        if self._name in ['AUC']:
+            return True
+        else:
+            return False
+
+    def needs_all_node_pairs(
+            self
+    ) -> bool:
+        """  """
+        if self._name in self.edge_prediction_metrics:
+            return True
+        else:
+            return False
 
     @staticmethod
     def create_mask_by_target_list(
@@ -221,3 +322,241 @@ class GNNConstructorError(Exception):
         else:
             return "GNNConstructorError has been raised!"
 
+
+# ================================================
+# ================ Additional torch layers
+# ================================================
+
+
+class Concat(nn.Module):
+    def __init__(self, dimension=1):
+        super(Concat, self).__init__()
+        self.dimension = dimension
+
+    def forward(self, tensors):
+        # Concatenate a list of tensors along the specified dimension
+        return torch.cat(tensors, dim=self.dimension)
+
+
+# ================================================
+# ================ Edge prediction over all graph node pairs
+# ================================================
+
+
+def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True, faiss_k_per_node=200):
+    """
+    Predict top-k new edges with FAISS support for large graphs
+
+    Args:
+        model: trained GNN model
+        data: PyG Data object with graph structure
+        exclude_edges: torch.Tensor shape (2, num_edges) - edges to exclude from predictions
+        k: number of top edges to return (globally)
+        use_faiss: use FAISS for fast search (recommended for large graphs)
+        faiss_k_per_node: how many candidates to search per node via FAISS
+
+    Returns:
+        top_edges: torch.Tensor shape (2, k) - indices of top-k node pairs
+        top_scores: torch.Tensor shape (k,) - scores for these pairs
+    """
+    model.eval()
+
+    with torch.no_grad():
+        # Get embeddings for all nodes
+        h = model(data.x, data.edge_index)
+
+        # Normalize embeddings (important for correct dot product)
+        # h_norm = F.normalize(h, p=2, dim=1)
+        h_norm = h
+
+        num_nodes = h.size(0)
+
+        # Create set of existing edges for fast lookup
+        existing_set = set()
+        if exclude_edges is not None and exclude_edges.size(1) > 0:
+            existing_set = set(zip(
+                exclude_edges[0].cpu().tolist(),
+                exclude_edges[1].cpu().tolist()
+            ))
+            print(f"Excluding {len(existing_set)} existing edges")
+
+            # Compute scores for sample of existing edges
+            h_src_existing = h[exclude_edges[0]]
+            h_dst_existing = h[exclude_edges[1]]
+            sample_scores = model.decode(h_src_existing, h_dst_existing)
+            sample_scores = sample_scores.sigmoid().cpu()
+
+            print(f"Existing edges: {exclude_edges.size(1)} edges")
+            print(f"Existing edges scores:")
+            print(f"  Mean: {sample_scores.mean():.4f}")
+            print(f"  Std: {sample_scores.std():.4f}")
+            print(f"  Min: {sample_scores.min():.4f}")
+            print(f"  Max: {sample_scores.max():.4f}")
+
+        # Choose strategy: FAISS or full enumeration
+        total_pairs = num_nodes * num_nodes
+        if use_faiss and total_pairs > 100e6:
+            print(f"Using FAISS for large graph: {num_nodes} x {num_nodes} = {total_pairs} pairs")
+            return _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node)
+        else:
+            print(
+                f"Using full enumeration for small graph: {num_nodes} x {num_nodes} = {total_pairs} pairs")
+            return _predict_full_enumeration(model, data, h_norm, existing_set, k)
+
+
+def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
+    """Prediction using FAISS for fast search"""
+    import faiss
+
+    num_nodes = h_norm.size(0)
+    embedding_dim = h_norm.size(1)
+
+    # Parameter: how many candidates to take per node
+    faiss_k_per_node = min(faiss_k_per_node, num_nodes)
+
+    # Build FAISS index for all nodes
+    h_np = h_norm.cpu().numpy().astype('float32')
+
+    # Use Inner Product (cosine similarity for normalized vectors)
+    index = faiss.IndexFlatIP(embedding_dim)
+    index.add(h_np)
+
+    print(f"FAISS index built. Searching top-{faiss_k_per_node} candidates per node...")
+
+    # Search top candidates for each node
+    similarities, candidate_indices = index.search(h_np, faiss_k_per_node)
+
+    # Collect all candidate pairs
+    all_pairs = []
+    for src_idx in range(num_nodes):
+        for rank, dst_idx in enumerate(candidate_indices[src_idx]):
+            # Skip existing edges
+            if (src_idx, int(dst_idx)) in existing_set:
+                print(f"Score for existing ({src_idx}, {dst_idx}): {similarities[src_idx, rank]}")
+                continue
+
+            # Save (src, dst, similarity)
+            all_pairs.append((src_idx, int(dst_idx), similarities[src_idx, rank]))
+
+    print(f"Found {len(all_pairs)} candidate pairs after filtering")
+
+    if len(all_pairs) == 0:
+        print("Warning: No candidate pairs found!")
+        return torch.zeros((2, 0), dtype=torch.long), torch.zeros(0)
+
+    # Sort by similarity and take top-k
+    all_pairs.sort(key=lambda x: x[2], reverse=True)
+    top_pairs = all_pairs[:min(k, len(all_pairs))]
+
+    # Now compute exact scores via model for final candidates
+    h = model(data.x, data.edge_index)
+
+    final_src = torch.tensor([p[0] for p in top_pairs], dtype=torch.long, device=h.device)
+    final_dst = torch.tensor([p[1] for p in top_pairs], dtype=torch.long, device=h.device)
+
+    # Prepare embeddings for decode
+    h_src_final = h[final_src]
+    h_dst_final = h[final_dst]
+
+    final_scores = model.decode(h_src_final, h_dst_final)
+    final_scores = final_scores.sigmoid()
+
+    # Re-sort by exact scores
+    sorted_scores, sorted_indices = torch.sort(final_scores, descending=True)
+    final_src = final_src[sorted_indices]
+    final_dst = final_dst[sorted_indices]
+    top_edges = torch.stack([final_src, final_dst], dim=0)
+
+    print(f"Top-{len(sorted_scores)} edges found with scores from "
+          f"{sorted_scores[-1]:.4f} to {sorted_scores[0]:.4f}")
+
+    return top_edges.cpu(), sorted_scores.cpu()
+
+
+def _predict_full_enumeration(model, data, h, existing_set, k):
+    """Prediction with full enumeration of all pairs (for small graphs)"""
+    num_nodes = h.size(0)
+    device = h.device
+
+    # Request more candidates with margin for filtering
+    k_candidates = k + (len(existing_set) if existing_set else 0)
+    k_candidates = min(k_candidates * 2, num_nodes * num_nodes)  # with 2x margin
+
+    # Store global top-k
+    global_top_scores = None
+    global_top_src = None
+    global_top_dst = None
+
+    # Process in batches by source nodes
+    batch_size = 1000
+    for src_start in range(0, num_nodes, batch_size):
+        src_end = min(src_start + batch_size, num_nodes)
+        batch_src_size = src_end - src_start
+
+        # Create pairs for current batch of source nodes with all destination nodes
+        src_batch = torch.arange(src_start, src_end, device=device)
+        dst_nodes = torch.arange(num_nodes, device=device)
+
+        src_repeated = src_batch.repeat_interleave(num_nodes)
+        dst_repeated = dst_nodes.repeat(batch_src_size)
+
+        # Prepare embeddings for decode
+        h_src_batch = h[src_repeated]
+        h_dst_batch = h[dst_repeated]
+
+        # Compute scores for batch
+        with torch.no_grad():
+            batch_scores = model.decode(h_src_batch, h_dst_batch).sigmoid()
+
+        # Take top-k from batch
+        batch_k = min(k_candidates, len(batch_scores))
+        batch_top_scores, batch_top_indices = torch.topk(batch_scores, batch_k)
+        batch_top_src = src_repeated[batch_top_indices]
+        batch_top_dst = dst_repeated[batch_top_indices]
+
+        # Merge with global top-k
+        if global_top_scores is None:
+            global_top_scores = batch_top_scores
+            global_top_src = batch_top_src
+            global_top_dst = batch_top_dst
+        else:
+            # Concatenate and take top-k from combined results
+            combined_scores = torch.cat([global_top_scores, batch_top_scores])
+            combined_src = torch.cat([global_top_src, batch_top_src])
+            combined_dst = torch.cat([global_top_dst, batch_top_dst])
+
+            keep_k = min(k_candidates, len(combined_scores))
+            top_scores, top_indices = torch.topk(combined_scores, keep_k)
+
+            global_top_scores = top_scores
+            global_top_src = combined_src[top_indices]
+            global_top_dst = combined_dst[top_indices]
+
+        print(f"Processed {src_end}/{num_nodes} source nodes, "
+              f"current top score: {global_top_scores[0]:.4f}")
+
+    # Now filter existing edges from final candidates
+    if existing_set:
+        mask = torch.tensor([
+            (s.item(), d.item()) not in existing_set
+            for s, d in zip(global_top_src.cpu(), global_top_dst.cpu())
+        ], device=device)
+
+        global_top_scores = global_top_scores[mask]
+        global_top_src = global_top_src[mask]
+        global_top_dst = global_top_dst[mask]
+
+    # Final top-k
+    final_k = min(k, len(global_top_scores))
+    if final_k < k:
+        print(f"Warning: Only {final_k} unique pairs available, returning all")
+
+    top_scores = global_top_scores[:final_k]
+    top_src = global_top_src[:final_k]
+    top_dst = global_top_dst[:final_k]
+
+    top_edges = torch.stack([top_src, top_dst], dim=0)
+
+    print(f"Top-{final_k} edges found with scores from {top_scores[-1]:.4f} to {top_scores[0]:.4f}")
+
+    return top_edges.cpu(), top_scores.cpu()

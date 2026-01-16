@@ -13,6 +13,11 @@
      "strong_restrictions": ["first_decoder", "last_decoder"],
      "model_manager_restrictions": []
    },
+   "Concat": {
+     "valid_label" : ["d"],
+     "strong_restrictions": ["first_decoder"],
+     "model_manager_restrictions": []
+   },
   "GCNConv": {
    "valid_label" : ["n"],
    "strong_restrictions": [],
@@ -69,7 +74,7 @@
    "model_manager_restrictions": []
   },
   "Linear": {
-   "valid_label" : ["n", "g", "e"],
+   "valid_label" : ["n", "g", "d"],
    "strong_restrictions": [],
    "model_manager_restrictions": []
   },
@@ -84,7 +89,7 @@
    "model_manager_restrictions": ["GSATModelManager"]
   },
   "DummyLayer": {
-   "valid_label": ["n", "g", "e"],
+   "valid_label": ["n", "g", "d"],
    "strong_restrictions": ["first_model"],
    "model_manager_restrictions": []
   }
