@@ -139,7 +139,8 @@ class ModelConstructorBlock(Block):
             gen_dataset: GeneralDataset
     ) -> list:
         ptg_dataset = gen_dataset.dataset
-        return [ptg_dataset.num_node_features, ptg_dataset.num_classes, gen_dataset.is_multi()]
+        return [ptg_dataset.num_node_features, ptg_dataset.num_classes,
+                gen_dataset.is_multi(), gen_dataset.dataset_var_config.task]
 
     def _finalize(
             self

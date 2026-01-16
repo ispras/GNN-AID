@@ -66,7 +66,7 @@ class MenuModelManagerView extends MenuView {
         let $lossParamsDiv
         [$cb, this.$lossSelect, $lossParamsDiv, this.lossParamsBuilder]
             = await addOptionsWithParams("menu-model-constructor-loss",
-            "Loss function", [["NLLLoss", "NLL"], ["CrossEntropyLoss", "CE"]], "F")
+            "Loss function", [["CrossEntropyLoss", "CE"], ["NLLLoss", "NLL"]], "F")
         $cc.append($cb)
         $cc.append($lossParamsDiv)
 

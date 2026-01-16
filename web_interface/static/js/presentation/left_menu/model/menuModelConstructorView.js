@@ -16,6 +16,8 @@ class MenuModelConstructorView extends MenuView {
         this.num_feats = args[0]
         this.num_classes = args[1]
         this.multi = args[2]
+        this.task = args[3]
+        console.log(args)
 
         this.$configConstructorDiv = $("<div></div>")
         this.$mainDiv.append(this.$configConstructorDiv)
@@ -63,6 +65,7 @@ class MenuModelConstructorView extends MenuView {
         this.absLayersCounter = 0
         this.nodeLayerBlocks = new BiList()
         this.graphLayerBlocks = new BiList()
+        this.decoderLayerBlocks = new BiList()
         this.customGraphLayerBlock = null // TODO can we have a lot of them ?
 
         // First node layer block is obligate
@@ -74,7 +77,7 @@ class MenuModelConstructorView extends MenuView {
         // Add node layer button
         let $cb = $("<div></div>").attr("class", "control-block")
         $cc.append($cb)
-        let $addNodeLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+        let $addNodeLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-node-layer")
             .text("+ node layer").css("margin-right", "12px")
         $cb.append($addNodeLayerButton)
 
@@ -103,7 +106,7 @@ class MenuModelConstructorView extends MenuView {
 
             let $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
-            let $addGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+            let $addGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-graph-layer")
                 .text("+ graph layer").css("margin-right", "12px")
             $cb.append($addGraphLayerButton)
 
@@ -126,7 +129,7 @@ class MenuModelConstructorView extends MenuView {
 
             $customGraphLayerButtonDiv = $("<div></div>").attr("class", "control-block")
             $cc.append($customGraphLayerButtonDiv)
-            let $addCustomGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+            let $addCustomGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-custom-layer")
                 .text("+ custom graph layer").css("margin-right", "12px")
             $customGraphLayerButtonDiv.append($addCustomGraphLayerButton)
 
@@ -138,6 +141,35 @@ class MenuModelConstructorView extends MenuView {
                 this.customGraphLayerBlock = layerBlock
                 this.updConnections() // fixme not sure we need
                 $customGraphLayerButtonDiv.hide()
+            })
+        }
+
+        // Decoder layers if task is edge prediction
+        let $decoderLayerBlocksDiv
+        if (this.task === 'edge-prediction') {
+            $decoderLayerBlocksDiv = $("<div></div>")
+            $cc.append($decoderLayerBlocksDiv)
+
+            // First decoder layer block is obligate
+            let layerBlock = new LayerBlock('d', this.absLayersCounter, 0)
+            this.decoderLayerBlocks.append(layerBlock)
+            $decoderLayerBlocksDiv.append(layerBlock.$div)
+            await layerBlock.build(this.decoderLayerBlocks.length, 0)
+            this.nodeLayerBlocks.first().update(null, this.nodeLayerBlocks.length, 0)
+
+            let $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            let $addDecoderLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-decoder-layer")
+                .text("+ decoder layer").css("margin-right", "12px")
+            $cb.append($addDecoderLayerButton)
+
+            $addDecoderLayerButton.click(() => {
+                this.absLayersCounter++
+                let layerBlock = new LayerBlock('d', this.absLayersCounter, this.decoderLayerBlocks.length)
+                $decoderLayerBlocksDiv.append(layerBlock.$div)
+                layerBlock.build(this.nodeLayerBlocks.length, this.decoderLayerBlocks.length)
+                this.decoderLayerBlocks.append(layerBlock)
+                // this.updConnections()
             })
         }
 
@@ -206,13 +238,15 @@ class MenuModelConstructorView extends MenuView {
 
     // Form model config from selectors values
     constructModelConfig() {
+        let nodeLayersOutputSize = this.num_classes
+
         // Change layers output size to num_classes, and all its precedents if needed
         let setOutputSize = (layerBlocks) => {
             let iter = layerBlocks.reverseIterator()
             let result = iter.next()
             let done
             while (!result.done) {
-                done = result.value.setOutputSize(this.num_classes)
+                done = result.value.setOutputSize(nodeLayersOutputSize)
                 if (done)
                     break
                 result = iter.next()
@@ -228,21 +262,21 @@ class MenuModelConstructorView extends MenuView {
         if (this.multi) {
             if (this.customGraphLayerBlock) {
                 this.customGraphLayerBlock.setAsLast()
-                let done = this.customGraphLayerBlock.setOutputSize(this.num_classes)
+                let done = this.customGraphLayerBlock.setOutputSize(nodeLayersOutputSize)
                 if (!done)
                     // TODO setOutputSize for previous layers
                     console.error('Not implemented')
             }
             else {
                 this.graphLayerBlocks.last().setAsLast()
-                let done = this.graphLayerBlocks.last().setOutputSize(this.num_classes)
+                let done = this.graphLayerBlocks.last().setOutputSize(nodeLayersOutputSize)
                 if (!done)
                     // TODO setOutputSize for previous layers
                     console.error('Not implemented')
             }
             this.nodeLayerBlocks.last().setAsLast()
         }
-        else {
+        else if (this.task !== 'edge-prediction') {
             setOutputSize(this.nodeLayerBlocks)
             this.nodeLayerBlocks.last().setAsLast()
         }
@@ -299,6 +333,23 @@ class MenuModelConstructorView extends MenuView {
                 // for (const i of additionalGraphIxes)
                 //     additionalGraphSize[i] += inputSize
                 architecture.push(cfg)
+            }
+        }
+
+        // Add decoder layers
+        if (this.task === 'edge-prediction') {
+            inputSize = 0
+            ix = 0 // layer index
+            iter = this.decoderLayerBlocks.iterator()
+            result = iter.next()
+            while (!result.done) {
+                [cfg, inputSize, additionalNodeIxes, additionalGraphIxes]
+                    = result.value.constructConfig(inputSize)
+                // for (const i of additionalGraphIxes)
+                //     additionalGraphSize[i] += inputSize
+                architecture.push(cfg)
+                result = iter.next()
+                ix++
             }
         }
         return architecture

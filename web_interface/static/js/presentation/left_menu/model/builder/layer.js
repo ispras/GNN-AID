@@ -8,10 +8,11 @@ class LayerBlock {
     static convColor = "#bfb"
     static linearColor = "#bff"
     static connectionColor = "#ffb"
+    static functionColor = "#fbf"
 
     constructor(type, absIx, ix) {
-        console.assert(Array('n', 'g', 'gc').includes(type))
-        this.type = type // Type: 'n' or 'g' or 'gc'
+        console.assert(Array('n', 'g', 'gc', 'd').includes(type))
+        this.type = type // Type: 'n' or 'g' or 'gc' or 'd'
         this.absIx = absIx // Absolute index
         this.ix = ix // Order index
         this.nodeCount = null // number of node layers
@@ -31,10 +32,11 @@ class LayerBlock {
 
         this.protParamsBuilder = null // Params for prot layer
 
-        // One of 3 alternatives for type value
+        // One of 4 alternatives for type value
         this.$convSelect = null
         this.convParamsBuilder = null // for conv kwargs
         this.$linearOutputSizeInput = null
+        this.$functionNameInput = null
         this.sequential = null
 
         // Bathcnorm value and kwargs
@@ -117,7 +119,8 @@ class LayerBlock {
     // }
 
     _name() {
-        return {'n': 'Node layer', 'g': 'Graph layer', 'gc': 'Custom graph layer'}[this.type]
+        return {'n': 'Node layer', 'g': 'Graph layer',
+            'gc': 'Custom graph layer', 'd': 'Decoder layer'}[this.type]
     }
 
     // Update layer label and skip connections
@@ -147,7 +150,7 @@ class LayerBlock {
             .css("grid-column", 2).css("display", "flex").css("flex-flow", "row-reverse")
         $headDiv.append($buttonsDiv)
 
-        if (this.type === 'gc')
+        if (this.type === 'gc' || (this.type === 'd' && this.ix === 0))
             this.buildButtons($buttonsDiv, false, false, true)
         else
             this.buildButtons($buttonsDiv)
@@ -159,15 +162,23 @@ class LayerBlock {
         $cb.append($("<label></label>").text("Layer type").attr("for", id))
         this.$typeSelect = $("<select></select>").attr("id", id)
         $cb.append(this.$typeSelect)
-        if (this.type === 'n')
-            this.$typeSelect.append($("<option></option>").val("conv").text("Convolution"))
-        if (this.type === 'n' || this.type === 'g')
-            this.$typeSelect.append($("<option></option>").val("lin").text("Linear"))
-        if (this.type === 'gc')
-            this.$typeSelect.append($("<option></option>").val("prot").text("Prot"))
-        if (this.type === 'n')
-            this.$typeSelect.append($("<option></option>").val("gin").text("GIN"))
-        // this.$typeSelect.append($("<option></option>").val("None").text("None"))
+        if (this.type === 'd') {
+            if (this.ix === 0)
+                this.$typeSelect.append($("<option></option>").val("func").text("Function"))
+            else
+                this.$typeSelect.append($("<option></option>").val("lin").text("Linear"))
+        }
+        else {
+            if (this.type === 'n')
+                this.$typeSelect.append($("<option></option>").val("conv").text("Convolution"))
+            if (this.type === 'n' || this.type === 'g')
+                this.$typeSelect.append($("<option></option>").val("lin").text("Linear"))
+            if (this.type === 'gc')
+                this.$typeSelect.append($("<option></option>").val("prot").text("Prot"))
+            if (this.type === 'n')
+                this.$typeSelect.append($("<option></option>").val("gin").text("GIN"))
+            // this.$typeSelect.append($("<option></option>").val("None").text("None"))
+        }
 
         let self = this
         this.$typeSelect.change(function () {
@@ -185,7 +196,7 @@ class LayerBlock {
         this.$typeSelect.change()
 
         // 2. BatchNorm
-        if (this.type !== 'gc') {
+        if (this.type !== 'gc' && !(this.type === 'd' && this.ix === 0)) {
             $cc.append($("<div></div>").attr("class", "menu-separator"))
             options = [
                 ["None", "None"], ["BatchNorm1d", "1d"], ["BatchNorm2d", "2d"], ["BatchNorm3d", "3d"]]
@@ -199,26 +210,28 @@ class LayerBlock {
         }
 
         // 3. Activation
-        $cc.append($("<div></div>").attr("class", "menu-separator"))
-        options = [
-            ["ReLU", "ReLU"],
-            ["ReLU6", "ReLU6"],
-            ["LogSoftmax", "Log-Softmax"],
-            ["Sigmoid", "Sigmoid"],
-            ["Tanh", "Tanh"],
-            ["ELU", "ELU"],
-            ["LeakyReLU", "LeakyReLU"],
-            ["None", "None"]]
-        let $activationParamsDiv
-        [$cb, this.$activationSelect, $activationParamsDiv, this.activationParamsBuilder]
-            = await addOptionsWithParams("menu-model-constructor-activation-" + this.absIx,
-            "Activation", options, "F", null)
+        if (!(this.type === 'd' && this.ix === 0)) {
+            $cc.append($("<div></div>").attr("class", "menu-separator"))
+            options = [
+                ["ReLU", "ReLU"],
+                ["ReLU6", "ReLU6"],
+                ["LogSoftmax", "Log-Softmax"],
+                ["Sigmoid", "Sigmoid"],
+                ["Tanh", "Tanh"],
+                ["ELU", "ELU"],
+                ["LeakyReLU", "LeakyReLU"],
+                ["None", "None"]]
+            let $activationParamsDiv
+            [$cb, this.$activationSelect, $activationParamsDiv, this.activationParamsBuilder]
+                = await addOptionsWithParams("menu-model-constructor-activation-" + this.absIx,
+                "Activation", options, "F", null)
 
-        $cc.append($cb)
-        $cc.append($activationParamsDiv)
+            $cc.append($cb)
+            $cc.append($activationParamsDiv)
+        }
 
         // 4. Dropout
-        if (this.type !== 'gc') {
+        if (this.type !== 'gc' && !(this.type === 'd' && this.ix === 0)) {
             $cc.append($("<div></div>").attr("class", "menu-separator"))
             $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
@@ -257,7 +270,7 @@ class LayerBlock {
         }
 
         // 5. Connections
-        if (this.type !== 'gc') {
+        if (this.type !== 'gc' && !(this.type === 'd' && this.ix === 0)) {
             $cc.append($("<div></div>").attr("class", "menu-separator"))
             $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
@@ -372,6 +385,26 @@ class LayerBlock {
             // Not showing - because prot layer is the last and outSize = num_classes
             $cb.hide()
         }
+        else if (type === "func") {
+            // Function
+            // TODO misha
+            let $cb = $("<div></div>").attr("class", "control-block")
+            $tpc.append($cb)
+            let id = "menu-model-constructor-func-select-" + this.absIx
+            $cb.append($("<label></label>").text("Name").attr("for", id))
+                .css("background-color", LayerBlock.functionColor)
+
+            // TODO try addOptionsWithParams?
+            this.$functionNameInput = $("<select></select>").attr("id", id)
+            $cb.append(this.$functionNameInput)
+            let options = [
+                ["CosineSimilarity", "CosineSimilarity"],
+                ["Concat", "Concat"]]
+            for (const [val, text] of options) {
+                this.$functionNameInput.append($("<option></option>").val(val).text(text))
+            }
+
+        }
         else {
             console.error("Not implemented")
         }
@@ -379,7 +412,7 @@ class LayerBlock {
 
     constructConfig(inputSize=-1) {
         let config = {
-            'label': {'n': 'n', 'g': 'g', 'gc': 'g'}[this.type], // FIXME replace gc with checker?
+            'label': {'n': 'n', 'g': 'g', 'gc': 'g', 'd': 'd'}[this.type], // FIXME replace gc with checker?
             'layer': {},
         }
         let layer = config['layer']
@@ -426,6 +459,16 @@ class LayerBlock {
             // [layer['gin_seq'], outputSize] = this.sequential.constructConfig(inputSize)
             layer['layer_name'] = 'GINConv'
             layer['layer_kwargs'] = null // TODO
+        } else if (type === 'func') {
+            delete config.layer
+
+            let function_name = this.$functionNameInput.val()
+
+            config['function'] = {
+                'function_name': function_name,
+                'function_kwargs': null,
+            }
+            outputSize = {"CosineSimilarity": 1, "Concat": 2*inputSize}[function_name]
         } else
             console.error('Not implemented')
 
