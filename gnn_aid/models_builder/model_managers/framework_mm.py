@@ -708,10 +708,13 @@ class FrameworkGNNModelManager(GNNModelManager):
         if any(m.needs_all_node_pairs() for m in metrics):
             assert gen_dataset.dataset_var_config.task == Task.EDGE_PREDICTION
 
-            exclude_edges = None  # TODO
+            # By default we exclude train edges from prediction
+            exclude_edges = gen_dataset.edge_label_index[:, gen_dataset.train_mask]
             k = max(m.kwargs.get('k', 0) for m in metrics)
             top_edges, top_scores = predict_top_k_edges(
-                self.gnn, gen_dataset.data, exclude_edges, k=k, use_faiss=False)
+                self.gnn, gen_dataset.data, exclude_edges, k=k, use_faiss=True,
+                is_directed=gen_dataset.is_directed(), remove_loops=True
+            )
             # y_pred_edges = list(zip(map(int, top_edges[0]), map(int, top_edges[1])))
             model_outputs['all_pairs'] = top_edges
 
@@ -731,7 +734,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             if metric.needs_logits():
                 y_pred = model_outputs[mask]['logits']
             if metric.needs_all_node_pairs():
-                y_pred = model_outputs['all_pairs']
+                k = metric.kwargs.get('k')
+                y_pred = model_outputs['all_pairs'][:k]
                 y_true = model_outputs[mask]['true_edges']
 
             if mask not in metrics_values:

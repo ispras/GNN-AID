@@ -214,11 +214,10 @@ def link_prediction():
     res = gnn_model_manager.evaluate_model(
         gen_dataset=gen_dataset,
         metrics=[
-            Metric("Accuracy", mask='all'),
+            # Metric("Accuracy", mask='all'),
             Metric("AUC", mask='test'),
-            # Metric("Precision@k", mask='test', k=50),
-            # Metric("Precision@k", mask='test', k=500000),
-            # Metric("Recall@k", mask='test', k=500000),
+            Metric("Recall@k", mask='test', k=50),
+            Metric("Recall@k", mask='test', k=10000),
         ]
     )
     print(json.dumps(res, indent=2))
