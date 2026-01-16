@@ -302,6 +302,10 @@ class FrameworkGNNConstructor(
 
         for i, elem in enumerate(self.structure):
             self.embedding_levels_by_layers.append(elem['label'])
+            layer_name_prefix = ''
+            if elem['label'] == 'd':
+                layer_name_prefix = 'decoder_'
+
             # print(elem['layer']['layer_name'])
             if 'function' in elem:
                 assert not 'layer' in elem, "Model structure item can be either 'function' or 'layer', not both"
@@ -312,7 +316,7 @@ class FrameworkGNNConstructor(
                     self.modules_info[function_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
                 )
                 function_init_class = function_class(**function_kwargs)
-                setattr(self, f"decoder_{function_name}_{i}", function_init_class)
+                setattr(self, f"{layer_name_prefix}{function_name}_{i}", function_init_class)
 
             else:  # layer
                 layer_name = elem['layer']['layer_name']
@@ -358,7 +362,7 @@ class FrameworkGNNConstructor(
                         self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
                     )
                     custom_layer = layer_class(id(self), f"{layer_name}_{i}", **layer_kwargs)
-                    setattr(self, f"{layer_name}_{i}", custom_layer)
+                    setattr(self, f"{layer_name_prefix}{layer_name}_{i}", custom_layer)
 
                 else:
                     layer_class = import_by_name(
@@ -366,7 +370,7 @@ class FrameworkGNNConstructor(
                         self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY][1]
                     )
                     layer_init_class = layer_class(**layer_kwargs)
-                    setattr(self, f"{layer_name}_{i}", layer_init_class)
+                    setattr(self, f"{layer_name_prefix}{layer_name}_{i}", layer_init_class)
 
             # FIXME can we have function + batchNorm etc ?
             if 'batchNorm' in elem:
@@ -375,7 +379,7 @@ class FrameworkGNNConstructor(
                     batch_norm = batch_norm_class(**elem['batchNorm']['batchNorm_kwargs'])
                 else:
                     batch_norm = batch_norm_class()
-                setattr(self, 'batchNorm_%s' % i, batch_norm)
+                setattr(self, f'{layer_name_prefix}batchNorm_{i}', batch_norm)
 
             if 'activation' in elem:
                 activation_class = import_by_name(elem['activation']['activation_name'],
@@ -384,7 +388,7 @@ class FrameworkGNNConstructor(
                     activation = activation_class(**elem['activation']['activation_kwargs'])
                 else:
                     activation = activation_class()
-                setattr(self, 'activation_%s' % i, activation)
+                setattr(self, f'{layer_name_prefix}activation_{i}', activation)
 
             if 'dropout' in elem:
                 dropout_class = import_by_name(elem['dropout']['dropout_name'], ["torch.nn"])
@@ -392,7 +396,7 @@ class FrameworkGNNConstructor(
                     dropout = dropout_class(**elem['dropout']['dropout_kwargs'])
                 else:
                     dropout = dropout_class()
-                setattr(self, 'dropout_%s' % i, dropout)
+                setattr(self, f'{layer_name_prefix}dropout_{i}', dropout)
 
             if 'connections' in elem:
                 for con in elem['connections']:
@@ -667,6 +671,7 @@ class FrameworkGNNConstructor(
 
         # TODO what about device
 
+        is_first_layer = True
         for elem in list(self.__dict__['_modules'].items()):
             if not elem[0].startswith('decoder_'):  # Omit non-decoder layers
                 continue
@@ -681,68 +686,6 @@ class FrameworkGNNConstructor(
                 #     if key[0] == layer_ind and layer_ind not in tensor_storage:
                 #         tensor_storage[layer_ind] = torch.clone(x)
                 layer_ind = curr_layer_ind
-                # TODO how to handle skip connections?
-                # x_copy = torch.clone(x)
-                # connection_tensor = torch.empty(0, device=x_copy.device)
-                # x_dict = {}
-                # for key, value in self.conn_dict.items():
-                #     if key[1] == curr_layer_ind:
-                #         if key[1] - key[0] == 1:
-                #             zeroing_x_flag = True
-                #         for con in value:
-                #             aggregation_type = con.get('aggregation_type', 'cat')
-                #
-                #             if aggregation_type == 'cat':
-                #                 if connection_tensor is None:
-                #                     connection_tensor = tensor_storage[key[0]]
-                #                 else:
-                #                     if self.embedding_levels_by_layers[key[1]] == 'n' and \
-                #                             self.embedding_levels_by_layers[key[0]] == 'n':
-                #                         connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 1)
-                #                         dim_cat = 1
-                #                     elif self.embedding_levels_by_layers[key[1]] == 'g' and \
-                #                             self.embedding_levels_by_layers[key[0]] == 'g':
-                #                         connection_tensor = torch.cat((connection_tensor, tensor_storage[key[0]]), 0)
-                #                         dim_cat = 0
-                #                     elif self.embedding_levels_by_layers[key[1]] == 'g' and \
-                #                             self.embedding_levels_by_layers[key[0]] == 'n':
-                #                         con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
-                #                         tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
-                #                         connection_tensor = torch.cat((connection_tensor, tensor_after_pool), 1)
-                #                         dim_cat = 1
-                #                     else:
-                #                         raise GNNConstructorError(
-                #                             f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
-                #                             f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
-                #                         )
-                #
-                #             elif aggregation_type == 'stack':
-                #                 if self.embedding_levels_by_layers[key[1]] == 'n' and self.embedding_levels_by_layers[
-                #                                                                                         key[0]] == 'n':
-                #                     x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
-                #                 elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
-                #                                                                                         key[0]] == 'g':
-                #                     x_dict[f'skip_{key[0]}'] = tensor_storage[key[0]]
-                #                 elif self.embedding_levels_by_layers[key[1]] == 'g' and self.embedding_levels_by_layers[
-                #                                                                                         key[0]] == 'n':
-                #                     con_pool = import_by_name(con['pool']['pool_type'], ["torch_geometric.nn"])
-                #                     tensor_after_pool = con_pool(tensor_storage[key[0]], batch)
-                #                     x_dict[f'skip_{key[0]}'] = tensor_after_pool
-                #                 else:
-                #                     raise GNNConstructorError(
-                #                         f"Connection from layer type {self.embedding_levels_by_layers[curr_layer_ind - 1]} to "
-                #                         f"layer type {self.embedding_levels_by_layers[curr_layer_ind]} is not supported now"
-                #                     )
-                #             else:
-                #                 raise ValueError(f"Unknown aggregation type: {aggregation_type}")
-                # if len(x_dict) > 0:  # stack
-                #     x_dict[f'prev_{curr_layer_ind - 1}'] = x_copy
-                #     x = x_dict
-                # else:  # cat
-                #     if zeroing_x_flag:
-                #         x = connection_tensor
-                #     else:
-                #         x = torch.cat((x_copy, connection_tensor), dim_cat)
 
             # QUE Kirill, maybe we should not off UserWarning
             with warnings.catch_warnings():
@@ -752,17 +695,22 @@ class FrameworkGNNConstructor(
                     code_str = f"getattr(self, elem[0])({self.modules_info[layer_name][TECHNICAL_PARAMETER_KEY]['forward_parameters']})"
                     x = eval(f"{code_str}")
                 else:
-                    x = getattr(self, elem[0])(src, dst)
+                    if is_first_layer:
+                        x = getattr(self, elem[0])(src, dst)
+                    else:
+                        x = getattr(self, elem[0])(x)
             if loc_flag:
                 layer_emb_dict[layer_ind] = torch.clone(x)
 
-            # out = x
-            # if self._my_forward_hooks:
-            #     for hook in self._my_forward_hooks.values():
-            #         hook(self, curr_layer_ind, feat, edge_index, inp, mid, out)
+            is_first_layer = False
+
+        # Remove dimension of size=1 after last layer to get edge score as a single number not list
+        x = torch.squeeze(x)
+
         if save_emb_flag:
-            # layer_emb_dict[layer_ind] = torch.clone(x)
+            layer_emb_dict[layer_ind] = torch.clone(x)
             return layer_emb_dict
+
         return x
 
 
@@ -815,7 +763,7 @@ class FrameworkGNNConstructor(
     ) -> torch.Tensor:
         if edge_out is not None:
             # Edge prediction task. Apply threshold
-            return edge_out > 0.5  # FIXME use parameter
+            return edge_out > 0.5  # TODO misha create parameter
         else:
             return self.get_predictions(*args, **kwargs).argmax(dim=1)
 

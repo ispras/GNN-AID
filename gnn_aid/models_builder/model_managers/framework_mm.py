@@ -17,7 +17,7 @@ from gnn_aid.data_structures import Task, GraphModificationArtifact
 from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
 from . import GNNModelManager
-from gnn_aid.models_builder.models_utils import Metric
+from gnn_aid.models_builder.models_utils import Metric, predict_top_k_edges
 from .. import GNNConstructor
 
 
@@ -444,20 +444,7 @@ class FrameworkGNNModelManager(GNNModelManager):
          availability depends on which methods have been overridden in the parent class
         :return: tensor of outputs
         """
-        task_type = gen_dataset.dataset_var_config.task
-        if mask == 'all' and task_type.is_edge_level():
-            # TODO all means we compare all node pairs. Try use faiss for approximate eval
-            raise NotImplementedError
-
-        try:
-            mask = {
-                'train': gen_dataset.train_mask,
-                'val': gen_dataset.val_mask,
-                'test': gen_dataset.test_mask,
-                'all': tensor([True] * len(gen_dataset.labels)),
-            }[mask]
-        except KeyError:
-            assert isinstance(mask, torch.Tensor)
+        mask_tensor = mask_to_tensor(gen_dataset, mask)
 
         run_func = {
             'answers': self.gnn.get_answer,
@@ -465,6 +452,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             'logits': self.gnn.__call__,
         }[out]
 
+        task_type = gen_dataset.dataset_var_config.task
         self.gnn.eval()
         with torch.no_grad():  # Turn off gradients computation
             if task_type.is_graph_level():
@@ -472,7 +460,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 part_loader = cast(
                     Iterable,
                     DataLoader(
-                        gen_dataset.dataset.index_select(mask),
+                        gen_dataset.dataset.index_select(mask_tensor),
                         batch_size=self.batch,
                         shuffle=False
                     )
@@ -490,7 +478,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             elif task_type.is_node_level():
                 data = gen_dataset.data
-                node_ind = [n for n, x in enumerate(mask) if x]
+                node_ind = [n for n, x in enumerate(mask_tensor) if x]
                 mask_size = len(node_ind)
 
                 # QUE Kirill, why we need batches here?
@@ -531,21 +519,14 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             elif task_type.is_edge_level():
                 data = gen_dataset.data
-                edge_label_index = mask
-                # edge_label_index = gen_dataset.edge_label_index[:, mask]
-
-                node_ind = torch.unique(edge_label_index)
-                mask_size = len(node_ind)
-
-                # data_x_elem_len = data.x.size()[1]
-                full_out = torch.empty(0, device=data.x.device)
-                # features_mask_tensor = torch.full(size=data.x.size(), fill_value=True)
+                edge_label_index = mask_tensor
 
                 data_x_copy = torch.clone(data.x)
 
-                for elem_ind in node_ind:
-                    # FIXME misha check, test
-                    if hasattr(self, 'mask_features'):
+                # FIXME misha check, test
+                if hasattr(self, 'mask_features'):
+                    node_ind = torch.unique(edge_label_index)
+                    for elem_ind in node_ind:
                         for feature in self.mask_features:
                             data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
                                                   gen_dataset.node_attr_slices[feature][1]] = 0
@@ -553,8 +534,6 @@ class FrameworkGNNModelManager(GNNModelManager):
                 # FIXME Kirill what to do if no optimizer, train_mask_flag, batch?
                 if hasattr(self, 'optimizer'):
                     self.optimizer.zero_grad()
-                # logits_batch = self.gnn(data_x_copy, data.edge_index)
-                # pred_batch = logits_batch.argmax(dim=1)
 
                 # get logits for nodes
                 node_out = self.gnn(data_x_copy, data.edge_index)
@@ -563,6 +542,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 dst = node_out[edge_label_index[1]]
 
                 edge_out = self.gnn.decode(src, dst)
+
                 full_out = None
                 if out == 'logits':
                     full_out = edge_out
@@ -579,7 +559,6 @@ class FrameworkGNNModelManager(GNNModelManager):
                     if task_type == Task.EDGE_PREDICTION:
                         # TODO misha thresholded(thr - параметр)
                         full_out = self.gnn.get_answer(edge_out=edge_out)
-                        # full_out = self.gnn.get_answer(edge_out, task_type)
                     elif task_type == Task.EDGE_CLASSIFICATION:
                         full_out = edge_out.softmax(dim=-1)
                     elif task_type == Task.EDGE_REGRESSION:
@@ -674,39 +653,22 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param metrics: list of metrics to compute. metric based on class Metric
         :return: dict {metric -> value}
         """
-        mask_metrics = {}
-        for metric in metrics:
-            mask = metric.mask
-            if mask not in mask_metrics:
-                mask_metrics[mask] = []
-            mask_metrics[mask].append(metric)
-
-        metrics_values = {}
-        for mask, ms in mask_metrics.items():
-            try:
-                mask_tensor = {
-                    'train': gen_dataset.train_mask.tolist(),
-                    'val': gen_dataset.val_mask.tolist(),
-                    'test': gen_dataset.test_mask.tolist(),
-                    'all': [True] * len(gen_dataset.labels),
-                }[mask]
-            except KeyError:
-                assert isinstance(mask, torch.Tensor)
-                mask_tensor = mask
+        # Compute model outputs for all needed masks
+        model_outputs = {}  # mask -> {outputs}
+        masks = set(m.mask for m in metrics)
+        for mask in masks:
+            mask_tensor = mask_to_tensor(gen_dataset, mask)
             if self.evasion_attacker and self.evasion_attack_flag:
                 # TODO pass decoder
                 self.call_evasion_attack(
                     gen_dataset=gen_dataset,
                     mask=mask,
                 )
-            metrics_values[mask] = {}
+            model_outputs[mask] = {}
 
             # Get model predictions
             task_type = gen_dataset.dataset_var_config.task
             if task_type == Task.EDGE_PREDICTION:
-                if mask == 'all':
-                    raise NotImplementedError
-
                 pos_edge_index = gen_dataset.edge_label_index[:, mask_tensor]
                 # TODO num_neg_samples as MM parameter
                 neg_edge_index = negative_sampling(
@@ -725,16 +687,56 @@ class FrameworkGNNModelManager(GNNModelManager):
                 neg_edge_index = neg_edge_index.to(device)
                 edge_mask = torch.cat([pos_edge_index, neg_edge_index], dim=1)
 
+                # FIXME we call model 2 times, can we cache the results?
+                y_pred_logits = self.run_model(gen_dataset, mask=edge_mask, out='logits')
                 y_pred = self.run_model(gen_dataset, mask=edge_mask, out='answers')
                 y_true = torch.cat([pos_label, neg_label], dim=0)
 
             else:
+                # FIXME we call model 2 times, can we cache the results?
+                y_pred_logits = self.run_model(gen_dataset, mask=mask, out='logits')
                 y_pred = self.run_model(gen_dataset, mask=mask, out='answers')
                 y_true = gen_dataset.labels[mask_tensor]
 
-            # Compute metrics
-            for metric in ms:
-                metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
+            model_outputs[mask] = {
+                'logits': y_pred_logits,
+                'answers': y_pred,
+                'true': y_true,
+            }
+
+        # Compute all nodes pairs scores for edge prediction
+        if any(m.needs_all_node_pairs() for m in metrics):
+            assert gen_dataset.dataset_var_config.task == Task.EDGE_PREDICTION
+
+            exclude_edges = None  # TODO
+            k = max(m.kwargs.get('k', 0) for m in metrics)
+            top_edges, top_scores = predict_top_k_edges(
+                self.gnn, gen_dataset.data, exclude_edges, k=k, use_faiss=False)
+            # y_pred_edges = list(zip(map(int, top_edges[0]), map(int, top_edges[1])))
+            model_outputs['all_pairs'] = top_edges
+
+            for mask in [m.mask for m in metrics if m.needs_all_node_pairs()]:
+                mask_tensor = mask_to_tensor(gen_dataset, mask)
+                edge_index = gen_dataset.edge_label_index[:, mask_tensor]
+                # y_true_edges = list(zip(map(int, edge_index[0]), map(int, edge_index[1])))
+                model_outputs[mask]['true_edges'] = edge_index
+
+        # Compute metrics
+        metrics_values = {}
+        for metric in metrics:
+            mask = metric.mask
+
+            y_pred = model_outputs[mask]['answers']
+            y_true = model_outputs[mask]['true']
+            if metric.needs_logits():
+                y_pred = model_outputs[mask]['logits']
+            if metric.needs_all_node_pairs():
+                y_pred = model_outputs['all_pairs']
+                y_true = model_outputs[mask]['true_edges']
+
+            if mask not in metrics_values:
+                metrics_values[mask] = {}
+            metrics_values[mask][metric.name()] = metric.compute(y_true, y_pred)
 
         if self.mi_attacker and self.mi_attack_flag:
             # TODO pass decoder
@@ -747,16 +749,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ):
         if self.evasion_attacker:
-            try:
-                mask_tensor = {
-                    'train': gen_dataset.train_mask.tolist(),
-                    'val': gen_dataset.val_mask.tolist(),
-                    'test': gen_dataset.test_mask.tolist(),
-                    'all': [True] * len(gen_dataset.labels),
-                }[mask]
-            except KeyError:
-                assert isinstance(mask, torch.Tensor)
-                mask_tensor = mask
+            mask_tensor = mask_to_tensor(gen_dataset, mask)
             self.evasion_attacker.attack(
                 model_manager=self,
                 gen_dataset=gen_dataset,
@@ -871,3 +864,30 @@ class FrameworkGNNModelManager(GNNModelManager):
         path = path / 'train_test_split'
         gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask, _ = torch.load(path)[:]
         return gen_dataset
+
+
+def mask_to_tensor(
+        gen_dataset: GeneralDataset,
+        mask: Union[str, List[bool], torch.Tensor] = 'test'
+) -> torch.Tensor:
+    """
+    Convert mask over nodes/edges/graphs to tensor.
+    Mask can be 'train', 'val', 'test', 'all', or Tensor of specific nodes/edges/graphs.
+
+    :param gen_dataset: dataset
+    :param mask: part of the dataset on which the output will be obtained.
+     'train', 'val', 'test', 'all', or Tensor of specific nodes/edges/graphs
+    :return: tensor of nodes/edges/graphs
+    """
+    try:
+        mask_tensor = {
+            'train': gen_dataset.train_mask,
+            'val': gen_dataset.val_mask,
+            'test': gen_dataset.test_mask,
+            'all': tensor([True] * len(gen_dataset.labels)),
+        }[mask]
+    except KeyError:
+        assert isinstance(mask, torch.Tensor)
+        mask_tensor = mask
+
+    return mask_tensor
