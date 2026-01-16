@@ -10,7 +10,7 @@ import torch
 
 from gnn_aid.aux.utils import all_subclasses
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from .gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 
 
 class FrameworkAttackDefenseManager:
@@ -82,7 +82,7 @@ class FrameworkAttackDefenseManager:
             self.set_clear_model()
             self.gnn_manager.modification.epochs = 0
             self.gnn_manager.gnn.reset_parameters()
-            from .gnn_models import Metric
+            from .models_utils import Metric
             local_gen_dataset_copy = copy.deepcopy(self.gen_dataset)
             self.gnn_manager.train_model(
                 gen_dataset=local_gen_dataset_copy,
@@ -144,7 +144,7 @@ class FrameworkAttackDefenseManager:
     ) -> dict:
         metrics_values = {}
         if self.available_attacks["evasion"] and self.available_defense["evasion"]:
-            from .gnn_models import Metric
+            from .models_utils import Metric
             local_gen_dataset_copy = copy.deepcopy(self.gen_dataset)
             self.set_clear_model()
             self.gnn_manager.modification.epochs = 0
@@ -241,7 +241,7 @@ class FrameworkAttackDefenseManager:
             self.set_clear_model()
             self.gnn_manager.modification.epochs = 0
             self.gnn_manager.gnn.reset_parameters()
-            from .gnn_models import Metric
+            from .models_utils import Metric
             local_gen_dataset_copy = copy.deepcopy(self.gen_dataset)
             self.gnn_manager.train_model(
                 gen_dataset=local_gen_dataset_copy,
@@ -298,7 +298,7 @@ class FrameworkAttackDefenseManager:
     ) -> dict:
         metrics_values = {}
         if self.available_attacks["poison"] and self.available_defense["poison"]:
-            from .gnn_models import Metric
+            from .models_utils import Metric
             local_gen_dataset_copy = copy.deepcopy(self.gen_dataset)
             self.set_clear_model()
             self.gnn_manager.modification.epochs = 0

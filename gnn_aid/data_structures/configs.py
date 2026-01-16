@@ -616,7 +616,7 @@ class DatasetVarConfig(Config):
     @property
     def task(
             self
-    ) -> Union[str, dict]:
+    ) -> Task:
         return self["task"]
 
     @property

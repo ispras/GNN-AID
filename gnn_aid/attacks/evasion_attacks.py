@@ -5,7 +5,7 @@ import copy
 from gnn_aid.attacks.attack_base import Attacker
 from gnn_aid.aux.utils import move_to_same_device
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 
 # Nettack imports
 from .evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack

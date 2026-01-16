@@ -9,7 +9,8 @@ from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConf
     ConfigPattern, FeatureConfig, Task
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
-from gnn_aid.models_builder.gnn_models import FrameworkGNNModelManager, Metric
+from gnn_aid.models_builder.models_utils import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 

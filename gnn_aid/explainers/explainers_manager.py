@@ -6,7 +6,7 @@ from gnn_aid.data_structures.configs import ExplainerInitConfig, ExplainerModifi
 from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 from .explainer import Explainer, ProgressBar
 from .explainer_metrics import NodesExplainerMetric
 

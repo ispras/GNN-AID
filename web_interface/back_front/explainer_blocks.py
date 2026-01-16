@@ -10,7 +10,7 @@ from gnn_aid.aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
-from gnn_aid.models_builder.gnn_models import GNNModelManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
 from .block import Block, WrapperBlock
 from .utils import json_loads, get_config_keys
 

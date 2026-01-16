@@ -1,8 +1,10 @@
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Callable, Union
 from typing import Callable
 
+import sklearn.metrics
 import torch
 import torch.nn as nn
+from torch import tensor
 from torch.utils.hooks import RemovableHandle
 from torch_geometric.nn import MessagePassing
 
@@ -129,3 +131,93 @@ class EdgeMaskingWrapper(nn.Module):
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
+
+
+class Metric:
+    available_metrics = {
+        'Accuracy': sklearn.metrics.accuracy_score,
+        'F1': sklearn.metrics.f1_score,
+        'BalancedAccuracy': sklearn.metrics.balanced_accuracy_score,
+        'Recall': sklearn.metrics.recall_score,
+        'Precision': sklearn.metrics.precision_score,
+        'Jaccard': sklearn.metrics.jaccard_score,
+    }
+
+    @staticmethod
+    def add_custom(
+            name: str,
+            compute_function: Callable
+    ) -> None:
+        """
+        Register a custom metric.
+        Example for accuracy:
+
+        >>> Metric.add_custom('accuracy', lambda y_true, y_pred, normalize=False:
+        >>>     int((y_true == y_pred).sum()) / (len(y_true) if normalize else 1))
+
+        :param name: name to refer to this metric
+        :param compute_function: function which computes metric result:
+         f(y_true, y_pred, **kwargs) -> value
+        """
+        if name in Metric.available_metrics:
+            raise NameError(f"Metric '{name}' already registered, use another name")
+        Metric.available_metrics[name] = compute_function
+
+    def __init__(
+            self,
+            name: str,
+            mask: Union[str, List[bool], torch.Tensor],
+            **kwargs
+    ):
+        """
+        :param name: name to refer to this metric
+        :param mask: 'train', 'val', 'test', or a bool valued list
+        :param kwargs: params used in compute function
+        """
+        self.name = name
+        self.mask = mask
+        self.kwargs = kwargs
+
+    def compute(
+            self,
+            y_true,
+            y_pred
+    ):
+        if self.name in Metric.available_metrics:
+            if y_true.device != "cpu":
+                y_true = y_true.cpu()
+            if y_pred.device != "cpu":
+                y_pred = y_pred.cpu()
+            return Metric.available_metrics[self.name](y_true, y_pred, **self.kwargs)
+        raise NotImplementedError()
+
+    @staticmethod
+    def create_mask_by_target_list(
+            y_true,
+            target_list: List = None
+    ) -> torch.Tensor:
+        if target_list is None:
+            mask = [True] * len(y_true)
+        else:
+            mask = [False] * len(y_true)
+        for i in target_list:
+            if 0 <= i < len(mask):
+                mask[i] = True
+        return tensor(mask)
+
+
+class GNNConstructorError(Exception):
+    def __init__(
+            self,
+            *args
+    ):
+        self.message = args[0] if args else None
+
+    def __str__(
+            self
+    ):
+        if self.message:
+            return f"GNNConstructorError: {self.message}"
+        else:
+            return "GNNConstructorError has been raised!"
+
