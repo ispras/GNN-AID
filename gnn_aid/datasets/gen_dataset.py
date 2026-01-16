@@ -366,7 +366,8 @@ class GeneralDataset(ABC):
                      train_data.edge_label_index.size(1) + val_data.edge_label_index.size(1)] = True
 
             test_mask = torch.zeros(total_edges, dtype=torch.bool)
-            test_mask[-test_data.edge_label_index.size(1):] = True
+            if test_data.edge_label_index.size(1) > 0:
+                test_mask[-test_data.edge_label_index.size(1):] = True
         else:
             raise ValueError(f"Unsupported task type {task_type}")
 
