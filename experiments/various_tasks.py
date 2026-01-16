@@ -108,7 +108,7 @@ def link_prediction():
 
     gen_dataset = DatasetManager.get_by_config(dc, dvc)
     print(gen_dataset.data)
-    gen_dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
+    gen_dataset.train_test_split(percent_train_class=0.8, percent_test_class=0.2)
 
     gnn = FrameworkGNNConstructor(
         model_config=ModelConfig(
@@ -227,7 +227,8 @@ def link_prediction():
     edge_label_index = torch.tensor([[5], [6]])
 
     # get embeddings for all nodes
-    node_out = gnn(data.x, data.edge_index)
+    train_edge_index = gen_dataset.edge_label_index[:, gen_dataset.train_mask]
+    node_out = gnn(data.x, train_edge_index)
 
     # Get embeddings for our nodes
     src = node_out[edge_label_index[0]]

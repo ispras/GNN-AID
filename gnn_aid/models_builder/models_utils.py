@@ -255,6 +255,11 @@ class Metric:
             res += '{' + kwargs + '}'
         return res
 
+    def __str__(
+            self
+    ) -> str:
+        return self.name()
+
     def compute(
             self,
             y_true,

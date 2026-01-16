@@ -519,13 +519,12 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             elif task_type.is_edge_level():
                 data = gen_dataset.data
-                edge_label_index = mask_tensor
-
+                train_edge_index = gen_dataset.edge_label_index[:, gen_dataset.train_mask]
                 data_x_copy = torch.clone(data.x)
 
                 # FIXME misha check, test
                 if hasattr(self, 'mask_features'):
-                    node_ind = torch.unique(edge_label_index)
+                    node_ind = torch.unique(train_edge_index)
                     for elem_ind in node_ind:
                         for feature in self.mask_features:
                             data_x_copy[elem_ind][gen_dataset.node_attr_slices[feature][0]:
@@ -535,21 +534,23 @@ class FrameworkGNNModelManager(GNNModelManager):
                 if hasattr(self, 'optimizer'):
                     self.optimizer.zero_grad()
 
-                # get logits for nodes
-                node_out = self.gnn(data_x_copy, data.edge_index)
+                # get logits for all nodes based on train edges
+                node_out = self.gnn(data_x_copy, train_edge_index)
 
-                src = node_out[edge_label_index[0]]
-                dst = node_out[edge_label_index[1]]
-
+                # Get logits for edges from mask
+                src = node_out[mask_tensor[0]]
+                dst = node_out[mask_tensor[1]]
                 edge_out = self.gnn.decode(src, dst)
 
+                # Apply different out
                 full_out = None
                 if out == 'logits':
                     full_out = edge_out
                 elif out == 'predictions':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha
-                        raise NotImplementedError
+                        # TODO misha is it ok?
+                        full_out = edge_out.softmax(dim=-1)
+                        # raise NotImplementedError
                     elif task_type == Task.EDGE_CLASSIFICATION:
                         full_out = edge_out.softmax(dim=-1)
                     elif task_type == Task.EDGE_REGRESSION:
