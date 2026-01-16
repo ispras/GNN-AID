@@ -25,7 +25,7 @@ sphinx_docs
 *explainers_metrics*
 experiments/explainers_metrics/**/*_metrics.json
 
-
+datasets
 explanations
 models
 models_exp
