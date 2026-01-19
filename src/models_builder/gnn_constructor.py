@@ -626,6 +626,8 @@ class FrameworkGNNConstructor(
             *args,
             **kwargs
     ) -> torch.Tensor:
+        # FIXME Kirill. tmp fix of AttributeError: 'dict' object has no attribute 'softmax' for SubgraphX
+        # self._save_emb_flag = False
         return self(*args, **kwargs).softmax(dim=-1)
         # return self.forward(*args, **kwargs)
 

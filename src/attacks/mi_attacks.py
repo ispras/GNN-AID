@@ -116,6 +116,8 @@ class NaiveMIAttacker(
         mask_tensor: Union[str, List[bool], torch.Tensor],
     ):
         assert not isinstance(mask_tensor, str), "Input of original mask seems senseless"
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
 
         model.eval()
 
@@ -222,6 +224,8 @@ class ShadowModelMIAttacker(
             mask_tensor: Union[List[bool], torch.Tensor],
             **kwargs
     ):
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
         task_type = gen_dataset.is_multi()
         if task_type:
             self.model_name = 'gcn_gcn_linear'

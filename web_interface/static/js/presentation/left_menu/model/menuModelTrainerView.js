@@ -32,6 +32,13 @@ class MenuModelTrainerView extends MenuView {
         await this.updateTrainerMenu()
     }
 
+    async _accept() {
+        let metrics = this.getMetrics()
+        // We should pass metrics if user presses 'accept' without training
+        await controller.blockRequest(
+            this.requestBlock, 'modify', {'metrics': metrics})
+    }
+
     onReceive(block, args) {
         // super.onReceive(block, args)
         if (block === 'mt') {

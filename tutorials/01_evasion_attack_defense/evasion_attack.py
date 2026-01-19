@@ -50,12 +50,13 @@ def evasion_attack():
     # the evasion attack. You can see the available evasion attack types and their default parameters in
     # ./metainfo/evasion_attack_parameters.json
     evasion_attack_config = ConfigPattern(
-        _class_name="FGSM",
+        # _class_name="FGSM",
+        _class_name="PGD",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "epsilon": 0.01,
-            "is_feature_attack": True,
+            # "epsilon": 0.01,
+            # "is_feature_attack": True,
         }
     )
     # Here we pass information to the model manager about the attack configuration, which will be enabled by default

@@ -366,6 +366,8 @@ class ModelTrainerBlock(Block):
     def _submit(
             self
     ) -> None:
+        self.metrics = [Metric(**m) for m in self._config.get('metrics')]
+
         self._object = [self.model_manager, self.metrics]
 
     def do(

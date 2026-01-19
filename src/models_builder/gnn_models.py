@@ -1394,7 +1394,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
         if self.mi_attacker and self.mi_attack_flag:
-            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
+            self.call_mi_attack(gen_dataset=gen_dataset, mask=mask, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(
@@ -1423,9 +1423,20 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset,
             model: torch.nn.Module,
-            mask_tensor: Union[str, List[bool], torch.Tensor] = 'test'
+            mask: Union[str, List[bool], torch.Tensor] = 'test'
     ):
         if self.mi_attacker:
+            # FIXME misha this is tmp fix should be removed after merge with models stage 3
+            try:
+                mask_tensor = {
+                    'train': gen_dataset.train_mask.tolist(),
+                    'val': gen_dataset.val_mask.tolist(),
+                    'test': gen_dataset.test_mask.tolist(),
+                    'all': [True] * len(gen_dataset.labels),
+                }[mask]
+            except KeyError:
+                assert isinstance(mask, torch.Tensor)
+                mask_tensor = mask
             self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
 
     def compute_stats_data(
