@@ -133,6 +133,13 @@ class PanelModelStatView extends PanelView {
         if (data["metrics_values"]) {
             this.$metricsDiv.append($("<label></label>").text('Metrics:'))
             for (const [part, metricValues] of Object.entries(data["metrics_values"])) {
+                if (!(part in this.metricsValues)) {
+                    // Just add to div not to chart
+                    this.$metricsDiv.append($("<label></label>").text(
+                        part + ' ' + JSON_stringify(metricValues)))
+                    continue
+                }
+
                 let thisMetricsValues = this.metricsValues[part]
                 for (const [metric, value] of Object.entries(metricValues)) {
                     if (!(metric in thisMetricsValues)) {

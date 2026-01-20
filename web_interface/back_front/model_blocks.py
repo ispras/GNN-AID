@@ -1,5 +1,6 @@
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Union
 
@@ -341,9 +342,12 @@ class ModelTrainerBlock(Block):
     ):
         super().__init__(*args, **kwargs)
 
-        self.gen_dataset = None
+        self.gen_dataset: GeneralDataset = None
         self.model_manager = None
         self.metrics = None
+
+        # Copy of the dataset before attacks applied.
+        self._gen_dataset_backup: GeneralDataset = None
 
     def _init(
             self,
@@ -367,8 +371,21 @@ class ModelTrainerBlock(Block):
             self
     ) -> None:
         self.metrics = [Metric(**m) for m in self._config.get('metrics')]
-
         self._object = [self.model_manager, self.metrics]
+        self._save_model()
+
+        # Make a dataset backup
+        if self._gen_dataset_backup is None:
+            # Make a dataset backup
+            # FIXME This is a bad way - for large datasets very bad. It is a temporary solution
+            self._gen_dataset_backup = deepcopy(self.gen_dataset)
+
+    def _unlock(
+            self
+    ) -> None:
+        # Retract changes - reset dataset as before evasion attacks
+        # FIXME This is a bad way - for large datasets very bad. It is a temporary solution
+        self.gen_dataset = deepcopy(self._gen_dataset_backup)
 
     def do(
             self,
@@ -443,9 +460,12 @@ class ModelTrainerBlock(Block):
             mode: Union[str, None],
             steps: Union[int, None]
     ) -> None:
+        apply_posisoning_ad = True if self.model_manager.modification.epochs == 0 else False
         self.model_manager.train_model(
             gen_dataset=self.gen_dataset, save_model_flag=False,
-            mode=mode, steps=steps, metrics=self.metrics, socket=self.socket)
+            mode=mode, steps=steps, metrics=self.metrics, socket=self.socket,
+            apply_posisoning_ad=apply_posisoning_ad)
+        self.socket.send(block='mt', msg={"info": "training-finished"})
 
     def _save_model(
             self

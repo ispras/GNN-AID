@@ -52,6 +52,10 @@ class MenuModelTrainerView extends MenuView {
                 if (text)
                     this.progressBar.setText(text)
             }
+            else if ("info" in args) {
+                if (args["info"] === "training-finished")
+                    this.ontrainfinish()
+            }
         }
     }
 
@@ -75,6 +79,20 @@ class MenuModelTrainerView extends MenuView {
         await controller.ajaxRequest('/model',
             {do: "train", mode: mode, steps: steps, metrics: JSON_stringify(metrics)})
         this.$acceptDiv.find('button').prop("disabled", false)
+    }
+
+    ontrainstart() {
+        // Lock panels
+        console.log('ontrainstart')
+        blockDiv($("#menu-dataset"), true, "wait")
+        blockDiv($("#menu-model"), true, "wait")
+    }
+
+    ontrainfinish() {
+        // Unlock panels
+        console.log('ontrainfinish')
+        blockDiv($("#menu-dataset"), false, "wait")
+        blockDiv($("#menu-model"), false, "wait")
     }
 
     async onstop() {
@@ -228,6 +246,7 @@ class MenuModelTrainerView extends MenuView {
                 blockLeftMenu(true)
                 await this.ontrain(mode, parseInt(this.$epochsInput.val()), this.getMetrics())
                 blockLeftMenu(false)
+                this.ontrainstart()
                 $button.prop("disabled", false)
                 this.$save.prop("disabled", false)
                 this.$reset.prop("disabled", false)

@@ -135,7 +135,7 @@ class Block:
 
     def _finalize(
             self
-    ) -> None:
+    ) -> bool:
         """ Checks whether the config is correct to create the object.
         Returns True if OK or False.
         # TODO can we send to front errors to be fixed?

@@ -259,7 +259,7 @@ def worker_process(
                         result = json_dumps(client.mcustomBlock.get_index())
                 elif do in ['train', 'reset', 'run', 'save']:
                     result = client.mtBlock.do(do, args)
-                elif do in ['run with attacks']:
+                elif do in ['run with attacks', 'save attack configs']:
                     result = client.atBlock.do(do, args)
                 else:
                     raise WebInterfaceError(f"Unknown do command: '{do}'")

@@ -1129,7 +1129,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             mode: Union[str, None] = None,
             steps=None,
             metrics: List[Metric] = None,
-            socket: SocketConnect = None
+            socket: SocketConnect = None,
+            apply_posisoning_ad: bool = True
     ) -> Union[str, Path]:
         """
         Convenient train method.
@@ -1140,14 +1141,16 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param steps: train specific number of epochs, if None - all of them
         :param metrics: list of metrics to measure at each step or at the end of training
         :param socket: socket to use for sending data to frontend
+        :param apply_posisoning_ad: if True, apply posisoning attack and defense before the training
         """
         from explainers.explainer import ProgressBar
-        gen_dataset = self.load_or_execute_poisoning_attack(
-            gen_dataset=gen_dataset
-        )
-        gen_dataset = self.load_or_execute_poisoning_defense(
-            gen_dataset=gen_dataset
-        )
+        if apply_posisoning_ad:
+            gen_dataset = self.load_or_execute_poisoning_attack(
+                gen_dataset=gen_dataset
+            )
+            gen_dataset = self.load_or_execute_poisoning_defense(
+                gen_dataset=gen_dataset
+            )
 
         self.socket = socket
         pbar = ProgressBar(self.socket, "mt")

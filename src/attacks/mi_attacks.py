@@ -1,5 +1,5 @@
 import copy
-from typing import Union, List
+from typing import Union, List, Dict
 
 import torch
 from sklearn.metrics import accuracy_score
@@ -30,7 +30,7 @@ class MIAttacker(
             inferred_labels: torch.Tensor,
             mask_true: torch.Tensor,
             train_class_label: bool = True
-    ) -> float:
+    ) -> Union[float, Dict]:
         """
         Computes accuracy for a single attack result (mask + inferred labels pair).
 
@@ -40,7 +40,7 @@ class MIAttacker(
             mask_true: Tensor of true labels for all nodes in the graph
 
         Returns:
-            float: Accuracy (0.0 to 1.0) of correct predictions among attacked samples
+            float: Dict with metrics for predictions among attacked samples.
                    Returns 0.0 if no samples were attacked
         """
         metrics = {
@@ -82,6 +82,7 @@ class MIAttacker(
             metrics['f1_train'] = 2 * (precision * recall) / (precision + recall)
 
         return metrics
+
 
 class EmptyMIAttacker(
     MIAttacker

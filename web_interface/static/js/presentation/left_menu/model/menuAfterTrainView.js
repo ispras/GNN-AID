@@ -15,7 +15,8 @@ class MenuAfterTrainView extends MenuView {
         this.$methodSelects = Object.fromEntries(MenuAfterTrainView.names.map(x => [x, null]))
 
         // Buttons
-        this.$run = null
+        this.$run = null // Run with attacks
+        this.$save = null
         // this.$reset = null
     }
 
@@ -48,6 +49,16 @@ class MenuAfterTrainView extends MenuView {
         await controller.ajaxRequest('/model',
             {do: "run with attacks", configs: JSON_stringify(configs)})
         this.$run.prop("disabled", false)
+        this.$acceptDiv.find('button').prop("disabled", false)
+    }
+
+    async onsave() {
+        let configs = this._getConfigs()
+        this.$acceptDiv.find('button').prop("disabled", true)
+        this.$save.prop("disabled", true)
+        await controller.ajaxRequest('/model',
+            {do: "save attack configs", configs: JSON_stringify(configs)})
+        this.$save.prop("disabled", false)
         this.$acceptDiv.find('button').prop("disabled", false)
     }
 
@@ -124,6 +135,18 @@ class MenuAfterTrainView extends MenuView {
 
         this.$run.click(async () => {
             this.onrun() // No await
+        })
+
+        $cb = $("<div></div>").attr("class", "control-block")
+        this.$mainDiv.append($cb)
+        this.$save = $("<button></button>")
+            .attr("id", "model-button-save-after").text("Save")
+            .css("margin-right", "5px")
+            .attr("title", "Save the chosen attack configurations")
+        $cb.append(this.$save)
+
+        this.$save.click(async () => {
+            this.onsave() // No await
         })
 
     }
