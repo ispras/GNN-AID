@@ -200,8 +200,12 @@ class AfterTrainBlock(Block):
 
             # Apply attacks
             metrics_values = {}
-            metrics_values['After attacks'] = self.model_manager.evaluate_model(
+            res = self.model_manager.evaluate_model(
                 gen_dataset=self.gen_dataset, metrics=self.metrics)
+            if self.ad_configs["AD-ea"] is not None:
+                metrics_values['After evasion attack'] = res
+            else:
+                metrics_values = res
 
             # Get MI metrics
             import numpy as np

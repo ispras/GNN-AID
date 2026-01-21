@@ -309,7 +309,7 @@ class PGDAttacker(
             self,
             model_manager: Type,
             gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor,
+            mask_tensor: torch.Tensor,  # is not used
             task_type: str = None,
     ) -> None:
         if task_type is None:
