@@ -168,7 +168,7 @@ class DummyExplainer(
             model_manager: Type
     ) -> bool:
         """ Fits for all """
-        return True
+        return False
 
     def __init__(
             self,

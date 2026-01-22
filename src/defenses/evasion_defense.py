@@ -249,6 +249,11 @@ class AdvTraining(
         self.perturbed_gen_dataset.dataset = self.perturbed_gen_dataset.data
         self.perturbed_gen_dataset.dataset.data = self.perturbed_gen_dataset.data
 
+        def is_multi():
+            return task_type == "multiple-graphs"
+
+        setattr(self.perturbed_gen_dataset, "is_multi", is_multi)
+
         # self.perturbed_gen_dataset = LocalPTGDataset(batch)
         if self.attack_type == "EVASION":
             self.attacker.attack(
