@@ -11,6 +11,7 @@ from gnn_aid.models_builder.model_managers import GNNModelManager
 from .evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
 
 # PGD imports
+from torch_geometric.data import Batch
 from torch_geometric.data import Data
 from torch_geometric.utils import k_hop_subgraph
 from gnn_aid.models_builder.models_utils import EdgeMaskingWrapper
@@ -436,29 +437,7 @@ class PGDAttacker(
         model.eval()
         attack_loss = self.get_attack_loss(model_manager)
 
-        if task_type:
-            graph_idx = self.element_idx
-            x = gen_dataset.dataset[graph_idx].x.clone()
-            edge_index = gen_dataset.dataset[graph_idx].edge_index.clone()
-            y = gen_dataset.dataset[graph_idx].y.clone()
-        else:
-            node_idx = self.element_idx
-            x = gen_dataset.data.x.clone()
-            edge_index = gen_dataset.data.edge_index.clone()
-            y = gen_dataset.data.y.clone()
-
-            num_hops = model.n_layers
-            subset, edge_index_subset, inv, edge_mask_k_hop = k_hop_subgraph(
-                node_idx=node_idx,
-                num_hops=num_hops,
-                edge_index=edge_index,
-                relabel_nodes=True,
-                directed=False
-            )
-            node_idx_remap = torch.where(subset == node_idx)[0].item()
-            x = x[subset]
-            y = y[subset]
-
+        """
         if self.is_feature_attack:
             orig_x = x.clone()
             x.requires_grad = True
@@ -496,8 +475,98 @@ class PGDAttacker(
                 for remap_idx, node_idx in enumerate(subset.detach().cpu()):
                     for feature_idx in range(x.size(1)):
                         self.attack_diff.change_node_feature(node_idx, feature_idx,
-                                                             x[remap_idx][feature_idx].detach().cpu().item())
+                                                             x[remap_idx][feature_idx].detach().cpu().item())"""
+
+        if self.is_feature_attack:
+            device = gen_dataset.data.x.device
+
+            if task_type:
+                graph_idxs = mask_tensor.nonzero(as_tuple=True)[0]  # LongTensor индексов графов
+
+                selected_graphs = [gen_dataset.dataset[i].clone() for i in graph_idxs.tolist()]
+
+                batch = Batch.from_data_list(selected_graphs).to(device)
+
+                x = batch.x.clone()
+                edge_index = batch.edge_index
+                y = batch.y
+                batch_vec = batch.batch
+
+                orig_x = x.clone()
+                x.requires_grad_(True)
+
+                for _ in tqdm(range(self.num_iterations)):
+                    if x.grad is not None:
+                        x.grad.zero_()
+
+                    out = model(x, edge_index, batch_vec)
+                    loss = attack_loss(out, y)
+                    loss.backward()
+
+                    with torch.no_grad():
+                        x -= self.learning_rate * x.grad.sign()
+                        x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
+                        x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
+
+                ptr = batch.ptr
+                attacked = []
+                for j, gi in enumerate(graph_idxs.tolist()):
+                    start = int(ptr[j])
+                    end = int(ptr[j + 1])
+
+                    attacked.append({
+                        "graph_idx": gi,
+                        "x": x[start:end].detach().clone(),
+                        "edge_index": selected_graphs[j].edge_index
+                    })
+                self.attack_res = attacked
+
+            else:
+                x = gen_dataset.data.x.clone()
+                edge_index = gen_dataset.data.edge_index.clone()
+                y = gen_dataset.data.y.clone()
+                # node_idxs = mask_tensor.nonzero(as_tuple=True)[0].tolist()
+
+                orig_x = x.clone()
+                x.requires_grad = True
+
+                for _ in tqdm(range(self.num_iterations)):
+                    if x.grad is not None:
+                        x.grad.zero_()
+                    out = model(x, edge_index)
+                    loss = attack_loss(out[mask_tensor], y[mask_tensor])
+                    loss.backward()
+                    with torch.no_grad():
+                        x -= self.learning_rate * x.grad.sign()
+                        x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
+                        x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
+
+                self.attack_res = Data(x=x, edge_index=edge_index, y=y)
+
         else:  # structure attack
+            if task_type:
+                graph_idx = self.element_idx
+                x = gen_dataset.dataset[graph_idx].x.clone()
+                edge_index = gen_dataset.dataset[graph_idx].edge_index.clone()
+                y = gen_dataset.dataset[graph_idx].y.clone()
+            else:
+                node_idx = self.element_idx
+                x = gen_dataset.data.x.clone()
+                edge_index = gen_dataset.data.edge_index.clone()
+                y = gen_dataset.data.y.clone()
+
+                num_hops = model.n_layers
+                subset, edge_index_subset, inv, edge_mask_k_hop = k_hop_subgraph(
+                    node_idx=node_idx,
+                    num_hops=num_hops,
+                    edge_index=edge_index,
+                    relabel_nodes=True,
+                    directed=False
+                )
+                node_idx_remap = torch.where(subset == node_idx)[0].item()
+                x = x[subset]
+                y = y[subset]
+
             if task_type:
                 num_edges = edge_index.size(1)
             else:
