@@ -79,6 +79,15 @@ class FGSMAttacker(
         self.attack_diff = GraphModificationArtifact()
         self.attack_res_misha = None
 
+    @staticmethod
+    def get_attack_loss(model_manager):
+        """
+        Returns a loss function that computes -loss_fn(pred, target). Lower loss value means better attack.
+        """
+        def attack_loss(output, target):
+            return -model_manager.loss_function(output, target)
+        return attack_loss
+
     def attack(
             self,
             model_manager: Type,

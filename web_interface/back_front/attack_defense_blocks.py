@@ -219,7 +219,7 @@ class AfterTrainBlock(Block):
                 metrics_values = res
 
             # Apply MI attack and get metrics
-            if self.ad_configs["AD-ea"] is not None:
+            if self.ad_configs["AD-ma"] is not None:
                 import numpy as np
                 assert not self.gen_dataset.is_multi()
                 target_list = np.random.choice(
