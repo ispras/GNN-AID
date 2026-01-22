@@ -1,6 +1,8 @@
 import json
 from copy import deepcopy
 
+import torch
+
 from attacks.mi_attacks import MIAttacker
 from aux.data_info import DataInfo
 from data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
@@ -198,7 +200,16 @@ class AfterTrainBlock(Block):
             self.model_manager.set_evasion_attacker(self.ad_configs["AD-ea"])
             self.model_manager.set_mi_attacker(self.ad_configs["AD-ma"])
 
-            # Apply attacks
+            # Apply evasion attack
+            if self.ad_configs["AD-ea"] is not None:
+                # attack_mask =
+
+                self.model_manager.call_evasion_attack(
+                    gen_dataset=self.gen_dataset,
+                    mask=torch.empty(1),
+                )
+
+            # Evaluate metrics
             metrics_values = {}
             res = self.model_manager.evaluate_model(
                 gen_dataset=self.gen_dataset, metrics=self.metrics)
@@ -207,32 +218,35 @@ class AfterTrainBlock(Block):
             else:
                 metrics_values = res
 
-            # Get MI metrics
-            import numpy as np
-            assert not self.gen_dataset.is_multi()
-            target_list = np.random.choice(
-                self.gen_dataset.info.nodes[0], size=100, replace=False)
-            mask_loc = Metric.create_mask_by_target_list(
-                y_true=self.gen_dataset.labels, target_list=target_list)
-            # self.model_manager.evaluate_model(
-            #     gen_dataset=self.gen_dataset,
-            #     metrics=[Metric("F1", mask=mask_loc, average='macro')])
-            # Apply MI attack on a special mask
-            self.model_manager.mi_attacker.attack(
-                gen_dataset=self.gen_dataset, model=self.model_manager.gnn,
-                mask_tensor=mask_loc)
-            res = self.model_manager.mi_attacker.results.get(mask_loc)
-            if res is not None:
-                metrics_values['MI attack results'] = MIAttacker.compute_single_attack_accuracy(
-                    mask_loc, res, self.gen_dataset.train_mask)
+            # Apply MI attack and get metrics
+            if self.ad_configs["AD-ea"] is not None:
+                import numpy as np
+                assert not self.gen_dataset.is_multi()
+                target_list = np.random.choice(
+                    self.gen_dataset.info.nodes[0], size=100, replace=False)
+                mask_loc = Metric.create_mask_by_target_list(
+                    y_true=self.gen_dataset.labels, target_list=target_list)
+                # Apply MI attack on a special mask
+                self.model_manager.mi_attacker.attack(
+                    gen_dataset=self.gen_dataset, model=self.model_manager.gnn,
+                    mask_tensor=mask_loc)
+                res = self.model_manager.mi_attacker.results.get(mask_loc)
+                if res is not None:
+                    metrics_values['MI attack results'] = MIAttacker.compute_single_attack_accuracy(
+                        mask_loc, res, self.gen_dataset.train_mask)
 
             # Update model logits and predictions
             self.model_manager.compute_stats_data(
                 gen_dataset=self.gen_dataset, predictions=True, logits=True)
+            stats_data = self.model_manager.stats_data
 
             # print("metrics_values after attacks", metrics_values)
             stats_data = {k: self.gen_dataset.visible_part.filter(v)
-                          for k, v in self.model_manager.stats_data.items()}
+                          for k, v in stats_data.items()}
+
+            # Update dataset features
+            stats_data["node_features"] = self.gen_dataset.visible_part.get_dataset_var_data().node_features
+
             self.model_manager.send_epoch_results(
                 metrics_values=metrics_values, stats_data=stats_data, socket=self.socket)
             return ''
@@ -269,6 +283,12 @@ class AfterTrainBlock(Block):
         self._restore_dataset()
         self.model_manager.set_evasion_attacker(None)
         self.model_manager.set_mi_attacker(None)
+
+        # Update dataset features
+        stats_data = {
+            "node_features": self.gen_dataset.visible_part.get_dataset_var_data().node_features
+        }
+        self.socket.send(block='at', msg=stats_data, tag='node_features', obligate=True)
 
     def _restore_dataset(
             self

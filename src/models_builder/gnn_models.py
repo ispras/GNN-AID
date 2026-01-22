@@ -1384,11 +1384,11 @@ class FrameworkGNNModelManager(GNNModelManager):
             except KeyError:
                 assert isinstance(mask, torch.Tensor)
                 mask_tensor = mask
-            if self.evasion_attacker and self.evasion_attack_flag:
-                self.call_evasion_attack(
-                    gen_dataset=gen_dataset,
-                    mask=mask,
-                )
+            # if self.evasion_attacker and self.evasion_attack_flag:
+            #     self.call_evasion_attack(
+            #         gen_dataset=gen_dataset,
+            #         mask=mask,
+            #     )
             metrics_values[mask] = {}
             y_pred = self.run_model(gen_dataset, mask=mask)
             y_true = gen_dataset.labels[mask_tensor]
@@ -1396,8 +1396,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             for metric in ms:
                 metrics_values[mask][metric.name] = metric.compute(y_pred, y_true)
                 # metrics_values[mask][metric.name] = MetricManager.compute(metric, y_pred, y_true)
-        if self.mi_attacker and self.mi_attack_flag:
-            self.call_mi_attack(gen_dataset=gen_dataset, mask=mask, model=self.gnn)
+        # if self.mi_attacker and self.mi_attack_flag:
+        #     self.call_mi_attack(gen_dataset=gen_dataset, mask=mask, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(

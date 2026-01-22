@@ -102,7 +102,7 @@ class DatasetView extends View {
 
     onReceive(block, data) {
         // super.onReceive(block, args)
-        if (block === "mmc" || block === "mt") {
+        if (block === "mmc" || block === "mt" || block === "at") {
             for (const satellite of VisibleGraph.SATELLITES) {
                 if (satellite in data) {
                     this.datasetVar[satellite] = data[satellite]

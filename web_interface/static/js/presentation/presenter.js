@@ -23,7 +23,7 @@ class Presenter {
 
         this.datasetView = new DatasetView(
             $("#dataset-graph-view"), null,
-            ["dc", "dvc", "mmc", "mt", "ei", "er", "el"])
+            ["dc", "dvc", "mmc", "mt", "ei", "er", "el", "at"])
 
         this.modelView = new MenuModelView(
             $("#menu-model-view"), "mc", [])

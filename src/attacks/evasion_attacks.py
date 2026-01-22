@@ -8,12 +8,13 @@ from datasets.gen_dataset import GeneralDataset
 from models_builder.gnn_models import GNNModelManager
 
 # Nettack imports
-from attacks.evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
+from .evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
 
 # PGD imports
+from torch_geometric.data import Data
 from torch_geometric.utils import k_hop_subgraph
 from models_builder.models_utils import EdgeMaskingWrapper
-from attacks.evasion_attacks_collection.pgd.utils import random_sampling
+from .evasion_attacks_collection.pgd.utils import random_sampling
 from data_structures.graph_modification_artifacts import GraphModificationArtifact, GlobalNodeIndexer
 from tqdm import tqdm
 
@@ -21,7 +22,7 @@ from tqdm import tqdm
 from models_builder.models_utils import apply_decorator_to_graph_layers
 
 # ReWatt imports
-from attacks.evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
+from .evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
     GraphState, ReWattAgent
 
 
@@ -76,6 +77,7 @@ class FGSMAttacker(
         self.epsilon = epsilon
         self.grad_aggr_type = 'mean'
         self.attack_diff = GraphModificationArtifact()
+        self.attack_res_misha = None
 
     def attack(
             self,
@@ -84,39 +86,75 @@ class FGSMAttacker(
             mask_tensor: torch.Tensor,
             task_type: str = None,
     ):
-        if task_type is None:
-            task_type = gen_dataset.is_multi()
-        elif task_type == "multiple-graphs":
-            task_type = True
-        else:
-            task_type = False
+        # task = gen_dataset.dataset_var_config.task
+        device = gen_dataset.data.x.device
+
         if self.is_feature_attack:
             model = model_manager.gnn
             model.eval()
-            if task_type:
+
+            # if task.is_edge_level():
+            #     data = gen_dataset.data
+            #     x = data.x
+            #     x.requires_grad = True
+            #
+            #     # TODO now support only one edge, mask_tensor?
+            #     edge_label_index = torch.tensor([[5], [6]]).to(device)
+            #     edge_label = ((data.edge_index == edge_label_index).all(dim=0).any()).float().unsqueeze(dim=0).to(device)
+            #
+            #     node_out = model(data.x, data.edge_index)
+            #     src = node_out[edge_label_index[0]]
+            #     dst = node_out[edge_label_index[1]]
+            #     edge_out = model.decode(src, dst).unsqueeze(dim=0).to(device)
+            #
+            #     # TODO use model_manager.loss_function when BCE support
+            #     # loss = model_manager.loss_function(edge_out, edge_label)
+            #     criterion = torch.nn.BCEWithLogitsLoss()
+            #     loss = criterion(edge_out, edge_label)
+            #     model.zero_grad()
+            #     loss.backward()
+            #     sign_data_grad = x.grad.sign()
+            #     perturbed_data_x = x + self.epsilon * sign_data_grad
+            #     perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
+            #     gen_dataset.data.x = perturbed_data_x.detach()
+            #
+            # elif task.is_graph_level() and task.is_classification():  # graph_classification
+            if gen_dataset.is_multi():
                 graph_idx = self.element_idx
                 x = gen_dataset.dataset[graph_idx].x
                 x.requires_grad = True
                 edge_index = gen_dataset.dataset[graph_idx].edge_index
                 y = gen_dataset.dataset[graph_idx].y
+
+                output = model(x, edge_index)
+                loss = model_manager.loss_function(*move_to_same_device(output, y))
+                model.zero_grad()
+                loss.backward()
+                sign_data_grad = x.grad.sign()
+                perturbed_data_x = x + self.epsilon * sign_data_grad
+                perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
+                gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
+
+            # elif task.is_node_level() and task.is_classification():  # node_classification
             else:
-                # node_idx = self.element_idx
+                node_idx = self.element_idx
                 x = gen_dataset.data.x
                 x.requires_grad = True
                 edge_index = gen_dataset.data.edge_index
-                y = gen_dataset.data.y
-            output = model(x, edge_index)
-            loss = model_manager.loss_function(*move_to_same_device(output, y))
-            model.zero_grad()
-            loss.backward()
-            sign_data_grad = x.grad.sign()
-            perturbed_data_x = x + self.epsilon * sign_data_grad
-            perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
-            # gen_dataset.data.x = perturbed_data_x.detach()
-            if task_type:
-                gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
-            else:
+                y = gen_dataset.data.y[node_idx]
+
+                output = model(x, edge_index)[node_idx]
+                loss = model_manager.loss_function(*move_to_same_device(output, y))
+                model.zero_grad()
+                loss.backward()
+                sign_data_grad = x.grad.sign()
+                perturbed_data_x = x + self.epsilon * sign_data_grad
+                perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
                 gen_dataset.data.x = perturbed_data_x.detach()
+
+            # else:
+            #     pass
+
             # if task_type:
             #     gni = GlobalNodeIndexer(gen_dataset.dataset)
             #     for node_idx in tqdm(range(perturbed_data_x.size(0))):
@@ -127,7 +165,78 @@ class FGSMAttacker(
             #         for feature_idx in range(gen_dataset.data.x.size(1)):
             #             self.attack_diff.change_node_feature(node_idx, feature_idx, perturbed_data_x[node_idx][feature_idx].detach().cpu().item())
         else:
-            if task_type:
+            # if task.is_edge_level():
+            #
+            #     edge_index = gen_dataset.data.edge_index
+            #     y = gen_dataset.data.y
+            #     x = gen_dataset.data.x
+            #
+            #     edge_label_index = torch.tensor([[7], [6]]).to(device)
+            #     edge_label = ((edge_index == edge_label_index).all(dim=0).any()).float().unsqueeze(dim=0).to(device)
+            #     node_idx_1 = edge_label_index[0].item()
+            #     node_idx_2 = edge_label_index[1].item()
+            #
+            #     model = model_manager.gnn
+            #     model.eval()
+            #     num_hops = model.n_layers
+            #
+            #     subset, edge_index_subset, inv, edge_mask = k_hop_subgraph(node_idx=[node_idx_1, node_idx_2],
+            #                                                                num_hops=num_hops,
+            #                                                                edge_index=edge_index,
+            #                                                                relabel_nodes=True,
+            #                                                                directed=False)
+            #
+            #     node_idx_1_remap = torch.where(subset == node_idx_1)[0]
+            #     node_idx_2_remap = torch.where(subset == node_idx_2)[0]
+            #     x = x.clone()
+            #     x = x[subset]
+            #
+            #     first_layer_name, layer = next(model.named_children())
+            #     apply_decorator_to_graph_layers(model)
+            #
+            #     # budget = int(self.epsilon * edge_index_subset.size(1))
+            #     budget = 10
+            #
+            #     perturbed_edges = edge_index_subset.clone()
+            #     self_loops_part_size = subset.size(0)
+            #
+            #     for _ in tqdm(range(budget)):
+            #         node_out = model(x, perturbed_edges)
+            #         src = node_out[node_idx_1_remap]
+            #         dst = node_out[node_idx_2_remap]
+            #         edge_out = model.decode(src, dst).unsqueeze(dim=0).to(device)
+            #         # TODO use model_manager.loss_function when BCE support
+            #         # loss = -model_manager.loss_function(edge_out, edge_label)
+            #         criterion = torch.nn.BCEWithLogitsLoss()
+            #         loss = -criterion(edge_out, edge_label)
+            #         loss.backward()
+            #
+            #         grad = layer.message_gradients[first_layer_name]
+            #         if self.grad_aggr_type == 'mean':
+            #             grad = torch.mean(grad, dim=1)
+            #         else:
+            #             raise ValueError(f"Unsupported grad_aggr_type: {self.grad_aggr_type}")
+            #
+            #         if grad.size(0) != perturbed_edges.size(1):  # model use add_self_loops
+            #             grad = grad[:-self_loops_part_size]
+            #
+            #         max_index = torch.argmax(grad)
+            #         perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
+            #                                     dim=1)
+            #
+            #     # TODO check correctness
+            #     # Update dataset
+            #     edges_to_keep = edge_index[:, ~edge_mask]
+            #     updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
+            #     gen_dataset.data.edge_index = updated_edge_index
+            #     # self.attack_diff = gen_dataset
+            #     set_a = set(map(tuple, edge_index.T.tolist()))
+            #     set_b = set(map(tuple, updated_edge_index.T.tolist()))
+            #     diff_a = list(set_a - set_b)
+            #     self.attack_diff.remove_edges(diff_a)
+            #
+            # elif task.is_graph_level() and task.is_classification():  # graph_classification
+            if gen_dataset.is_multi():
                 graph_idx = self.element_idx
 
                 edge_index = gen_dataset.dataset[graph_idx].edge_index
@@ -167,7 +276,9 @@ class FGSMAttacker(
                     max_index = torch.argmax(grad)
                     perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
                                                 dim=1)
-                # self.attack_diff = Data(x=x, edge_index=perturbed_edges, y=y)
+
+                from torch_geometric.data import Data
+                self.attack_res_misha = Data(x=x, edge_index=perturbed_edges, y=y)
                 set_a = set(map(tuple, edge_index.T.tolist()))
                 set_b = set(map(tuple, perturbed_edges.T.tolist()))
 
@@ -180,6 +291,8 @@ class FGSMAttacker(
 
                 self.attack_diff.remove_edges(diff_a)
                 self.attack_diff.add_edges(diff_b)
+
+            # elif task.is_node_level() and task.is_classification():  # node_classification
             else:
                 node_idx = self.element_idx
 
@@ -238,7 +351,7 @@ class FGSMAttacker(
                 edges_to_keep = edge_index[:, ~edge_mask]
                 updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
                 gen_dataset.data.edge_index = updated_edge_index
-                # self.attack_diff = gen_dataset
+                self.attack_res_misha = gen_dataset
 
                 set_a = set(map(tuple, edge_index.T.tolist()))
                 set_b = set(map(tuple, updated_edge_index.T.tolist()))
@@ -248,6 +361,9 @@ class FGSMAttacker(
 
                 self.attack_diff.remove_edges(diff_a)
                 self.attack_diff.add_edges(diff_b)
+
+            # else:
+            #     pass
 
         # return gen_dataset
 
@@ -288,6 +404,7 @@ class PGDAttacker(
         self.num_iterations = num_iterations
         self.random_sampling_num_trials = random_sampling_num_trials
         self.attack_diff = GraphModificationArtifact()
+        self.attack_res = None
 
         # Process epsilon depending on attack type
         if not is_feature_attack:
@@ -309,7 +426,7 @@ class PGDAttacker(
             self,
             model_manager: Type,
             gen_dataset: GeneralDataset,
-            mask_tensor: torch.Tensor,  # is not used
+            mask_tensor: torch.Tensor,
             task_type: str = None,
     ) -> None:
         if task_type is None:
@@ -365,6 +482,13 @@ class PGDAttacker(
                     x.copy_(torch.max(torch.min(x, orig_x + self.epsilon), orig_x - self.epsilon))
                     x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
 
+            # Save changes in self.attack_res
+            if task_type:
+                self.attack_res = Data(x=x, edge_index=edge_index, y=y)
+            else:
+                gen_dataset.data.x[subset] = x
+                self.attack_res = gen_dataset
+
             # Save changes
             if task_type:
                 gni = GlobalNodeIndexer(gen_dataset.dataset)
@@ -417,6 +541,20 @@ class PGDAttacker(
                 attack_loss=attack_loss,
                 target_idx=target_idx
             )
+
+            # Save changes in self.attack_res
+            if task_type:
+                # edges_to_delete = edge_index[:, best_binary_mask].T.tolist()
+                edges_to_keep = edge_index[:, ~best_binary_mask]
+                # gen_dataset.data.edge_index = edges_to_keep
+                self.attack_res = Data(x=x, edge_index=edges_to_keep, y=y)
+            else:
+                edges_to_keep = edge_index[:, ~edge_mask_k_hop]
+                perturbed_edges = edge_index_subset[:, best_binary_mask]
+                updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
+
+                gen_dataset.data.edge_index = updated_edge_index
+                self.attack_res = gen_dataset
 
             # Save changes
             if task_type:
@@ -681,4 +819,3 @@ class ReWattAttacker(
             self
     ) -> GraphModificationArtifact:
         return self.attack_diff
-
