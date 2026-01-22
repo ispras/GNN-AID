@@ -265,7 +265,8 @@ def test_attack_defense():
                 # "_import_path": OPTIMIZERS_PARAMETERS_PATH,
                 # "_class_import_info": ["torch.optim"],
                 "_config_kwargs": {},
-            }
+            },
+            "batch": 100
         }
     )
     # manager_config = ModelManagerConfig(**{
@@ -288,6 +289,7 @@ def test_attack_defense():
         dataset_path=results_dataset_path,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+
     )
 
     save_model_flag = False
@@ -477,9 +479,10 @@ def test_attack_defense():
 
     # gnn_model_manager.set_poison_attacker(poison_attack_config=metafull_poison_attack_config)
     # gnn_model_manager.set_poison_defender(poison_defense_config=jaccard_poison_defense_config)
-    gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
+    # gnn_model_manager.set_poison_defender(poison_defense_config=prognn_poison_defense_config)
     # gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
     # gnn_model_manager.set_evasion_defender(evasion_defense_config=gradientregularization_evasion_defense_config)
+    gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 
     warnings.warn("Start training")
     gen_dataset.train_test_split()
@@ -1730,12 +1733,12 @@ if __name__ == '__main__':
 
     random.seed(10)
     # test_attack_defense_small()
-    # test_attack_defense()
+    test_attack_defense()
     # test_nettack_evasion()
     # torch.manual_seed(5000)
     # test_gnnguard()
     # test_jaccard()
-    test_pgd()
+    # test_pgd()
     # test_fgsm()
     # test_pgd_structure()
     # test_rewatt()

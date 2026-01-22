@@ -1,11 +1,13 @@
 import copy
 from typing import Type, Any
 import torch
+from torch_geometric.data import Dataset
 
+from datasets.ptg_datasets import LocalPTGDataset
 from defenses.defense_base import Defender
 from data_structures.configs import ConfigPattern, EvasionAttackConfig
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, move_to_same_device
-from attacks.evasion_attacks import FGSMAttacker
+from attacks.evasion_attacks import FGSMAttacker, PGDAttacker
 from attacks.qattack import qattack
 from torch_geometric import data
 
@@ -202,9 +204,16 @@ class AdvTraining(
             self.epsilon = self.attack_config._config_kwargs["epsilon"]
             self.learning_rate = self.attack_config._config_kwargs["learning_rate"]
             self.num_iterations = self.attack_config._config_kwargs["num_iterations"]
-            self.num_rand_trials = self.attack_config._config_kwargs["num_rand_trials"]
+            self.num_rand_trials = self.attack_config._config_kwargs["random_sampling_num_trials"]
             # set attacker
-            self.attacker = FGSMAttacker(self.epsilon)
+            # FIXME this is a fast fix
+            self.attacker = PGDAttacker(
+                is_feature_attack=True,
+                epsilon=self.epsilon,
+                learning_rate=self.learning_rate,
+                num_iterations=self.num_iterations,
+                random_sampling_num_trials=self.num_rand_trials,
+            )
         elif self.attack_config._class_name == "QAttack":
             self.attack_type = "EVASION"
             # get attack params
@@ -239,11 +248,13 @@ class AdvTraining(
         self.perturbed_gen_dataset.data = copy.deepcopy(batch)
         self.perturbed_gen_dataset.dataset = self.perturbed_gen_dataset.data
         self.perturbed_gen_dataset.dataset.data = self.perturbed_gen_dataset.data
+
+        # self.perturbed_gen_dataset = LocalPTGDataset(batch)
         if self.attack_type == "EVASION":
             self.attacker.attack(
                 model_manager=model_manager,
                 gen_dataset=self.perturbed_gen_dataset,
-                mask_tensor=self.perturbed_gen_dataset.data.train_mask,
+                mask_tensor=torch.arange(0, batch.batch_size),
                 task_type=task_type,
             )
 
