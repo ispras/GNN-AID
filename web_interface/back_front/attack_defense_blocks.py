@@ -284,11 +284,30 @@ class AfterTrainBlock(Block):
         self.model_manager.set_evasion_attacker(None)
         self.model_manager.set_mi_attacker(None)
 
+        # # Update dataset features
+        # stats_data = {
+        #     "node_features": self.gen_dataset.visible_part.get_dataset_var_data().node_features
+        # }
+        # self.socket.send(block='at', msg=stats_data, tag='node_features', obligate=True)
+
+        # Update model logits and predictions
+        self.model_manager.compute_stats_data(
+            gen_dataset=self.gen_dataset, predictions=True, logits=True)
+        stats_data = self.model_manager.stats_data
+
+        # print("metrics_values after attacks", metrics_values)
+        stats_data = {k: self.gen_dataset.visible_part.filter(v)
+                      for k, v in stats_data.items()}
+
         # Update dataset features
-        stats_data = {
-            "node_features": self.gen_dataset.visible_part.get_dataset_var_data().node_features
-        }
-        self.socket.send(block='at', msg=stats_data, tag='node_features', obligate=True)
+        stats_data[
+            "node_features"] = self.gen_dataset.visible_part.get_dataset_var_data().node_features
+
+        metrics_values = self.model_manager.evaluate_model(
+            gen_dataset=self.gen_dataset, metrics=self.metrics)
+
+        self.model_manager.send_epoch_results(
+            metrics_values=metrics_values, stats_data=stats_data, socket=self.socket)
 
     def _restore_dataset(
             self
