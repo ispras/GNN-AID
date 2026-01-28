@@ -2,6 +2,7 @@ import json
 
 from gnn_aid.aux.data_info import DataInfo
 from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
+from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.gen_dataset import GeneralDataset
@@ -112,6 +113,7 @@ class DatasetVarBlock(Block):
 
         kwargs = self._config.copy()
         features = FeatureConfig(**kwargs.pop('features'))
+        kwargs['task'] = Task(kwargs.pop('task'))
         kwargs['features'] = features
         self.dataset_var_config = DatasetVarConfig(**kwargs)
         # print(self.dataset_var_config.to_dict())
