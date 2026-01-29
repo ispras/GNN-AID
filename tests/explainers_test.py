@@ -1,4 +1,5 @@
 import collections.abc
+
 collections.Callable = collections.abc.Callable
 import unittest
 import warnings
@@ -65,7 +66,7 @@ class ExplainersTest(unittest.TestCase):
         results_dataset_path_mg_mutag = gen_dataset_mg_mutag.prepared_dir
 
         # Init models
-        gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
+        gcn2_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name='gcn_gcn')
 
         gnn_model_manager_sg_example_manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",
@@ -76,11 +77,11 @@ class ExplainersTest(unittest.TestCase):
         )
         self.gnn_model_manager_sg_example = FrameworkGNNModelManager(
             gnn=gcn2_sg_example,
-            dataset_path=results_dataset_path_sg_example,
+            dataset_path=self.results_dataset_path_sg_cora,
             manager_config=gnn_model_manager_sg_example_manager_config
         )
 
-        self.gnn_model_manager_sg_example.train_model(gen_dataset=gen_dataset_sg_example, steps=50,
+        self.gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=50,
                                                       save_model_flag=False,
                                                       metrics=[Metric("F1", mask='test')])
 
@@ -106,9 +107,9 @@ class ExplainersTest(unittest.TestCase):
             manager_config=gnn_model_manager_mg_mutag_manager_config
         )
 
-        self.gnn_model_manager_mg_mutag.train_model(
-            gen_dataset=dataset_mg_mutag, steps=50, save_model_flag=False,
-            metrics=[Metric("F1", mask='test')])
+        # self.gnn_model_manager_mg_mutag.train_model(
+        #     gen_dataset=dataset_mg_mutag, steps=50, save_model_flag=False,
+        #     metrics=[Metric("F1", mask='test')])
 
         gin3_lin2_mg_small_manager_config = ConfigPattern(
             _config_class="ModelManagerConfig",
@@ -125,8 +126,8 @@ class ExplainersTest(unittest.TestCase):
         self.prot_gnn_mm_mutag = ProtGNNModelManager(gnn=gin3_lin2_prot_mg_mutag, dataset_path=results_dataset_path_mg_mutag)
         # TODO Misha use as training params: clst=clst, sep=sep, save_thrsh=save_thrsh, lr=lr
 
-        best_acc = self.prot_gnn_mm_mg_small.train_model(
-            gen_dataset=self.dataset_mg_small, steps=100, metrics=[])
+        # best_acc = self.prot_gnn_mm_mg_small.train_model(
+        #     gen_dataset=self.dataset_mg_small, steps=100, metrics=[])
 
         # uncomment for ProtGNN big test
         # self.prot_gnn_mm_mutag.train_model(
@@ -139,9 +140,9 @@ class ExplainersTest(unittest.TestCase):
             dataset_path=results_dataset_path_mg_small,
             manager_config=gin3_lin2_mg_small_manager_config
         )
-        self.gnn_model_manager_mg_small.train_model(
-            gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
-            metrics=[Metric("F1", mask='test')])
+        # self.gnn_model_manager_mg_small.train_model(
+        #     gen_dataset=self.dataset_mg_small, steps=50, save_model_flag=False,
+        #     metrics=[Metric("F1", mask='test')])
 
         self.dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="dummy_gcn_gcn_gsat")
         # dummy_gcn_2_gsat = model_configs_zoo(dataset=self.gen_dataset_sg_cora, model_name="gcn_gcn")
@@ -187,7 +188,7 @@ class ExplainersTest(unittest.TestCase):
         #     dataset_path=self.results_dataset_path_sg_cora
         # )
 
-        self.gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=300, metrics=[])
+        self.gsat_gnn_mm_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=30, metrics=[])
         metric_loc = self.gsat_gnn_mm_sg_cora.evaluate_model(
             gen_dataset=self.gen_dataset_sg_cora, metrics=[Metric("F1", mask='test', average='macro')])
         print(metric_loc)
@@ -441,7 +442,7 @@ class ExplainersTest(unittest.TestCase):
         )
         explainer_GNNExpl = FrameworkExplainersManager(
             init_config=explainer_init_config,
-            dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            dataset=self.gen_dataset_sg_cora, gnn_manager=self.gnn_model_manager_sg_example,
             explainer_name='GNNExplainer(torch-geom)',
         )
         explainer_GNNExpl.conduct_experiment(explainer_run_config)
