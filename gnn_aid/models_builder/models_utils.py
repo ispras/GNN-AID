@@ -255,6 +255,11 @@ class Metric:
             res += '{' + kwargs + '}'
         return res
 
+    def __str__(
+            self
+    ) -> str:
+        return self.name()
+
     def compute(
             self,
             y_true,
@@ -343,7 +348,8 @@ class Concat(nn.Module):
 # ================================================
 
 
-def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True, faiss_k_per_node=200):
+def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True,
+                        faiss_k_per_node=100, is_directed=True, remove_loops=True):
     """
     Predict top-k new edges with FAISS support for large graphs
 
@@ -354,6 +360,8 @@ def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True, faiss
         k: number of top edges to return (globally)
         use_faiss: use FAISS for fast search (recommended for large graphs)
         faiss_k_per_node: how many candidates to search per node via FAISS
+        is_directed: if False, normalize edges to (i,j) where i < j and remove duplicates
+        remove_loops: if True, exclude self-loops (i,i) from predictions
 
     Returns:
         top_edges: torch.Tensor shape (2, k) - indices of top-k node pairs
@@ -374,9 +382,15 @@ def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True, faiss
         # Create set of existing edges for fast lookup
         existing_set = set()
         if exclude_edges is not None and exclude_edges.size(1) > 0:
+            # Normalize exclude_edges for undirected graphs
+            if not is_directed:
+                exclude_edges_normalized = _normalize_edges(exclude_edges)
+            else:
+                exclude_edges_normalized = exclude_edges
+
             existing_set = set(zip(
-                exclude_edges[0].cpu().tolist(),
-                exclude_edges[1].cpu().tolist()
+                exclude_edges_normalized[0].cpu().tolist(),
+                exclude_edges_normalized[1].cpu().tolist()
             ))
             print(f"Excluding {len(existing_set)} existing edges")
 
@@ -397,14 +411,74 @@ def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True, faiss
         total_pairs = num_nodes * num_nodes
         if use_faiss and total_pairs > 100e6:
             print(f"Using FAISS for large graph: {num_nodes} x {num_nodes} = {total_pairs} pairs")
-            return _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node)
+            return _predict_with_faiss(model, data, h_norm, existing_set, k,
+                                       faiss_k_per_node, is_directed, remove_loops)
         else:
             print(
                 f"Using full enumeration for small graph: {num_nodes} x {num_nodes} = {total_pairs} pairs")
-            return _predict_full_enumeration(model, data, h_norm, existing_set, k)
+            return _predict_full_enumeration(model, data, h_norm, existing_set, k,
+                                             is_directed, remove_loops)
 
 
-def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
+def _normalize_edges(edges):
+    """
+    Normalize edges for undirected graph: ensure i < j for each edge (i,j)
+
+    Args:
+        edges: torch.Tensor shape (2, num_edges)
+
+    Returns:
+        normalized_edges: torch.Tensor shape (2, num_edges) with i < j
+    """
+    src, dst = edges[0], edges[1]
+
+    # Swap where src > dst
+    mask = src > dst
+    src_new = torch.where(mask, dst, src)
+    dst_new = torch.where(mask, src, dst)
+
+    return torch.stack([src_new, dst_new], dim=0)
+
+
+def _deduplicate_edges(edges, scores):
+    """
+    Remove duplicate edges and keep only unique ones with highest scores
+
+    Args:
+        edges: torch.Tensor shape (2, num_edges)
+        scores: torch.Tensor shape (num_edges,)
+
+    Returns:
+        unique_edges: torch.Tensor shape (2, num_unique)
+        unique_scores: torch.Tensor shape (num_unique,)
+    """
+    if edges.size(1) == 0:
+        return edges, scores
+
+    # Create dictionary: edge_tuple -> (score, index)
+    edge_dict = {}
+    for idx in range(edges.size(1)):
+        edge_tuple = (edges[0, idx].item(), edges[1, idx].item())
+        score = scores[idx].item()
+
+        # Keep edge with higher score
+        if edge_tuple not in edge_dict or score > edge_dict[edge_tuple][0]:
+            edge_dict[edge_tuple] = (score, idx)
+
+    # Extract unique edges and their scores
+    unique_indices = [v[1] for v in edge_dict.values()]
+    unique_edges = edges[:, unique_indices]
+    unique_scores = scores[unique_indices]
+
+    # Re-sort by scores
+    sorted_scores, sorted_indices = torch.sort(unique_scores, descending=True)
+    unique_edges = unique_edges[:, sorted_indices]
+
+    return unique_edges, sorted_scores
+
+
+def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node,
+                        is_directed, remove_loops):
     """Prediction using FAISS for fast search"""
     import faiss
 
@@ -412,7 +486,11 @@ def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
     embedding_dim = h_norm.size(1)
 
     # Parameter: how many candidates to take per node
-    faiss_k_per_node = min(faiss_k_per_node, num_nodes)
+    # For undirected graphs, we need more candidates to account for deduplication
+    if not is_directed:
+        faiss_k_per_node = min(faiss_k_per_node * 2, num_nodes)
+    else:
+        faiss_k_per_node = min(faiss_k_per_node, num_nodes)
 
     # Build FAISS index for all nodes
     h_np = h_norm.cpu().numpy().astype('float32')
@@ -430,13 +508,24 @@ def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
     all_pairs = []
     for src_idx in range(num_nodes):
         for rank, dst_idx in enumerate(candidate_indices[src_idx]):
+            dst_idx = int(dst_idx)
+
+            # Remove loops if requested
+            if remove_loops and src_idx == dst_idx:
+                continue
+
+            # Normalize edge for undirected graph
+            if not is_directed:
+                edge = (min(src_idx, dst_idx), max(src_idx, dst_idx))
+            else:
+                edge = (src_idx, dst_idx)
+
             # Skip existing edges
-            if (src_idx, int(dst_idx)) in existing_set:
-                print(f"Score for existing ({src_idx}, {dst_idx}): {similarities[src_idx, rank]}")
+            if edge in existing_set:
                 continue
 
             # Save (src, dst, similarity)
-            all_pairs.append((src_idx, int(dst_idx), similarities[src_idx, rank]))
+            all_pairs.append((edge[0], edge[1], similarities[src_idx, rank]))
 
     print(f"Found {len(all_pairs)} candidate pairs after filtering")
 
@@ -444,9 +533,12 @@ def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
         print("Warning: No candidate pairs found!")
         return torch.zeros((2, 0), dtype=torch.long), torch.zeros(0)
 
-    # Sort by similarity and take top-k
+    # Sort by similarity and take more than k to account for deduplication
     all_pairs.sort(key=lambda x: x[2], reverse=True)
-    top_pairs = all_pairs[:min(k, len(all_pairs))]
+
+    # For undirected graphs, we already normalized, so no duplicates
+    # But we take more candidates to be safe
+    top_pairs = all_pairs[:min(k * 2 if not is_directed else k, len(all_pairs))]
 
     # Now compute exact scores via model for final candidates
     h = model(data.x, data.edge_index)
@@ -461,26 +553,34 @@ def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node):
     final_scores = model.decode(h_src_final, h_dst_final)
     final_scores = final_scores.sigmoid()
 
-    # Re-sort by exact scores
-    sorted_scores, sorted_indices = torch.sort(final_scores, descending=True)
-    final_src = final_src[sorted_indices]
-    final_dst = final_dst[sorted_indices]
-    top_edges = torch.stack([final_src, final_dst], dim=0)
+    # Create edges tensor
+    edges = torch.stack([final_src, final_dst], dim=0)
 
-    print(f"Top-{len(sorted_scores)} edges found with scores from "
-          f"{sorted_scores[-1]:.4f} to {sorted_scores[0]:.4f}")
+    # Deduplicate if undirected (should already be normalized, but just in case)
+    if not is_directed:
+        edges, final_scores = _deduplicate_edges(edges, final_scores)
 
-    return top_edges.cpu(), sorted_scores.cpu()
+    # Take final top-k
+    final_k = min(k, edges.size(1))
+    top_edges = edges[:, :final_k]
+    top_scores = final_scores[:final_k]
+
+    print(f"Top-{final_k} edges found with scores from "
+          f"{top_scores[-1]:.4f} to {top_scores[0]:.4f}")
+
+    return top_edges.cpu(), top_scores.cpu()
 
 
-def _predict_full_enumeration(model, data, h, existing_set, k):
+def _predict_full_enumeration(model, data, h, existing_set, k, is_directed, remove_loops):
     """Prediction with full enumeration of all pairs (for small graphs)"""
     num_nodes = h.size(0)
     device = h.device
 
     # Request more candidates with margin for filtering
     k_candidates = k + (len(existing_set) if existing_set else 0)
-    k_candidates = min(k_candidates * 2, num_nodes * num_nodes)  # with 2x margin
+    if not is_directed:
+        k_candidates = k_candidates * 3  # More margin for undirected due to deduplication
+    k_candidates = min(k_candidates * 2, num_nodes * num_nodes)
 
     # Store global top-k
     global_top_scores = None
@@ -499,6 +599,22 @@ def _predict_full_enumeration(model, data, h, existing_set, k):
 
         src_repeated = src_batch.repeat_interleave(num_nodes)
         dst_repeated = dst_nodes.repeat(batch_src_size)
+
+        # Filter before computing scores
+        # Remove loops if requested
+        if remove_loops:
+            loop_mask = src_repeated != dst_repeated
+            src_repeated = src_repeated[loop_mask]
+            dst_repeated = dst_repeated[loop_mask]
+
+        # For undirected graphs, only keep pairs where src <= dst to avoid duplicates
+        if not is_directed:
+            undirected_mask = src_repeated <= dst_repeated
+            src_repeated = src_repeated[undirected_mask]
+            dst_repeated = dst_repeated[undirected_mask]
+
+        if len(src_repeated) == 0:
+            continue
 
         # Prepare embeddings for decode
         h_src_batch = h[src_repeated]
@@ -546,16 +662,21 @@ def _predict_full_enumeration(model, data, h, existing_set, k):
         global_top_src = global_top_src[mask]
         global_top_dst = global_top_dst[mask]
 
+    # Create edges tensor
+    edges = torch.stack([global_top_src, global_top_dst], dim=0)
+
+    # For undirected graphs, edges should already be normalized (src <= dst)
+    # But deduplicate just in case
+    if not is_directed:
+        edges, global_top_scores = _deduplicate_edges(edges, global_top_scores)
+
     # Final top-k
-    final_k = min(k, len(global_top_scores))
+    final_k = min(k, edges.size(1))
     if final_k < k:
         print(f"Warning: Only {final_k} unique pairs available, returning all")
 
+    top_edges = edges[:, :final_k]
     top_scores = global_top_scores[:final_k]
-    top_src = global_top_src[:final_k]
-    top_dst = global_top_dst[:final_k]
-
-    top_edges = torch.stack([top_src, top_dst], dim=0)
 
     print(f"Top-{final_k} edges found with scores from {top_scores[-1]:.4f} to {top_scores[0]:.4f}")
 

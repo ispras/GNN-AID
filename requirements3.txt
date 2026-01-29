@@ -19,3 +19,6 @@ matplotlib
 # For other datasets
 dgl==1.1.0
 mat73  # powergraph
+
+# For edge prediction on big graphs
+faiss-cpu==1.13.2
