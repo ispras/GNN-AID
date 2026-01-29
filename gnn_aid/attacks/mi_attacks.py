@@ -1,6 +1,7 @@
 import copy
-from typing import Union, List
+from typing import Union, List, Tuple
 
+import numpy as np
 import torch
 from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
@@ -128,41 +129,62 @@ class NaiveMIAttacker(
 
         return self.results
 
-
-class ShadowModelMIAttacker(
-    MIAttacker
-):
+class ShadowModelMIAttacker(MIAttacker):
     """
-    The surrogate model is trained on a part of the initial dataset.
-    The classifier learns from its responses to determine whether the input is from train or test
+    Shadow model-based membership inference attack for Node/Graph Classification.
     """
     name = "ShadowModelMIAttacker"
 
     def __init__(
             self,
-            shadow_data_ratio: float = 0.25,  # Fraction of data to use for shadow training
-            shadow_epochs: int = 100,  # Number of epochs to train shadow model
-            classifier_type: str = 'svc',  # Type of classifier to use ('svc' or 'mlp')
+            shadow_data_ratio: float = 0.25,
+            shadow_train_ratio: float = 0.75,
+            shadow_epochs: int = 100,
+            classifier_type: str = 'svc',  # 'svc' only for now
+            use_logits: bool = True,  # Use logits (recommended) or softmax probs
             **kwargs
     ):
         super().__init__(**kwargs)
         self.shadow_data_ratio = shadow_data_ratio
+        self.shadow_train_ratio = shadow_train_ratio
         self.shadow_epochs = shadow_epochs
         self.classifier_type = classifier_type
+        self.use_logits = use_logits
         self.classifier = None
+        self.model_name = None
 
-        # TODO customizable surrogate model
-        # TODO customizable classifier
+    def _prepare_shadow_masks(
+            self,
+            num_nodes: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Create shadow train/test masks over a random subset of nodes.
+        """
+        all_indices = torch.arange(num_nodes)
+        shadow_size = int(num_nodes * self.shadow_data_ratio)
+        shadow_indices = all_indices[torch.randperm(num_nodes)[:shadow_size]]
+
+        n_train = int(shadow_size * self.shadow_train_ratio)
+        shadow_train_indices = shadow_indices[:n_train]
+        shadow_test_indices = shadow_indices[n_train:]
+
+        shadow_train_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        shadow_test_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        shadow_train_mask[shadow_train_indices] = True
+        shadow_test_mask[shadow_test_indices] = True
+
+        return shadow_train_mask, shadow_test_mask
 
     def _train_shadow_model(
             self,
-            gen_dataset: GeneralDataset,
+            shadow_dataset: GeneralDataset,
             shadow_train_mask: torch.Tensor
-    ):
+    ) -> torch.nn.Module:
         """
-        Train the shadow model on the shadow dataset
+        Train shadow model on shadow training nodes
         """
-        shadow_model = model_configs_zoo(dataset=gen_dataset, model_name=self.model_name)
+        shadow_model = model_configs_zoo(dataset=shadow_dataset, model_name=self.model_name)
+        shadow_model = shadow_model.to(shadow_dataset.data.x.device)
 
         optimizer = torch.optim.Adam(shadow_model.parameters(), lr=0.01)
         criterion = torch.nn.CrossEntropyLoss()
@@ -171,93 +193,115 @@ class ShadowModelMIAttacker(
             shadow_model.train()
             optimizer.zero_grad()
 
-            # Forward pass
-            outputs = shadow_model(gen_dataset.data.x, gen_dataset.data.edge_index)
-
-            # Compute loss only on shadow training nodes
-            loss = criterion(*move_to_same_device(outputs[shadow_train_mask], gen_dataset.data.y[shadow_train_mask]))
-            print(f"Shadow loss: {loss}")
-
-            # Backward pass
+            outputs = shadow_model(shadow_dataset.data.x, shadow_dataset.data.edge_index)
+            loss = criterion(
+                *move_to_same_device(
+                    outputs[shadow_train_mask],
+                    shadow_dataset.data.y[shadow_train_mask]
+                )
+            )
             loss.backward()
             optimizer.step()
+
+            if epoch % 20 == 0:
+                print(f"  Shadow epoch {epoch}/{self.shadow_epochs}, loss: {loss.item():.4f}")
+
         return shadow_model
+
+    def _extract_features(
+            self,
+            model: torch.nn.Module,
+            dataset: GeneralDataset,
+            node_mask: torch.Tensor
+    ) -> np.ndarray:
+        """Extract features (logits or probabilities) from model outputs."""
+        model.eval()
+        with torch.no_grad():
+            outputs = model(dataset.data.x, dataset.data.edge_index)
+            if self.use_logits:
+                features = outputs[node_mask]
+            else:
+                features = torch.softmax(outputs[node_mask], dim=1)
+            return features.cpu().numpy()
 
     def _train_attack_classifier(
             self,
             shadow_model: torch.nn.Module,
-            shadow_data: GeneralDataset,
-            shadow_train_mask: torch.tensor,
-            original_train_mask: torch.Tensor
+            shadow_dataset: GeneralDataset,
+            shadow_train_mask: torch.Tensor,
+            shadow_test_mask: torch.Tensor
     ):
-        """
-        Train the attack classifier using shadow model outputs
-        """
-        shadow_model.eval()
-        with torch.no_grad():
-            outputs = shadow_model(shadow_data.data.x, shadow_data.data.edge_index)
-            probs = torch.softmax(outputs, dim=1)
-            # max_probs = torch.max(probs, dim=1).values.cpu().numpy()
-        # Prepare features and labels for attack classifier
-        # X = max_probs.reshape(-1, 1)  # Using prediction confidence as feature
-        X = probs[shadow_train_mask].detach().cpu().numpy()
-        y = original_train_mask[shadow_train_mask].detach().cpu().numpy().astype(int)  # Membership labels
+        """Train attack classifier using shadow model outputs."""
+        # Features for shadow train nodes → label 1 (member)
+        X_train = self._extract_features(shadow_model, shadow_dataset, shadow_train_mask)
+        y_train = np.ones(X_train.shape[0])
 
+        # Features for shadow test nodes → label 0 (non-member)
+        X_test = self._extract_features(shadow_model, shadow_dataset, shadow_test_mask)
+        y_test = np.zeros(X_test.shape[0])
+
+        # Combine
+        X = np.vstack([X_train, X_test])
+        y = np.concatenate([y_train, y_test])
+
+        # Train classifier
         if self.classifier_type == 'svc':
-            self.classifier = SVC(kernel='rbf', probability=False)
+            self.classifier = SVC(kernel='rbf', probability=True)
         else:
-            raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
+            raise ValueError(f"Unsupported classifier: {self.classifier_type}")
 
         self.classifier.fit(X, y)
 
-        # Evaluate on shadow data (for debugging)
+        # Debug: evaluate on shadow data
         y_pred = self.classifier.predict(X)
-        shadow_accuracy = accuracy_score(y, y_pred)
-        print(f"Shadow model attack classifier accuracy: {shadow_accuracy:.4f}")
+        acc = accuracy_score(y, y_pred)
+        print(f"  ✓ Shadow attack classifier accuracy: {acc:.4f}")
 
     def attack(
             self,
             model: torch.nn.Module,
             gen_dataset: GeneralDataset,
-            mask_tensor: Union[List[bool], torch.Tensor],
+            mask_tensor: Union[torch.Tensor, list],
             **kwargs
     ):
+        """
+        Perform membership inference attack using shadow model technique.
+        """
         task_type = gen_dataset.is_multi()
-        if task_type:
-            self.model_name = 'gcn_gcn_linear'
-        else:
-            self.model_name = 'gcn_gcn'
-
-        shadow_dataset = copy.deepcopy(gen_dataset)
+        self.model_name = 'gcn_gcn_lin_no_softmax' if task_type else 'gcn_gcn_no_softmax'
 
         num_nodes = gen_dataset.data.x.shape[0]
         shadow_indices = torch.randperm(num_nodes)[:int(num_nodes * self.shadow_data_ratio)]
-        shadow_train_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
-        shadow_test_mask = torch.zeros_like(gen_dataset.train_mask, dtype=torch.bool)
-        shadow_train_mask[shadow_indices[:int(len(shadow_indices) * 0.75)]] = True  # 75-25 split
-        shadow_test_mask[shadow_indices[int(len(shadow_indices) * 0.75):]] = True
+        n_shadow = len(shadow_indices)
+        n_train = int(n_shadow * 0.75)
+
+        shadow_train_indices = shadow_indices[:n_train]
+        shadow_test_indices = shadow_indices[n_train:]
+
+        shadow_train_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        shadow_test_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        shadow_train_mask[shadow_train_indices] = True
+        shadow_test_mask[shadow_test_indices] = True
+
+        shadow_dataset = copy.deepcopy(gen_dataset)
         shadow_dataset.train_mask = shadow_train_mask
         shadow_dataset.test_mask = shadow_test_mask
 
-        print("Training shadow model...")
         shadow_model = self._train_shadow_model(shadow_dataset, shadow_train_mask)
 
-        print("Training attack classifier...")
-        self._train_attack_classifier(shadow_model, shadow_dataset, shadow_train_mask, gen_dataset.train_mask)
+        self._train_attack_classifier(shadow_model, shadow_dataset, shadow_train_mask, shadow_test_mask)
 
-        print("Performing attack on target model...")
         model.eval()
         with torch.no_grad():
-            outputs = shadow_model(gen_dataset.data.x, gen_dataset.data.edge_index)
-            probs = torch.softmax(outputs, dim=1)
-            max_probs = torch.max(probs, dim=1).values.detach().cpu().numpy()
-        # Predict membership using attack classifier
-        # X_target = max_probs.reshape(-1, 1)
-        X_target = probs
-        inferred_train_mask = torch.tensor(self.classifier.predict(X_target),
-                                           dtype=torch.bool, device=mask_tensor.device)
+            outputs = model(gen_dataset.data.x, gen_dataset.data.edge_index)
+            if self.use_logits:
+                features = outputs
+            else:
+                features = torch.softmax(outputs, dim=1)
+            features = features.cpu().numpy()
 
-        # Store results
-        self.results.add(mask_tensor, inferred_train_mask)
+        all_predictions = self.classifier.predict(features)
+        inferred_membership_full = torch.tensor(all_predictions, dtype=torch.bool)
 
+        self.results.add(mask_tensor, inferred_membership_full)
         return self.results

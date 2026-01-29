@@ -620,6 +620,40 @@ def model_configs_zoo(
         )
     )
 
+    gcn_gcn_no_softmax = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': dataset.num_classes,
+                            },
+                        },
+                    },
+                ]
+            )
+        )
+    )
+
     gcn_gcn_gcn = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(
@@ -873,7 +907,63 @@ def model_configs_zoo(
                             'activation_kwargs': None,
                         },
                     },
+                ]
+            )
+        )
+    )
 
+    gcn_gcn_lin_no_softmax = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': dataset.num_node_features,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 2,
+                                'connection_kwargs': {
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {
+                                'in_channels': 16,
+                                'out_channels': 16,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None,
+                        },
+                    },
+
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': 16 * 2,
+                                'out_features': dataset.num_classes,
+                            },
+                        },
+                    },
                 ]
             )
         )
