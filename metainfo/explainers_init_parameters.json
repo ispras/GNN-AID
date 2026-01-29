@@ -2,7 +2,8 @@
  "Zorro": {
   "greedy": ["Greedy", "bool", true, null, "?"],
   "add_noise": ["Noise", "bool", false, null, "?"],
-  "samples": ["Samples", "int", 100, {"min": 1}, "Number of random noise samples to control fidelity"]
+  "samples": ["Samples", "int", 100, {"min": 1}, "Number of random noise samples to control fidelity"],
+  "_test_": ["Test", "int_or_tuple", [0, 1], {"min": 1}, "_test_"]
 },
 
  "SubgraphX": {
