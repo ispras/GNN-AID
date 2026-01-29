@@ -232,15 +232,12 @@ class ShadowModelMIAttacker(MIAttacker):
             shadow_test_mask: torch.Tensor
     ):
         """Train attack classifier using shadow model outputs."""
-        # Features for shadow train nodes → label 1 (member)
         X_train = self._extract_features(shadow_model, shadow_dataset, shadow_train_mask)
         y_train = np.ones(X_train.shape[0])
 
-        # Features for shadow test nodes → label 0 (non-member)
         X_test = self._extract_features(shadow_model, shadow_dataset, shadow_test_mask)
         y_test = np.zeros(X_test.shape[0])
 
-        # Combine
         X = np.vstack([X_train, X_test])
         y = np.concatenate([y_train, y_test])
 
@@ -251,11 +248,6 @@ class ShadowModelMIAttacker(MIAttacker):
             raise ValueError(f"Unsupported classifier: {self.classifier_type}")
 
         self.classifier.fit(X, y)
-
-        # Debug: evaluate on shadow data
-        y_pred = self.classifier.predict(X)
-        acc = accuracy_score(y, y_pred)
-        print(f"  ✓ Shadow attack classifier accuracy: {acc:.4f}")
 
     def attack(
             self,
