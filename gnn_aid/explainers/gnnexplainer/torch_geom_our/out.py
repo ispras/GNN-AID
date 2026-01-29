@@ -4,7 +4,8 @@ from typing import Optional, Union
 import torch
 from torch import Tensor
 from torch.nn.parameter import Parameter
-from torch_geometric.explain import Explainer as torchExplainerRunner
+# from torch_geometric.explain import Explainer as torchExplainerRunner
+from gnn_aid.explainers.gnnexplainer.torch_geom_our.utils.pyg_explainer import Explainer as torchExplainerRunner
 from torch_geometric.explain import Explanation
 from torch_geometric.explain.algorithm import ExplainerAlgorithm
 from torch_geometric.explain.algorithm.utils import clear_masks, set_masks
@@ -60,13 +61,19 @@ class GNNExplainer(Explainer):
 
         self.graph_idx = None
         self.node_idx = None
+        self.edge_idx = None
         self.x = None
         self.edge_index = None
         self.num_classes = gen_dataset.num_classes
+        self.task = self.gen_dataset.dataset_var_config.task
+        if self.task.is_edge_level():
+            mode = 'binary_classification'
+            return_type = 'probs'
+            task_level = 'edge'
 
         self.explainer = torchExplainerRunner(
             model=model,
-            algorithm=GNNExplainerAlgorithm(None, epochs=epochs, lr=lr, kwargs=self.coeffs),
+            algorithm=GNNExplainerAlgorithm(None, task=self.task, epochs=epochs, lr=lr, kwargs=self.coeffs),
             explanation_type='model',
             node_mask_type=node_mask_type,
             edge_mask_type=edge_mask_type,
@@ -82,22 +89,37 @@ class GNNExplainer(Explainer):
         assert mode == "local"
         idx = kwargs.pop('element_idx')
 
-        if self.gen_dataset.is_multi():
+        if self.task.is_edge_level():
+            self.edge_idx = idx
+            # TODO pass an edge as a parameter
+            self.edge_idx = torch.tensor([[1], [2]])
+
+            self.x = self.gen_dataset.data.x
+            self.edge_index = self.gen_dataset.data.edge_index
+        elif self.task.is_graph_level() and self.task.is_classification():  # graph_classification
             self.graph_idx = idx
             graph = self.gen_dataset.dataset[self.graph_idx]
             self.x = graph.x
             self.edge_index = graph.edge_index
-        else:
+        elif self.task.is_node_level() and self.task.is_classification():  # node_classification
             self.node_idx = idx
             self.x = self.gen_dataset.data.x
             self.edge_index = self.gen_dataset.data.edge_index
+        else:
+            pass
 
         self.pbar.reset(total=self.epochs, mode=mode)
         self.explainer.algorithm.pbar = self.pbar
-        if self.gen_dataset.is_multi():
-            self.raw_explanation = self.explainer(self.x, self.edge_index)
+
+        if self.task.is_edge_level():
+            self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.edge_idx, **{'link_prediction': True})
+        elif self.task.is_graph_level() and self.task.is_classification():  # graph_classification
+            self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.graph_idx, **{'link_prediction': False})
+        elif self.task.is_node_level() and self.task.is_classification():  # node_classification
+            self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.node_idx, **{'link_prediction': False})
         else:
-            self.raw_explanation = self.explainer(self.x, self.edge_index, index=self.node_idx)
+            pass
+
         self.pbar.close()
 
     def _finalize(self):
@@ -201,11 +223,12 @@ class GNNExplainerAlgorithm(ExplainerAlgorithm):
             :attr:`~torch_geometric.explain.algorithm.GNNExplainer.coeffs`.
     """
 
-    def __init__(self, pbar, epochs: int = 100, lr: float = 0.01, **kwargs):
+    def __init__(self, pbar, task, epochs: int = 100, lr: float = 0.01, **kwargs):
         super().__init__()
         self.epochs = epochs
         self.lr = lr
         self.coeffs = kwargs['kwargs']
+        self.task = task
 
         self.node_mask = self.hard_node_mask = None
         self.edge_mask = self.hard_edge_mask = None
@@ -271,9 +294,15 @@ class GNNExplainerAlgorithm(ExplainerAlgorithm):
             optimizer.zero_grad()
 
             h = x if self.node_mask is None else x * self.node_mask.sigmoid()
-            y_hat, y = model(h, edge_index, **kwargs), target
 
-            if index is not None:
+            if self.task.is_edge_level():
+                y = target
+                node_embeddings = model(h, edge_index, **kwargs)
+                src = node_embeddings[index[0]]
+                dst = node_embeddings[index[1]]
+                y_hat = model.decode(src, dst).sigmoid()
+            else:
+                y_hat, y = model(h, edge_index, **kwargs), target
                 y_hat, y = y_hat[index], y[index]
 
             loss = self._loss(y_hat, y)
