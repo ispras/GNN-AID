@@ -188,7 +188,8 @@ def link_prediction():
     )
 
     steps_epochs = 3
-    my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    # my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    my_device = 'cpu'
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
         dataset_path=gen_dataset.prepared_dir,
@@ -211,17 +212,63 @@ def link_prediction():
     #     gen_dataset=gen_dataset,
     #     mask='all'
     # )
-    res = gnn_model_manager.evaluate_model(
-        gen_dataset=gen_dataset,
-        metrics=[
-            Metric("Accuracy", mask='all'),
-            Metric("AUC", mask='test'),
-            # Metric("Precision@k", mask='test', k=50),
-            # Metric("Precision@k", mask='test', k=500000),
-            # Metric("Recall@k", mask='test', k=500000),
-        ]
+    from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH
+    evasion_attack_config = ConfigPattern(
+        _class_name="FGSM",
+        _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+        _config_class="EvasionAttackConfig",
+        _config_kwargs={
+            "is_feature_attack": False,
+            "element_idx": 0,
+            "epsilon": 0.5,
+        }
     )
-    print(json.dumps(res, indent=2))
+
+    # атака
+    # gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+    #
+    # res = gnn_model_manager.evaluate_model(
+    #     gen_dataset=gen_dataset,
+    #     metrics=[
+    #         Metric("Accuracy", mask='all'),
+    #         Metric("AUC", mask='test'),
+    #         # Metric("Precision@k", mask='test', k=50),
+    #         # Metric("Precision@k", mask='test', k=500000),
+    #         # Metric("Recall@k", mask='test', k=500000),
+    #     ]
+    # )
+    # print(json.dumps(res, indent=2))
+
+    # explainer
+    from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+    from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+    explainer_init_config = ConfigPattern(
+        _class_name="GNNExplainer(torch-geom)",
+        _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+        _config_class="ExplainerInitConfig",
+        _config_kwargs={
+        }
+    )
+    explainer_run_config = ConfigPattern(
+        _config_class="ExplainerRunConfig",
+        _config_kwargs={
+            "mode": "local",
+            "kwargs": {
+                "_class_name": "GNNExplainer(torch-geom)",
+                "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                "_config_class": "Config",
+                "_config_kwargs": {
+
+                },
+            }
+        }
+    )
+    explainer_GNNExpl = FrameworkExplainersManager(
+        init_config=explainer_init_config,
+        dataset=gen_dataset, gnn_manager=gnn_model_manager,
+        explainer_name='GNNExplainer(torch-geom)',
+    )
+    explainer_GNNExpl.conduct_experiment(explainer_run_config)
 
     # Example how to get prediction for specific node pair (5,6)
     data = gen_dataset.data
@@ -231,8 +278,11 @@ def link_prediction():
     node_out = gnn(data.x, data.edge_index)
 
     # Get embeddings for our nodes
-    src = node_out[edge_label_index[0]]
-    dst = node_out[edge_label_index[1]]
+    # src = node_out[edge_label_index[0]]
+    # dst = node_out[edge_label_index[1]]
+
+    src = node_out[data.edge_index[0]]
+    dst = node_out[data.edge_index[1]]
 
     # Pass to decoder and get the output
     edge_out = gnn.decode(src, dst)
@@ -242,7 +292,8 @@ def link_prediction():
     print(f"Logits: {full_out}")
 
     # 'answers':
-    full_out = gnn.get_answer(edge_out=edge_out)
+    full_out = gnn.get_answer(full_out.unsqueeze(dim=1))
+    # full_out = gnn.get_answer(edge_out=edge_out)
     print(f"Answers: {full_out}")
 
 
