@@ -811,5 +811,144 @@ class AttacksTest(unittest.TestCase):
         self.assertLess(test_metrics['test']['AUC'], 0.95)
 
 
+    def test_mi_shadow_link_prediction(self):
+        """
+        Test Shadow Model MI Attack on Link Prediction task (Cora dataset).
+        """
+        gen_dataset = DatasetManager.get_by_config(
+            DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+            LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
+        )
+
+        mi_attack_config = ConfigPattern(
+            _class_name="ShadowModelMILinkAttacker",
+            _import_path=MI_ATTACK_PARAMETERS_PATH,
+            _config_class="MIAttackConfig",
+            _config_kwargs={
+                "shadow_edge_ratio": 0.05,
+                "shadow_train_ratio": 0.75,
+                "shadow_epochs": 3,
+                "use_embedding_features": False
+            }
+        )
+
+        gnn = FrameworkGNNConstructor(
+            model_config=ModelConfig(
+                structure=ModelStructureConfig([
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {'in_channels': gen_dataset.num_node_features, 'out_channels': 32}
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None
+                        }
+                    },
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'GCNConv',
+                            'layer_kwargs': {'in_channels': 32, 'out_channels': 16}
+                        }
+                    },
+                    {
+                        'label': 'd',
+                        'function': {
+                            'function_name': 'Concat',
+                            'function_kwargs': None
+                        }
+                    },
+                    {
+                        'label': 'd',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {'in_features': 32, 'out_features': 16}
+                        },
+                        'activation': {
+                            'activation_name': 'ReLU',
+                            'activation_kwargs': None
+                        }
+                    },
+                    {
+                        'label': 'd',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {'in_features': 16, 'out_features': 1}
+                        }
+                    }
+                ])
+            )
+        )
+
+        manager_config_lp = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {
+                        "lr": 0.01,
+                        "weight_decay": 5e-4
+                    },
+                },
+                "loss_function": {
+                    "_class_name": "BCEWithLogitsLoss",
+                    "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                    "_class_import_info": ["torch.nn"],
+                    "_config_kwargs": {}
+                },
+                "batch": 64
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=gnn,
+            dataset_path=gen_dataset.prepared_dir,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=40),
+            manager_config=manager_config_lp,
+        )
+        gnn_model_manager.set_mi_attacker(mi_attack_config=mi_attack_config)
+
+        gen_dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.15)
+
+        gnn_model_manager.train_model(
+            gen_dataset=gen_dataset,
+            steps=3,
+            metrics=[Metric("AUC", mask='train')]
+        )
+
+        model_metrics = gnn_model_manager.evaluate_model(
+            gen_dataset=gen_dataset,
+            metrics=[
+                Metric("AUC", mask='test'),
+                Metric("Recall@k", mask='test', k=100)
+            ]
+        )
+
+        num_train_edges = gen_dataset.train_mask.sum().item()
+        num_test_edges = gen_dataset.test_mask.sum().item()
+        attack_cnt_per_class = min(100, num_train_edges, num_test_edges)
+
+        train_edge_indices = gen_dataset.train_mask.nonzero(as_tuple=True)[0].cpu().numpy()
+        test_edge_indices = gen_dataset.test_mask.nonzero(as_tuple=True)[0].cpu().numpy()
+
+        target_train_indices = np.random.choice(train_edge_indices, size=attack_cnt_per_class, replace=False)
+        target_test_indices = np.random.choice(test_edge_indices, size=attack_cnt_per_class, replace=False)
+        target_edge_indices = np.concatenate([target_train_indices, target_test_indices])
+
+        edge_mask = torch.zeros(gen_dataset.edge_label_index.size(1), dtype=torch.bool)
+        edge_mask[target_edge_indices] = True
+
+        mi_attacker = gnn_model_manager.mi_attacker
+        for mask, inferred_membership in mi_attacker.results.items():
+            attack_metrics = MIAttacker.compute_single_attack_accuracy(
+                mask=edge_mask,
+                inferred_labels=inferred_membership,
+                mask_true=gen_dataset.train_mask,
+                train_class_label=True
+            )
+
 if __name__ == '__main__':
     unittest.main()

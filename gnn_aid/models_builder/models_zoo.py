@@ -2505,6 +2505,77 @@ def model_configs_zoo(
         )
     )
 
+    gcn_link_pred = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+            [
+                {
+                    "label": "n",
+                    "layer": {
+                        "layer_name": "GCNConv",
+                        "layer_kwargs": {
+                            "in_channels": dataset.num_node_features,
+                            "out_channels": 32
+                        }
+                    },
+                    "activation": {
+                        "activation_name": "ReLU",
+                        "activation_kwargs": None
+                    },
+                    "dropout": {
+                        "dropout_name": "Dropout",
+                        "dropout_kwargs":
+                        {
+                            "p": 0.5
+                        }
+                    }
+                },
+                {
+                    "label": "n",
+                    "layer": {
+                        "layer_name": "GCNConv",
+                        "layer_kwargs": {
+                            "in_channels": 32,
+                            "out_channels": 16
+                        }
+                    }
+                },
+                {
+                    "label": "d",
+                    "function": {
+                        "function_name": "Concat",
+                        "function_kwargs": None
+                    }
+                },
+                {
+                    "label": "d",
+                    "layer": {
+                        "layer_name": "Linear",
+                        "layer_kwargs": {
+                            "in_features": 32,
+                            "out_features": 16
+                        }
+                    },
+                    "activation": {
+                        "activation_name": "ReLU",
+                        "activation_kwargs": None
+                    }
+                },
+                {
+                    "label": "d",
+                    "layer": {
+                        "layer_name": "Linear",
+                        "layer_kwargs": {
+                            "in_features": 16,
+                            "out_features": 1
+                        }
+                    }
+                }
+            ]
+        )
+    )
+    )
+
     if model_name in locals():
         return locals()[model_name]
     else:

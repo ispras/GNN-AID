@@ -5,11 +5,13 @@ import numpy as np
 import torch
 from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 
 from gnn_aid.attacks.attack_base import Attacker
 from gnn_aid.aux.utils import move_to_same_device
 from gnn_aid.data_structures.mi_results import MIResultsStore
 from gnn_aid.datasets.gen_dataset import GeneralDataset
+from gnn_aid.models_builder import FrameworkGNNConstructor
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 
@@ -204,7 +206,7 @@ class ShadowModelMIAttacker(MIAttacker):
             optimizer.step()
 
             if epoch % 20 == 0:
-                print(f"  Shadow epoch {epoch}/{self.shadow_epochs}, loss: {loss.item():.4f}")
+                print(f"Shadow epoch {epoch}/{self.shadow_epochs}, loss: {loss.item():.4f}")
 
         return shadow_model
 
@@ -296,4 +298,207 @@ class ShadowModelMIAttacker(MIAttacker):
         inferred_membership_full = torch.tensor(all_predictions, dtype=torch.bool)
 
         self.results.add(mask_tensor, inferred_membership_full)
+        return self.results
+
+
+class ShadowModelMILinkAttacker(MIAttacker):
+    """
+    Shadow model-based membership inference attack for Link Prediction.
+    """
+    name = "ShadowModelMILinkAttacker"
+
+    def __init__(
+            self,
+            shadow_edge_ratio: float = 0.2,
+            shadow_train_ratio: float = 0.75,
+            shadow_epochs: int = 10,
+            classifier_type: str = 'linreg',
+            use_embedding_features: bool = False,
+            **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.shadow_edge_ratio = shadow_edge_ratio
+        self.shadow_train_ratio = shadow_train_ratio
+        self.shadow_epochs = shadow_epochs
+        self.classifier_type = classifier_type
+        self.use_embedding_features = use_embedding_features
+        self.classifier = None
+        self.model_name = None
+
+    def _prepare_shadow_edge_masks(
+            self,
+            num_edges: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Create shadow train/test masks over a random subset of edges
+        """
+        all_indices = torch.arange(num_edges)
+        shadow_size = int(num_edges * self.shadow_edge_ratio)
+        shadow_indices = all_indices[torch.randperm(num_edges)[:shadow_size]]
+
+        n_train = int(shadow_size * self.shadow_train_ratio)
+        shadow_train_indices = shadow_indices[:n_train]
+        shadow_test_indices = shadow_indices[n_train:]
+
+        shadow_train_mask = torch.zeros(num_edges, dtype=torch.bool)
+        shadow_test_mask = torch.zeros(num_edges, dtype=torch.bool)
+        shadow_train_mask[shadow_train_indices] = True
+        shadow_test_mask[shadow_test_indices] = True
+
+        return shadow_train_mask, shadow_test_mask
+
+    def _train_shadow_model(
+            self,
+            shadow_model: torch.nn.Module,
+            shadow_dataset: GeneralDataset,
+            shadow_train_mask: torch.Tensor,
+            device: torch.device
+    ) -> torch.nn.Module:
+        """
+        Train shadow model on shadow dataset
+        """
+        shadow_model = shadow_model.to(device)
+        optimizer = torch.optim.Adam(shadow_model.parameters(), lr=0.01)
+        criterion = torch.nn.BCEWithLogitsLoss()
+
+        for epoch in range(self.shadow_epochs):
+            shadow_model.train()
+            optimizer.zero_grad()
+
+            node_emb = shadow_model(
+                shadow_dataset.data.x.to(device),
+                shadow_dataset.data.edge_index.to(device)
+            )
+
+            train_edge_index = shadow_dataset.edge_label_index[:, shadow_train_mask].to(device)
+            train_edge_labels = shadow_dataset.edge_labels[shadow_train_mask].float().to(device)
+
+            edge_logits = shadow_model.decode(node_emb[train_edge_index[0]], node_emb[train_edge_index[1]]).squeeze()
+
+            loss = criterion(edge_logits, train_edge_labels)
+            loss.backward()
+            optimizer.step()
+
+            if epoch % 10 == 0:
+                print(f"Shadow epoch {epoch}/{self.shadow_epochs}, loss: {loss.item():.4f}")
+
+        return shadow_model
+
+    def _extract_edge_features(
+            self,
+            model: torch.nn.Module,
+            dataset: GeneralDataset,
+            edge_mask: torch.Tensor,
+            device: torch.device
+    ) -> np.ndarray:
+        model.eval()
+        model = model.to(device)
+        with torch.no_grad():
+            node_emb = model(
+                dataset.data.x.to(device),
+                dataset.data.edge_index.to(device)
+            )
+
+            edge_index = dataset.edge_label_index[:, edge_mask].to(device)
+
+            edge_logits = model.decode(node_emb[edge_index[0]], node_emb[edge_index[1]]).squeeze()
+            edge_probs = torch.sigmoid(edge_logits)
+
+            if self.use_embedding_features:
+                features = torch.cat([
+                    edge_probs.unsqueeze(1),
+                    node_emb[edge_index[0]],
+                    node_emb[edge_index[1]]
+                ], dim=1)
+            else:
+                features = edge_probs.unsqueeze(1)
+
+            return features.cpu().numpy()
+
+    def _train_attack_classifier(
+            self,
+            shadow_model: torch.nn.Module,
+            shadow_dataset: GeneralDataset,
+            shadow_train_mask: torch.Tensor,
+            shadow_test_mask: torch.Tensor,
+            device: torch.device
+    ):
+        """
+        Train attack classifier using shadow model outputs
+        """
+        X_train = self._extract_edge_features(shadow_model, shadow_dataset, shadow_train_mask, device)
+        y_train = np.ones(X_train.shape[0])
+
+        X_test = self._extract_edge_features(shadow_model, shadow_dataset, shadow_test_mask, device)
+        y_test = np.zeros(X_test.shape[0])
+
+        X = np.vstack([X_train, X_test])
+        y = np.concatenate([y_train, y_test])
+
+        import matplotlib.pyplot as plt
+        plt.hist(X_train[:, 0], bins=50, alpha=0.5, label='Train edges')
+        plt.hist(X_test[:, 0], bins=50, alpha=0.5, label='Test edges')
+        plt.legend()
+        plt.title('Probability distributions: Train vs Test edges')
+        plt.savefig('edge_prob_distributions.png')
+
+        if self.classifier_type == 'svc':
+            self.classifier = SVC(kernel='rbf', probability=True)
+        elif self.classifier_type == 'linreg':
+            self.classifier = LogisticRegression(max_iter=1000)
+        else:
+            raise ValueError(f"Unsupported classifier: {self.classifier_type}")
+
+        self.classifier.fit(X, y)
+
+    def attack(
+            self,
+            model: torch.nn.Module,
+            gen_dataset: GeneralDataset,
+            mask_tensor: Union[torch.Tensor, list],
+            **kwargs
+    ):
+        """
+        Perform membership inference attack on target model
+        """
+        if isinstance(mask_tensor, str):
+            if mask_tensor == 'train':
+                mask_tensor = gen_dataset.train_mask
+            elif mask_tensor == 'val':
+                mask_tensor = gen_dataset.val_mask
+            elif mask_tensor == 'test':
+                mask_tensor = gen_dataset.test_mask
+            elif mask_tensor == 'all':
+                mask_tensor = torch.ones(
+                    gen_dataset.edge_label_index.size(1),
+                    dtype=torch.bool,
+                    device=gen_dataset.train_mask.device
+                )
+            else:
+                raise ValueError(f"Unknown mask string: {mask_tensor}")
+
+        num_edges = gen_dataset.edge_label_index.size(1)
+        device = next(model.parameters()).device
+
+        shadow_train_mask, shadow_test_mask = self._prepare_shadow_edge_masks(num_edges)
+
+        shadow_dataset = copy.deepcopy(gen_dataset)
+        shadow_dataset.train_mask = shadow_train_mask
+        shadow_dataset.test_mask = shadow_test_mask
+
+        shadow_model = model_configs_zoo(dataset=shadow_dataset, model_name='gcn_link_pred')
+        shadow_model = self._train_shadow_model(shadow_model, shadow_dataset, shadow_train_mask, device)
+
+        self._train_attack_classifier(
+            shadow_model, shadow_dataset, shadow_train_mask, shadow_test_mask, device
+        )
+
+        target_features = self._extract_edge_features(model, gen_dataset, torch.ones(num_edges, dtype=torch.bool),
+                                                      device)
+
+        all_predictions = self.classifier.predict(target_features)
+        inferred_membership_full = torch.tensor(all_predictions, dtype=torch.bool)
+
+        self.results.add(mask_tensor, inferred_membership_full)
+        members_count = inferred_membership_full.sum().item()
         return self.results
