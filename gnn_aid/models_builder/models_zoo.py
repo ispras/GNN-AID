@@ -7,6 +7,32 @@ def model_configs_zoo(
         dataset: GeneralDataset,
         model_name: str
 ):
+    sage_cossim = FrameworkGNNConstructor(
+            model_config=ModelConfig(
+                structure=ModelStructureConfig(
+                    [
+                        {
+                            'label': 'n',
+                            'layer': {
+                                'layer_name': 'SAGEConv',
+                                'layer_kwargs': {
+                                    'in_channels': dataset.num_node_features,
+                                    'out_channels': 16,
+                                },
+                            },
+                        },
+                        {
+                            'label': 'd',
+                            'function': {
+                                'function_name': 'CosineSimilarity',
+                                'function_kwargs': None
+                            }
+                        }
+                    ]
+                )
+            )
+    )
+
     gin_gin = FrameworkGNNConstructor(
         model_config=ModelConfig(
             structure=ModelStructureConfig(

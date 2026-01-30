@@ -90,10 +90,7 @@ class GNNExplainer(Explainer):
         idx = kwargs.pop('element_idx')
 
         if self.task.is_edge_level():
-            self.edge_idx = idx
-            # TODO pass an edge as a parameter
-            self.edge_idx = torch.tensor([[1], [2]])
-
+            self.edge_idx = torch.tensor(idx).unsqueeze(dim=1)
             self.x = self.gen_dataset.data.x
             self.edge_index = self.gen_dataset.data.edge_index
         elif self.task.is_graph_level() and self.task.is_classification():  # graph_classification

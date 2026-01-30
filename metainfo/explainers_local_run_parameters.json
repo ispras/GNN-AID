@@ -18,7 +18,7 @@
  },
 
  "GNNExplainer(torch-geom)": {
-  "element_idx": ["Node","int",0,{"min": 0},null],
+  "element_idx": ["Node","int_or_tuple",0,{"min": 0},null],
   "_technical_parameter": {
    "dataset": ["single", "multiple"]
    }
