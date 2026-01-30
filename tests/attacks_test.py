@@ -11,7 +11,7 @@ from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConf
     ConfigPattern, FeatureConfig, Task
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
-    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH
+    OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from .utils import monkey_patch_dirs, cleanup_patches
 
 
@@ -74,6 +74,15 @@ class AttacksTest(unittest.TestCase):
                 }
             }
         )
+
+        # Cora for link pred
+        dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
+        dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
+
+        self.gen_dataset_sg_cora_link = DatasetManager.get_by_config(dc, dvc)
+        self.gen_dataset_sg_cora_link.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
+        self.results_dataset_path_sg_cora_link = self.gen_dataset_sg_cora_link.prepared_dir
+        self.gen_dataset_sg_cora_link.data.to(self.my_device)
 
         monkey_patch_dirs()
 
@@ -365,6 +374,76 @@ class AttacksTest(unittest.TestCase):
 
         # Attack
         _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_example,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ----------------- ----------
+
+    def test_fgsm_LINK(self):
+        sage_cossim = model_configs_zoo(dataset=self.gen_dataset_sg_cora_link, model_name="sage_cossim")
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "batch": 64,
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                },
+                "loss_function": {
+                    "_config_class": "Config",
+                    "_class_name": "CrossEntropyLoss",
+                    "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                    "_class_import_info": ["torch.nn"],
+                    "_config_kwargs": {},
+                },
+            }
+        )
+
+        gnn_model_manager = FrameworkGNNModelManager(
+            gnn=sage_cossim,
+            dataset_path=self.gen_dataset_sg_cora_link.prepared_dir,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+
+        gnn_model_manager.gnn.to(self.my_device)
+        gnn_model_manager.train_model(gen_dataset=self.gen_dataset_sg_cora_link, steps=10, save_model_flag=False)
+
+        # ---------- Attack on structure ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": False,
+                "element_idx": (1, 2),
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_cora_link,
+                                             metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
+        # ---------- ------------------- ----------
+
+        # ---------- Attack on feature ----------
+        evasion_attack_config = ConfigPattern(
+            _class_name="FGSM",
+            _import_path=EVASION_ATTACK_PARAMETERS_PATH,
+            _config_class="EvasionAttackConfig",
+            _config_kwargs={
+                "is_feature_attack": True,
+                "element_idx": (1, 2),
+                "epsilon": 0.5,
+            }
+        )
+
+        gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
+
+        # Attack
+        _ = gnn_model_manager.evaluate_model(gen_dataset=self.gen_dataset_sg_cora_link,
                                              metrics=[Metric("Accuracy", mask='test')])['test']['Accuracy']
         # ---------- ----------------- ----------
 

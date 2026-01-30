@@ -226,7 +226,7 @@ class ExplainersTest(unittest.TestCase):
             gnn=self.sage_cossim,
             dataset_path=self.gen_dataset_sg_cora_link.prepared_dir,
             manager_config=manager_config,
-            modification=ModelModificationConfig(model_ver_ind=0, epochs=10)
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
         )
         self.sage_cossim_mm.train_model(
             gen_dataset=self.gen_dataset_sg_cora_link, steps=10,
