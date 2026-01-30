@@ -1,5 +1,6 @@
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Union
 
@@ -11,16 +12,18 @@ from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.prefix_storage import FixedKeysPrefixStorage
 from gnn_aid.aux.utils import (
     import_by_name, model_managers_info_by_names_list,
-    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, DATASETS_DIR)
+    TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, DATASETS_DIR, ProgressBar)
+from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import (
     ModelStructureConfig, ModelConfig, ModelModificationConfig, ModelManagerConfig)
-from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.datasets.visible_part import VisiblePart
+# from gnn_aid.datasets.visible_part import VisiblePart, ViewPoint
 from gnn_aid.models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
 from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import GNNModelManager
+from . import VisiblePart, ViewPoint, DatasetVarData
 from .block import Block, WrapperBlock
-from .utils import WebInterfaceError, json_dumps, get_config_keys, SocketConnect
+from .utils import WebInterfaceError, json_dumps, get_config_keys, send_epoch_results
+from .visible_part import add_into_dvd
 
 TENSOR_SIZE_LIMIT = 1024  # Max size of weights tensor we sent to frontend
 
@@ -37,9 +40,10 @@ class ModelWBlock(WrapperBlock):
 
     def _init(
             self,
-            ptg_dataset: Dataset
+            visible_part: VisiblePart
     ) -> list[int]:
-        return [ptg_dataset.num_node_features, ptg_dataset.num_classes]
+        gen_dataset = visible_part.gen_dataset
+        return [gen_dataset.num_node_features, gen_dataset.num_classes]
 
     def _finalize(
             self
@@ -65,9 +69,10 @@ class ModelLoadBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset
+            visible_part: VisiblePart
     ) -> list[str]:
-        self.gen_dataset = gen_dataset
+        self.visible_part = visible_part
+        self.gen_dataset = visible_part.gen_dataset
         return self.get_index()
 
     def _finalize(
@@ -119,9 +124,9 @@ class ModelLoadBlock(Block):
     ) -> None:
         """ Load train/test mask associated to the model and send to frontend """
         # FIXME self.manager_config.train_test_split
-        self.gen_dataset.train_mask, self.gen_dataset.val_mask, \
-        self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
-        send_train_test_mask(self.gen_dataset, self.socket)
+        self.gen_dataset.train_mask, self.gen_dataset.val_mask, self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
+        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+        self.socket.send(block='mload', msg=dvd)
 
 
 class ModelConstructorBlock(Block):
@@ -136,10 +141,10 @@ class ModelConstructorBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset
+            visible_part: VisiblePart
     ) -> list:
-        ptg_dataset = gen_dataset.dataset
-        return [ptg_dataset.num_node_features, ptg_dataset.num_classes,
+        gen_dataset = visible_part.gen_dataset
+        return [gen_dataset.num_node_features, gen_dataset.num_classes,
                 gen_dataset.is_multi(), gen_dataset.dataset_var_config.task]
 
     def _finalize(
@@ -172,9 +177,9 @@ class ModelCustomBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset
+            visible_part: VisiblePart
     ) -> list[str]:
-        self.gen_dataset = gen_dataset
+        self.gen_dataset = visible_part.gen_dataset
         return self.get_index()
 
     def _finalize(
@@ -236,11 +241,12 @@ class ModelManagerBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset,
+            visible_part: VisiblePart,
             gnn: GNNConstructor
-    ) -> dict:
+    ) -> Union[dict, list]:
         # Define options for model manager
-        self.gen_dataset = gen_dataset
+        self.visible_part = visible_part
+        self.gen_dataset = visible_part.gen_dataset
         self.gnn = gnn
 
         mm_set = self.gnn.suitable_model_managers()
@@ -248,7 +254,7 @@ class ModelManagerBlock(Block):
         if len(mm_set) == 0:  # FIXME is it ok for custom model?
             mm_set.add("FrameworkGNNModelManager")
         mm_info = model_managers_info_by_names_list(mm_set)
-        return mm_info
+        return [self.gen_dataset.dataset_var_config.task, mm_info]
 
     def _finalize(
             self
@@ -290,36 +296,35 @@ class ModelManagerBlock(Block):
         # Create and send train_test_mask
         if create_train_test_mask:
             self.gen_dataset.train_test_split(*self.model_manager_config.train_test_split)
-            send_train_test_mask(self.gen_dataset, self.socket)
+            dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+            self.socket.send(block='mmc', msg=dvd)
 
     def get_satellites(
             self,
-            part: dict = None
-    ) -> str:
+            view_point: ViewPoint
+    ) -> DatasetVarData:
         """ Get model dependent satellites data: train-test mask, embeds, preds
         """
-        visible_part = self.gen_dataset.visible_part if part is None else\
-            VisiblePart(self.gen_dataset, **part)
+        self.visible_part.update_view_point(view_point)
 
-        res = {}
-        res.update(send_train_test_mask(self.gen_dataset, None, visible_part))
+        task = self.gen_dataset.dataset_var_config.task
+        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+
         if self._object.stats_data is not None:
-            stats_data = {k: visible_part.filter(v)
+            stats_data = {k: self.visible_part.filter(v, task)
                           for k, v in self._object.stats_data.items()}
-            res.update(stats_data)
-        return json.dumps(res)
+            dvd = add_into_dvd(self.gen_dataset, stats_data, dvd)
+        return dvd
 
 
-def send_train_test_mask(
+# TODO move to front client?
+def get_train_test_mask(
         gen_dataset,
-        socket: SocketConnect = None,
         visible_part: VisiblePart = None
-) -> Union[None, dict]:
-    """ Compute train/test mask for the dataset and send to frontend.
+) -> Union[None, DatasetVarData]:
+    """ Get train/val/test mask for the dataset and send to frontend.
     """
-    if visible_part is None:
-        visible_part = gen_dataset.visible_part
-
+    # Encode mask as train=1, val=2, test=3
     train_test_mask = [0] * len(gen_dataset.train_mask)
     for n in range(len(train_test_mask)):
         if gen_dataset.train_mask[n]:
@@ -328,11 +333,10 @@ def send_train_test_mask(
             train_test_mask[n] = 2
         elif gen_dataset.val_mask[n]:
             train_test_mask[n] = 3
+
+    # Filter
     msg = {"train-test-mask": visible_part.filter(train_test_mask)}
-    if socket:
-        socket.send(block='mmc', msg=msg)
-    else:
-        return msg
+    return add_into_dvd(gen_dataset, msg)
 
 
 class ModelTrainerBlock(Block):
@@ -343,20 +347,64 @@ class ModelTrainerBlock(Block):
     ):
         super().__init__(*args, **kwargs)
 
-        self.gen_dataset = None
+        self.gen_dataset: GeneralDataset = None
         self.model_manager = None
         self.metrics = None
 
+        # Copy of the dataset before attacks applied.
+        self._gen_dataset_backup: GeneralDataset = None
+
     def _init(
             self,
-            gen_dataset: GeneralDataset,
+            visible_part: VisiblePart,
             gmm: GNNModelManager
-    ) -> dict:
-        self.gen_dataset = gen_dataset
+    ) -> Union[str, dict]:
+        self.visible_part = visible_part
+        self.gen_dataset = visible_part.gen_dataset
         self.model_manager = gmm
 
+        # Inject hooks
+        self.model_manager.set_hook(self._after_epoch_hook, 'after_epoch')
+
         # fixme misha do we need it?
-        return self.model_manager.get_model_data()
+        # return self.model_manager.get_model_data()
+        return self.gen_dataset.dataset_var_config.task
+
+    def _report(self):
+        """ Called when model training epoch changes: update or reset
+        """
+        msg = {}
+        msg.update(self.pbar.kwargs)
+        msg.update({
+            "progress": {
+                "text": f'{self.pbar.n} of {self.pbar.total}',
+                "load": self.pbar.n / self.pbar.total if self.pbar.total > 0 else 1
+            }})
+        self.socket.send(block='mt', msg=msg, tag='mt' + '_progress', obligate=True)
+
+    def _after_epoch_hook(
+            self,
+            train_loss,
+    ):
+        metrics_values = self.model_manager.evaluate_model(
+            gen_dataset=self.gen_dataset, metrics=self.metrics)
+        self.model_manager.compute_stats_data(
+            self.gen_dataset, predictions=True, logits=True)
+        stats_data = {k: self.visible_part.filter(
+            v, self.gen_dataset.dataset_var_config.task)
+                         for k, v in self.model_manager.stats_data.items()}
+
+        # Reformat to DatasetVarData
+        dvd = add_into_dvd(self.gen_dataset, stats_data)
+
+        send_epoch_results(
+            epochs=self.model_manager.modification.epochs,
+            metrics_values=metrics_values,
+            stats_data=dvd,
+            weights={"weights": self.model_manager.gnn.get_weights()},
+            loss=train_loss,
+            socket=self.socket)
+        self.pbar.update(1)
 
     def _finalize(
             self
@@ -368,7 +416,22 @@ class ModelTrainerBlock(Block):
     def _submit(
             self
     ) -> None:
+        self.metrics = [Metric(**m) for m in self._config.get('metrics')]
         self._object = [self.model_manager, self.metrics]
+        self._save_model()
+
+        # Make a dataset backup
+        if self._gen_dataset_backup is None:
+            # Make a dataset backup
+            # FIXME This is a bad way - for large datasets very bad. It is a temporary solution
+            self._gen_dataset_backup = deepcopy(self.gen_dataset)
+
+    def _unlock(
+            self
+    ) -> None:
+        # Retract changes - reset dataset as before evasion attacks
+        # FIXME This is a bad way - for large datasets very bad. It is a temporary solution
+        self.gen_dataset = deepcopy(self._gen_dataset_backup)
 
     def do(
             self,
@@ -419,7 +482,8 @@ class ModelTrainerBlock(Block):
         self.model_manager.gnn.reset_parameters()
         self.model_manager.modification.epochs = 0
         self.gen_dataset.train_test_split(*self.model_manager.manager_config.train_test_split)
-        send_train_test_mask(self.gen_dataset, self.socket)
+        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+        self.socket.send(block='mt', msg=dvd)
         self._run_model()
 
     def _run_model(
@@ -433,19 +497,42 @@ class ModelTrainerBlock(Block):
             self.gen_dataset, metrics=self.metrics)
         self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
 
-        stats_data = {k: self.gen_dataset.visible_part.filter(v)
+        # fixme here we can want to obtain predicts for nodes and graphs both
+        stats_data = {k: self.visible_part.filter(v)
                       for k, v in self.model_manager.stats_data.items()}
-        self.model_manager.send_epoch_results(
-            metrics_values=metrics_values, stats_data=stats_data, socket=self.socket)
+        # Reformat to DatasetVarData
+        dvd = add_into_dvd(self.gen_dataset, stats_data)
+
+        send_epoch_results(
+            metrics_values=metrics_values, stats_data=dvd, socket=self.socket)
 
     def _train_model(
             self,
             mode: Union[str, None],
             steps: Union[int, None]
     ) -> None:
-        self.model_manager.train_model(
-            gen_dataset=self.gen_dataset, save_model_flag=False,
-            mode=mode, steps=steps, metrics=self.metrics, socket=self.socket)
+
+        self.pbar = ProgressBar()
+        self.pbar.set_hook(self._report, 'on_reset')
+        self.pbar.set_hook(self._report, 'on_update')
+
+        self.pbar.total = self.model_manager.modification.epochs + steps
+        self.pbar.n = self.model_manager.modification.epochs
+        self.pbar.update(0)
+
+        apply_posisoning_ad = True if self.model_manager.modification.epochs == 0 else False
+        try:
+            self.model_manager.train_model(
+                gen_dataset=self.gen_dataset, save_model_flag=False,
+                mode=mode, steps=steps, metrics=self.metrics,
+            apply_posisoning_ad=apply_posisoning_ad)
+
+            self.pbar.close()
+            self.socket.send("mt", {"status": "OK", "info": "training-finished"})
+
+        except Exception as e:
+            self.socket.send("mt", {"status": "FAILED"})
+            raise e
 
     def _save_model(
             self
@@ -459,12 +546,20 @@ class ModelTrainerBlock(Block):
     def _adjust_metrics(
             self
     ) -> None:
-        """ Adjust metrics parameters if dataset has many classes, e.g. binary -> macro averaging
         """
-        classes = self.gen_dataset.num_classes
-        if classes > 2:
+        Adjust metrics parameters if dataset has many classes, e.g. binary -> macro averaging.
+        Helper function until frontend supports metric kwargs.
+        """
+        if self.gen_dataset.num_classes > 2:  # Binary -> macro averaging
             for m in self.metrics:
-                if m.name in ['F1', 'Recall', 'Precision', 'Jaccard']:
+                if m._name in ['F1', 'Recall', 'Precision', 'Jaccard']:
                     avg = m.kwargs.get('average', 'binary')
                     if avg == 'binary':
                         m.kwargs['average'] = 'macro'
+
+        if self.gen_dataset.dataset_var_config.task == Task.EDGE_PREDICTION:
+            for m in self.metrics:
+                if '@' in m._name:
+                    name, k = m._name.split('@')
+                    m._name = name + '@k'
+                    m.kwargs['k'] = int(k)

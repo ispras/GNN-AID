@@ -7,6 +7,7 @@ class SvgElement {
     static scaledRadius(radius, scale) {
         return Math.max(MIN_NODE_RADIUS, Math.ceil(radius * (scale/100) ** 0.5))
     }
+    static MAX_FEATURES_SHOWN = MAX_FEATURES_SHOWN
 
     constructor(x, y, r, color, show, $tip) {
         // X position
@@ -19,6 +20,8 @@ class SvgElement {
         this.s = 1
         // Flag whether all is shown or not
         this.show = show
+
+        this.maxFeaturesShown = MAX_FEATURES_SHOWN
 
         // Tip info
         this.$tip = $tip
@@ -71,7 +74,7 @@ class SvgElement {
                 return this.setEmbeddings.apply(this, args)
             case 'train-test-mask':
                 return this.setTrainMask.apply(this, args)
-            case 'node_features':
+            case 'features':
                 return this.setFeatures.apply(this, args)
             case 'scores':
                 return this.setScores.apply(this, args)
@@ -80,12 +83,102 @@ class SvgElement {
         }
     }
 
-    setFeatures() {}
+    setFeatures(feats) {
+        let r = SvgElement.scaledRadius(this.r, this.s)
+        let size = 0.8 * r
+        let features = this.satellites['features']
+        features.blocks = []
+        let tipText = "Feature:"
+        if (feats.length > this.maxFeaturesShown) {
+            let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+            let x = features.placeX(0, r, feats.length)
+            let y = features.placeY(0, r, feats.length)
+            rect.setAttribute('x', x)
+            rect.setAttribute('y', y)
+            rect.setAttribute('width', size)
+            rect.setAttribute('height', size)
+            let color = 'rgb(255,255,255)'
+            rect.setAttribute('fill', color)
+            rect.setAttribute('stroke', '#ffffff')
+            rect.setAttribute('stroke-width', 1)
+            rect.setAttribute('display', !this.lightMode && this.show ? "inline" : "none")
+            features.blocks.push(rect)
+            tipText += '<br>' + this._featureTipText(feats)
+        }
+        else {
+            for (let i = 0; i < feats.length; i++) {
+                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+                let x = features.placeX(i, r, feats.length)
+                let y = features.placeY(i, r, feats.length)
+                rect.setAttribute('x', x)
+                rect.setAttribute('y', y)
+                rect.setAttribute('width', size)
+                rect.setAttribute('height', size)
+                let color = valueToColor(feats[i], EMBEDDING_COLORMAP, -2, 2, true, 0.2)
+                rect.setAttribute('fill', color)
+                rect.setAttribute('stroke', '#000')
+                rect.setAttribute('stroke-width', 1)
+                rect.setAttribute('display', !this.lightMode && this.show ? "inline" : "none")
+                features.blocks.push(rect)
+            }
+            tipText += feats.reduce((a, c) => a + '<br>' + c.toFixed(5), '')
+        }
+        this._addTip(features.blocks, "feature")
+        this.tipText["feature"] = tipText
+        return true
+    }
 
-    setScores() {}
+    setScores(values) {
+        let r = SvgElement.scaledRadius(this.r, this.s)
+        let size = 0.8 * r
+        let scores = this.satellites['scores']
+        scores.blocks = []
+        let tipText = "Scores:"
+        if (values.length > MAX_FEATURES_SHOWN) {
+            let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+            let x = scores.placeX(0, r, values.length)
+            let y = scores.placeY(0, r, values.length)
+            rect.setAttribute('x', x)
+            rect.setAttribute('y', y)
+            rect.setAttribute('width', size)
+            rect.setAttribute('height', size)
+            let color = 'rgb(255,255,255)'
+            rect.setAttribute('fill', color)
+            rect.setAttribute('stroke', '#ffffff')
+            rect.setAttribute('stroke-width', 1)
+            rect.setAttribute('display', !this.lightMode && this.show ? "inline" : "none")
+            scores.blocks.push(rect)
+            tipText += '<br>' + this._featureTipText(values)
+        }
+        else {
+            for (let i = 0; i < values.length; i++) {
+                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+                let x = scores.placeX(i, r, values.length)
+                let y = scores.placeY(i, r, values.length)
+                rect.setAttribute('x', x)
+                rect.setAttribute('y', y)
+                rect.setAttribute('width', size)
+                rect.setAttribute('height', size)
+                let color = valueToColor(values[i], EMBEDDING_COLORMAP, -2, 2, true, 0.2)
+                rect.setAttribute('fill', color)
+                rect.setAttribute('stroke', '#000')
+                rect.setAttribute('stroke-width', 1)
+                rect.setAttribute('display', !this.lightMode && this.show ? "inline" : "none")
+                scores.blocks.push(rect)
+            }
+            tipText += values.reduce((a, c) => a + '<br>' + c.toFixed(5), '')
+        }
+        this._addTip(scores.blocks, "scores")
+        this.tipText["scores"] = tipText
+        return true
+    }
 
     // Add node labels values
     setLabels(classIndex, numClasses) {
+        if (!numClasses) {
+            console.log('numClasses is null. Labels will not be created')
+            return
+        }
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8*r
         let labels = this.satellites['labels']
@@ -105,6 +198,8 @@ class SvgElement {
 
     // Add node predictions
     setPredictions(preds) {
+        if (!Array.isArray(preds))
+            preds = [preds]
         let predictions = this.satellites['predictions']
         let createNew = predictions.blocks == null
         if (createNew) {
@@ -136,6 +231,8 @@ class SvgElement {
 
     // Add node embeddings
     setEmbeddings(embeds) {
+        if (!Array.isArray(embeds))
+            embeds = [embeds]
         let embeddings = this.satellites['embeddings']
         let createNew = embeddings.blocks == null
         if (createNew) {

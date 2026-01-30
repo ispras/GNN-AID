@@ -1,5 +1,5 @@
 import copy
-from typing import Union, List
+from typing import Union, List, Dict
 
 import torch
 from sklearn.metrics import accuracy_score
@@ -30,7 +30,7 @@ class MIAttacker(
             inferred_labels: torch.Tensor,
             mask_true: torch.Tensor,
             train_class_label: bool = True
-    ) -> float:
+    ) -> Union[float, Dict]:
         """
         Computes accuracy for a single attack result (mask + inferred labels pair).
 
@@ -40,7 +40,7 @@ class MIAttacker(
             mask_true: Tensor of true labels for all nodes in the graph
 
         Returns:
-            float: Accuracy (0.0 to 1.0) of correct predictions among attacked samples
+            float: Dict with metrics for predictions among attacked samples.
                    Returns 0.0 if no samples were attacked
         """
         metrics = {
@@ -83,6 +83,7 @@ class MIAttacker(
 
         return metrics
 
+
 class EmptyMIAttacker(
     MIAttacker
 ):
@@ -116,6 +117,8 @@ class NaiveMIAttacker(
         mask_tensor: Union[str, List[bool], torch.Tensor],
     ):
         assert not isinstance(mask_tensor, str), "Input of original mask seems senseless"
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
 
         model.eval()
 
@@ -222,6 +225,8 @@ class ShadowModelMIAttacker(
             mask_tensor: Union[List[bool], torch.Tensor],
             **kwargs
     ):
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
         task_type = gen_dataset.is_multi()
         if task_type:
             self.model_name = 'gcn_gcn_linear'

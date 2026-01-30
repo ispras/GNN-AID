@@ -5,7 +5,6 @@ from .datasets_manager import DatasetManager
 from .gen_dataset import GeneralDataset, LocalDataset
 from .known_format_datasets import KnownFormatDataset
 from .ptg_datasets import PTGDataset, LibPTGDataset
-from .visible_part import VisiblePart
 
 __all__ = [
     'DatasetConverter',
@@ -17,5 +16,4 @@ __all__ = [
     'KnownFormatDataset',
     'PTGDataset',
     'LibPTGDataset',
-    'VisiblePart'
 ]

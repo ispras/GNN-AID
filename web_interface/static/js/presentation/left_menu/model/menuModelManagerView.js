@@ -1,8 +1,18 @@
 class MenuModelManagerView extends MenuView {
+    static allowedLosses(task) {
+        if ([Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION].includes(task))
+            return [["CrossEntropyLoss", "CrossEntropy"], ["NLLLoss", "NLL"]]
+        if (task === Task.EDGE_PREDICTION)
+            return [["BCEWithLogitsLoss", "BCE with logits"]]
+
+        console.error(`Task ${task} is not supported yet`)
+    }
+
     constructor($div, requestBlock, listenBlocks) {
         super($div, requestBlock, listenBlocks)
 
         // Variables
+        this.task = null
         this.mm_info = null // Dict of appropriate managers, {manager -> info}
 
         // Training params
@@ -17,12 +27,13 @@ class MenuModelManagerView extends MenuView {
         this.$trainMaskFlag = null
     }
 
-    async init(arg) {
+    async init(args) {
         super.init()
         this.appendAcceptBreakButtons()
         // this.$acceptDiv.hide()
 
-        this.mm_info = arg
+        this.task = args[0]
+        this.mm_info = args[1]
 
         await this.buildManager()
     }
@@ -66,7 +77,7 @@ class MenuModelManagerView extends MenuView {
         let $lossParamsDiv
         [$cb, this.$lossSelect, $lossParamsDiv, this.lossParamsBuilder]
             = await addOptionsWithParams("menu-model-constructor-loss",
-            "Loss function", [["CrossEntropyLoss", "CE"], ["NLLLoss", "NLL"]], "F")
+            "Loss function", MenuModelManagerView.allowedLosses(this.task), "F")
         $cc.append($cb)
         $cc.append($lossParamsDiv)
 

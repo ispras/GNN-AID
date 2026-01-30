@@ -172,16 +172,19 @@ class MultipleGraphs extends VisibleGraph {
     _buildVar() {
         for (const [ix, graph] of Object.entries(this.graphs)) {
             graph.datasetVar = {}
-            for (const satellite of VisibleGraph.SATELLITES)
-                if (satellite in this.datasetVar)
-                    graph.datasetVar[satellite] = this.datasetVar[satellite][ix]
+            for (const elem of VisibleGraph.ELEMS) {
+                graph.datasetVar[elem] = {}
+                for (const satellite of VisibleGraph.SATELLITES)
+                    if (elem in this.datasetVar && satellite in this.datasetVar[elem])
+                        graph.datasetVar[elem][satellite] = this.datasetVar[elem][satellite][ix]
+            }
         }
 
         // Check for feature color coding possibility
         if (this.oneHotableFeature) {
-            let key = Object.keys(this.datasetVar['node_features'])[0]
+            let key = Object.keys(this.datasetVar['node']['features'])[0]
             this.coloredNodes = createSetOfColors(
-                this.datasetVar['node_features'][key][0].length, this.svgPanel.$svg)
+                this.datasetVar['node']['features'][key][0].length, this.svgPanel.$svg)
             this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, true)
         }
         else {
@@ -331,39 +334,42 @@ class MultipleGraphs extends VisibleGraph {
     }
 
     // Assign/remove SVG primitives for node satellites: labels, features, predictions, etc
-    setSatellite(satellite, on=true) {
+    setSatellite(elem, satellite, on=true) {
         if (!this.ready)
             // Could happen when we reinit graph while satellites data is being received
             return
-        let $g = this.svgPanel.get("graphs-" + satellite)
+        let $g = this.svgPanel.get("graph-" + satellite)
         if (!on) {
             // Remove SVGs
-            if (satellite === "node_features") {
+            if (elem === 'node' && satellite === "features") {
                 for (const graph of Object.values(this.graphs))
-                    graph.setSatellite("node_features", null)
+                    graph.setSatellite(elem, "features", null)
                     this.showClassAsColor(false)
             }
 
-            else {
+            else if (elem === 'graph') {
                 $g.empty()
                 for (const graph of Object.values(this.graphPrimitives))
                     graph.satellites[satellite].blocks = null
             }
         }
         else { // Draw or update SVGs
-            if (satellite === "node_features") { // Draw feature for each node
+            if (elem === 'node' && satellite === "features") { // Draw feature for each node
                 for (const [n, graph] of Object.entries(this.graphs))
-                    graph.setSatellite("node_features")
+                    graph.setSatellite(elem, "features")
 
                 if (this.coloredNodes)
                     this.showClassAsColor(true)
 
             }
-            else {
-                let numClasses = this.datasetInfo["labelings"][this.labeling]
-                if (satellite in this.datasetVar)
+            else if (elem === 'graph') {
+                // todo later features, merge with upper
+
+                let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
+                if (elem in this.datasetVar && satellite in this.datasetVar[elem])
                     for (const [i, graph] of Object.entries(this.graphPrimitives))
-                        if (graph.setSatellite(satellite, this.datasetVar[satellite][i], numClasses))
+                        if (graph.setSatellite(
+                            satellite, this.datasetVar[elem][satellite][i], numClasses))
                             for (const e of graph.satellites[satellite].blocks)
                                 $g.append(e)
             }
@@ -386,11 +392,21 @@ class MultipleGraphs extends VisibleGraph {
                 graph.setExplanation(this.explanation.reduce(n))
     }
 
-    // getNodes() {
-    // }
-    //
-    // getEdges() {
-    // }
+    getNodes() {
+        let nodes = {} // NOTE copying is not good
+        for (const [n, graph] of Object.entries(this.graphs)) {
+            nodes[n] = graph.getNodes()
+        }
+        return nodes
+    }
+
+    getEdges() {
+        let res = {}
+        for (const [n, graph] of Object.entries(this.graphs)) {
+            res[n] = graph.getEdges()
+        }
+        return res
+    }
 
     // Get information HTML
     getInfo() {
@@ -460,21 +476,20 @@ class MultipleGraphs extends VisibleGraph {
         // Explanation will be set after the layout
 
         // Add graph primitives for all graphs
-        let g = this.svgPanel.add("graphs")
+        let g = this.svgPanel.add("graph")
         for (const svgGraph of Object.values(this.graphPrimitives)) {
             g.appendChild(svgGraph.frame)
             g.appendChild(svgGraph.text)
         }
 
         // Add <g> for graphs satellites
-        // Features for nodes are created within graphs
-        for (const satellite of VisibleGraph.SATELLITES.slice(1))
-            this.svgPanel.add("graphs-" + satellite)
-        this.svgPanel.add("graphs-scores")
+        for (const satellite of VisibleGraph.SATELLITES)
+            this.svgPanel.add("graph-" + satellite)
+        this.svgPanel.add("graph-scores")
         super.createPrimitives()
 
         // Add nodes of visible graphs
-        g = this.svgPanel.get("nodes")
+        g = this.svgPanel.get("node")
         for (const aGraph of Object.values(this.graphs))
             for (const node of Object.values(aGraph.nodePrimitives)) {
                 g.append(node.body)
@@ -520,7 +535,7 @@ class MultipleGraphs extends VisibleGraph {
             if (this.coloredNodes)
                 for (const [g, graph] of Object.entries(this.graphs))
                     for (const [n, node] of Object.entries(graph.nodePrimitives))
-                        node.setFillColorIdx(un1hot(this.datasetVar['node_features'][g][n]))
+                        node.setFillColorIdx(un1hot(this.datasetVar['node']['features'][g][n]))
         }
         else {
             for (const graph of Object.values(this.graphs))
@@ -530,18 +545,22 @@ class MultipleGraphs extends VisibleGraph {
     }
 
     // Turn on/off visibility of labels, features, predictions, etc
-    showSatellite(satellite, show) {
+    showSatellite(elem, satellite, show) {
         // console.log('multi.showSatellite', satellite, show)
-        if (satellite === "node_features") {
+        if (elem === "node" && satellite === "features") {
             for (const graph of Object.values(this.graphs))
-                graph.showSatellite(satellite, show)
+                graph.showSatellite(elem, satellite, show)
         }
-        else {
-            this.svgPanel.get("graphs-" + satellite).css("display", show ? 'inline' : 'none')
+        else if (elem === "graph") {
+            this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
             for (const graph of Object.values(this.graphPrimitives)) {
                 graph.satellites[satellite].show = show
                 graph.visible(graph.show)
             }
+        }
+        else if (elem === "edge") {
+            // todo
+            // console.error('not implemented')
         }
     }
 

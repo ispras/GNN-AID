@@ -11,7 +11,7 @@ from gnn_aid.data_structures import DatasetConfig
 from gnn_aid.data_structures.configs import ConfigPattern
 from .datasets_manager import DatasetManager
 from .known_format_datasets import KnownFormatDataset
-from .visible_part import VisiblePart
+from .visible_part import VisiblePart, ViewPoint
 
 
 class CustomHeteroDataset(
@@ -357,7 +357,7 @@ class CustomHeteroDataset(
             "labels": labels,
         }
 
-        visible_part = self.visible_part if part is None else VisiblePart(self, **part)
+        visible_part = self.visible_part if part is None else VisiblePart(ViewPoint(**part), self)
 
         for nt, ixes in visible_part.ixes().items():
             # TODO IMP misha replace with getting data from tensors instead of keeping the whole data

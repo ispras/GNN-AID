@@ -13,7 +13,6 @@ from gnn_aid.aux.utils import root_dir
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
     Task
 from .dataset_info import DatasetInfo
-from .visible_part import VisiblePart
 
 
 class GeneralDataset(ABC):
@@ -55,9 +54,6 @@ class GeneralDataset(ABC):
         self.info: DatasetInfo = None
 
         # = Variable part
-        # TODO misha - dataset should not know about visible part, but we use it when model sends stats over visible nodes only
-        self.visible_part: VisiblePart = None  # index of visible nodes/graphs at frontend
-
         self.dataset: Dataset = None  # Current PTG dataset
         self._data: Data = None
 
@@ -124,6 +120,11 @@ class GeneralDataset(ABC):
         NOTE: this will load the whole dataset into memory, be careful if the size is large.
         """
         if self._data is None:
+            if self.dataset is None:
+                raise RuntimeError(
+                    f"PyG dataset is not defined. Didn't you forget to build() the dataset?"
+                    f" If so, define {DatasetVarConfig.__name__} and call build() method.")
+
             if len(self.dataset) > 1:
                 if isinstance(self.dataset, InMemoryDataset):
                     self._data = self.dataset._data
@@ -184,18 +185,22 @@ class GeneralDataset(ABC):
     def num_classes(
             self
     ) -> int:
+        # FIXME depends on task
         return self.dataset.num_classes
 
     @property
     def num_node_features(
             self
     ) -> int:
+        # FIXME depends on task?
         return self.dataset.num_node_features
 
     @property
     def node_features(
             self
     ) -> List[torch.Tensor]:
+        """ Get a list of tensors of node features, one for each graph in the dataset.
+        """
         if self.dataset is None:
             raise RuntimeError(f"Cannot get node features: dataset {self} is not built."
                                f" Define {DatasetVarConfig.__name__} and call build() method")
@@ -203,6 +208,22 @@ class GeneralDataset(ABC):
             return [data.x for data in self.dataset]
         else:
             return self.dataset[0].x
+
+    @property
+    def edge_features(
+            self
+    ) -> List[torch.Tensor]:
+        """ Get a list of tensors of edge features, one for each graph in the dataset.
+        """
+        if self.dataset is None:
+            raise RuntimeError(f"Cannot get edge features: dataset {self} is not built."
+                               f" Define {DatasetVarConfig.__name__} and call build() method")
+
+        if self.is_multi():
+            return [data.edge_attr for data in self.dataset]
+        else:
+            return self.dataset[0].edge_attr
+        # TODO misha implement
 
     def __len__(
             self
@@ -254,12 +275,6 @@ class GeneralDataset(ABC):
         """ Build graph(s) structure - edge index
         Structure according to https://docs.google.com/spreadsheets/d/1fNI3sneeGoOFyIZP_spEjjD-7JX2jNl_P8CQrA4HZiI/edit#gid=1096434224
         """
-
-    def set_visible_part(
-            self,
-            part: dict
-    ) -> None:
-        self.visible_part = VisiblePart(self, **part)
 
     def _register(
             self

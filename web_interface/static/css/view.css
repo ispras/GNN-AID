@@ -127,3 +127,23 @@ div.disabled * {
     -ms-user-select: none;
     user-select: none;
 }
+
+details.notAllowed {
+    cursor: not-allowed;
+}
+details.wait {
+    cursor: wait;
+}
+details.disabled {
+    opacity: 0.6;
+}
+details.disabled *:focus {
+    outline: 0;
+}
+details.disabled * {
+    pointer-events: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}

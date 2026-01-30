@@ -334,6 +334,8 @@ class GNNConstructorError(Exception):
 
 
 class Concat(nn.Module):
+    """ Concatenation of tensors as a torch function. Convenient to use as a model layer.
+    """
     def __init__(self, dimension=1):
         super(Concat, self).__init__()
         self.dimension = dimension
@@ -341,6 +343,18 @@ class Concat(nn.Module):
     def forward(self, tensors):
         # Concatenate a list of tensors along the specified dimension
         return torch.cat(tensors, dim=self.dimension)
+
+
+class DotProduct(nn.Module):
+    """ Dot-product of 2 tensors as a torch function. Convenient to use as a model layer.
+    """
+    def __init__(self, dimension=-1):
+        super(DotProduct, self).__init__()
+        self.dimension = dimension
+
+    def forward(self, x1, x2):
+        # Dot product of 2 tensors
+        return (x1 * x2).sum(dim=-1)
 
 
 # ================================================

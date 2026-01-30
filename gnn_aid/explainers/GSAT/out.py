@@ -14,7 +14,8 @@ class GSATExplainer(Explainer):
     @staticmethod
     def check_availability(gen_dataset, model_manager):
         """ Availability check for the given dataset and model manager. """
-        return any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules())
+        # return any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules())
+        return False
 
     def __init__(
             self,

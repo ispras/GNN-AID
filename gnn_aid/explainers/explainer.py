@@ -3,59 +3,9 @@ from time import sleep
 from abc import ABC, abstractmethod
 from typing import Union, Callable, Any, Type
 
-from tqdm import tqdm
-
+from gnn_aid.aux.utils import ProgressBar
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
-
-
-# from web_interface.back_front.utils import SocketConnect
-
-
-class ProgressBar(tqdm):
-    def __init__(
-            self,
-            socket: 'SocketConnect',
-            dst,
-            *args,
-            **kwargs
-    ):
-        super(ProgressBar, self).__init__(*args, **kwargs)
-        self.dst = dst
-        self.socket = socket
-        self._kwargs = {}
-
-    def _report(
-            self,
-            obligate: bool = False
-    ) -> None:
-        if self.socket is not None:
-            msg = {}
-            msg.update(self._kwargs)
-            msg.update({
-                "progress": {
-                    "text": f'{self.n} of {self.total}',
-                    "load": self.n / self.total if self.total > 0 else 1
-                }})
-            self.socket.send(block=self.dst, msg=msg, tag=self.dst + '_progress', obligate=obligate)
-
-    def reset(
-            self,
-            total: Union[float, None] = None,
-            **kwargs
-    ):
-        res = super().reset(total=total)
-        self._kwargs = kwargs
-        self._report(obligate=True)
-        return res
-
-    def update(
-            self,
-            n: int = 1
-    ):
-        res = super().update(n=n)
-        self._report(obligate=True)
-        return res
 
 
 def finalize_decorator(
@@ -107,8 +57,7 @@ class Explainer(
         self.gen_dataset = gen_dataset
         self.model = model
 
-        # self.socket = SocketConnect()
-        self.pbar = None  # to be set when run from explainer manager
+        self.pbar: ProgressBar = None  # Progress bar for reporting results to frontend. Set from explainer manager
         self.raw_explanation = None  # result of external explainer algorithm
         self.explanation = None  # explanation in our format, ready to be saved
         self._run_kwargs = None  # cache for kwargs from run()
@@ -170,7 +119,7 @@ class DummyExplainer(
             model_manager: Type
     ) -> bool:
         """ Fits for all """
-        return True
+        return False
 
     def __init__(
             self,

@@ -27,7 +27,7 @@ class Layout {
         this.iteration = 0
         this.pos = {}
         let nodes = this.visibleGraph.getNodes()
-        let r = nodes.size ** 0.5
+        let r = nodes.length ** 0.5
         for (const n of nodes)
             // TODO increase zone according to num of nodes
             this.pos[n] = new Vec(r*Math.random(), r*Math.random())

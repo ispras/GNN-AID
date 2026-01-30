@@ -1,4 +1,4 @@
-from .explainer import Explainer, DummyExplainer, ProgressBar
+from .explainer import Explainer, DummyExplainer
 from .explainer_metrics import NodesExplainerMetric
 
 import gnn_aid.explainers.gnnexplainer
@@ -17,7 +17,6 @@ from .explainers_manager import FrameworkExplainersManager
 __all__ = [
     'Explainer',
     'DummyExplainer',
-    'ProgressBar',
     'NodesExplainerMetric',
     'FrameworkExplainersManager'
 ]

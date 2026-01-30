@@ -1,3 +1,5 @@
+from .utils import SocketConnect, WebInterfaceError, json_loads, json_dumps
+from .visible_part import ViewPoint, DatasetData, DatasetVarData, DatasetIndex, VisiblePart
 from .diagram import Diagram
 from .frontend_client import FrontendClient, ClientMode
 from .block import Block, BlockConfig, WrapperBlock
@@ -8,7 +10,6 @@ from .model_blocks import (
 from .explainer_blocks import (
     ExplainerWBlock, ExplainerInitBlock, ExplainerLoadBlock, ExplainerRunBlock)
 from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
-from .utils import SocketConnect, WebInterfaceError, json_loads, json_dumps
 
 __all__ = [
     'Diagram',
@@ -33,6 +34,11 @@ __all__ = [
     'AfterTrainBlock',
     'SocketConnect',
     'WebInterfaceError',
+    'ViewPoint',
+    'DatasetData',
+    'DatasetVarData',
+    'DatasetIndex',
+    'VisiblePart',
     'json_loads',
     'json_dumps'
 ]

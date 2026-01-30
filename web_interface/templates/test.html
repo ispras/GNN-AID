@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trainer</title>
+    <script src="../static/js/libs/jquery-3.6.0.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.7.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.7.1"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+
+    <link rel="stylesheet" type="text/css" href="../static/css/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/styles.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/controls.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/view.css">
+
+
+    <style>
+/*#container {*/
+/*  position: relative;*/
+/*  !*overflow: hidden; !* ⛔️ Не даст выйти элементам, внутри позиционированных блоков *!*!*/
+/*  z-index: 0;*/
+/*}*/
+
+/*.submenu {*/
+/*  z-index: 9999; !* ✅ Убедись, что выпадающее меню выше контейнера *!*/
+/*}*/
+
+/*.submenu {*/
+/*  background: white;*/
+/*  border: 1px solid #aaa;*/
+/*  padding: 5px;*/
+/*  display: none;*/
+/*  z-index: 999;*/
+/*  min-width: 150px;*/
+/*  box-shadow: 0 2px 5px rgba(0,0,0,0.2);*/
+/*}*/
+
+.dropdownmenuitem {
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dropdownmenuitem:hover {
+  background: #f0f0f0;
+}
+
+.has-submenu:hover > .submenu {
+  display: block;
+  position: absolute;
+}
+    </style>
+
+</head>
+<body>
+    <h1>Trainer</h1>
+    <button onclick="httpRequest()">http Request</button>
+    <button onclick="train()">train</button>
+    <ul id="log"></ul>
+
+    <div class="controls-zone">
+      <div class="v-scrollable" id="menu-left">
+          <button id="dataset-button">Choose dataset</button>
+          <div id="dropdown-menu"></div>
+          <div id="menu-dataset-view">
+            <!-- generated stuff -->
+          </div>
+      </div>
+    </div>
+
+    <script>
+
+    ///
+    // Index of data elements present on backend.
+    // Each data element is identified by a list of keys and object.
+    class TuplePrefixStorage {
+        constructor() {
+            this.content = {} // {K1 -> {K2 -> ... -> {K(d-1) -> [obj]}...}
+
+            this.selects = null // key -> select
+        }
+
+        // Build PrefixStorage from its json
+        static fromJSON(string) {
+            let ps = new TuplePrefixStorage()
+            ps.content = JSON.parse(string)
+            return ps
+        }
+        /**
+         * Create menu selectors according to the contents with hierarchical dependency, i.e.
+         * number of selectors == this.depth,
+         * elements of selector[i] == this.contents at depth i.
+         * @param $div - HTML element where to add selectors
+         * @param dropFunc - called when user change any selector
+         * @param setFunc - called when user choose option in the last selector
+         * @param descriptionInfo - dict with descriptions of all options
+         */
+        buildCascadeMenu($div, dropFunc, setFunc, descriptionInfo) {
+            let levelMap = new Map(); // уровень -> список подменю на этом уровне
+
+            let add = ($aDiv, content, level = 0, path=[]) => {
+                if (!levelMap.has(level)) levelMap.set(level, []);
+                for (const [k, v] of Object.entries(content)) {
+                    let $item = $("<div></div>")//.attr("style", "width: 150px");
+                    $aDiv.append($item);
+                    $item.addClass("dropdownmenuitem");
+
+                    let $subDiv
+                    let popperInstance
+                    let newPath = path.concat([k])
+
+                    let isObject = Array.isArray(v)
+                    if (isObject) {
+                        $item.append($("<b></b>").text(k));
+                        $item.attr("title", v[0]);
+                        $item.click(function (e) {
+                            if (dropFunc) dropFunc();
+                            if (setFunc) setFunc(newPath);
+                            this.selects = newPath
+                            // e.stopPropagation();
+                        });
+                    } else {
+                        $item.append(k);
+                        $item.addClass("has-submenu");
+
+                        $subDiv = $("<div></div>").attr("class", "submenu").css("position", "absolute").hide();
+                        $("body").append($subDiv);
+                        add($subDiv, v, level + 1, newPath);
+
+                        levelMap.get(level + 1).push($subDiv);
+
+                        popperInstance = Popper.createPopper($item[0], $subDiv[0], {
+                            placement: 'right-start',
+                            modifiers: [
+                                // { name: 'preventOverflow', options: { boundary: document.body } },
+                                // { name: 'offset', options: { offset: [0, 0] } },
+                            ],
+                        });
+
+                        // If click on submenu title - do nothing
+                        $item.click(function (e) {
+                            e.stopPropagation();
+                        });
+                    }
+                    $item.on("mouseenter", function () {
+                        // Скрываем ВСЕ подменю текущего и более глубоких уровней
+                        for (let [lvl, subs] of levelMap.entries()) {
+                            if (lvl >= level + 1) {
+                                subs.forEach($s => $s.hide());
+                            }
+                        }
+
+                        if (!isObject) {
+                            // Показываем текущее
+                            $subDiv.show();
+                            popperInstance.update();
+                        }
+                    });
+                }
+            };
+
+            add($div, this.content, 0, [])
+
+        }
+
+        getConfig() {
+            let res = {}
+            for (let d = 0; d<this.keys.length; ++d)
+                res[this.keys[d]] = this.selects[d].get(0).value
+            return res
+        }
+    }
+
+    let ps = "{\n" +
+        "  \"single\": {\n" +
+        "    \"test\": [\n" +
+        "      \"OBJ1\"\n" +
+        "    ]\n" +
+        "  },\n" +
+        "  \"multiple-graphs\": {\n" +
+        "    \"custom\": {\n" +
+        "      \"example_gml\": [\n" +
+        "        \"OBJ2\"\n" +
+        "      ],\n" +
+        "      \"small\": [\n" +
+        "        \"OBJ3\"\n" +
+        "      ],\n" +
+        "      \"example\": [\n" +
+        "        \"OBJ4\"\n" +
+        "      ]\n" +
+        "    }\n" +
+        "  },\n" +
+        "  \"single-graph\": {\n" +
+        "    \"Planetoid\": {\n" +
+        "      \"Cora\": [\n" +
+        "        \"OBJ5\"\n" +
+        "      ]\n" +
+        "    },\n" +
+        "    \"example\": [\n" +
+        "      \"OBJ6\"\n" +
+        "    ],\n" +
+        "    \"custom\": {\n" +
+        "      \"examples1\": [\n" +
+        "        \"OBJ7\"\n" +
+        "      ],\n" +
+        "      \"examples\": {\n" +
+        "        \"test1\": [\n" +
+        "          \"OBJ7\"\n" +
+        "        ],\n" +
+        "        \"test2\": [\n" +
+        "          \"OBJ7\"\n" +
+        "        ],\n" +
+        "        \"tests\": {\n" +
+        "          \"test3\": [\n" +
+        "            \"OBJ7\"\n" +
+        "          ]\n" +
+        "        }\n" +
+        "      },\n" +
+        "      \"example\": [\n" +
+        "        \"OBJ8\"\n" +
+        "      ]\n" +
+        "    }\n" +
+        "  }\n" +
+        "}\n"
+
+    let prefixStorage = TuplePrefixStorage.fromJSON(ps)
+
+    function drop() {
+        console.log('drop')
+    }
+    function set(arg) {
+        console.log('set', arg)
+    }
+    let $div = $("#menu-dataset-view")
+
+    // Hide menus when clicking anywhere outside
+    document.addEventListener('click', () => {
+        $(".menu-dataset-view").hide()
+        $(".submenu").hide()
+    })
+
+
+    const dropdown = document.getElementById('menu-dataset-view');
+    const button = document.getElementById('dataset-button');
+    let mainPopper = null;
+
+    $("#dataset-button").click(function (e) {
+      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+      if (!mainPopper) {
+
+        prefixStorage.buildCascadeMenu($div, drop, set)
+
+        mainPopper = Popper.createPopper(button, dropdown, {
+          placement: 'bottom-start',
+          modifiers: [
+            { name: 'preventOverflow', options: { boundary: document.body } },
+            { name: 'offset', options: { offset: [0, 4] } },
+          ],
+        });
+      } else {
+        mainPopper.update();
+      }
+    })
+
+    // let mainPopper = null;
+    // button.addEventListener('click', () => {
+    //   dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    //   if (!mainPopper) {
+    //     mainPopper = Popper.createPopper(button, dropdown, {
+    //       placement: 'bottom-start',
+    //       modifiers: [
+    //         { name: 'preventOverflow', options: { boundary: document.body } },
+    //         { name: 'offset', options: { offset: [0, 4] } },
+    //       ],
+    //     });
+    //   } else {
+    //     mainPopper.update();
+    //   }
+    // });
+
+    const allSubmenus = [];
+
+    // Обрабатываем вложенные подменю
+    document.querySelectorAll('.has-submenu').forEach(parentItem => {
+      // const submenu = parentItem.querySelector('.submenu');
+      // document.body.appendChild(submenu); // ⬅️ первичный перенос в body
+      // allSubmenus.push(submenu);
+      //
+      // const popperInstance = Popper.createPopper(parentItem, submenu, {
+      //   placement: 'right-start',
+      //   modifiers: [
+      //     { name: 'preventOverflow', options: { boundary: document.body } },
+      //     // { name: 'offset', options: { offset: [8, 0] } },
+      //   ],
+      // });
+
+      // // наведение на пункт — показать и скрыть остальные
+      // parentItem.addEventListener('mouseenter', () => {
+      //   allSubmenus.forEach(s => {
+      //     if (s !== submenu && !s.contains(document.activeElement)) {
+      //       s.style.display = 'none';
+      //     }
+      //   });
+      //   submenu.style.display = 'block';
+      //   popperInstance.update();
+      // });
+
+      // // наведение на submenu — не скрывать
+      // submenu.addEventListener('mouseenter', () => {
+      //   submenu.style.display = 'block'; // держим открытым
+      // });
+      //
+      // // уход с submenu — скрыть (опционально)
+      // submenu.addEventListener('mouseleave', () => {
+      //   submenu.style.display = 'none';
+      // });
+    });
+
+    </script>
+</body>
+</html>

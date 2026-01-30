@@ -40,6 +40,7 @@ class DatasetView extends View {
         this.datasetVar = null
         this.explanation = null
         this.visibleGraph = null
+        this.task = null
         this.labeling = null
         this.oneHotableFeature = null
     }
@@ -48,6 +49,8 @@ class DatasetView extends View {
         await super.onInit(block, data)
         if (block === "dvc") {
             this.datasetInfo = data
+            console.log('this.datasetInfo')
+            console.log(this.datasetInfo)
             if (controller.presenter.menuDatasetView.state === MVState.LOCKED) {
                 // this.dataset = new Dataset(datasetData)
                 // console.log(this.dataset)
@@ -62,8 +65,10 @@ class DatasetView extends View {
             await this.init()
         }
         else if (block === "dvc") {
-            [this.labeling, this.oneHotableFeature] = data
+            [this.task, this.labeling, this.oneHotableFeature] = data
             this.datasetVar = await controller.ajaxRequest('/dataset', {get: "var_data"})
+            console.log('this.datasetVar')
+            console.log(this.datasetVar)
             this.setDatasetVar()
         }
         else if (block === "el") {
@@ -83,14 +88,17 @@ class DatasetView extends View {
         else if (block === "dvc") {
             this.dropDatasetVar()
             this.datasetVar = null
+            this.task = null
             this.labeling = null
             this.oneHotableFeature = null
         }
         else if (block === "mmc") {
             if (this.datasetVar) {
                 // TODO other model vars
-                this.datasetVar['train-test-mask'] = null
-                this.visibleGraph.setSatellite('train-test-mask', false)
+                for (const elem of VisibleGraph.ELEMS) {
+                    this.datasetVar[elem]['train-test-mask'] = null
+                    this.visibleGraph.setSatellite(elem, 'train-test-mask', false)
+                }
             }
         }
         else if (block === "el" || block === "ei") {
@@ -102,13 +110,29 @@ class DatasetView extends View {
 
     onReceive(block, data) {
         // super.onReceive(block, args)
-        if (block === "mmc" || block === "mt") {
-            for (const satellite of VisibleGraph.SATELLITES) {
-                if (satellite in data) {
-                    this.datasetVar[satellite] = data[satellite]
-                    this.visibleGraph.setSatellite(satellite)
+        if (block === "mmc" || block === "mt" || block === "at") {
+            console.log('onReceive', block, data)
+            let updDatasetVar = false
+            for (const elem of VisibleGraph.ELEMS) {
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    if (elem in data && satellite in data[elem]) {
+                        updDatasetVar = true
+                        this.datasetVar[elem][satellite] = data[elem][satellite]
+                        // this.visibleGraph.setSatellite(elem, satellite)
+                    }
                 }
             }
+            // fixme can we do simpler than copying? it is in several places.
+            //  why we need this.datasetVar?
+            this.visibleGraph.datasetVar = this.visibleGraph._convertDatasetVar(this.datasetVar)
+            if (updDatasetVar)
+                for (const elem of VisibleGraph.ELEMS) {
+                    for (const satellite of VisibleGraph.SATELLITES) {
+                        if (elem in data && satellite in data[elem]) {
+                            this.visibleGraph.setSatellite(elem, satellite)
+                        }
+                    }
+                }
         }
         else if (block === "er") {
             if ("explanation_data" in data) {
@@ -201,11 +225,12 @@ class DatasetView extends View {
     }
 
     setDatasetVar() {
-        // console.log('setDatasetVar()')
-        this.visibleGraph.initVar(this.datasetVar, this.labeling, this.oneHotableFeature)
+        console.log('setDatasetVar()')
+        this.visibleGraph.initVar(this.datasetVar, this.task, this.labeling, this.oneHotableFeature)
     }
 
     dropDatasetVar() {
+        // this.datasetVar = null
         if (this.visibleGraph)
             this.visibleGraph.dropVar()
     }
@@ -235,29 +260,38 @@ class DatasetView extends View {
             {set: "visible_part", part: JSON_stringify(this.visibleGraph.visibleConfig)})
 
         let data = await controller.ajaxRequest('/dataset', {get: "data"})
+        console.log('datasetData')
+        console.log(data)
         this.visibleGraph.datasetData = data
     }
 
     async afterInit() {
         // Ask for features and labels
         let data = await controller.ajaxRequest('/dataset', {get: "var_data"})
+        console.log('var_data', data)
         if (data !== '') {
-            for (const satellite of VisibleGraph.SATELLITES) {
-                if (satellite in data) {
-                    this.datasetVar[satellite] = data[satellite]
+            for (const elem of VisibleGraph.ELEMS) {
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    if (elem in data && satellite in data[elem]) {
+                        this.datasetVar[elem][satellite] = data[elem][satellite]
+                    }
                 }
             }
         }
 
         // Ask for model satellites: masks, preds and embeds
         data = await controller.ajaxRequest('/model', {get: "satellites"})
+        console.log('satellites data', data)
         if (data !== '') {
-            for (const satellite of VisibleGraph.SATELLITES) {
-                if (satellite in data) {
-                    this.datasetVar[satellite] = data[satellite]
+            for (const elem of VisibleGraph.ELEMS) {
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    if (elem in data && satellite in data[elem]) {
+                        this.datasetVar[elem][satellite] = data[elem][satellite]
+                    }
                 }
             }
         }
+        this.visibleGraph.datasetVar = this.visibleGraph._convertDatasetVar(this.datasetVar)
 
         if (this.explanation)
             this.visibleGraph.setExplanation(this.explanation)

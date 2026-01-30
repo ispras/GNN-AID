@@ -2,7 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 from types import FunctionType
-from typing import List, Union, Type
+from typing import List, Union, Type, Callable
 
 from gnn_aid.aux import Declare, UserCodeInfo
 from gnn_aid.aux.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, all_subclasses, \
@@ -15,7 +15,7 @@ from gnn_aid.data_structures import ModelManagerConfig, ModelModificationConfig,
 from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_CLASS_NAME, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor
-# from web_interface.back_front.utils import SocketConnect
+
 
 # TODO misha, Kirill add comments to class and all functions
 class GNNModelManager:
@@ -93,7 +93,6 @@ class GNNModelManager:
         self.mi_defense_flag = False
 
         self.gnn = None
-        self.socket = None  # Websocket for sending info to frontend, we avoid to store it since it is not pickleable
         self.stats_data = None  # Stores some stats to be sent to frontend
 
         self.set_poison_defender()
@@ -102,6 +101,20 @@ class GNNModelManager:
         self.set_mi_defender()
         self.set_evasion_attacker()
         self.set_evasion_defender()
+
+        # Hooks for frontend client
+        self._after_epoch_hook: Callable = None
+
+    # FIXME consider moving to super class?
+    def set_hook(
+            self,
+            hook: Callable,
+            where: str
+    ) -> None:
+        if where == 'after_epoch':
+            self._after_epoch_hook = hook
+        else:
+            raise ValueError(f"Hook {where} is not supported")
 
     def train_model(
             self,
@@ -704,11 +717,13 @@ class GNNModelManager:
 
     def after_epoch(
             self,
-            gen_dataset: GeneralDataset
+            gen_dataset: GeneralDataset,
+            **hook_kwargs
     ):
         """ This hook is called after training the next training epoch
         """
-        pass
+        if self._after_epoch_hook:
+            self._after_epoch_hook(**hook_kwargs)
 
     def before_batch(
             self,

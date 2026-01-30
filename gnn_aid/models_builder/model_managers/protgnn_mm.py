@@ -207,7 +207,8 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
 
     def after_epoch(
             self,
-            gen_dataset: GeneralDataset
+            gen_dataset: GeneralDataset,
+            **hook_kwargs
     ):
         # TODO compare is_best with different metrics to be implemented
 
@@ -226,6 +227,8 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self.best_acc = self.cur_acc
             self.early_stop_count = 0
             self.gnn.best_prots = self.prot_layer.prototype_graphs
+
+        super().after_epoch(gen_dataset, **hook_kwargs)
 
     def early_stopping(
             self,

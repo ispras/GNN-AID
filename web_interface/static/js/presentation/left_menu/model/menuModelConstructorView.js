@@ -1,4 +1,7 @@
 class MenuModelConstructorView extends MenuView {
+    // Decoder functions that must be final they do not allow adding decoder layers after them
+    static finalDecoderFunctions = ["CosineSimilarity", "DotProduct"]
+
     constructor($div, requestBlock, listenBlocks) {
         super($div, requestBlock, listenBlocks)
 
@@ -9,7 +12,7 @@ class MenuModelConstructorView extends MenuView {
     }
 
     async init(args) {
-        super.init(args)
+        super.init()
 
         this.state = MVState.ACTIVE
 
@@ -93,7 +96,7 @@ class MenuModelConstructorView extends MenuView {
 
         // Graph layer block if needed
         let $graphLayerBlocksDiv
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             $graphLayerBlocksDiv = $("<div></div>")
             $cc.append($graphLayerBlocksDiv)
 
@@ -123,7 +126,7 @@ class MenuModelConstructorView extends MenuView {
         // Custom layer block - for now Prot, only 1
         let $customGraphLayerBlockDiv
         let $customGraphLayerButtonDiv
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             $customGraphLayerBlockDiv = $("<div></div>")
             $cc.append($customGraphLayerBlockDiv)
 
@@ -155,15 +158,24 @@ class MenuModelConstructorView extends MenuView {
             this.decoderLayerBlocks.append(layerBlock)
             $decoderLayerBlocksDiv.append(layerBlock.$div)
             await layerBlock.build(this.decoderLayerBlocks.length, 0)
-            this.nodeLayerBlocks.first().update(null, this.nodeLayerBlocks.length, 0)
+            // this.nodeLayerBlocks.first().update(null, this.nodeLayerBlocks.length, 0)
 
             let $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
-            let $addDecoderLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-decoder-layer")
+            let $addDecoderLayerButton = $("<button></button>")
+                .attr("id", "model-button-constructor-add-decoder-layer")
                 .text("+ decoder layer").css("margin-right", "12px")
             $cb.append($addDecoderLayerButton)
 
             $addDecoderLayerButton.click(() => {
+                // Check if last decoder layer is Linear, otherwise we cannot add layers
+                let fn = this.decoderLayerBlocks.last().getFunctionName()
+                if (MenuModelConstructorView.finalDecoderFunctions.includes(fn)) {
+                    alert(`Cannot add decoder layer after the functions: ${
+                        MenuModelConstructorView.finalDecoderFunctions}`)
+                    return
+                }
+
                 this.absLayersCounter++
                 let layerBlock = new LayerBlock('d', this.absLayersCounter, this.decoderLayerBlocks.length)
                 $decoderLayerBlocksDiv.append(layerBlock.$div)
@@ -182,7 +194,11 @@ class MenuModelConstructorView extends MenuView {
                 $customGraphLayerButtonDiv.show()
             }
             else {
-                let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
+                let layerBlocks = {
+                    'n': self.nodeLayerBlocks,
+                    'g': self.graphLayerBlocks,
+                    'd': self.decoderLayerBlocks,
+                }[this.type]
                 if (layerBlocks.length === 1) return
                 let ix = this.ix
                 this.$div.remove()
@@ -197,8 +213,16 @@ class MenuModelConstructorView extends MenuView {
             }
         }
         LayerBlock.prototype.up = function () {
-            let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
-            let $layerBlocksDiv = this.type === 'n' ? $nodeLayerBlocksDiv : $graphLayerBlocksDiv
+            let layerBlocks = {
+                'n': self.nodeLayerBlocks,
+                'g': self.graphLayerBlocks,
+                'd': self.decoderLayerBlocks,
+            }[this.type]
+            let $layerBlocksDiv = {
+                'n': $nodeLayerBlocksDiv,
+                'g': $graphLayerBlocksDiv,
+                'd': $decoderLayerBlocksDiv,
+            }[this.type]
             let ix = this.ix
             if (ix > 0) {
                 $layerBlocksDiv.children().eq(ix).after($layerBlocksDiv.children().eq(ix - 1))
@@ -209,8 +233,16 @@ class MenuModelConstructorView extends MenuView {
             self.updConnections()
         }
         LayerBlock.prototype.down = function () {
-            let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
-            let $layerBlocksDiv = this.type === 'n' ? $nodeLayerBlocksDiv : $graphLayerBlocksDiv
+            let layerBlocks = {
+                'n': self.nodeLayerBlocks,
+                'g': self.graphLayerBlocks,
+                'd': self.decoderLayerBlocks,
+            }[this.type]
+            let $layerBlocksDiv = {
+                'n': $nodeLayerBlocksDiv,
+                'g': $graphLayerBlocksDiv,
+                'd': $decoderLayerBlocksDiv,
+            }[this.type]
             let ix = this.ix
             if (ix < layerBlocks.length - 1) {
                 $layerBlocksDiv.children().eq(ix).before($layerBlocksDiv.children().eq(ix + 1))
@@ -238,15 +270,13 @@ class MenuModelConstructorView extends MenuView {
 
     // Form model config from selectors values
     constructModelConfig() {
-        let nodeLayersOutputSize = this.num_classes
-
         // Change layers output size to num_classes, and all its precedents if needed
-        let setOutputSize = (layerBlocks) => {
+        let setOutputSize = (layerBlocks, outputSize) => {
             let iter = layerBlocks.reverseIterator()
             let result = iter.next()
             let done
             while (!result.done) {
-                done = result.value.setOutputSize(nodeLayersOutputSize)
+                done = result.value.setOutputSize(outputSize)
                 if (done)
                     break
                 result = iter.next()
@@ -258,29 +288,38 @@ class MenuModelConstructorView extends MenuView {
             }
         }
 
-        // Last layer must have Activation=LogSoftmax and outsize=number of classes
-        if (this.multi) {
+        // Handle the last layer - adjust output dim and activation
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
+            // Last layer must have Activation=LogSoftmax and outsize=number of classes
             if (this.customGraphLayerBlock) {
                 this.customGraphLayerBlock.setAsLast()
-                let done = this.customGraphLayerBlock.setOutputSize(nodeLayersOutputSize)
+                let done = this.customGraphLayerBlock.setOutputSize(this.num_classes)
                 if (!done)
                     // TODO setOutputSize for previous layers
                     console.error('Not implemented')
             }
             else {
                 this.graphLayerBlocks.last().setAsLast()
-                let done = this.graphLayerBlocks.last().setOutputSize(nodeLayersOutputSize)
+                let done = this.graphLayerBlocks.last().setOutputSize(this.num_classes)
                 if (!done)
                     // TODO setOutputSize for previous layers
                     console.error('Not implemented')
             }
             this.nodeLayerBlocks.last().setAsLast()
         }
-        else if (this.task !== 'edge-prediction') {
-            setOutputSize(this.nodeLayerBlocks)
+        else if (this.task === Task.NODE_CLASSIFICATION) {
+            setOutputSize(this.nodeLayerBlocks, this.num_classes)
             this.nodeLayerBlocks.last().setAsLast()
         }
+        else if (this.task === Task.EDGE_PREDICTION) {
+            // todo Activation=LogSoftmax?
+            setOutputSize(this.decoderLayerBlocks, 1)
+            this.decoderLayerBlocks.last().setAsLast()
+        }
+        else
+            console.error("Not implemented for task", this.task)
 
+        // Assemble the whole model architecture
         let architecture = []
         let additionalNodeIxes = []
         let additionalGraphIxes = []
@@ -311,7 +350,7 @@ class MenuModelConstructorView extends MenuView {
         }
 
         // Add graph layers
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             inputSize = 0
             ix = 0 // layer index
             iter = this.graphLayerBlocks.iterator()
@@ -337,8 +376,7 @@ class MenuModelConstructorView extends MenuView {
         }
 
         // Add decoder layers
-        if (this.task === 'edge-prediction') {
-            inputSize = 0
+        if (this.task === Task.EDGE_PREDICTION) {
             ix = 0 // layer index
             iter = this.decoderLayerBlocks.iterator()
             result = iter.next()

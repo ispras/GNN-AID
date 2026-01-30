@@ -11,7 +11,7 @@ class LayerBlock {
     static functionColor = "#fbf"
 
     constructor(type, absIx, ix) {
-        console.assert(Array('n', 'g', 'gc', 'd').includes(type))
+        console.assert(['n', 'g', 'gc', 'd'].includes(type))
         this.type = type // Type: 'n' or 'g' or 'gc' or 'd'
         this.absIx = absIx // Absolute index
         this.ix = ix // Order index
@@ -63,8 +63,13 @@ class LayerBlock {
             // Last node layer must have a pooling connection
             this.connections.setAsLast()
 
+        if (this.type === 'd') {
+            // todo remove activ, batchnorm, dropout, connections
+        }
+
         // FIXME add others
-        this.$activationSelect.val("LogSoftmax").change()
+        if (['n', 'g', 'gc'].includes(this.type))
+            this.$activationSelect.val("LogSoftmax").change()
     }
 
     /// Modify layer dimensions according to its output dimension given.
@@ -96,6 +101,13 @@ class LayerBlock {
             case "gin":
                 this.sequential.setAsLast(outputSize)
                 break
+            case "func":
+                // Currently all functions (cos-sim and dot-product) have out dim = 1, or cannot be
+                // the last layer
+                if (outputSize !== 1)
+                    alert(`Cannot make output dimension of function layer to ${outputSize}.
+                     Check layers structure`)
+                break
             default:
                 console.error('Not implemented')
         }
@@ -121,6 +133,14 @@ class LayerBlock {
     _name() {
         return {'n': 'Node layer', 'g': 'Graph layer',
             'gc': 'Custom graph layer', 'd': 'Decoder layer'}[this.type]
+    }
+
+    // Get name of function chosen. If layer is not a function, return null
+    getFunctionName() {
+        if (this.$functionNameInput)
+            return this.$functionNameInput.val()
+        else
+            return null
     }
 
     // Update layer label and skip connections
@@ -150,7 +170,7 @@ class LayerBlock {
             .css("grid-column", 2).css("display", "flex").css("flex-flow", "row-reverse")
         $headDiv.append($buttonsDiv)
 
-        if (this.type === 'gc' || (this.type === 'd' && this.ix === 0))
+        if (this.type === 'gc' || this.type === 'd')
             this.buildButtons($buttonsDiv, false, false, true)
         else
             this.buildButtons($buttonsDiv)
@@ -270,7 +290,7 @@ class LayerBlock {
         }
 
         // 5. Connections
-        if (this.type !== 'gc' && !(this.type === 'd' && this.ix === 0)) {
+        if (this.type !== 'gc' && this.type !== 'd') {
             $cc.append($("<div></div>").attr("class", "menu-separator"))
             $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
@@ -398,8 +418,10 @@ class LayerBlock {
             this.$functionNameInput = $("<select></select>").attr("id", id)
             $cb.append(this.$functionNameInput)
             let options = [
-                ["CosineSimilarity", "CosineSimilarity"],
-                ["Concat", "Concat"]]
+                ["CosineSimilarity", "Cosine similarity"],
+                ["DotProduct", "Dot-product"],
+                ["Concat", "Concat"],
+            ]
             for (const [val, text] of options) {
                 this.$functionNameInput.append($("<option></option>").val(val).text(text))
             }
@@ -468,7 +490,11 @@ class LayerBlock {
                 'function_name': function_name,
                 'function_kwargs': null,
             }
-            outputSize = {"CosineSimilarity": 1, "Concat": 2*inputSize}[function_name]
+            outputSize = {
+                "CosineSimilarity": 1,
+                "DotProduct": 1,
+                "Concat": 2*inputSize
+            }[function_name]
         } else
             console.error('Not implemented')
 

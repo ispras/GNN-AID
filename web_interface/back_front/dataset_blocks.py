@@ -1,4 +1,5 @@
 import json
+from typing import Tuple
 
 from gnn_aid.aux.data_info import DataInfo
 from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
@@ -6,7 +7,7 @@ from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from gnn_aid.datasets.visible_part import DatasetVarData, DatasetData
+from . import DatasetData, DatasetVarData, VisiblePart, ViewPoint
 from .block import Block
 from .utils import json_dumps, get_config_keys
 
@@ -20,6 +21,7 @@ class DatasetBlock(Block):
         super().__init__(*args, **kwargs)
 
         self.dataset_config = None
+        self.gen_dataset: GeneralDataset = None
 
         from gnn_aid.aux.prefix_storage import TuplePrefixStorage
         self._index = None
@@ -44,13 +46,14 @@ class DatasetBlock(Block):
     def _submit(
             self
     ) -> None:
-        self._object = DatasetManager.get_by_config(self.dataset_config)
+        self.gen_dataset = DatasetManager.get_by_config(self.dataset_config)
+        self._object = self.gen_dataset
 
     def get_stat(
             self,
             stat
     ) -> object:
-        return self._object.get_stat(stat)
+        return self.gen_dataset.get_stat(stat)
 
     def get_index(
             self
@@ -72,18 +75,12 @@ class DatasetBlock(Block):
 
         return json_dumps([self._index.to_json(), json_dumps('')])
 
-    def set_visible_part(
-            self,
-            part: dict = None
-    ) -> str:
-        self._object.set_visible_part(part=part)
-        return ''
-
-    def get_dataset_data(
-            self,
-            part: dict = None
-    ) -> DatasetData:
-        return self._object.visible_part.get_dataset_data(part=part)
+    # def get_dataset_data(
+    #         self,
+    #         view_point: ViewPoint
+    # ) -> DatasetData:
+    #     return self.visible_part.get_dataset_data(view_point)
+    #     # return self._object.visible_part.get_dataset_data(part=part)
 
 
 class DatasetVarBlock(Block):
@@ -100,9 +97,11 @@ class DatasetVarBlock(Block):
 
     def _init(
             self,
-            dataset: GeneralDataset
+            gen_dataset: GeneralDataset
+            # dataset_and_vp: Tuple[GeneralDataset, VisiblePart]
     ) -> dict:
-        self.gen_dataset = dataset
+        self.gen_dataset = gen_dataset
+        self.visible_part = None
         return self.gen_dataset.info.to_dict()
 
     def _finalize(
@@ -124,17 +123,26 @@ class DatasetVarBlock(Block):
             self
     ) -> None:
         self.gen_dataset.build(self.dataset_var_config)
-        self._object = self.gen_dataset
+        assert self.visible_part is not None
+        self._object = self.visible_part
         # NOTE: we need to compute var_data to be able to get is_one_hot_able()
-        self.gen_dataset.visible_part.get_dataset_var_data()
+        self.visible_part.get_dataset_var_data()
         one_hot_able = is_one_hot_able(self.gen_dataset) if self.gen_dataset.is_multi() else True
-        self._result = [self.dataset_var_config.labeling, one_hot_able]
+        self._result = [self.dataset_var_config.task, self.dataset_var_config.labeling, one_hot_able]
 
-    def get_dataset_var_data(
+    def set_visible_part(
             self,
-            part: dict = None
-    ) -> DatasetVarData:
-        return self._object.visible_part.get_dataset_var_data(part=part)
+            view_point: ViewPoint
+    ) -> str:
+        self.visible_part = VisiblePart(view_point, self.gen_dataset)
+        # self._object.set_visible_part(part=part)
+        return ''
+
+    # def get_dataset_var_data(
+    #         self,
+    #         view_point: ViewPoint
+    # ) -> DatasetVarData:
+    #     return self.visible_part.get_dataset_var_data(view_point)
 
 
 def is_one_hot_able(dataset: GeneralDataset) -> bool:
