@@ -435,13 +435,6 @@ class ShadowModelMILinkAttacker(MIAttacker):
         X = np.vstack([X_train, X_test])
         y = np.concatenate([y_train, y_test])
 
-        import matplotlib.pyplot as plt
-        plt.hist(X_train[:, 0], bins=50, alpha=0.5, label='Train edges')
-        plt.hist(X_test[:, 0], bins=50, alpha=0.5, label='Test edges')
-        plt.legend()
-        plt.title('Probability distributions: Train vs Test edges')
-        plt.savefig('edge_prob_distributions.png')
-
         if self.classifier_type == 'svc':
             self.classifier = SVC(kernel='rbf', probability=True)
         elif self.classifier_type == 'linreg':
