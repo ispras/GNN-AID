@@ -698,7 +698,7 @@ class AttacksTest(unittest.TestCase):
             print(f"MI Attack accuracy:"
                   f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
 
-    def test_clga_link_prediction(self):
+    def test_z_clga_link_prediction(self):
         gen_dataset = DatasetManager.get_by_config(
             DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
             LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
@@ -811,7 +811,7 @@ class AttacksTest(unittest.TestCase):
         self.assertLess(test_metrics['test']['AUC'], 0.95)
 
 
-    def test_mi_shadow_link_prediction(self):
+    def test_z_mi_shadow_link_prediction(self):
         """
         Test Shadow Model MI Attack on Link Prediction task (Cora dataset).
         """

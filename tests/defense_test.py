@@ -167,7 +167,7 @@ class DefenseTest(unittest.TestCase):
             print(f"MI Attack accuracy:"
                   f" {MIAttacker.compute_single_attack_accuracy(mask, res, self.gen_dataset_sg_cora.train_mask)}")
 
-    def test_jaccard_defender_link_prediction(self):
+    def test_z_jaccard_defender_link_prediction(self):
         """
         Test JaccardDefender on Link Prediction task (Cora dataset).
         """
@@ -267,7 +267,7 @@ class DefenseTest(unittest.TestCase):
 
         self.assertGreater(test_metrics['test']['Recall@k{k=50}'], 0.0, "Recall@50 should be >0 after training")
 
-    def test_noise_mi_link_defender_cora(self):
+    def test_z_noise_mi_link_defender_cora(self):
         """
         Test NoiseMILinkDefender on Link Prediction task (Cora)
         """
