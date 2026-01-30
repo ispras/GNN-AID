@@ -117,14 +117,14 @@ def setting_class_default_parameters(
             raise Exception(f"{class_name} is not currently supported")
         class_kwargs_default = class_kwargs_default[class_name]
     for key, val in class_kwargs.items():
-        key_1 = class_kwargs_default[key][1]
         if key == TECHNICAL_PARAMETER_KEY or key not in class_kwargs_default.keys():
             # raise Exception(
             #     f"Parameter {key} cannot be set for {class_name}")
             warnings.warn(f"WARNING: Parameter {key} cannot be set for {class_name} "
                           f"in def setting_class_default_parameters")
             continue
-        elif key_1 == 'int_or_tuple':
+        key_1 = class_kwargs_default[key][1]
+        if key_1 == 'int_or_tuple':
             try:
                 class_kwargs[key] = int(val)
             except TypeError:
