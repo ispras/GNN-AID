@@ -3,7 +3,7 @@
  }, 
  "FGSM": {
   "is_feature_attack": ["is feature attack", "bool", false, {}, "If true, applies perturbations to node features; otherwise, perturbs the graph structure (edges)"],
-  "element_idx": ["node", "int", 0, {"min": 0, "step": 1}, "Index of the element to attack"],
+  "element_idx": ["node", "int_or_tuple", 0, {"min": 0, "step": 1}, "Index of the element to attack"],
   "epsilon": ["epsilon", "float", 0.1, {"min": 0.0001, "step": 0.01}, "Magnitude of the perturbation — higher values result in stronger attacks"]
  },
  "Nettack": {

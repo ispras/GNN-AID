@@ -123,14 +123,27 @@ def setting_class_default_parameters(
             warnings.warn(f"WARNING: Parameter {key} cannot be set for {class_name} "
                           f"in def setting_class_default_parameters")
             continue
-        elif val is None or class_kwargs_default[key][1] == 'string' or (class_kwargs_default[key][1] == 'dynamic' and isinstance(val, str)) or np.isinf(val):
+        key_1 = class_kwargs_default[key][1]
+        if key_1 == 'int_or_tuple':
+            try:
+                class_kwargs[key] = int(val)
+            except TypeError:
+                class_kwargs[key] = tuple(val)
+        elif val is None or key_1 == 'string'\
+                or (key_1 == 'dynamic' and isinstance(val, str))\
+                or np.isinf(val):
             class_kwargs[key] = val
         else:
-            class_kwargs[key] = locate(class_kwargs_default[key][1])(val)
+            class_kwargs[key] = locate(key_1)(val)
     for key, val in class_kwargs_default.items():
         if key != TECHNICAL_PARAMETER_KEY and key not in class_kwargs.keys():
             if val[2] is None or val[1] == 'string' or val[2] == np.inf:
                 class_kwargs[key] = val[2]
+            elif val[1] == 'int_or_tuple':
+                try:
+                    class_kwargs[key] = int(val[2])
+                except TypeError:
+                    class_kwargs[key] = tuple(val[2])
             else:
                 class_kwargs[key] = locate(val[1])(val[2])
 
