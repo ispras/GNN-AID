@@ -25,5 +25,8 @@
  },
  "NLLLoss": {
   "reduction": ["Reduction", "string", "mean", ["none","mean","sum"], "Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'. 'none': no reduction will be applied, 'mean': the weighted mean of the output is taken, 'sum': the output will be summed. Note: size_average and reduce are in the process of being deprecated, and in the meantime, specifying either of those two args will override reduction."]
- }
+ },
+  "BCEWithLogitsLoss": {
+  "reduction": ["Reduction", "string", "mean", ["none","mean","sum"], "Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'. 'none': no reduction will be applied, 'mean': the weighted mean of the output is taken, 'sum': the output will be summed. Note: size_average and reduce are in the process of being deprecated, and in the meantime, specifying either of those two args will override reduction."]
+  }
 }

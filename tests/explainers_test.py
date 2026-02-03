@@ -4,7 +4,7 @@ import unittest
 import warnings
 
 from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
-    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
+    EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
@@ -193,6 +193,46 @@ class ExplainersTest(unittest.TestCase):
         print(metric_loc)
         sg_cora_model_path = self.gsat_gnn_mm_sg_cora.model_path_info() / 'model'
         self.gsat_gnn_mm_sg_cora.load_model_executor(path=sg_cora_model_path)
+
+        # Cora for link pred
+        dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
+        dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
+
+        self.gen_dataset_sg_cora_link = DatasetManager.get_by_config(dc, dvc)
+        self.gen_dataset_sg_cora_link.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
+        self.results_dataset_path_sg_cora_link = self.gen_dataset_sg_cora_link.prepared_dir
+
+        self.sage_cossim = model_configs_zoo(dataset=self.gen_dataset_sg_cora_link, model_name="sage_cossim")
+
+        manager_config = ConfigPattern(
+            _config_class="ModelManagerConfig",
+            _config_kwargs={
+                "batch": 64,
+                "mask_features": [],
+                "optimizer": {
+                    "_class_name": "Adam",
+                    "_config_kwargs": {},
+                },
+                "loss_function": {
+                    "_config_class": "Config",
+                    "_class_name": "CrossEntropyLoss",
+                    "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                    "_class_import_info": ["torch.nn"],
+                    "_config_kwargs": {},
+                },
+            }
+        )
+        self.sage_cossim_mm = FrameworkGNNModelManager(
+            gnn=self.sage_cossim,
+            dataset_path=self.gen_dataset_sg_cora_link.prepared_dir,
+            manager_config=manager_config,
+            modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
+        )
+        self.sage_cossim_mm.train_model(
+            gen_dataset=self.gen_dataset_sg_cora_link, steps=10,
+            save_model_flag=False,
+            metrics=[Metric("F1", mask='train', average=None)]
+        )
 
         monkey_patch_dirs()
 
@@ -442,6 +482,36 @@ class ExplainersTest(unittest.TestCase):
         explainer_GNNExpl = FrameworkExplainersManager(
             init_config=explainer_init_config,
             dataset=self.dataset_sg_example, gnn_manager=self.gnn_model_manager_sg_example,
+            explainer_name='GNNExplainer(torch-geom)',
+        )
+        explainer_GNNExpl.conduct_experiment(explainer_run_config)
+
+    def test_GNNExpl_PYG_LINK(self):
+        warnings.warn("Start GNNExplainer_PYG")
+        explainer_init_config = ConfigPattern(
+            _class_name="GNNExplainer(torch-geom)",
+            _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+            _config_class="ExplainerInitConfig",
+            _config_kwargs={
+            }
+        )
+        explainer_run_config = ConfigPattern(
+            _config_class="ExplainerRunConfig",
+            _config_kwargs={
+                "mode": "local",
+                "kwargs": {
+                    "_class_name": "GNNExplainer(torch-geom)",
+                    "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                    "_config_class": "Config",
+                    "_config_kwargs": {
+                        "element_idx": (1, 2)
+                    },
+                }
+            }
+        )
+        explainer_GNNExpl = FrameworkExplainersManager(
+            init_config=explainer_init_config,
+            dataset=self.gen_dataset_sg_cora_link, gnn_manager=self.sage_cossim_mm,
             explainer_name='GNNExplainer(torch-geom)',
         )
         explainer_GNNExpl.conduct_experiment(explainer_run_config)

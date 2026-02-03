@@ -23,7 +23,7 @@
   "node_mask_type": ["Node mask","string","object",["None","object","common_attributes","attributes"],"The type of mask to apply on nodes"],
   "edge_mask_type": ["Edge mask","string","object",["None","object","common_attributes","attributes"],"The type of mask to apply on edges"],
   "mode": ["Mode","string","multiclass_classification",["binary_classification","multiclass_classification","regression"],"The mode of the model"],
-  "return_type": ["Model return","string","log_probs",["raw","prob","log_probs"],"Denotes the type of output from model. Valid inputs are 'log_probs' (the model returns the logarithm of probabilities), 'prob' (the model returns probabilities), 'raw' (the model returns raw scores)"],
+  "return_type": ["Model return","string","log_probs",["raw","probs","log_probs"],"Denotes the type of output from model. Valid inputs are 'log_probs' (the model returns the logarithm of probabilities), 'prob' (the model returns probabilities), 'raw' (the model returns raw scores)"],
   "edge_size": ["edge_size","float",0.005,{"min": 0, "step": 0.001},""],
   "edge_reduction": ["edge_reduction","string","sum",["sum","mean","max","min"],""],
   "node_feat_size": ["node_feat_size","float",1.0,{},""],

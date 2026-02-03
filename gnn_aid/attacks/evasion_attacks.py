@@ -78,7 +78,7 @@ class FGSMAttacker(
         self.epsilon = epsilon
         self.grad_aggr_type = 'mean'
         self.attack_diff = GraphModificationArtifact()
-        self.attack_res_misha = None
+        # self.attack_res_misha = None
 
     def attack(
             self,
@@ -100,7 +100,7 @@ class FGSMAttacker(
                 x.requires_grad = True
 
                 # TODO now support only one edge, mask_tensor?
-                edge_label_index = torch.tensor([[5], [6]]).to(device)
+                edge_label_index = torch.tensor(self.element_idx).unsqueeze(dim=1).to(device)
                 edge_label = ((data.edge_index == edge_label_index).all(dim=0).any()).float().unsqueeze(dim=0).to(device)
 
                 node_out = model(data.x, data.edge_index)
@@ -170,7 +170,7 @@ class FGSMAttacker(
                 y = gen_dataset.data.y
                 x = gen_dataset.data.x
 
-                edge_label_index = torch.tensor([[7], [6]]).to(device)
+                edge_label_index = torch.tensor(self.element_idx).unsqueeze(dim=1).to(device)
                 edge_label = ((edge_index == edge_label_index).all(dim=0).any()).float().unsqueeze(dim=0).to(device)
                 node_idx_1 = edge_label_index[0].item()
                 node_idx_2 = edge_label_index[1].item()
@@ -275,8 +275,8 @@ class FGSMAttacker(
                     perturbed_edges = torch.cat((perturbed_edges[:, :max_index], perturbed_edges[:, max_index + 1:]),
                                                 dim=1)
 
-                from torch_geometric.data import Data
-                self.attack_res_misha = Data(x=x, edge_index=perturbed_edges, y=y)
+                # from torch_geometric.data import Data
+                # self.attack_res_misha = Data(x=x, edge_index=perturbed_edges, y=y)
                 set_a = set(map(tuple, edge_index.T.tolist()))
                 set_b = set(map(tuple, perturbed_edges.T.tolist()))
 
@@ -348,7 +348,7 @@ class FGSMAttacker(
                 edges_to_keep = edge_index[:, ~edge_mask]
                 updated_edge_index = torch.cat([edges_to_keep, perturbed_edges], dim=1)
                 gen_dataset.data.edge_index = updated_edge_index
-                self.attack_res_misha = gen_dataset
+                # self.attack_res_misha = gen_dataset
 
                 set_a = set(map(tuple, edge_index.T.tolist()))
                 set_b = set(map(tuple, updated_edge_index.T.tolist()))
@@ -884,3 +884,4 @@ class ReWattAttacker(
             self
     ) -> GraphModificationArtifact:
         return self.attack_diff
+

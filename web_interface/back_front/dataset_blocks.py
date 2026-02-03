@@ -112,6 +112,7 @@ class DatasetVarBlock(Block):
 
         kwargs = self._config.copy()
         features = FeatureConfig(**kwargs.pop('features'))
+        kwargs['task'] = Task(kwargs.pop('task'))
         kwargs['features'] = features
         task = Task(kwargs.pop('task'))
         kwargs['task'] = task

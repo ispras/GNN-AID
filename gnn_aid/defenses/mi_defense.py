@@ -147,3 +147,87 @@ class NoiseMIDefender(MIDefender):
             "outputs": modified_logits,
             "loss": modified_loss
         }
+
+
+class NoiseMILinkDefender(MIDefender):
+    """
+    MI defense for Link Prediction tasks via edge logit perturbation
+    """
+    name = "NoiseMILinkDefender"
+
+    def __init__(
+            self,
+            noise_type: Literal["reverse_sigmoid", "random", "none"] = "reverse_sigmoid",
+            beta: float = 0.3,
+            gamma: float = 0.8,
+            noise_scale: float = 0.2,
+            temperature: float = 1.0,
+            **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.noise_type = noise_type
+        self.beta = beta
+        self.gamma = gamma
+        self.noise_scale = noise_scale
+        self.temperature = temperature
+
+        if noise_type not in ["reverse_sigmoid", "random", "none"]:
+            raise ValueError(f"Invalid noise_type: {noise_type}")
+
+    def _apply_reverse_sigmoid_binary(
+            self,
+            edge_logits: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Reverse sigmoid perturbation for binary classification (link prediction)
+        """
+        probs = torch.sigmoid(edge_logits / self.temperature)
+
+        perturbed_temp_logits = self.gamma * edge_logits
+        perturbed_temp_probs = torch.sigmoid(perturbed_temp_logits)
+        r = self.beta * (perturbed_temp_probs - 0.5)
+
+        perturbed_probs = probs - r
+        perturbed_probs = torch.clamp(perturbed_probs, min=1e-7, max=1.0 - 1e-7)
+
+        perturbed_logits = torch.logit(perturbed_probs, eps=1e-7) * self.temperature
+        return perturbed_logits
+
+    def _apply_random_noise(
+            self,
+            edge_logits: torch.Tensor
+    ) -> torch.Tensor:
+        """Add Gaussian noise to edge logits"""
+        noise = torch.randn_like(edge_logits) * self.noise_scale
+        return edge_logits + noise
+
+    def post_batch(
+            self,
+            model_manager: Any,
+            batch: Any,
+            **kwargs
+    ) -> dict:
+        node_emb = model_manager.gnn(batch.x, batch.edge_index)
+        src_emb = node_emb[batch.edge_label_index[0]]
+        dst_emb = node_emb[batch.edge_label_index[1]]
+
+        if hasattr(model_manager.gnn, 'decode'):
+            edge_logits = model_manager.gnn.decode(src_emb, dst_emb).squeeze(-1)
+        else:
+            edge_logits = (src_emb * dst_emb).sum(dim=-1)
+
+        if self.noise_type == "reverse_sigmoid":
+            modified_logits = self._apply_reverse_sigmoid_binary(edge_logits)
+        elif self.noise_type == "random":
+            modified_logits = self._apply_random_noise(edge_logits)
+        else:
+            modified_logits = edge_logits
+
+        edge_labels = batch.edge_label.float()
+        modified_loss = model_manager.loss_function(modified_logits, edge_labels)
+
+        return {
+            "outputs": modified_logits,
+            "loss": modified_loss,
+            "original_logits": edge_logits.detach()
+        }

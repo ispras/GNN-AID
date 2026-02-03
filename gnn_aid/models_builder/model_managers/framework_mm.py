@@ -303,7 +303,9 @@ class FrameworkGNNModelManager(GNNModelManager):
             out = self.gnn.decode(src, dst)
 
             # FIXME loss must be for edge prediction
-            loss = self.loss_function(out, edge_label)
+            criterion = torch.nn.BCEWithLogitsLoss()
+            loss = criterion(out, edge_label)
+            # loss = self.loss_function(out, edge_label)
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         return loss
