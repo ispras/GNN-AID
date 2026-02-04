@@ -125,6 +125,52 @@ class ParamsBuilder {
                 $input.change(() => this.kwArgs[name] = $input.is(":checked"))
             }
 
+            else if (type === "int_or_tuple") {
+                // fixme this is a copy. todo tuple for edge task
+                $input.attr("type", "number")
+                $input.val(Number.isFinite(def) ? def : possible["min"])
+                let checkClass = id + "-radio"
+                if ("special" in possible) {
+                    // Add special values as separate checkboxes
+                    let checkId = id + "-check"
+                    for (const variant of possible.special) {
+                        let $checkBox = $("<input>").attr("id", checkId)
+                            .attr("type", "checkbox").prop('checked', variant === def)
+                        $checkBox.addClass(checkClass)
+                        $cb.append($checkBox)
+                        let $label = $("<label></label>").text(variant == null ? "None" : variant)
+                            .attr("for", checkId)
+                        $cb.append($label)
+                        $checkBox.change((e) => { // Uncheck all but this
+                            let wasChecked = $checkBox.is(":checked")
+                            $("." + checkClass).prop("checked", false)
+                            $checkBox.prop("checked", true)
+                            this.kwArgs[name] = variant
+                        })
+                    }
+                    $input.focus(() => {
+                        $("." + checkClass).prop("checked", false)
+                        $input.trigger("change")
+                    })
+                    $input.css("min-width", "60px")
+                    delete possible.special
+                }
+
+                if (type === "int") {
+                    $input.attr("step", 1)
+                    $input.attr("pattern", "\d+")
+                    $input.change(() => this.kwArgs[name] = parseInt($input.val()))
+                }
+                else {
+                    // fixme
+                }
+                for (const [key, value] of Object.entries(possible))
+                    $input.attr(key, value)
+
+                // Check input value when user unfocus it or change it
+                addValueChecker($input, type, def, possible["min"], possible["max"], "change")
+            }
+
             else if (type === "int" || type === "float") {
                 $input.attr("type", "number")
                 $input.val(Number.isFinite(def) ? def : possible["min"])

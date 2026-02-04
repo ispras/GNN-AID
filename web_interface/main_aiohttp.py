@@ -16,7 +16,12 @@ from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import WebInterfaceError, json_loads, json_dumps, SocketConnect
 
 # Socket.IO server (ASGI not used here)
-sio = socketio.AsyncServer(async_mode="aiohttp")
+sio = socketio.AsyncServer(
+    async_mode="aiohttp",
+    ping_timeout=600,  # wait pong from client
+    ping_interval=25,
+    cors_allowed_origins='*'
+)
 app = web.Application()
 sio.attach(app)
 

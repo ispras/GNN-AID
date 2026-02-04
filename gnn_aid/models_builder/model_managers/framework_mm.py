@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Union, List, cast, Iterable
 
 import torch
-from torch import tensor
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
 from torch_geometric.loader import NeighborLoader, DataLoader, LinkNeighborLoader
@@ -16,7 +15,7 @@ from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_P
 from gnn_aid.data_structures import Task, GraphModificationArtifact
 from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
-from gnn_aid.models_builder.models_utils import Metric, predict_top_k_edges
+from gnn_aid.models_builder.models_utils import Metric, predict_top_k_edges, mask_to_tensor
 from . import GNNModelManager
 
 
@@ -751,28 +750,3 @@ class FrameworkGNNModelManager(GNNModelManager):
         return gen_dataset
 
 
-def mask_to_tensor(
-        gen_dataset: GeneralDataset,
-        mask: Union[str, List[bool], torch.Tensor] = 'test'
-) -> torch.Tensor:
-    """
-    Convert mask over nodes/edges/graphs to tensor.
-    Mask can be 'train', 'val', 'test', 'all', or Tensor of specific nodes/edges/graphs.
-
-    :param gen_dataset: dataset
-    :param mask: part of the dataset on which the output will be obtained.
-     'train', 'val', 'test', 'all', or Tensor of specific nodes/edges/graphs
-    :return: tensor of nodes/edges/graphs
-    """
-    try:
-        mask_tensor = {
-            'train': gen_dataset.train_mask,
-            'val': gen_dataset.val_mask,
-            'test': gen_dataset.test_mask,
-            'all': tensor([True] * len(gen_dataset.labels)),
-        }[mask]
-    except KeyError:
-        assert isinstance(mask, torch.Tensor)
-        mask_tensor = mask
-
-    return mask_tensor

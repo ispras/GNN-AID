@@ -25,6 +25,7 @@ from gnn_aid.models_builder.models_utils import apply_decorator_to_graph_layers
 # ReWatt imports
 from .evasion_attacks_collection.rewatt.utils import GraphEnvironment, ReWattPolicyNet, \
     GraphState, ReWattAgent
+from ..data_structures import Task
 
 
 class EvasionAttacker(
@@ -94,7 +95,7 @@ class FGSMAttacker(
             model = model_manager.gnn
             model.eval()
 
-            if task.is_edge_level():
+            if task == Task.EDGE_PREDICTION:
                 data = gen_dataset.data
                 x = data.x
                 x.requires_grad = True
@@ -119,7 +120,7 @@ class FGSMAttacker(
                 perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
                 gen_dataset.data.x = perturbed_data_x.detach()
 
-            elif task.is_graph_level() and task.is_classification():  # graph_classification
+            elif task == Task.GRAPH_CLASSIFICATION:
                 graph_idx = self.element_idx
                 x = gen_dataset.dataset[graph_idx].x
                 x.requires_grad = True
@@ -135,7 +136,7 @@ class FGSMAttacker(
                 perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
                 gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
 
-            elif task.is_node_level() and task.is_classification():  # node_classification
+            elif task == Task.NODE_CLASSIFICATION:
                 node_idx = self.element_idx
                 x = gen_dataset.data.x
                 x.requires_grad = True
@@ -152,7 +153,7 @@ class FGSMAttacker(
                 gen_dataset.data.x = perturbed_data_x.detach()
 
             else:
-                pass
+                raise NotImplementedError
 
             # if task_type:
             #     gni = GlobalNodeIndexer(gen_dataset.dataset)
@@ -542,6 +543,7 @@ class PGDAttacker(
                         x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
 
                 self.attack_res = Data(x=x, edge_index=edge_index, y=y)
+                gen_dataset.data.x = x  # FIXME tmp
 
         else:  # structure attack
             if task_type:

@@ -5,8 +5,9 @@ import torch
 
 from gnn_aid.attacks import MIAttacker
 from gnn_aid.aux import DataInfo
-from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
-    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig
+from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, \
+    EvasionAttackConfig, \
+    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig, CONFIG_OBJ
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     MI_DEFENSE_PARAMETERS_PATH
@@ -14,6 +15,7 @@ from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefenseManager
 from gnn_aid.models_builder.model_managers import GNNModelManager
+from gnn_aid.models_builder.models_utils import mask_to_tensor
 from . import VisiblePart
 from .block import Block
 from .utils import WebInterfaceError, send_epoch_results, compute_stats_data
@@ -212,11 +214,12 @@ class AfterTrainBlock(Block):
 
             # Apply evasion attack
             if self.ad_configs["AD-ea"] is not None:
-                # attack_mask =
+                element_idx = getattr(self.ad_configs["AD-ea"], CONFIG_OBJ).element_idx
+                attack_mask = mask_to_tensor(self.gen_dataset, element_idx)
 
                 self.model_manager.call_evasion_attack(
                     gen_dataset=self.gen_dataset,
-                    mask=torch.empty(1),
+                    mask=attack_mask,
                 )
 
             # Evaluate metrics without attacks
@@ -253,6 +256,7 @@ class AfterTrainBlock(Block):
 
             # Update dataset features
             dvd = self.visible_part.get_dataset_var_data()
+            print('dvd after attack', dvd.node['features'])
 
             dvd = add_into_dvd(self.gen_dataset, stats_data, dvd)
 
