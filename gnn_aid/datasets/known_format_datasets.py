@@ -12,7 +12,7 @@ from gnn_aid.data_structures.configs import DatasetConfig, ConfigPattern, Featur
 from .dataset_info import DatasetInfo
 from .dataset_converter import DatasetConverter
 from .gen_dataset import LocalDataset, GeneralDataset
-from ..aux.utils import shape
+from gnn_aid.aux.utils import shape
 
 
 class KnownFormatDataset(
@@ -64,6 +64,7 @@ class KnownFormatDataset(
         self.node_map = None  # Optional nodes mapping: node_map[i] = original id of node i
 
         self._ptg_edge_index: List[torch.Tensor] = None  # list ptg tensors
+        # TODO IMP replace dict with list
         self._node_attributes: dict = None  # python lists
         self._edge_attributes: dict = None
 
@@ -406,7 +407,7 @@ class KnownFormatDataset(
                         orig_edge_attributes = [orig_edge_attributes]
                     for g in range(self.info.count):
                         edge_attributes = {}
-                        for ix, (orig_i, orig_j) in self._iter_edges(g, exclude_rev_for_undirected=True):
+                        for ix, (orig_i, orig_j) in self._iter_edges(g, exclude_rev_for_undirected=False):
                             orig = f"{orig_i},{orig_j}"
                             try:
                                 edge_attributes[ix] = orig_edge_attributes[g][orig]
@@ -472,6 +473,7 @@ class KnownFormatDataset(
             exclude_rev_for_undirected: bool = False
     ) -> Generator[Tuple[int, Tuple[str, str]], Any, None]:
         """ Iterate over edges according to mapping.
+        The order is the same as in self._ptg_edge_index.
         Yields pairs of pairs (edge_id, original_id).
         If `exclude_rev_for_undirected` is True, do not yield reverse edges (where j > i).
         """
@@ -559,9 +561,9 @@ class KnownFormatDataset(
             num_nodes = self.info.nodes[0]
             num_edges = shape(self.edges[0])[1]
             # num_edges = self.stats.get('num_edges')
-        if not self.is_directed():
-            assert num_edges % 2 == 0
-            num_edges = num_edges // 2
+        # if not self.is_directed():
+        #     assert num_edges % 2 == 0
+        #     num_edges = num_edges // 2
 
         node_features = [[] for _ in range(num_nodes)]  # List of vectors
 

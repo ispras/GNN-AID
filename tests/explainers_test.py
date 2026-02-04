@@ -220,6 +220,7 @@ class ExplainersTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {},
                 },
+                "neg_samples_ratio": 1
             }
         )
         self.sage_cossim_mm = FrameworkGNNModelManager(

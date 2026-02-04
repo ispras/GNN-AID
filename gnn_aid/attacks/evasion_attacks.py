@@ -884,4 +884,3 @@ class ReWattAttacker(
             self
     ) -> GraphModificationArtifact:
         return self.attack_diff
-

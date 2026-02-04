@@ -349,11 +349,10 @@ class ProgressBar(tqdm):
             total: Union[float, None] = None,
             **kwargs
     ):
-        res = super().reset(total=total)
+        super().reset(total=total)
         self.kwargs = kwargs
         if self._on_reset_hook:
             self._on_reset_hook()
-        return res
 
     def update(
             self,

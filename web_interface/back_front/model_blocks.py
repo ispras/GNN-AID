@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Union
 
 import torch
-from torch_geometric.data import Dataset
 
 from gnn_aid.aux.data_info import UserCodeInfo, DataInfo
 from gnn_aid.aux.declaration import Declare
@@ -17,12 +16,14 @@ from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import (
     ModelStructureConfig, ModelConfig, ModelModificationConfig, ModelManagerConfig)
 # from gnn_aid.datasets.visible_part import VisiblePart, ViewPoint
+from gnn_aid.datasets import GeneralDataset
 from gnn_aid.models_builder.gnn_constructor import FrameworkGNNConstructor, GNNConstructor
 from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart, ViewPoint, DatasetVarData
 from .block import Block, WrapperBlock
-from .utils import WebInterfaceError, json_dumps, get_config_keys, send_epoch_results
+from .utils import WebInterfaceError, json_dumps, get_config_keys, send_epoch_results, \
+    compute_stats_data
 from .visible_part import add_into_dvd
 
 TENSOR_SIZE_LIMIT = 1024  # Max size of weights tensor we sent to frontend
@@ -125,7 +126,7 @@ class ModelLoadBlock(Block):
         """ Load train/test mask associated to the model and send to frontend """
         # FIXME self.manager_config.train_test_split
         self.gen_dataset.train_mask, self.gen_dataset.val_mask, self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
-        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+        dvd = self.visible_part.get_train_test_mask()
         self.socket.send(block='mload', msg=dvd)
 
 
@@ -236,6 +237,7 @@ class ModelManagerBlock(Block):
     ):
         super().__init__(*args, **kwargs)
 
+        self.model_manager: GNNModelManager = None
         self.model_manager_config = None
         self.klass = None
 
@@ -260,6 +262,7 @@ class ModelManagerBlock(Block):
             self
     ) -> bool:
         self.klass = self._config.pop("class")
+        print("MM config:", json.dumps(self._config))
         self.model_manager_config = ModelManagerConfig(**self._config)
         return True
 
@@ -280,7 +283,7 @@ class ModelManagerBlock(Block):
                 self.klass, [mm_info[self.klass][TECHNICAL_PARAMETER_KEY][IMPORT_INFO_KEY]])
 
         # Build model manager
-        self._object = mm_class(
+        self.model_manager = self._object = mm_class(
             gnn=self.gnn,
             manager_config=self.model_manager_config,
             dataset_path=self.gen_dataset.prepared_dir,
@@ -296,7 +299,7 @@ class ModelManagerBlock(Block):
         # Create and send train_test_mask
         if create_train_test_mask:
             self.gen_dataset.train_test_split(*self.model_manager_config.train_test_split)
-            dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+            dvd = self.visible_part.get_train_test_mask()
             self.socket.send(block='mmc', msg=dvd)
 
     def get_satellites(
@@ -307,36 +310,13 @@ class ModelManagerBlock(Block):
         """
         self.visible_part.update_view_point(view_point)
 
-        task = self.gen_dataset.dataset_var_config.task
-        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+        dvd = self.visible_part.get_train_test_mask()
 
-        if self._object.stats_data is not None:
-            stats_data = {k: self.visible_part.filter(v, task)
-                          for k, v in self._object.stats_data.items()}
+        if self.model_manager.stats_data is not None:
+            stats_data = {k: self.visible_part.filter(v)
+                          for k, v in self.model_manager.stats_data.items()}
             dvd = add_into_dvd(self.gen_dataset, stats_data, dvd)
         return dvd
-
-
-# TODO move to front client?
-def get_train_test_mask(
-        gen_dataset,
-        visible_part: VisiblePart = None
-) -> Union[None, DatasetVarData]:
-    """ Get train/val/test mask for the dataset and send to frontend.
-    """
-    # Encode mask as train=1, val=2, test=3
-    train_test_mask = [0] * len(gen_dataset.train_mask)
-    for n in range(len(train_test_mask)):
-        if gen_dataset.train_mask[n]:
-            train_test_mask[n] = 1
-        elif gen_dataset.test_mask[n]:
-            train_test_mask[n] = 2
-        elif gen_dataset.val_mask[n]:
-            train_test_mask[n] = 3
-
-    # Filter
-    msg = {"train-test-mask": visible_part.filter(train_test_mask)}
-    return add_into_dvd(gen_dataset, msg)
 
 
 class ModelTrainerBlock(Block):
@@ -388,11 +368,9 @@ class ModelTrainerBlock(Block):
     ):
         metrics_values = self.model_manager.evaluate_model(
             gen_dataset=self.gen_dataset, metrics=self.metrics)
-        self.model_manager.compute_stats_data(
-            self.gen_dataset, predictions=True, logits=True)
-        stats_data = {k: self.visible_part.filter(
-            v, self.gen_dataset.dataset_var_config.task)
-                         for k, v in self.model_manager.stats_data.items()}
+        stats_data = compute_stats_data(
+            self.gen_dataset, self.model_manager, predictions=True, logits=True)
+        stats_data = {k: self.visible_part.filter(v) for k, v in stats_data.items()}
 
         # Reformat to DatasetVarData
         dvd = add_into_dvd(self.gen_dataset, stats_data)
@@ -482,7 +460,7 @@ class ModelTrainerBlock(Block):
         self.model_manager.gnn.reset_parameters()
         self.model_manager.modification.epochs = 0
         self.gen_dataset.train_test_split(*self.model_manager.manager_config.train_test_split)
-        dvd = get_train_test_mask(self.gen_dataset, self.visible_part)
+        dvd = self.visible_part.get_train_test_mask()
         self.socket.send(block='mt', msg=dvd)
         self._run_model()
 
@@ -495,11 +473,12 @@ class ModelTrainerBlock(Block):
         # from gnn_aid.models_builder.models_utils import Metric
         metrics_values = self.model_manager.evaluate_model(
             self.gen_dataset, metrics=self.metrics)
-        self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
+        stats_data = compute_stats_data(
+            self.gen_dataset, self.model_manager, predictions=True, logits=True)
 
         # fixme here we can want to obtain predicts for nodes and graphs both
         stats_data = {k: self.visible_part.filter(v)
-                      for k, v in self.model_manager.stats_data.items()}
+                      for k, v in stats_data.items()}
         # Reformat to DatasetVarData
         dvd = add_into_dvd(self.gen_dataset, stats_data)
 
@@ -563,3 +542,5 @@ class ModelTrainerBlock(Block):
                     name, k = m._name.split('@')
                     m._name = name + '@k'
                     m.kwargs['k'] = int(k)
+
+

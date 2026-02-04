@@ -30,9 +30,9 @@ class SvgEdge extends SvgElement{
         predictions.placeX = (ix, r, count) => (this.x + this.x2) / 2 + 0.8 * r*(-count/2 + 1/2 + ix)
         predictions.placeY = (ix, r, count) => (this.y + this.y2) / 2 + 1.1 * r
 
-        let embeddings = this.satellites['embeddings'] = new Satellite("rect", this.r)
-        embeddings.placeX = (ix, r, count) => (this.x + this.x2) / 2
-        embeddings.placeY = (ix, r, count) => (this.y + this.y2) / 2 - r + ix * 0.8 * r
+        let logits = this.satellites['logits'] = new Satellite("rect", this.r)
+        logits.placeX = (ix, r, count) => (this.x + this.x2) / 2
+        logits.placeY = (ix, r, count) => (this.y + this.y2) / 2 - r + ix * 0.8 * r
 
         let trainmask = this.satellites['train-test-mask'] = new Satellite("text", this.r)
         trainmask.placeX = (ix, r, count) => (this.x + this.x2) / 2

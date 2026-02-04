@@ -217,3 +217,45 @@ def send_epoch_results(
         socket.send("mt", weights, tag='model_weights', obligate=obligate)
     if stats_data:
         socket.send("mt", stats_data, tag='model_stats', obligate=obligate)
+
+
+def compute_stats_data(
+        gen_dataset,
+        model_manager,
+        predictions: bool = False,
+        logits: bool = False
+):
+    """
+    :param gen_dataset: wrapper over the dataset, stores the dataset
+     and all meta-information about the dataset
+    :param predictions: boolean flag that indicates the need to enter model predictions
+     in the statistics for the front
+    :param logits: boolean flag that indicates the need to enter model logits
+     in the statistics for the front
+    :return: dict with model weights. Also function can add in dict model predictions
+     and logits
+    """
+    stats_data = {}
+
+    # Stats: weights, logits, predictions
+    if predictions:  # and hasattr(self.gnn, 'get_predictions'):
+        predictions = model_manager.run_model(gen_dataset, mask='all', out='predictions')
+        stats_data["predictions"] = predictions.detach().cpu().tolist()
+    if logits:  # and hasattr(gnn, 'forward'):
+        logits = model_manager.run_model(gen_dataset, mask='all', out='logits')
+        stats_data["logits"] = logits.detach().cpu().tolist()
+
+    if gen_dataset.dataset_var_config.task.is_edge_level():
+        # Convert list ot dict
+        edge_label_index = gen_dataset.edge_label_index
+        keys = list(zip(*edge_label_index.tolist()))
+        stats_data = {key: dict(zip(keys, value))
+                      for key, value in stats_data.items()}
+
+    if model_manager.stats_data is None:
+        model_manager.stats_data = {}
+    model_manager.stats_data.update(**stats_data)
+
+    # Note: we update all stats data at once because it can be requested from frontend during
+    # the update
+    return stats_data

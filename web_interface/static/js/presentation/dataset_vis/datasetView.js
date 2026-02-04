@@ -160,8 +160,8 @@ class DatasetView extends View {
                 attrString = attrString.slice(0, 120) + '...'
             html += `<br>Attributes: ${attrString}`
             // html += `<br>pos: ${this.visibleGraph.layout.pos[node].str(5)}`
-            // if (this.embeddings)
-            //     html += `<br>embedding: ${this.embeddings[node]}`
+            // if (this.logits)
+            //     html += `<br>logit: ${this.logits[node]}`
         }
         this.$upLeftInfoDiv.html(html)
     }
@@ -279,7 +279,7 @@ class DatasetView extends View {
             }
         }
 
-        // Ask for model satellites: masks, preds and embeds
+        // Ask for model satellites: masks, preds and logits
         data = await controller.ajaxRequest('/model', {get: "satellites"})
         console.log('satellites data', data)
         if (data !== '') {

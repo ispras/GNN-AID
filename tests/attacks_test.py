@@ -399,6 +399,7 @@ class AttacksTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {},
                 },
+                "neg_samples_ratio": 2,
             }
         )
 
@@ -888,7 +889,6 @@ class AttacksTest(unittest.TestCase):
         print("CLGA Link Prediction AUC:", test_metrics['test']['AUC'])
 
         self.assertLess(test_metrics['test']['AUC'], 0.95)
-
 
     def test_z_mi_shadow_link_prediction(self):
         """

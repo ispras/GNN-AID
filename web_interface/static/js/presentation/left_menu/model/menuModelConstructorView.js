@@ -32,7 +32,7 @@ class MenuModelConstructorView extends MenuView {
     }
 
     async _accept() {
-        let mc = this.constructModelConfig()
+        let mc = await this.constructModelConfig()
         if (mc == null)
             return -1
 
@@ -269,7 +269,7 @@ class MenuModelConstructorView extends MenuView {
     }
 
     // Form model config from selectors values
-    constructModelConfig() {
+    async constructModelConfig() {
         // Change layers output size to num_classes, and all its precedents if needed
         let setOutputSize = (layerBlocks, outputSize) => {
             let iter = layerBlocks.reverseIterator()
@@ -315,6 +315,18 @@ class MenuModelConstructorView extends MenuView {
             // todo Activation=LogSoftmax?
             setOutputSize(this.decoderLayerBlocks, 1)
             this.decoderLayerBlocks.last().setAsLast()
+
+            // Recommend to remove activation for last 'n' layer if present
+            let last = this.nodeLayerBlocks.last()
+            if (last.$activationSelect.val() !== "None") {
+                const userAccepted = await showRecommendationDialog(
+                    `For edge prediction task, it is recommended that last node layer has no activation.
+                     Remove the activation or leave as is (${last.$activationSelect.val()})?`
+                )
+                if (userAccepted) {
+                    last.$activationSelect.val("None")
+                }
+            }
         }
         else
             console.error("Not implemented for task", this.task)
@@ -394,3 +406,92 @@ class MenuModelConstructorView extends MenuView {
     }
 }
 
+function showRecommendationDialog(message) {
+    return new Promise((resolve) => {
+        // Создаём overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        `;
+
+        // Создаём диалоговое окно
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+        `;
+
+        // Текст сообщения
+        const messageEl = document.createElement('p');
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            margin: 0 0 20px 0;
+            color: #333;
+        `;
+
+        // Контейнер для кнопок
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        `;
+
+        // Кнопка Accept
+        const acceptButton = document.createElement('button');
+        acceptButton.textContent = 'Accept';
+        acceptButton.style.cssText = `
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        `;
+        acceptButton.onmouseover = () => acceptButton.style.background = '#0056b3';
+        acceptButton.onmouseout = () => acceptButton.style.background = '#007bff';
+        acceptButton.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(true);
+        };
+
+        // Кнопка Cancel
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.cssText = `
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        `;
+        cancelButton.onmouseover = () => cancelButton.style.background = '#545b62';
+        cancelButton.onmouseout = () => cancelButton.style.background = '#6c757d';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        };
+
+        // Собираем всё вместе
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(acceptButton);
+        dialog.appendChild(messageEl);
+        dialog.appendChild(buttonContainer);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+    });
+}

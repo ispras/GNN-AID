@@ -16,7 +16,7 @@ from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefense
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart
 from .block import Block
-from .utils import WebInterfaceError, send_epoch_results
+from .utils import WebInterfaceError, send_epoch_results, compute_stats_data
 from .visible_part import add_into_dvd
 
 NAME_TO_PATH = {
@@ -119,10 +119,11 @@ class BeforeTrainBlock(Block):
         # Retract training changes - reset model weights
         self.model_manager.gnn.reset_parameters()
         self.model_manager.modification.epochs = 0
-        self.model_manager.compute_stats_data(self.gen_dataset, predictions=True, logits=True)
+        stats_data = compute_stats_data(
+            self.gen_dataset, self.model_manager, predictions=True, logits=True)
 
         stats_data = {k: self.visible_part.filter(v)
-                      for k, v in self.model_manager.stats_data.items()}
+                      for k, v in stats_data.items()}
         # Reformat to DatasetVarData
         dvd = add_into_dvd(self.gen_dataset, stats_data)
         send_epoch_results(stats_data=dvd, socket=self.socket)
@@ -218,10 +219,10 @@ class AfterTrainBlock(Block):
                     mask=torch.empty(1),
                 )
 
-            # Evaluate metrics
+            # Evaluate metrics without attacks
             metrics_values = {}
             res = self.model_manager.evaluate_model(
-                gen_dataset=self.gen_dataset, metrics=self.metrics)
+                gen_dataset=self.gen_dataset, metrics=self.metrics, omit_attacks=True)
             if self.ad_configs["AD-ea"] is not None:
                 metrics_values['After evasion attack'] = res
             else:
@@ -245,10 +246,10 @@ class AfterTrainBlock(Block):
                         mask_loc, res, self.gen_dataset.train_mask)
 
             # Update model logits and predictions
-            self.model_manager.compute_stats_data(
-                gen_dataset=self.gen_dataset, predictions=True, logits=True)
+            stats_data = compute_stats_data(
+                self.gen_dataset, self.model_manager, predictions=True, logits=True)
             stats_data = {k: self.visible_part.filter(v)
-                          for k, v in self.model_manager.stats_data.items()}
+                          for k, v in stats_data.items()}
 
             # Update dataset features
             dvd = self.visible_part.get_dataset_var_data()
@@ -299,10 +300,10 @@ class AfterTrainBlock(Block):
         # self.socket.send(block='at', msg=stats_data, tag='node_features', obligate=True)
 
         # Update model logits and predictions
-        self.model_manager.compute_stats_data(
-            gen_dataset=self.gen_dataset, predictions=True, logits=True)
+        stats_data = compute_stats_data(
+            self.gen_dataset, self.model_manager, predictions=True, logits=True)
         stats_data = {k: self.visible_part.filter(v)
-                      for k, v in self.model_manager.stats_data.items()}
+                      for k, v in stats_data.items()}
 
         # Update dataset features
         dvd = self.visible_part.get_dataset_var_data()

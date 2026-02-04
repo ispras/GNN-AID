@@ -17,8 +17,6 @@ Short overview
     datasets.ptg_datasets.PTGDataset
     datasets.known_format_datasets.KnownFormatDataset
     datasets.datasets_manager.DatasetManager
-    datasets.visible_part.DatasetData
-    datasets.visible_part.DatasetVarData
 
 
 Base classes
@@ -46,6 +44,4 @@ Additional dataset related modules
 .. automodule:: datasets.dataset_converter
     :members:
 .. automodule:: datasets.dataset_stats
-    :members:
-.. automodule:: datasets.visible_part
     :members:

@@ -213,11 +213,12 @@ class FrameworkGNNModelManager(GNNModelManager):
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         loss = 0
-        for batch in loader:
+        n = 0
+        for n, batch in enumerate(loader):
             self.before_batch(batch)
             loss += self.train_on_batch_full(batch, task_type)
             self.after_batch(batch)
-        print("loss %.8f" % loss)
+        print("loss %.8f" % (loss / n))
         self.modification.epochs += 1
         self.gnn.eval()
         return loss.cpu().detach().numpy().tolist()
@@ -302,10 +303,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             out = self.gnn.decode(src, dst)
 
-            # FIXME loss must be for edge prediction
-            criterion = torch.nn.BCEWithLogitsLoss()
-            loss = criterion(out, edge_label)
-            # loss = self.loss_function(out, edge_label)
+            loss = self.loss_function(out, edge_label)
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         return loss
@@ -520,20 +518,19 @@ class FrameworkGNNModelManager(GNNModelManager):
                     full_out = edge_out
                 elif out == 'predictions':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha is it ok?
-                        full_out = edge_out.softmax(dim=-1)
-                        # raise NotImplementedError
+                        full_out = self.gnn.get_predictions(edge_out=edge_out)
                     elif task_type == Task.EDGE_CLASSIFICATION:
-                        full_out = edge_out.softmax(dim=-1)
+                        raise NotImplementedError
+                        # full_out = self.gnn.get_predictions(edge_out=edge_out)
                     elif task_type == Task.EDGE_REGRESSION:
                         raise ValueError(f"'predictions' output is not available for edge regression task")
 
                 elif out == 'answers':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha thresholded(thr - параметр)
-                        full_out = self.gnn.get_answer(edge_out=edge_out)
+                        # TODO misha threshold - параметр
+                        full_out = self.gnn.get_answer(edge_out=edge_out, threshold=0.5)
                     elif task_type == Task.EDGE_CLASSIFICATION:
-                        full_out = edge_out.softmax(dim=-1)
+                        raise NotImplementedError
                     elif task_type == Task.EDGE_REGRESSION:
                         full_out = edge_out
 
@@ -617,13 +614,15 @@ class FrameworkGNNModelManager(GNNModelManager):
     def evaluate_model(
             self,
             gen_dataset: GeneralDataset,
-            metrics: Union[List[Metric], Metric, torch.Tensor]
+            metrics: Union[List[Metric], Metric, torch.Tensor],
+            omit_attacks: bool = False
     ) -> dict:
         """
         Compute metrics for a model result on a part of dataset specified by the metric mask.
 
         :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
         :param metrics: list of metrics to compute. metric based on class Metric
+        :param omit_attacks: if True, do not apply MI and evasion attacks even if they are set
         :return: dict {metric -> value}
         """
         if metrics is None:
@@ -633,13 +632,11 @@ class FrameworkGNNModelManager(GNNModelManager):
         masks = set(m.mask for m in metrics)
         for mask in masks:
             mask_tensor = mask_to_tensor(gen_dataset, mask)
-            # FIXME move to attack_defense_block
-            # if self.evasion_attacker and self.evasion_attack_flag:
-            #     # TODO pass decoder
-            #     self.call_evasion_attack(
-            #         gen_dataset=gen_dataset,
-            #         mask=mask,
-            #     )
+            if not omit_attacks and self.evasion_attacker and self.evasion_attack_flag:
+                self.call_evasion_attack(
+                    gen_dataset=gen_dataset,
+                    mask=mask,
+                )
             model_outputs[mask] = {}
 
             # Get model predictions
@@ -718,10 +715,8 @@ class FrameworkGNNModelManager(GNNModelManager):
                 metrics_values[mask] = {}
             metrics_values[mask][metric.name()] = metric.compute(y_true, y_pred)
 
-        # FIXME move to attack_defense_block
-        # if self.mi_attacker and self.mi_attack_flag:
-        #     # TODO pass decoder
-        #     self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
+        if not omit_attacks and self.mi_attacker and self.mi_attack_flag:
+            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask_tensor, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(
@@ -745,36 +740,6 @@ class FrameworkGNNModelManager(GNNModelManager):
     ):
         if self.mi_attacker:
             self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
-
-    def compute_stats_data(
-            self,
-            gen_dataset: GeneralDataset,
-            predictions: bool = False,
-            logits: bool = False
-    ):
-        """
-        :param gen_dataset: wrapper over the dataset, stores the dataset
-         and all meta-information about the dataset
-        :param predictions: boolean flag that indicates the need to enter model predictions
-         in the statistics for the front
-        :param logits: boolean flag that indicates the need to enter model logits
-         in the statistics for the front
-        :return: dict with model weights. Also function can add in dict model predictions
-         and logits
-        """
-        stats_data = {}
-
-        # Stats: weights, logits, predictions
-        if predictions:  # and hasattr(self.gnn, 'get_predictions'):
-            predictions = self.run_model(gen_dataset, mask='all', out='predictions')
-            stats_data["predictions"] = predictions.detach().cpu().tolist()
-        if logits:  # and hasattr(self.gnn, 'forward'):
-            logits = self.run_model(gen_dataset, mask='all', out='logits')
-            stats_data["embeddings"] = logits.detach().cpu().tolist()
-
-        # Note: we update all stats data at once because it can be requested from frontend during
-        # the update
-        self.stats_data = stats_data
 
     def load_train_test_split(
             self,

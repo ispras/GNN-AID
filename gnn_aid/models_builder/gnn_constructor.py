@@ -745,11 +745,16 @@ class FrameworkGNNConstructor(
     def get_predictions(
             self,
             *args,
+            edge_out: torch.Tensor = None,
             **kwargs
     ) -> torch.Tensor:
         # FIXME Kirill. tmp fix of AttributeError: 'dict' object has no attribute 'softmax' for SubgraphX
         # self._save_emb_flag = False
-        return self(*args, **kwargs).softmax(dim=-1)
+        if edge_out is not None:
+            # Edge prediction task. Apply threshold
+            return edge_out.sigmoid()
+        else:
+            return self(*args, **kwargs).softmax(dim=-1)
         # return self.forward(*args, **kwargs)
 
     def get_parameters(
@@ -760,12 +765,12 @@ class FrameworkGNNConstructor(
     def get_answer(
             self,
             *args,
-            edge_out: torch.Tensor=None,
+            threshold: float = None,
             **kwargs,
     ) -> torch.Tensor:
-        if edge_out is not None:
+        if threshold is not None:
             # Edge prediction task. Apply threshold
-            return edge_out > 0.5  # TODO misha create parameter
+            return self.get_predictions(*args, **kwargs) > threshold
         else:
             return self.get_predictions(*args, **kwargs).argmax(dim=1)
 

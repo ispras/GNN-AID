@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from data_structures.configs import DatasetConfig
-from datasets.ptg_datasets import PTGDataset
+from gnn_aid.data_structures.configs import DatasetConfig
+from gnn_aid.datasets.ptg_datasets import PTGDataset
 from user_datasets.power_graph.powergrid import PowerGrid
 
 

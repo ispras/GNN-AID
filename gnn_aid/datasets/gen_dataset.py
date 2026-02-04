@@ -330,17 +330,17 @@ class GeneralDataset(ABC):
             labeled_nodes_numbers = [n for n, y in enumerate(self.labels) if y != -1]
             num_train = int(percent_train_class * len(labeled_nodes_numbers))
             num_test = int(percent_test_class * len(labeled_nodes_numbers))
-            num_eval = len(labeled_nodes_numbers) - num_train - num_test
-            if percent_val_class <= 0 and num_eval > 0:
-                num_test += num_eval
-                num_eval = 0
-            split = randperm(num_train + num_eval + num_test, generator=default_generator).tolist()
+            num_val = len(labeled_nodes_numbers) - num_train - num_test
+            if percent_val_class <= 0 and num_val > 0:
+                num_test += num_val
+                num_val = 0
+            split = randperm(num_train + num_val + num_test, generator=default_generator).tolist()
 
             for elem in split[:num_train]:
                 train_mask[labeled_nodes_numbers[elem]] = True
-            for elem in split[num_train: num_train + num_eval]:
+            for elem in split[num_train: num_train + num_val]:
                 val_mask[labeled_nodes_numbers[elem]] = True
-            for elem in split[num_train + num_eval:]:
+            for elem in split[num_train + num_val:]:
                 test_mask[labeled_nodes_numbers[elem]] = True
 
         elif task_type in [Task.EDGE_PREDICTION, Task.EDGE_REGRESSION]:

@@ -6,11 +6,6 @@ data_structures
    :toctree: generated
 
 
-Prefix storage
-==============
-.. automodule:: data_structures.prefix_storage
-   :members:
-
 Configs
 =======
 .. automodule:: data_structures.configs

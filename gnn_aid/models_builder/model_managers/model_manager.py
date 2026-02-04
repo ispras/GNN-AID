@@ -93,7 +93,7 @@ class GNNModelManager:
         self.mi_defense_flag = False
 
         self.gnn = None
-        self.stats_data = None  # Stores some stats to be sent to frontend
+        self.stats_data: dict = None  # Stores some stats to be sent to frontend
 
         self.set_poison_defender()
         self.set_poison_attacker()
@@ -105,7 +105,6 @@ class GNNModelManager:
         # Hooks for frontend client
         self._after_epoch_hook: Callable = None
 
-    # FIXME consider moving to super class?
     def set_hook(
             self,
             hook: Callable,

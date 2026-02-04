@@ -82,6 +82,7 @@ class DefenseTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {},
                 },
+                "neg_samples_ratio": 1,
             }
         )
         monkey_patch_dirs()
@@ -345,7 +346,8 @@ class DefenseTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {}
                 },
-                "batch": 64
+                "batch": 64,
+                "neg_samples_ratio": 1
             }
         )
 
@@ -382,7 +384,6 @@ class DefenseTest(unittest.TestCase):
             model_manager = FrameworkGNNModelManager(
                 gnn=copy.deepcopy(gnn),
                 dataset_path=dataset_copy.prepared_dir,
-                modification=ModelModificationConfig(model_ver_ind=0, epochs=30),
                 manager_config=manager_config_lp,
             )
             model_manager.set_mi_attacker(mi_attack_config=mi_attack_config)
@@ -429,6 +430,7 @@ class DefenseTest(unittest.TestCase):
                     train_class_label=True
                 )
                 attack_results = attack_metrics
+            print(mi_attacker.results)
 
             return {
                 'auc': test_auc,

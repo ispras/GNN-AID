@@ -62,7 +62,7 @@ function createSetOfColors(numColors, $svg) {
 // Representation of a visible part of dataset - whole graph or a neighborhood.
 // Responsible for drawing and interaction with user.
 class VisibleGraph {
-    static SATELLITES = ["features", "labels", "predictions", "embeddings", "train-test-mask"]
+    static SATELLITES = ["features", "labels", "predictions", "logits", "train-test-mask"]
     static ELEMS = ["node", "edge", "graph"]
 
     constructor(datasetInfo, svgPanel) {
@@ -76,7 +76,7 @@ class VisibleGraph {
 
         // Constants
         this.nodeRadius = 15
-        this.edgeRadius = 10
+        this.edgeRadius = 12
         this.nodeStrokeWidth = 2
         this.nodeExplainedStrokeWidth = 4
         this.edgeStrokeWidth = 1
@@ -711,7 +711,7 @@ class VisibleGraph {
         // html += `<br> scroll: ${new Vec(this.element.parentElement.scrollLeft, this.element.parentElement.scrollTop).str(4)}`
         // $("#dataset-info-bottomleft").html(html)
         // $("#dataset-info-upright").html(html)
-        controller.presenter.datasetView.$upRightInfoDiv.html(html)
+        // controller.presenter.datasetView.$upRightInfoDiv.html(html)
     }
 
     // Compute approximate bounding box using nodes positions

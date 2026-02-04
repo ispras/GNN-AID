@@ -16,8 +16,6 @@ Base classes
    :members:
 .. automodule:: models_builder.gnn_constructor
    :members:
-.. automodule:: models_builder.gnn_models
-   :members:
 .. automodule:: models_builder.models_utils
    :members:
 .. automodule:: models_builder.models_zoo

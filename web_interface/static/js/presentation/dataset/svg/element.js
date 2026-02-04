@@ -70,8 +70,8 @@ class SvgElement {
                 return this.setLabels.apply(this, args)
             case 'predictions':
                 return this.setPredictions.apply(this, args)
-            case 'embeddings':
-                return this.setEmbeddings.apply(this, args)
+            case 'logits':
+                return this.setLogits.apply(this, args)
             case 'train-test-mask':
                 return this.setTrainMask.apply(this, args)
             case 'features':
@@ -229,40 +229,40 @@ class SvgElement {
         return createNew
     }
 
-    // Add node embeddings
-    setEmbeddings(embeds) {
+    // Add node logits
+    setLogits(embeds) {
         if (!Array.isArray(embeds))
             embeds = [embeds]
-        let embeddings = this.satellites['embeddings']
-        let createNew = embeddings.blocks == null
+        let logits = this.satellites['logits']
+        let createNew = logits.blocks == null
         if (createNew) {
             let r = SvgElement.scaledRadius(this.r, this.s)
             let size = 0.8 * r
-            embeddings.blocks = []
+            logits.blocks = []
             for (let i = 0; i < embeds.length; i++) {
                 let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
-                rect.setAttribute('x', embeddings.placeX(i, r, embeds.length))
-                rect.setAttribute('y', embeddings.placeY(i, r, embeds.length))
+                rect.setAttribute('x', logits.placeX(i, r, embeds.length))
+                rect.setAttribute('y', logits.placeY(i, r, embeds.length))
                 rect.setAttribute('width', size)
                 rect.setAttribute('height', size)
                 rect.setAttribute('stroke', '#000')
                 rect.setAttribute('stroke-width', 1)
                 rect.setAttribute('display', !this.lightMode && this.show ? "inline" : "none")
-                embeddings.blocks.push(rect)
+                logits.blocks.push(rect)
             }
-            this._addTip(embeddings.blocks, "embedding")
+            this._addTip(logits.blocks, "logit")
         }
         // Set colors
         // TODO do not update if not visible. But then how to update when it gets visible??
         for (let i=0; i<embeds.length; i++) {
-            let rect = embeddings.blocks[i]
+            let rect = logits.blocks[i]
                 let color = valueToColor(embeds[i], EMBEDDING_COLORMAP, -2, 2, true, 0.2)
             rect.setAttribute('fill', color)
         }
-        let tipText = "embedding:" + embeds.reduce((a, c) => a + '<br>' + c.toFixed(5), '')
-        this.tipText["embedding"] = tipText
+        let tipText = "logit:" + embeds.reduce((a, c) => a + '<br>' + c.toFixed(5), '')
+        this.tipText["logit"] = tipText
         // Update tip if shown
-        if (this.tipShown === "embedding")
+        if (this.tipShown === "logit")
             this.$tip.html(tipText)
         return createNew
     }

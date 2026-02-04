@@ -19,6 +19,7 @@ class MenuModelManagerView extends MenuView {
         this.managerParamsBuilder = null
         this.$optimizerSelect = null
         this.optimizerParamsBuilder = null
+        this.$negSamplesRatio = null
         this.$lossSelect = null
         this.lossParamsBuilder = null
         this.$trainRatioInput = null
@@ -72,6 +73,19 @@ class MenuModelManagerView extends MenuView {
             "Optimizer", null, "O")
         $cc.append($cb)
         $cc.append($optimizerParamsDiv)
+
+        // Negative Samples Ratio - for edge prediction
+        if (this.task === Task.EDGE_PREDICTION) {
+            $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            let id = "menu-model-constructor-negsamplesratio"
+            $cb.append($("<label></label>").text("Neg.samples ratio").attr("for", id))
+            this.$negSamplesRatio = $("<input>").attr("type", "number")
+                .attr("min", "0").attr("step", "1")
+                .attr("value", "1").attr("id", id)
+            // addValueChecker(this.$negSamplesRatio, "float", 1, 0, null, "change")
+            $cb.append(this.$negSamplesRatio)
+        }
 
         // Loss function
         let $lossParamsDiv
@@ -191,6 +205,8 @@ class MenuModelManagerView extends MenuView {
                 // parseFloat(this.$valRatioInput.val()),
                 parseFloat(this.$testRatioInput.val())],
         }
+        if (this.$negSamplesRatio)
+            managerConfig['neg_samples_ratio'] = parseFloat(this.$negSamplesRatio.val())
 
         Object.assign(managerConfig, this.managerParamsBuilder.kwArgs)
         return managerConfig

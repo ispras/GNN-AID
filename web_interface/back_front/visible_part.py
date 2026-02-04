@@ -68,11 +68,6 @@ class DatasetVarData:
             # self.predictions: Union[Dict, List] = kwargs.get('predictions')
             # self.answers: Union[Dict, List] = kwargs.get('answers')
 
-        def __str__(
-                self
-        ):
-            return f"Element[{self.__dict__}]"
-
         def __setattr__(self, key, value):
             super().__setattr__(key, value)
             # Need it to make it jsonable as a common dict
@@ -128,6 +123,9 @@ class ViewPoint:
 
     def __str__(self):
         return f"center={self.center}, depth={self.depth}"
+
+    def __repr__(self):
+        return str(self)
 
     def __eq__(self, other):
         if not isinstance(other, ViewPoint):
@@ -195,37 +193,6 @@ class DatasetIndex:
                     # TODO misha hetero
                     raise NotImplementedError
 
-                    # nodes = {0: {center[0]: {center[1]}}}  # {depth: {type: set of ids}}
-                    # edges = {0: {}}  # incoming edges, {depth: {type: list}}
-                    # prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
-                    #
-                    # all_edges = gen_dataset.edges[0]
-                    # for d in range(1, depth + 1):
-                    #     ns = nodes[d - 1]
-                    #     es_next = []
-                    #     ns_next = set()
-                    #     for i, j in all_edges:
-                    #         # Get all incoming edges * -> j
-                    #         if j in ns and i not in prev_nodes:
-                    #             es_next.append((i, j))
-                    #             if i not in ns:
-                    #                 ns_next.add(i)
-                    #
-                    #         if not gen_dataset.info.directed:
-                    #             # Check also outcoming edge i -> *, excluding already added
-                    #             if i in ns and j not in prev_nodes:
-                    #                 es_next.append((j, i))
-                    #                 if j not in ns:
-                    #                     ns_next.add(j)
-                    #
-                    #     prev_nodes.update(ns)
-                    #     nodes[d] = ns_next
-                    #     edges[d] = es_next
-                    #
-                    # self.nodes = [list(ns) for ns in nodes.values()]
-                    # self.edges = [list(es) for es in edges.values()]
-                    # self.node_index = [n for ns in self.nodes for n in ns]
-
                 else:  # homo
                     nodes = {0: {center}}  # {depth: set of ids}
                     edges = {0: []}  # incoming edges
@@ -235,7 +202,7 @@ class DatasetIndex:
                     all_edges = edge_index_to_edge_list(gen_dataset.edges[0], True)
                     for d in range(1, depth + 1):
                         ns = nodes[d - 1]
-                        es_next = []
+                        es_next = set()
                         ns_next = set()
                         for ix, (i, j) in enumerate(all_edges):
                             if not gen_dataset.info.directed and i > j:
@@ -243,7 +210,7 @@ class DatasetIndex:
 
                             # Get all incoming edges * -> j
                             if j in ns and i not in prev_nodes:
-                                es_next.append(ix)
+                                es_next.add(ix)
                                 # es_next.append((i, j))
                                 if i not in ns:
                                     ns_next.add(i)
@@ -251,13 +218,14 @@ class DatasetIndex:
                             if not gen_dataset.info.directed:
                                 # Check also outcoming edge i -> *, excluding already added
                                 if i in ns and j not in prev_nodes:
-                                    es_next.append(ix)
+                                    es_next.add(ix)
+                                    # es_next.append((i, j))
                                     if j not in ns:
                                         ns_next.add(j)
 
                         prev_nodes.update(ns)
                         nodes[d] = ns_next
-                        edges[d] = es_next
+                        edges[d] = list(sorted(es_next))
 
                     self.node_index = [list(ns) for ns in nodes.values()]
                     self.edge_index = [list(es) for es in edges.values()]
@@ -265,17 +233,24 @@ class DatasetIndex:
             else:  # Get whole graph
                 pass
 
+    def __str__(self):
+        return str(self.__dict__)
+
 
 class VisiblePart:
+    """
+    Датасет + индекс видимой части. Отвечает за выборку видимой части от датасета для отправки на
+    отрисовку.
+    """
     def __init__(
             self,
             view_point: ViewPoint,
             gen_dataset: GeneralDataset,
     ):
-        """ Compute a part of dataset specified by a center node/graph and a depth
+        """ Compute a part of dataset specified by a central node/edge/graph and a depth.
 
         :param view_point: какая часть датасета просматривается на фронте
-        :param gen_dataset:
+        :param gen_dataset: GeneralDataset, will be stored
         """
         #         neigh   graph   graphs
         # nodes   [[n]]     n      [n]
@@ -294,7 +269,7 @@ class VisiblePart:
         if view_point is not None and view_point != self.dataset_index.view_point:
             self.dataset_index = DatasetIndex(view_point, self.gen_dataset)
 
-    def iterate(self, elem: str):
+    def iterate(self, elem: str, pairs_for_edges=False):
         """ Iterate over indexed elements: nodes/edges/graphs
         """
         assert elem in ['nodes', 'edges', 'graphs']
@@ -315,10 +290,14 @@ class VisiblePart:
                             yield n
 
                 elif elem == 'edges':
-                    raise NotImplementedError
+                    if pairs_for_edges:
+                        edges = edge_index_to_edge_list(self.gen_dataset.edges[0], True)
                     for es in self.dataset_index.edge_index:
                         for e in es:
-                            yield e
+                            if pairs_for_edges:
+                                yield edges[e]
+                            else:
+                                yield e
 
                 else:
                     raise RuntimeError
@@ -329,32 +308,39 @@ class VisiblePart:
                         yield n
 
                 elif elem == 'edges':
-                    for e in edge_index_to_edge_list(
-                            self.gen_dataset.edges, self.gen_dataset.is_directed()):
-                        yield e
+                    for ix, e in enumerate(edge_index_to_edge_list(
+                            self.gen_dataset.edges[0], self.gen_dataset.is_directed())):
+                        if pairs_for_edges:
+                            yield tuple(e)
+                        else:
+                            yield ix
                 else:
                     raise RuntimeError
 
     def filter(
             self,
-            array: list,
-            task: Task = None
+            array: Union[list, dict],
+            elem: str = None
     ) -> list:
         """ Suppose ixes = [2,4]: [a, b, c, d] ->  {2: b, 4: d}
         """
-        if task is None:
+        if elem is None:
+            # FIXME can it differ from dataset's?
             task = self.gen_dataset.dataset_var_config.task
-        # FIXME do we always need tasK? can it differ from dataset's?
-        if task.is_node_level():
-            elem = 'nodes'
-        elif task.is_edge_level():
-            elem = 'edges'
-        elif task.is_graph_level():
-            elem = 'graphs'
-        else:
-            raise ValueError(f"Unsupported task {task}")
+            if task.is_node_level():
+                elem = 'nodes'
+            elif task.is_edge_level():
+                elem = 'edges'
+            elif task.is_graph_level():
+                elem = 'graphs'
+            else:
+                raise ValueError(f"Unsupported task {task}")
 
-        return [array[ix] for ix in self.iterate(elem)]
+        if elem == 'edges':
+            assert isinstance(array, dict),\
+                f"For edge filtering, array must be dict, not {type(array)}"
+
+        return [array[ix] for ix in self.iterate(elem, pairs_for_edges=True)]
 
     @timing_decorator
     def get_dataset_data(
@@ -387,6 +373,7 @@ class VisiblePart:
                 edges = [
                     [all_edges[i] for i in es] for es in self.dataset_index.edge_index
                 ]
+                # edges = copy(self.dataset_index.edge_index)
 
             else:  # Get whole graph
                 nodes = self.gen_dataset.info.nodes[0]
@@ -420,14 +407,20 @@ class VisiblePart:
     @timing_decorator
     def get_dataset_var_data(
             self,
-            view_point: ViewPoint = None
+            view_point: ViewPoint = None,
+            satellites: Union[list, None] = None
     ) -> DatasetVarData:
-        """ Get DatasetVarData for specified graphs or nodes. Tensors are converted to python lists.
+        """
+        Get DatasetVarData for specified graphs or nodes. Tensors are converted to python lists.
         """
         self.update_view_point(view_point)
 
         dataset_var_data = DatasetVarData()
         print("Computing dataset_var_data for", view_point)
+
+        # TODO use satellites
+        if satellites:
+            raise NotImplementedError
 
         # Node level
         dataset_var_data.node.features = {}
@@ -451,31 +444,79 @@ class VisiblePart:
                 ]
             else:
                 dataset_var_data.edge.features = [
-                    edge_features[n].tolist() for n in self.iterate('edges')
+                    edge_features[e].tolist() for e in self.iterate('edges')
                 ]
 
         # Labels according to task
+        if self.gen_dataset.labels is not None:
+            task = self.gen_dataset.dataset_var_config.task
+            if task.is_node_level():
+                elem = dataset_var_data.node
+                iterated = list(self.iterate('nodes'))
+                labels = self.gen_dataset.labels.tolist()
+            elif task.is_edge_level():
+                elem = dataset_var_data.edge
+                iterated = list(self.iterate('edges', pairs_for_edges=True))
+                labels = dict(zip(zip(*self.gen_dataset.edge_label_index.tolist()),
+                                  self.gen_dataset.labels.tolist()))
+            elif task.is_graph_level():
+                elem = dataset_var_data.graph
+                iterated = list(self.iterate('graphs'))
+                labels = self.gen_dataset.labels.tolist()
+            else:
+                raise ValueError(f"Unsupported task type {task}")
+
+            elem.labels = [labels[ix] for ix in iterated]
+
+        return dataset_var_data
+
+    def get_train_test_mask(
+            self,
+    ) -> DatasetVarData:
+        """ Get train/val/test mask for the dataset and send to frontend.
+        """
+        dataset_var_data = DatasetVarData()
+
         task = self.gen_dataset.dataset_var_config.task
         if task.is_node_level():
             elem = dataset_var_data.node
             iterated = list(self.iterate('nodes'))
         elif task.is_edge_level():
             elem = dataset_var_data.edge
-            iterated = list(self.iterate('edges'))
+            iterated = list(self.iterate('edges', pairs_for_edges=True))
         elif task.is_graph_level():
             elem = dataset_var_data.graph
             iterated = list(self.iterate('graphs'))
         else:
             raise ValueError(f"Unsupported task type {task}")
 
-        if self.gen_dataset.labels is not None:
-            labels = self.gen_dataset.labels.tolist()
-            elem.labels = [labels[ix] for ix in iterated]
-            # for ix in iterated:
-            #     if isinstance(ix, tuple):
-            #         raise NotImplementedError
-            #         # ix = ','.join(map(str, ix))
-            #     elem.labels[ix] = labels[ix]
+        if task.is_edge_level():
+            # Build sets of edges for each mask
+            mask_edges = {}
+            for m, mask in zip([1, 3, 2],
+                            [self.gen_dataset.train_mask, self.gen_dataset.val_mask, self.gen_dataset.test_mask]):
+                mask_edges[m] = set(zip(*self.gen_dataset.edge_label_index[:, mask].tolist()))
+
+            res = [0] * len(iterated)
+            for ix, e in enumerate(iterated):
+                for m, edges in mask_edges.items():
+                    if e in edges:
+                        res[ix] = m
+                        continue
+
+        else:
+            # Encode mask as train=1, val=2, test=3
+            res = []
+            for n in iterated:
+                if self.gen_dataset.train_mask[n]:
+                    res.append(1)
+                elif self.gen_dataset.test_mask[n]:
+                    res.append(2)
+                elif self.gen_dataset.val_mask[n]:
+                    res.append(3)
+
+        elem["train-test-mask"] = res
+        # add_into_dvd(self.gen_dataset, {"train": res}, dataset_var_data)
 
         return dataset_var_data
 
@@ -520,7 +561,8 @@ if __name__ == '__main__':
     #                        task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
 
     dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
-    dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
+    dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
+    # dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
 
     # dc = DatasetConfig(('example', 'example'))
     # dvc = DatasetVarConfig(task=Task.EDGE_REGRESSION, labeling="regression",
@@ -528,16 +570,18 @@ if __name__ == '__main__':
 
     gen_dataset = DatasetManager.get_by_config(dc, dvc)
     # gen_dataset.set_visible_part({})
+    # visible_part = VisiblePart(ViewPoint(), gen_dataset)
     visible_part = VisiblePart(ViewPoint(**{'center': 2, 'depth': 2}), gen_dataset)
     dd = visible_part.get_dataset_data()
-    print(visible_part.dataset_index)
-    print(dd)
-    # print(json_dumps(dd, indent=1))
+    # print(visible_part.dataset_index)
+    # print(dd)
+    print(json_dumps(dd, indent=1))
+    gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
 
     dvd = visible_part.get_dataset_var_data()
-    print(dvd.to_json(indent=1))
+    # print(dvd.to_json(indent=1))
     # print(json_dumps({"node": dvd.node}, indent=1))
 
-    gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    print(visible_part.filter(gen_dataset.labels.tolist()))
-
+    # labels = dict(zip(zip(*gen_dataset.edge_label_index.tolist()),
+    #                   gen_dataset.labels.tolist()))
+    print(visible_part.get_train_test_mask())
