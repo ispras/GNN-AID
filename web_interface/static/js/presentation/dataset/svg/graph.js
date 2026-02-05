@@ -31,13 +31,17 @@ class SvgGraph extends SvgElement {
         labels.placeX = (ix, r, count) => this.x + this.width + 0.8 * r*(-count + 1/2 + ix)
         labels.placeY = (ix, r, count) => this.y - r/2
 
+        let features = this.satellites['features'] = new Satellite("rect", this.r)
+        features.placeX = (ix, r, count) => this.x - r
+        features.placeY = (ix, r, count) => this.y + this.height/2 + 0.8 * r * (-count/2 - 1/2 + ix)
+
         let predictions = this.satellites['predictions'] = new Satellite("circle", this.r)
         predictions.placeX = (ix, r, count) => this.x + this.width + 0.8 * r*(-count + 1/2 + ix)
         predictions.placeY = (ix, r, count) => this.y + r/2
 
-        let embeddings = this.satellites['embeddings'] = new Satellite("rect", this.r)
-        embeddings.placeX = (ix, r, count) => this.x + this.width + 0.1 * r
-        embeddings.placeY = (ix, r, count) => this.y + this.height/2 + 0.8 * r * (-count + 1/2 + ix)
+        let logits = this.satellites['logits'] = new Satellite("rect", this.r)
+        logits.placeX = (ix, r, count) => this.x + this.width + 0.1 * r
+        logits.placeY = (ix, r, count) => this.y + this.height/2 + 0.8 * r * (-count/2 - 1/2 + ix)
 
         let trainmask = this.satellites['train-test-mask'] = new Satellite("text", this.r)
         trainmask.placeX = (ix, r, count) => this.x + r

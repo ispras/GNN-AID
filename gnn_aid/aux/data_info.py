@@ -189,11 +189,9 @@ class DataInfo:
                         for file_info_dict in val["files_info"]:
                             if file_info_dict["file_name"] == "origin":
                                 file_name = path[parts_parse].strip()
-                            else:
-                                file_name = file_info_dict["file_name"]
-                            file_name += file_info_dict["format"]
-                            description_info.update(
-                                {key: {parts_val[-1]: os.path.join(*path[:parts_parse], file_name)}})
+                                file_name += file_info_dict["format"]
+                                description_info.update(
+                                    {key: {parts_val[-1]: os.path.join(*path[:parts_parse], file_name)}})
                     parts_parse += 1
         return parts_val, description_info
 

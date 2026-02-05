@@ -33,7 +33,7 @@ class ForceNeighborhoodLayout extends Layout {
         }
         // FIXME generalize
         let depth = this.visibleGraph.depth
-        this.m[this.visibleGraph.n0] = 3*nodes.size
+        this.m[this.visibleGraph.n0] = 3*nodes.length
         if (depth >= 1)
             for (const n of this.visibleGraph.nodes[1])
                 this.m[n] = this.visibleGraph.getDegree(n)
@@ -193,15 +193,15 @@ class ForceNeighborhoodLayout extends Layout {
             this.temp = this.constT
         } else {
             if (this.stateFlag === 1) {
-                this.temp *= 10 / Math.sqrt(Math.sqrt(nodes.size))
+                this.temp *= 10 / Math.sqrt(Math.sqrt(nodes.length))
                 this.stateFlag = 0
             }
         }
         if (this.stateFlag === 2) {
             this.stateFlag = 0
-            this.temp *= Math.sqrt(nodes.size) / 100
-            this.constT = this.temp /(5 * Math.sqrt(nodes.size))
-            this.rad *= Math.sqrt(Math.sqrt(nodes.size))
+            this.temp *= Math.sqrt(nodes.length) / 100
+            this.constT = this.temp /(5 * Math.sqrt(nodes.length))
+            this.rad *= Math.sqrt(Math.sqrt(nodes.length))
         }
 
         // calculating repulsive forces

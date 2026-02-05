@@ -16,9 +16,8 @@ from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_P
 from gnn_aid.data_structures import Task, GraphModificationArtifact
 from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
 from gnn_aid.datasets import GeneralDataset
-from . import GNNModelManager
 from gnn_aid.models_builder.models_utils import Metric, predict_top_k_edges
-from .. import GNNConstructor
+from . import GNNModelManager
 
 
 class FrameworkGNNModelManager(GNNModelManager):
@@ -100,6 +99,9 @@ class FrameworkGNNModelManager(GNNModelManager):
         self.batch = getattr(self.manager_config, CONFIG_OBJ).batch
         self.clip = getattr(self.manager_config, CONFIG_OBJ).clip
         self.mask_features = getattr(self.manager_config, CONFIG_OBJ).mask_features
+        try:
+            self.neg_samples_ratio = getattr(self.manager_config, CONFIG_OBJ).neg_samples_ratio
+        except AttributeError: pass
 
         self.dataset_path = dataset_path
 
@@ -127,7 +129,6 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset,
             steps: int = None,
-            pbar: Union['tqdm', None] = None,
             metrics: Union[List[Metric], Metric] = None,
             **kwargs
     ) -> None:
@@ -135,13 +136,9 @@ class FrameworkGNNModelManager(GNNModelManager):
             self.before_epoch(gen_dataset)
             print("epoch", self.modification.epochs)
             train_loss = self.train_1_step(gen_dataset)
-            self.after_epoch(gen_dataset)
+            self.after_epoch(gen_dataset, train_loss=train_loss)
             early_stopping_flag = self.early_stopping(train_loss=train_loss, gen_dataset=gen_dataset,
                                                       metrics=metrics, steps=steps)
-            if self.socket:
-                self.report_results(train_loss=train_loss, gen_dataset=gen_dataset,
-                                    metrics=metrics)
-            pbar.update(1)
             if early_stopping_flag:
                 break
 
@@ -182,11 +179,10 @@ class FrameworkGNNModelManager(GNNModelManager):
             pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long,
                                    device=gen_dataset.dataset.edge_index.device)
 
-            # TODO num_neg_samples as MM parameter
             neg_edge_index = negative_sampling(
                 edge_index=gen_dataset.data.edge_index,
                 num_nodes=gen_dataset.data.num_nodes,
-                num_neg_samples=pos_edge_index.size(1),
+                num_neg_samples=int(self.neg_samples_ratio * pos_edge_index.size(1)),
                 method='sparse'
             )
             neg_label = torch.zeros(neg_edge_index.size(1), dtype=torch.long, device=gen_dataset.dataset.edge_index.device)
@@ -197,7 +193,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             edge_label_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
             edge_label = torch.cat([pos_label, neg_label], dim=0)
 
-            train_data = gen_dataset.data.clone()
+            train_data = gen_dataset.data.clone()  # FIXME can we avoid cloning?
             train_data.edge_label_index = edge_label_index
             train_data.edge_label = edge_label
 
@@ -209,6 +205,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                     batch_size=self.batch,
                     edge_label_index=edge_label_index,
                     edge_label=edge_label,
+                    directed=gen_dataset.is_directed(),
                     shuffle=True,
                 )
             )
@@ -216,11 +213,12 @@ class FrameworkGNNModelManager(GNNModelManager):
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         loss = 0
-        for batch in loader:
+        n = 0
+        for n, batch in enumerate(loader):
             self.before_batch(batch)
             loss += self.train_on_batch_full(batch, task_type)
             self.after_batch(batch)
-        print("loss %.8f" % loss)
+        print("loss %.8f" % (loss / n))
         self.modification.epochs += 1
         self.gnn.eval()
         return loss.cpu().detach().numpy().tolist()
@@ -305,10 +303,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
             out = self.gnn.decode(src, dst)
 
-            # FIXME loss must be for edge prediction
-            criterion = torch.nn.BCEWithLogitsLoss()
-            loss = criterion(out, edge_label)
-            # loss = self.loss_function(out, edge_label)
+            loss = self.loss_function(out, edge_label)
         else:
             raise ValueError(f"Unsupported task type {task_type}")
         return loss
@@ -353,20 +348,6 @@ class FrameworkGNNModelManager(GNNModelManager):
         """
         torch.save(self.gnn.state_dict(), path)
 
-    def report_results(
-            self,
-            train_loss,
-            gen_dataset: GeneralDataset,
-            metrics: List[Metric]
-    ) -> None:
-        metrics_values = self.evaluate_model(gen_dataset=gen_dataset, metrics=metrics)
-        self.compute_stats_data(gen_dataset, predictions=True, logits=True)
-        self.send_epoch_results(
-            metrics_values=metrics_values,
-            stats_data={k: gen_dataset.visible_part.filter(v)
-                        for k, v in self.stats_data.items()},
-            weights={"weights": self.gnn.get_weights()}, loss=train_loss)
-
     def train_model(
             self,
             gen_dataset: GeneralDataset,
@@ -374,7 +355,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             mode: Union[str, None] = None,
             steps=None,
             metrics: List[Metric] = None,
-            socket: 'SocketConnect' = None
+            apply_posisoning_ad: bool = True
     ) -> Path | None:
         """
         Convenient train method.
@@ -384,18 +365,15 @@ class FrameworkGNNModelManager(GNNModelManager):
         :param mode: '1 step' or 'full' or None (choose automatically)
         :param steps: train specific number of epochs, if None - all of them
         :param metrics: list of metrics to measure at each step or at the end of training
-        :param socket: socket to use for sending data to frontend
+        :param apply_posisoning_ad: if True, apply posisoning attack and defense before the training
         """
-        from gnn_aid.explainers.explainer import ProgressBar
-        gen_dataset = self.load_or_execute_poisoning_attack(
-            gen_dataset=gen_dataset
-        )
-        gen_dataset = self.load_or_execute_poisoning_defense(
-            gen_dataset=gen_dataset
-        )
-
-        self.socket = socket
-        pbar = ProgressBar(self.socket, "mt")
+        if apply_posisoning_ad:
+            gen_dataset = self.load_or_execute_poisoning_attack(
+                gen_dataset=gen_dataset
+            )
+            gen_dataset = self.load_or_execute_poisoning_defense(
+                gen_dataset=gen_dataset
+            )
 
         # Assure we call here from subclass
         assert issubclass(type(self), GNNModelManager)
@@ -404,30 +382,12 @@ class FrameworkGNNModelManager(GNNModelManager):
         # TODO Kirill what is this? Outdated?
         # has_complete = self.train_complete != super(type(self), self).train_complete
         # assert has_complete
-        do_1_step = True
 
-        try:
-            if do_1_step:
-                # assert steps > 0
-                pbar.total = self.modification.epochs + steps
-                pbar.n = self.modification.epochs
-                pbar.update(0)
-                self.train_complete(gen_dataset=gen_dataset, steps=steps,
-                                    pbar=pbar, metrics=metrics)
-                pbar.close()
-                self.send_data("mt", {"status": "OK"})
+        # assert steps > 0
+        self.train_complete(gen_dataset=gen_dataset, steps=steps,metrics=metrics)
 
-            else:
-                raise Exception
-
-            if save_model_flag:
-                return self.save_model_executor()
-
-        except Exception as e:
-            self.send_data("mt", {"status": "FAILED"})
-            raise e
-        finally:
-            self.socket = None
+        if save_model_flag:
+            return self.save_model_executor()
 
     def run_model(
             self,
@@ -522,6 +482,14 @@ class FrameworkGNNModelManager(GNNModelManager):
             elif task_type.is_edge_level():
                 data = gen_dataset.data
                 train_edge_index = gen_dataset.edge_label_index[:, gen_dataset.train_mask]
+                if mask_tensor.dim() == 2:  # specific edges
+                    edge_mask = mask_tensor
+                elif mask_tensor.dim() == 1:  # mask on edges
+                    edge_mask = gen_dataset.edge_label_index[:, mask_tensor]
+                else:
+                    raise RuntimeError(
+                        f"Dimension of mask_tensor must be 1 or 2, got {mask_tensor.shape}")
+
                 data_x_copy = torch.clone(data.x)
 
                 # FIXME misha check, test
@@ -540,8 +508,8 @@ class FrameworkGNNModelManager(GNNModelManager):
                 node_out = self.gnn(data_x_copy, train_edge_index)
 
                 # Get logits for edges from mask
-                src = node_out[mask_tensor[0]]
-                dst = node_out[mask_tensor[1]]
+                src = node_out[edge_mask[0]]
+                dst = node_out[edge_mask[1]]
                 edge_out = self.gnn.decode(src, dst)
 
                 # Apply different out
@@ -550,20 +518,19 @@ class FrameworkGNNModelManager(GNNModelManager):
                     full_out = edge_out
                 elif out == 'predictions':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha is it ok?
-                        full_out = edge_out.softmax(dim=-1)
-                        # raise NotImplementedError
+                        full_out = self.gnn.get_predictions(edge_out=edge_out)
                     elif task_type == Task.EDGE_CLASSIFICATION:
-                        full_out = edge_out.softmax(dim=-1)
+                        raise NotImplementedError
+                        # full_out = self.gnn.get_predictions(edge_out=edge_out)
                     elif task_type == Task.EDGE_REGRESSION:
                         raise ValueError(f"'predictions' output is not available for edge regression task")
 
                 elif out == 'answers':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha thresholded(thr - параметр)
-                        full_out = self.gnn.get_answer(edge_out=edge_out)
+                        # TODO misha threshold - параметр
+                        full_out = self.gnn.get_answer(edge_out=edge_out, threshold=0.5)
                     elif task_type == Task.EDGE_CLASSIFICATION:
-                        full_out = edge_out.softmax(dim=-1)
+                        raise NotImplementedError
                     elif task_type == Task.EDGE_REGRESSION:
                         full_out = edge_out
 
@@ -647,22 +614,25 @@ class FrameworkGNNModelManager(GNNModelManager):
     def evaluate_model(
             self,
             gen_dataset: GeneralDataset,
-            metrics: Union[List[Metric], Metric, torch.Tensor]
+            metrics: Union[List[Metric], Metric, torch.Tensor],
+            omit_attacks: bool = False
     ) -> dict:
         """
         Compute metrics for a model result on a part of dataset specified by the metric mask.
 
         :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
         :param metrics: list of metrics to compute. metric based on class Metric
+        :param omit_attacks: if True, do not apply MI and evasion attacks even if they are set
         :return: dict {metric -> value}
         """
+        if metrics is None:
+            return {}
         # Compute model outputs for all needed masks
         model_outputs = {}  # mask -> {outputs}
         masks = set(m.mask for m in metrics)
         for mask in masks:
             mask_tensor = mask_to_tensor(gen_dataset, mask)
-            if self.evasion_attacker and self.evasion_attack_flag:
-                # TODO pass decoder
+            if not omit_attacks and self.evasion_attacker and self.evasion_attack_flag:
                 self.call_evasion_attack(
                     gen_dataset=gen_dataset,
                     mask=mask,
@@ -673,11 +643,10 @@ class FrameworkGNNModelManager(GNNModelManager):
             task_type = gen_dataset.dataset_var_config.task
             if task_type == Task.EDGE_PREDICTION:
                 pos_edge_index = gen_dataset.edge_label_index[:, mask_tensor]
-                # TODO num_neg_samples as MM parameter
                 neg_edge_index = negative_sampling(
                     edge_index=gen_dataset.data.edge_index,
                     num_nodes=gen_dataset.data.num_nodes,
-                    num_neg_samples=pos_edge_index.size(1),
+                    num_neg_samples=int(self.neg_samples_ratio * pos_edge_index.size(1)),
                     method='sparse'
                 )
                 pos_label = torch.ones(pos_edge_index.size(1), dtype=torch.long,
@@ -691,6 +660,7 @@ class FrameworkGNNModelManager(GNNModelManager):
                 edge_mask = torch.cat([pos_edge_index, neg_edge_index], dim=1)
 
                 # FIXME we call model 2 times, can we cache the results?
+                #  (e.g. pass list of out values)
                 y_pred_logits = self.run_model(gen_dataset, mask=edge_mask, out='logits')
                 y_pred = self.run_model(gen_dataset, mask=edge_mask, out='answers')
                 y_true = torch.cat([pos_label, neg_label], dim=0)
@@ -738,16 +708,15 @@ class FrameworkGNNModelManager(GNNModelManager):
                 y_pred = model_outputs[mask]['logits']
             if metric.needs_all_node_pairs():
                 k = metric.kwargs.get('k')
-                y_pred = model_outputs['all_pairs'][:k]
+                y_pred = model_outputs['all_pairs'][:, :k]
                 y_true = model_outputs[mask]['true_edges']
 
             if mask not in metrics_values:
                 metrics_values[mask] = {}
             metrics_values[mask][metric.name()] = metric.compute(y_true, y_pred)
 
-        if self.mi_attacker and self.mi_attack_flag:
-            # TODO pass decoder
-            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask, model=self.gnn)
+        if not omit_attacks and self.mi_attacker and self.mi_attack_flag:
+            self.call_mi_attack(gen_dataset=gen_dataset, mask_tensor=mask_tensor, model=self.gnn)
         return metrics_values
 
     def call_evasion_attack(
@@ -771,97 +740,6 @@ class FrameworkGNNModelManager(GNNModelManager):
     ):
         if self.mi_attacker:
             self.mi_attacker.attack(gen_dataset=gen_dataset, model=model, mask_tensor=mask_tensor)
-
-    def compute_stats_data(
-            self,
-            gen_dataset: GeneralDataset,
-            predictions: bool = False,
-            logits: bool = False
-    ):
-        """
-        :param gen_dataset: wrapper over the dataset, stores the dataset
-         and all meta-information about the dataset
-        :param predictions: boolean flag that indicates the need to enter model predictions
-         in the statistics for the front
-        :param logits: boolean flag that indicates the need to enter model logits
-         in the statistics for the front
-        :return: dict with model weights. Also function can add in dict model predictions
-         and logits
-        """
-        stats_data = {}
-
-        # Stats: weights, logits, predictions
-        if predictions:  # and hasattr(self.gnn, 'get_predictions'):
-            predictions = self.run_model(gen_dataset, mask='all', out='predictions')
-            stats_data["predictions"] = predictions.detach().cpu().tolist()
-        if logits:  # and hasattr(self.gnn, 'forward'):
-            logits = self.run_model(gen_dataset, mask='all', out='logits')
-            stats_data["embeddings"] = logits.detach().cpu().tolist()
-
-        # Note: we update all stats data at once because it can be requested from frontend during
-        # the update
-        self.stats_data = stats_data
-
-    def send_data(
-            self,
-            block,
-            msg,
-            tag='model',
-            obligate=True,
-            socket=None
-    ):
-        """
-        Send data to the frontend.
-
-        :param socket:
-        :param tag:
-        :param block:
-        :param msg: message as a json-convertible dict
-        :param obligate: if you send a lot of updates of the same stuff, e.g. weights at each
-         training step, set obligate=False to save traffic and actually send only the last one on
-         the queue.
-        :return: bool flag
-        """
-        socket = socket or self.socket
-        if socket is None:
-            return False
-        socket.send(
-            block=block,
-            msg=msg,
-            tag=tag,
-            obligate=obligate
-        )
-        return True
-
-    def send_epoch_results(
-            self,
-            metrics_values=None,
-            stats_data=None,
-            weights=None,
-            loss=None,
-            obligate=False,
-            socket=None
-    ):
-        """
-        Send updates to the frontend after a training epoch: epoch, metrics, logits, loss.
-
-        :param weights:
-        :param metrics_values: quality metrics (accuracy, F1)
-        :param stats_data: model statistics (logits, predictions)
-        :param loss: train loss
-        """
-        socket = socket or self.socket
-        # Metrics values, epoch, loss
-        if metrics_values:
-            metrics_data = {"epochs": self.modification.epochs}
-            if loss:
-                metrics_data["loss"] = loss
-            metrics_data["metrics_values"] = metrics_values
-            self.send_data("mt", {"metrics": metrics_data}, tag='model_metrics', socket=socket)
-        if weights:
-            self.send_data("mt", weights, tag='model_weights', obligate=obligate, socket=socket)
-        if stats_data:
-            self.send_data("mt", stats_data, tag='model_stats', obligate=obligate, socket=socket)
 
     def load_train_test_split(
             self,

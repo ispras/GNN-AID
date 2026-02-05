@@ -51,10 +51,10 @@ class HeteroGraph extends Graph {
     }
 
     getNodes() {
-        let nodes = new Set() // NOTE copying is not good
+        let nodes = [] // NOTE copying is not good
         for (const nt of this.nodeTypes)
             for (let i = 0; i < this.numNodes[nt]; i++)
-                nodes.add(i + this.nodeIndexOffsets[nt])
+                nodes.push(i + this.nodeIndexOffsets[nt])
         return nodes
     }
 

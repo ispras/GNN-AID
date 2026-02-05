@@ -1,6 +1,8 @@
 import json
+import logging
 from enum import Enum
 from typing import Union
+from multiprocessing import Process, Queue
 
 from gnn_aid.aux.utils import (
     FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH,
@@ -8,6 +10,7 @@ from gnn_aid.aux.utils import (
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH,
     POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH,
     EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH)
+from . import json_loads, json_dumps, ViewPoint
 from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
 from .dataset_blocks import DatasetBlock, DatasetVarBlock
 from .diagram import Diagram
@@ -129,6 +132,9 @@ class FrontendClient:
         self.erBlock = ExplainerRunBlock("er", socket=self.socket)
         self.diagram.add_dependency(self.eiBlock, self.erBlock)
 
+        # --- Common
+        self.view_point = None
+
     # def drop(self):
     #     """ Drop all current data
     #     """
@@ -159,3 +165,140 @@ class FrontendClient:
         func = getattr(block, func)
         res = func(**params or {})
         return res
+
+    def _set_view_point(
+            self,
+            part: dict
+    ) -> bool:
+        """ Set a new viewpoint. Return True if new viewpoint is different from the current one.
+        """
+        view_point = ViewPoint(center=part.get('center'), depth=part.get('depth'))
+        if view_point != self.view_point:
+            self.view_point = view_point
+            return True
+        print('setting the same viewpoint')
+        return False
+
+    def run_loop(
+        self,
+        response_queue: Queue,
+        msg_queue: Queue,
+        request_queue: Queue,
+    ) -> None:
+        while True:
+            print('Worker is waiting for command...')
+            command = request_queue.get()
+            type = command.get('type')
+            args = command.get('args')
+            print(f"Worker: received command: {type} with args: {args}")
+
+            if type == "dataset":
+                get = args.get('get')
+                set = args.get('set')
+                part = args.get('part')
+                if part:
+                    part = json_loads(part)
+                    is_new = self._set_view_point(part)
+
+                if set == "visible_part":
+                    result = self.dvcBlock.set_visible_part(self.view_point)
+
+                elif get == "data":
+                    dataset_data = self.dvcBlock.visible_part.get_dataset_data(self.view_point)
+                    data = dataset_data.to_json()
+                    logging.info(f"Length of dataset_data: {len(data)}")
+                    result = data
+
+                elif get == "var_data":
+                    if not self.dvcBlock.is_set():
+                        result = ''
+                    else:
+                        dataset_var_data = self.dvcBlock.visible_part.get_dataset_var_data(self.view_point)
+                        data = dataset_var_data.to_json()
+                        logging.info(f"Length of dataset_var_data: {len(data)}")
+                        result = data
+
+                elif get == "stat":
+                    stat = args.get('stat')
+                    result = json_dumps(self.dcBlock.get_stat(stat))
+
+                elif get == "index":
+                    result = self.dcBlock.get_index()
+
+                else:
+                    raise WebInterfaceError(f"Unknown 'part' command {get} for dataset")
+
+                response_queue.put(result)
+
+            elif type == "block":
+                block = args.get('block')
+                func = args.get('func')
+                params = args.get('params')
+                if params:
+                    params = json_loads(params)
+                print(f"request_block: block={block}, func={func}, params={params}")
+                # TODO what if raise exception? process will stop
+                self.request_block(block, func, params)
+                response_queue.put('')
+                print("Worker puts result to response_queue")
+
+            elif type == "model":
+                do = args.get('do')
+                get = args.get('get')
+
+                if do:
+                    print(f"model.do: do={do}, params={args}")
+                    if do == 'index':
+                        type = args.get('type')
+                        if type == "saved":
+                            result = json_dumps(self.mloadBlock.get_index())
+                        elif type == "custom":
+                            result = json_dumps(self.mcustomBlock.get_index())
+                    elif do in ['train', 'reset', 'run', 'save']:
+                        result = self.mtBlock.do(do, args)
+                    elif do in ['run with attacks']:
+                        result = self.atBlock.do(do, args)
+                    else:
+                        raise WebInterfaceError(f"Unknown do command: '{do}'")
+
+                if get:
+                    if get == "satellites":
+                        if self.mmcBlock.is_set():
+                            part = args.get('part')
+                            if part:
+                                part = json_loads(part)
+                                is_new = self._set_view_point(part)
+                            dvd = self.mmcBlock.get_satellites(self.view_point)
+                            data = dvd.to_json()
+                            logging.info(f"Length of dataset_var_data: {len(data)}")
+                            result = data
+                        else:
+                            result = ''
+
+                assert result is not None
+                response_queue.put(result)
+
+            elif type == "explainer":
+                do = args.get('do')
+
+                print(f"explainer.do: do={do}, params={args}")
+
+                if do in ["run", "stop"]:
+                    result = self.erBlock.do(do, args)
+
+                elif do == 'index':
+                    result = self.elBlock.get_index()
+
+                # elif do == "save":
+                #     return self.save_explanation()
+
+                else:
+                    raise WebInterfaceError(f"Unknown 'do' command {do} for explainer")
+
+                response_queue.put(result)
+
+            elif type == "STOP":
+                print(f"Process {sid} received STOP command; it will finish")
+                break
+            else:
+                raise WebInterfaceError(f"Unknown command type: 'f{type}'")

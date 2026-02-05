@@ -112,7 +112,7 @@ class ForceLayout extends Layout {
         //     this.a[i].add(Vec.mul(f, dt / this.m[i]))
         //     this.a[j].sub(Vec.mul(f, dt / this.m[j]))
         // }
-        // randomPairing(func, nodes.size, 300)
+        // randomPairing(func, nodes.length, 300)
         // TODO this is the most computationally hard part !!!
         for (let i = 0; i < this.numNodes; i++) {
             for (let j = i+1; j < this.numNodes; j++) {
@@ -194,9 +194,9 @@ class ForceLayout extends Layout {
         //action mode check
         if (this.stateFlag === 2) {
             this.stateFlag = 0
-            this.temp *= nodes.size / 100
-            this.constT = this.temp / (10 *Math.sqrt(nodes.size))
-            this.rad *= Math.sqrt(Math.sqrt(nodes.size))
+            this.temp *= nodes.length / 100
+            this.constT = this.temp / (10 *Math.sqrt(nodes.length))
+            this.rad *= Math.sqrt(Math.sqrt(nodes.length))
         }
         if (this.lockedNode != null) {
             this.stateFlag = 1
@@ -204,7 +204,7 @@ class ForceLayout extends Layout {
         } else {
             if (this.stateFlag === 1) {
                 this.stateFlag = 0
-                this.temp *= 10 / Math.sqrt(Math.sqrt(nodes.size))
+                this.temp *= 10 / Math.sqrt(Math.sqrt(nodes.length))
             }
         }
 

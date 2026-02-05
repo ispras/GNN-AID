@@ -542,34 +542,34 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         Change keys order and combination.
         """
         raise NotImplementedError
-        # Check consistency
-        ms = set()
-        for m in mapping:
-            if isinstance(m, (list, tuple)):
-                ms.update(m)
-            else:
-                ms.add(m)
-        assert ms == set(range(len(self.keys))),\
-            f"mapping should contain key indices from 0 to {len(self.keys)-1}"
-
-        keys = [",".join(self.keys[i] for i in m) if isinstance(m, (list, tuple)) else self.keys[m]
-                for m in mapping]
-        ps = FixedKeysPrefixStorage(keys)
-
-        for item in self:
-            values = []
-            for m in mapping:
-                if isinstance(m, (list, tuple)):
-                    if only_values:
-                        v = ",".join(str(item[i]) for i in m)
-                    else:
-                        v = ",".join(f"{self.keys[i]}={item[i]}" for i in m)
-                else:
-                    v = item[m]
-                values.append(v)
-            ps.add(values)
-
-        return ps
+        # # Check consistency
+        # ms = set()
+        # for m in mapping:
+        #     if isinstance(m, (list, tuple)):
+        #         ms.update(m)
+        #     else:
+        #         ms.add(m)
+        # assert ms == set(range(len(self.keys))),\
+        #     f"mapping should contain key indices from 0 to {len(self.keys)-1}"
+        #
+        # keys = [",".join(self.keys[i] for i in m) if isinstance(m, (list, tuple)) else self.keys[m]
+        #         for m in mapping]
+        # ps = FixedKeysPrefixStorage(keys)
+        #
+        # for item in self:
+        #     values = []
+        #     for m in mapping:
+        #         if isinstance(m, (list, tuple)):
+        #             if only_values:
+        #                 v = ",".join(str(item[i]) for i in m)
+        #             else:
+        #                 v = ",".join(f"{self.keys[i]}={item[i]}" for i in m)
+        #         else:
+        #             v = item[m]
+        #         values.append(v)
+        #     ps.add(values)
+        #
+        # return ps
 
     def __str__(
             self

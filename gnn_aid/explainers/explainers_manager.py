@@ -1,13 +1,13 @@
 import json
-from socket import SocketIO
 from typing import Union, Type
 
-from gnn_aid.data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, ProgressBar
+from gnn_aid.data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, \
+    CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
-from .explainer import Explainer, ProgressBar
+from .explainer import Explainer
 from .explainer_metrics import NodesExplainerMetric
 
 
@@ -145,38 +145,30 @@ class FrameworkExplainersManager:
     def conduct_experiment(
             self,
             run_config: Union[ConfigPattern, ExplainerRunConfig],
-            socket: SocketIO = None
+            pbar: ProgressBar = None
     ) -> dict:
         """
         Runs the full cycle of the interpretation experiment
         """
-        self.explainer.pbar = ProgressBar(socket, "er", desc=f'{self.explainer.name} explaining')  # progress bar
+        self.explainer.pbar = pbar or ProgressBar()
         # mode = run_config.mode
         mode = getattr(run_config, CONFIG_OBJ).mode
         params = getattr(getattr(run_config, CONFIG_OBJ).kwargs, CONFIG_OBJ).to_dict()
         # params.pop(CONFIG_CLASS_NAME)
 
-        try:
-            print("Running explainer...")
-            self.explainer.run(mode, params, finalize=True)
-            print("Explanation ready")
-            # self.explainer._finalize()
-            result = self.explainer.explanation.dictionary
-            if socket:
-                socket.send("er", {
-                    "status": "OK",
-                    "explanation_data": result
-                })
+        print("Running explainer...")
+        self.explainer.run(mode, params, finalize=True)
+        print("Explanation ready")
+        # self.explainer._finalize()
+        result = self.explainer.explanation.dictionary
+        # if self._after_run_hook:
+        #     self._after_run_hook(result)
 
-            # TODO what if save_explanation_flag=False?
-            if self.save_explanation_flag:
-                self.save_explanation(run_config)
-                path = self.model_manager.save_model_executor()
-                self.gen_dataset.save_train_test_mask(path)
-        except Exception as e:
-            if socket:
-                socket.send("er", {"status": "FAILED"})
-            raise e
+        # TODO what if save_explanation_flag=False?
+        if self.save_explanation_flag:
+            self.save_explanation(run_config)
+            path = self.model_manager.save_model_executor()
+            self.gen_dataset.save_train_test_mask(path)
 
         return result
 
@@ -184,7 +176,6 @@ class FrameworkExplainersManager:
             self,
             run_config: Union[ConfigPattern, ExplainerRunConfig],
             dataset: GeneralDataset,
-            socket: SocketIO = None,
             save_explanation_flag=False
     ) -> dict:
         init_kwargs = getattr(self.init_config, CONFIG_OBJ).to_dict()
@@ -203,7 +194,7 @@ class FrameworkExplainersManager:
         )
         old_save_explanation_flag = self.save_explanation_flag
         self.save_explanation_flag = save_explanation_flag
-        result = self.conduct_experiment(run_config, socket)
+        result = self.conduct_experiment(run_config)
         self.save_explanation_flag = old_save_explanation_flag
         return result
 
@@ -211,42 +202,30 @@ class FrameworkExplainersManager:
             self,
             node_id_to_explainer_run_config: dict[int, ConfigPattern],
             explaining_metrics_params: Union[dict, None] = None,
-            socket: SocketIO = None
     ) -> dict:
         """
         Evaluates explanation metrics between given node indices
         """
-        self.explainer.pbar = ProgressBar(
-            socket, "er", desc=f'{self.explainer.name} explaining metrics calculation'
-        )  # progress bar
-        try:
-            print("Evaluating explanation metrics...")
-            if self.gen_dataset.is_multi():
-                raise NotImplementedError("Explanation metrics for graph classification")
-            else:
+        # TODO misha do we want progress bar here?
+        # self.explainer.pbar = ProgressBar(
+        #     "er", desc=f'{self.explainer.name} explaining metrics calculation'
+        # )  # progress bar
+        print("Evaluating explanation metrics...")
+        if self.gen_dataset.is_multi():
+            raise NotImplementedError("Explanation metrics for graph classification")
+        else:
 
-                explanation_metrics_calculator = NodesExplainerMetric(
-                    self,
-                    explaining_metrics_params
-                )
-                result = explanation_metrics_calculator.evaluate(node_id_to_explainer_run_config)
-            print("Explanation metrics are ready")
+            explanation_metrics_calculator = NodesExplainerMetric(
+                self,
+                explaining_metrics_params
+            )
+            result = explanation_metrics_calculator.evaluate(node_id_to_explainer_run_config)
+        print("Explanation metrics are ready")
 
-            if socket:
-                # TODO: Handle this on frontend
-                socket.send("er", {
-                    "status": "OK",
-                    "explanation_metrics": result
-                })
-
-            # TODO what if save_explanation_flag=False?
-            if self.save_explanation_flag:
-                # self.save_explanation_metrics(run_config)
-                self.model_manager.save_model_executor()
-        except Exception as e:
-            if socket:
-                socket.send("er", {"status": "FAILED"})
-            raise e
+        # TODO what if save_explanation_flag=False?
+        if self.save_explanation_flag:
+            # self.save_explanation_metrics(run_config)
+            self.model_manager.save_model_executor()
 
         return result
 

@@ -1,5 +1,5 @@
 import copy
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Dict
 
 import numpy as np
 import torch
@@ -33,7 +33,7 @@ class MIAttacker(
             inferred_labels: torch.Tensor,
             mask_true: torch.Tensor,
             train_class_label: bool = True
-    ) -> float:
+    ) -> Union[float, Dict]:
         """
         Computes accuracy for a single attack result (mask + inferred labels pair).
 
@@ -43,7 +43,7 @@ class MIAttacker(
             mask_true: Tensor of true labels for all nodes in the graph
 
         Returns:
-            float: Accuracy (0.0 to 1.0) of correct predictions among attacked samples
+            float: Dict with metrics for predictions among attacked samples.
                    Returns 0.0 if no samples were attacked
         """
         metrics = {
@@ -86,6 +86,7 @@ class MIAttacker(
 
         return metrics
 
+
 class EmptyMIAttacker(
     MIAttacker
 ):
@@ -119,6 +120,8 @@ class NaiveMIAttacker(
         mask_tensor: Union[str, List[bool], torch.Tensor],
     ):
         assert not isinstance(mask_tensor, str), "Input of original mask seems senseless"
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
 
         model.eval()
 
@@ -131,9 +134,13 @@ class NaiveMIAttacker(
 
         return self.results
 
-class ShadowModelMIAttacker(MIAttacker):
+
+class ShadowModelMIAttacker(
+    MIAttacker
+):
     """
-    Shadow model-based membership inference attack for Node/Graph Classification.
+    The surrogate model is trained on a part of the initial dataset.
+    The classifier learns from its responses to determine whether the input is from train or test
     """
     name = "ShadowModelMIAttacker"
 
@@ -255,12 +262,14 @@ class ShadowModelMIAttacker(MIAttacker):
             self,
             model: torch.nn.Module,
             gen_dataset: GeneralDataset,
-            mask_tensor: Union[torch.Tensor, list],
+            mask_tensor: Union[List[bool], torch.Tensor],
             **kwargs
     ):
         """
         Perform membership inference attack using shadow model technique.
         """
+        if isinstance(mask_tensor, list):
+            mask_tensor = torch.tensor(mask_tensor)
         task_type = gen_dataset.is_multi()
         self.model_name = 'gcn_gcn_lin_no_softmax' if task_type else 'gcn_gcn_no_softmax'
 

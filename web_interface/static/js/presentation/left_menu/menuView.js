@@ -13,9 +13,9 @@ class MenuView extends View {
     }
 
     // Create elements, init block
-    init(args) {
+    init() {
         if (!this.reuse || this.$mainDiv == null) { // create
-            super.init(args)
+            super.init()
             if (this.state !== MVState.OFF)
                 return console.error("Can't init " + this.constructor.name + " in state ", this.state)
 

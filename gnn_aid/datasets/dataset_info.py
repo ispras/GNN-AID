@@ -136,7 +136,7 @@ class DatasetInfo:
                 assert isinstance(value, int) and value > 0, "Node feature size must be positive"
             elif type == "other":
                 assert isinstance(value, int) or value in ["str", None]
-        assert len(self.labelings) > 0
+        # assert len(self.labelings) > 0  FIXME can we allow no labelings?
         if self.hetero:
             labelings = []
             for kv in self.labelings.values():

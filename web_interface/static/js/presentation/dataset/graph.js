@@ -17,7 +17,7 @@ class Graph extends VisibleGraph {
 
         // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes
-        this.edges = this.datasetData.edges[0]
+        this.edges = this.datasetData.edges
 
         await super._build()
         $(this.svgElement).css("background-color", "#404040")
@@ -78,9 +78,9 @@ class Graph extends VisibleGraph {
     }
 
     getNodes() {
-        let nodes = new Set() // NOTE copying is not good
+        let nodes = [] // NOTE copying is not good
         for (let i = 0; i < this.numNodes; i++)
-            nodes.add(i)
+            nodes.push(i)
         return nodes
     }
 
@@ -150,11 +150,19 @@ class Graph extends VisibleGraph {
     createPrimitives() {
         this.svgElement.innerHTML = ''
         this.nodePrimitives = {}
+        this.edgePrimitives = {}
         let directed = this.datasetInfo.directed
 
         // Edges
-        this.addEdgePrimitivesBatch(
-            0, this.getEdges(), this.edgeColor, this.edgeStrokeWidth, directed, true)
+        // this.addEdgePrimitivesBatch(
+        //    0, this.getEdges(), this.edgeColor, this.edgeStrokeWidth, directed, true)
+
+        // Edges - create individual edge primitives
+        let edges = this.getEdges()
+        for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
+            let [i, j] = edges[edgeIdx]
+            this.createEdgePrimitive(0, `${i},${j}`, i, j, this.edgeRadius, this.edgeColor, this.edgeStrokeWidth, directed, true)
+        }
 
         // Nodes
         for (let n=0; n<this.numNodes; n++)
@@ -171,9 +179,16 @@ class Graph extends VisibleGraph {
     }
 
     showEdges(show) {
-        for (const batch of Object.values(this.edgePrimitivesBatches))
-            for (const svg of batch)
-                svg.visible(show)
+        if (this.edgePrimitives) {
+            for (const es of Object.values(this.edgePrimitives))
+                for (const edge of Object.values(es))
+                    edge.visible(show)
+        }
+        if (this.edgePrimitivesBatches) {
+            for (const batch of Object.values(this.edgePrimitivesBatches))
+                for (const svg of batch)
+                    svg.visible(show)
+        }
     }
 
 }

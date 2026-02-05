@@ -201,7 +201,7 @@ class DatasetStats:
         """
         # assert self.info.count == 1
         # data: Data = self.dataset[0]
-        edges = edge_index_to_edge_list(self.gen_dataset.edges[0])
+        edges = edge_index_to_edge_list(self.gen_dataset.edges[0], self.gen_dataset.is_directed())
         num_nodes = self.gen_dataset.info.nodes[0]
 
         # Simple stats

@@ -2,7 +2,7 @@ import json
 from collections import deque
 from threading import Thread
 from time import sleep
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -75,7 +75,7 @@ class SocketConnect:
     def send(
             self,
             block: str,
-            msg: dict,
+            msg: Union[dict, 'DatasetVarData'],
             func: str = None,
             tag: str = 'all',
             obligate: bool = True
@@ -143,11 +143,16 @@ class SocketConnect:
 
 
 def json_dumps(
-        object
+        object,
+        **kwargs
 ) -> str:
     """ Dump an object to JSON properly handling values "-Infinity", "Infinity", and "NaN"
     """
-    string = json.dumps(object, ensure_ascii=False)
+    kwargs['ensure_ascii'] = False
+    if hasattr(object, 'to_json'):
+        string = object.to_json(**kwargs)
+    else:
+        string = json.dumps(object, **kwargs)
     return string \
         .replace('NaN', '"NaN"') \
         .replace('-Infinity', '"-Infinity"') \
@@ -183,3 +188,74 @@ def get_config_keys(
 
     return [k for k, v in save_dir_structure.items() if v["add_key_name_flag"] is not None]
 
+
+def send_epoch_results(
+        epochs=None,
+        metrics_values=None,
+        stats_data=None,
+        weights=None,
+        loss=None,
+        obligate=False,
+        socket=None
+):
+    """
+    Send updates to the frontend after a training epoch: epoch, metrics, logits, loss.
+
+    :param weights:
+    :param metrics_values: quality metrics (accuracy, F1)
+    :param stats_data: model statistics (logits, predictions)
+    :param loss: train loss
+    """
+    # Metrics values, epoch, loss
+    if metrics_values:
+        metrics_data = {"epochs": epochs}
+        if loss:
+            metrics_data["loss"] = loss
+        metrics_data["metrics_values"] = metrics_values
+        socket.send("mt", {"metrics": metrics_data}, tag='model_metrics')
+    if weights:
+        socket.send("mt", weights, tag='model_weights', obligate=obligate)
+    if stats_data:
+        socket.send("mt", stats_data, tag='model_stats', obligate=obligate)
+
+
+def compute_stats_data(
+        gen_dataset,
+        model_manager,
+        predictions: bool = False,
+        logits: bool = False
+):
+    """
+    :param gen_dataset: wrapper over the dataset, stores the dataset
+     and all meta-information about the dataset
+    :param predictions: boolean flag that indicates the need to enter model predictions
+     in the statistics for the front
+    :param logits: boolean flag that indicates the need to enter model logits
+     in the statistics for the front
+    :return: dict with model weights. Also function can add in dict model predictions
+     and logits
+    """
+    stats_data = {}
+
+    # Stats: weights, logits, predictions
+    if predictions:  # and hasattr(self.gnn, 'get_predictions'):
+        predictions = model_manager.run_model(gen_dataset, mask='all', out='predictions')
+        stats_data["predictions"] = predictions.detach().cpu().tolist()
+    if logits:  # and hasattr(gnn, 'forward'):
+        logits = model_manager.run_model(gen_dataset, mask='all', out='logits')
+        stats_data["logits"] = logits.detach().cpu().tolist()
+
+    if gen_dataset.dataset_var_config.task.is_edge_level():
+        # Convert list ot dict
+        edge_label_index = gen_dataset.edge_label_index
+        keys = list(zip(*edge_label_index.tolist()))
+        stats_data = {key: dict(zip(keys, value))
+                      for key, value in stats_data.items()}
+
+    if model_manager.stats_data is None:
+        model_manager.stats_data = {}
+    model_manager.stats_data.update(**stats_data)
+
+    # Note: we update all stats data at once because it can be requested from frontend during
+    # the update
+    return stats_data

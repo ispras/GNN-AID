@@ -4,12 +4,13 @@ import warnings
 from enum import EnumMeta
 from pathlib import Path
 from pydoc import locate
-from typing import Union, Type, Any, Tuple
+from typing import Union, Type, Any, Tuple, Callable
 
 import numpy as np
 import torch
 from torch import tensor, Tensor
 from torch_sparse import SparseTensor
+from tqdm import tqdm
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 root_dir_len = len(root_dir.parts)
@@ -268,11 +269,18 @@ def edge_index_to_edge_list(
     if directed:
         return edges
     else:
-        # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
-        edge_set = set()
+        # Leave i <= j edges only
+        result = []
         for i, j in edges:
-            edge_set.add(tuple(sorted((i, j))))
-        return list(edge_set)
+            if i > j: continue
+            result.append([i, j])
+        return result
+
+        # # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
+        # edge_set = set()
+        # for i, j in edges:
+        #     edge_set.add(tuple(sorted((i, j))))
+        # return list(edge_set)
 
 
 def shape(
@@ -298,3 +306,59 @@ class MetaEnum(EnumMeta):
         except ValueError:
             return False
         return True
+
+
+class ProgressBar(tqdm):
+    def __init__(
+            self,
+            *args,
+            **kwargs
+    ):
+        super(ProgressBar, self).__init__(*args, **kwargs)
+        self.kwargs = {}
+
+        # Hooks from frontend client
+        self._on_init_hook: Callable = None
+        self._on_reset_hook: Callable = None
+        self._on_update_hook: Callable = None
+
+    def set_hook(
+            self,
+            hook: Callable,
+            where: str
+    ) -> None:
+        if where == 'on_init':
+            self._on_init_hook = hook
+        elif where == 'on_reset':
+            self._on_reset_hook = hook
+        elif where == 'on_update':
+            self._on_update_hook = hook
+        else:
+            raise ValueError(f"Hook {where} is not supported")
+
+    def init(self,
+             **kwargs):
+        # TODO do we save kwargs?
+        self.kwargs.update(**kwargs)
+
+        if self._on_init_hook:
+            self._on_init_hook()
+
+    def reset(
+            self,
+            total: Union[float, None] = None,
+            **kwargs
+    ):
+        super().reset(total=total)
+        self.kwargs = kwargs
+        if self._on_reset_hook:
+            self._on_reset_hook()
+
+    def update(
+            self,
+            n: int = 1
+    ):
+        res = super().update(n=n)
+        if self._on_update_hook:
+            self._on_update_hook()
+        return res

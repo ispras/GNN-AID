@@ -171,7 +171,7 @@ def link_prediction():
     manager_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
-            "batch": 64,
+            "batch": 128,
             "mask_features": [],
             "optimizer": {
                 "_class_name": "Adam",
@@ -179,11 +179,12 @@ def link_prediction():
             },
             "loss_function": {
                 "_config_class": "Config",
-                "_class_name": "CrossEntropyLoss",
+                "_class_name": "BCEWithLogitsLoss",
                 "_import_path": FUNCTIONS_PARAMETERS_PATH,
                 "_class_import_info": ["torch.nn"],
                 "_config_kwargs": {},
             },
+            "neg_samples_ratio": 2
         }
     )
 
@@ -208,10 +209,14 @@ def link_prediction():
     )
     print("Training was successful")
 
-    # res = gnn_model_manager.run_model(
-    #     gen_dataset=gen_dataset,
-    #     mask='all'
-    # )
+    res = gnn_model_manager.run_model(
+        gen_dataset=gen_dataset,
+        mask='all',
+        out='predictions'
+    )
+    print(json.dumps(res.tolist(), indent=2))
+    return
+
     from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH
     evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
@@ -227,17 +232,17 @@ def link_prediction():
     # атака
     # gnn_model_manager.set_evasion_attacker(evasion_attack_config=evasion_attack_config)
     #
-    # res = gnn_model_manager.evaluate_model(
-    #     gen_dataset=gen_dataset,
-    #     metrics=[
-    #         Metric("Accuracy", mask='all'),
-    #         Metric("AUC", mask='test'),
-    #         # Metric("Precision@k", mask='test', k=50),
-    #         # Metric("Precision@k", mask='test', k=500000),
-    #         # Metric("Recall@k", mask='test', k=500000),
-    #     ]
-    # )
-    # print(json.dumps(res, indent=2))
+    res = gnn_model_manager.evaluate_model(
+        gen_dataset=gen_dataset,
+        metrics=[
+            Metric("Accuracy", mask='all'),
+            Metric("AUC", mask='test'),
+            # Metric("Precision@k", mask='test', k=50),
+            # Metric("Precision@k", mask='test', k=500000),
+            # Metric("Recall@k", mask='test', k=500000),
+        ]
+    )
+    print(json.dumps(res, indent=2))
 
     # explainer
     from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH

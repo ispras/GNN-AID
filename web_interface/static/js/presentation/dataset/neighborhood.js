@@ -23,8 +23,8 @@ class Neighborhood extends VisibleGraph {
         this.nodeRadius = this.nodeRadiuses[0]
 
         // Variables
-        this.nodes = null // {depth -> Set of d-th neighbors nodes}
-        this.edges = null // {depth -> Set of d-th depth incoming/adjacent edges}
+        this.nodes = null // {depth -> List of d-th neighbors nodes}
+        this.edges = null // {depth -> List of d-th depth incoming/adjacent edges}
         this.n0 = null // main node
         this.depth = null // neighborhood depth
         this.showDepth = Array(Neighborhood.PARTS+1).fill(true) // whether to show depth
@@ -145,20 +145,24 @@ class Neighborhood extends VisibleGraph {
     }
 
     getNodes(exceptMain=false) {
-        let set = new Set()
+        let list = []
         let d = 0
         for (const ns of this.nodes) {
             if (d === 0 && exceptMain) {
                 d++
                 continue
             }
-            ns.forEach(n => set.add(n))
+            ns.forEach(n => list.push(n))
         }
-        return set
+        return list
     }
 
     getEdges() {
-        console.error('UNDEFINED getEdges() for Neighborhood')
+        let list = []
+        for (const es of this.edges) {
+            es.forEach(e => list.push(e))
+        }
+        return list
     }
 
     // Get the number of edges depending on show options
@@ -185,12 +189,23 @@ class Neighborhood extends VisibleGraph {
         // this.svgElement.innerHTML = ''
         this.svgPanel.$svg.empty()
         this.nodePrimitives = {}
-        this.edgePrimitivesBatches = []
 
         // Add edges
-        for (const [d, es] of Object.entries(this.edges))
-            this.addEdgePrimitivesBatch(
-                d, es, this.edgeColor[d], this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
+        // this.edgePrimitivesBatches = []
+        // for (const [d, es] of Object.entries(this.edges))
+        //     this.addEdgePrimitivesBatch(
+        //         d, es, this.edgeColor[d], this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
+
+        // Edges - create individual edge primitives
+        let d = 1
+        for (const es of this.edges) {
+            for (const [i, j] of es) {
+                this.createEdgePrimitive(
+                    d, `${i},${j}`, i, j, this.edgeRadius, this.edgeColor[d],
+                    this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
+            }
+            ++d
+        }
 
         // Add nodes
         for (const [d, ns] of Object.entries(this.nodes)) {
@@ -209,8 +224,14 @@ class Neighborhood extends VisibleGraph {
         if (this.depth < part)
             return
         this.showDepth[part] = show
-        for (const svg of this.edgePrimitivesBatches[part])
-            svg.visible(show)
+        if (this.edgePrimitivesBatches)
+            for (const svg of this.edgePrimitivesBatches[part])
+                svg.visible(show)
+        if (this.edgePrimitives) {
+            for (const es of Object.values(this.edgePrimitives))
+                for (const edge of Object.values(es))
+                    edge.visible(show)
+        }
         for (const n of this.nodes[part])
             this.nodePrimitives[n].visible(show)
     }
