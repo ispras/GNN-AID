@@ -169,7 +169,7 @@ def test_attack_defense():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "node_idx": 0,  # Node for attack
+            "element_idx": 0,  # Node for attack
             "n_perturbations": 20,
             "perturb_features": True,
             "perturb_structure": True,
@@ -415,10 +415,10 @@ def test_nettack_evasion():
                                   save_model_flag=False)
 
     # Node for attack
-    node_idx = 1
+    element_idx = 1
 
     # Evaluate model
-    mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[node_idx])
+    mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[element_idx])
     acc_test_loc = gnn_model_manager.evaluate_model(gen_dataset=dataset,
                                                     metrics=[Metric("Accuracy", mask=mask_loc)])[mask_loc]['Accuracy']
 
@@ -435,11 +435,11 @@ def test_nettack_evasion():
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_evasion_attack = {"node_idx": node_idx,
+    info_before_evasion_attack = {"element_idx": element_idx,
                                   "predicted_class": predicted_class,
                                   "predicted_probability": predicted_probability,
                                   "real_class": real_class}
@@ -450,7 +450,7 @@ def test_nettack_evasion():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "node_idx": node_idx,
+            "element_idx": element_idx,
             "n_perturbations": 20,
             "perturb_features": True,
             "perturb_structure": True,
@@ -469,11 +469,11 @@ def test_nettack_evasion():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_evasion_attack = {"node_idx": node_idx,
+    info_after_evasion_attack = {"element_idx": element_idx,
                                  "predicted_class": predicted_class,
                                  "predicted_probability": predicted_probability,
                                  "real_class": real_class}
@@ -545,18 +545,18 @@ def test_qattack():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    # node_idx = 0
+    # element_idx = 0
     #
     # # Model prediction on a node before an evasion attack on it
     # gnn_model_manager.gnn.eval()
     # with torch.no_grad():
     #     probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
 
-    # info_before_evasion_attack = {"node_idx": node_idx,
+    # info_before_evasion_attack = {"element_idx": element_idx,
     #                               "predicted_class": predicted_class,
     #                               "predicted_probability": predicted_probability,
     #                               "real_class": real_class}
@@ -577,11 +577,11 @@ def test_qattack():
     #     probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
     #                                                     gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
     #
-    # info_after_evasion_attack = {"node_idx": node_idx,
+    # info_after_evasion_attack = {"element_idx": element_idx,
     #                              "predicted_class": predicted_class,
     #                              "predicted_probability": predicted_probability,
     #                              "real_class": real_class}
@@ -834,18 +834,18 @@ def test_pgd():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 650
+    element_idx = 650
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -857,7 +857,7 @@ def test_pgd():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": True,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "epsilon": 0.1,
             "learning_rate": 0.001,
             "num_iterations": 500,
@@ -876,11 +876,11 @@ def test_pgd():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -1029,18 +1029,18 @@ def test_pgd_structure():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 1700
+    element_idx = 1700
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1052,7 +1052,7 @@ def test_pgd_structure():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": False,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "num_iterations": 30,
         }
     )
@@ -1068,11 +1068,11 @@ def test_pgd_structure():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -1219,18 +1219,18 @@ def test_fgsm():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 650
+    element_idx = 650
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1242,7 +1242,7 @@ def test_fgsm():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": False,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "epsilon": 0.5,
         }
     )
@@ -1258,11 +1258,11 @@ def test_fgsm():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -1411,18 +1411,18 @@ def test_rewatt():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 44
+    element_idx = 44
 
     # Model prediction on a node before ReWatt attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1433,7 +1433,7 @@ def test_rewatt():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "eps": 0.001,
             "epochs": 10,
         }
@@ -1450,11 +1450,11 @@ def test_rewatt():
     #     probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
     #                                                     gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
     #
-    # info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    # info_after_pgd_attack_on_node = {"element_idx": element_idx,
     #                                  "predicted_class": predicted_class,
     #                                  "predicted_probability": predicted_probability,
     #                                  "real_class": real_class}

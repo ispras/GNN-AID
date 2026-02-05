@@ -196,6 +196,7 @@ class ExplainerRunBlock(Block):
 
         return [self.explainer_manager.gen_dataset.dataset.num_node_features,
                 self.explainer_manager.gen_dataset.is_multi(),
+                self.explainer_manager.gen_dataset.dataset_var_config.task.is_edge_level(),
                 self.explainer_manager.explainer.name]
 
     def do(

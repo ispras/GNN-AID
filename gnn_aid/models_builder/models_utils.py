@@ -738,8 +738,24 @@ def mask_to_tensor(
         mask_tensor[mask] = True  # for int or list of ints
 
     elif task.is_edge_level():  # Edge
-        # isinstance(mask, tuple)
-        raise NotImplementedError
+        if isinstance(mask, list) and isinstance(mask[0], (list, tuple)):
+            # List of edges - not support yet
+            raise NotImplementedError
+        # One edge
+        mask = tuple(mask)
+        if not gen_dataset.is_directed():
+            mask = (min(mask), max(mask))
+        mask_tensor = tensor([False] * len(gen_dataset.edge_label_index[0]))
+        # Linear search
+        # TODO consider sort edge_label_index when create to use binsearch
+        found = False
+        for ix, (i, j) in enumerate(zip(*gen_dataset.edge_label_index)):
+            if (i, j) == mask:
+                mask_tensor[ix] = True
+                found = True
+                break
+        if not found:
+            raise RuntimeError(f"Could not find edge {mask} in gen_dataset.edge_label_index.")
 
     else:
         raise RuntimeError(f"Cannot infer mask tensor for given mask {mask}.")

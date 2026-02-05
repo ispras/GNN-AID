@@ -727,7 +727,7 @@ class AttacksTest(unittest.TestCase):
             _import_path=EVASION_ATTACK_PARAMETERS_PATH,
             _config_class="EvasionAttackConfig",
             _config_kwargs={
-                "node_idx": 0,
+                "element_idx": 0,
             }
         )
 

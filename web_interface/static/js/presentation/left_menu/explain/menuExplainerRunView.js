@@ -14,6 +14,7 @@ class MenuExplainerRunView extends MenuView {
 
         // Variables
         this.multi = null
+        this.isEdgeLevel = null
         this.visibleGraph = null
         this.globalRunning = null
         this.localRunning = null
@@ -25,7 +26,8 @@ class MenuExplainerRunView extends MenuView {
         super.init()
         console.log('MenuExplainerRunView', args)
         this.multi = args[1]
-        this.algorithm = args[2]
+        this.isEdgeLevel = args[2]
+        this.algorithm = args[3]
 
         await this.buildMenu()
     }
@@ -147,8 +149,12 @@ class MenuExplainerRunView extends MenuView {
 
         // Ad-hoc defined values
         let localRunPostFunction = (algorithm) => {
-            // if ("element_idx" in this.paramsLocalRunBuilder.selectors)
-            this.paramsLocalRunBuilder.renameParam("element_idx", this.multi ? "Graph" : "Node")
+            let elemName = "Node"
+            if (this.multi)
+                elemName = "Graph"
+            if (this.isEdgeLevel)
+                elemName = "Pair"
+            this.paramsLocalRunBuilder.renameParam("element_idx", elemName)
             this.$localConstructorDiv.show()
         }
         let globalRunPostFunction = (algorithm) => {
@@ -156,7 +162,7 @@ class MenuExplainerRunView extends MenuView {
         }
 
         this.visibleGraph = controller.presenter.datasetView.visibleGraph
-        await this.paramsLocalRunBuilder.build(this.algorithm, localRunPostFunction)
+        await this.paramsLocalRunBuilder.build(this.algorithm, localRunPostFunction, this.isEdgeLevel)
         await this.paramsGlobalRunBuilder.build(this.algorithm, globalRunPostFunction)
         this.$builButtonsConstructorDiv.show()
 

@@ -21,14 +21,6 @@ class GNNExplainer(Explainer):
     name = 'GNNExplainer(torch-geom)'
     availability_profile = ({'single', 'multi'}, {'modules', 'get_num_hops', 'forward'})
 
-    @staticmethod
-    def check_availability(gen_dataset, model_manager):
-        """ Availability check for the given dataset and model manager. """
-        # Should have at least 1 MessagePassing module
-        return\
-            {'modules', 'get_num_hops', 'forward'}.issubset(dir(model_manager.gnn)) and\
-            any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules())
-
     coeffs = {
         'edge_size': 0.005,
         'edge_reduction': 'sum',
@@ -38,6 +30,17 @@ class GNNExplainer(Explainer):
         'node_feat_ent': 0.1,
         'EPS': 1e-15,
     }
+
+    @staticmethod
+    def check_availability(gen_dataset, model_manager):
+        """ Availability check for the given dataset and model manager. """
+        rules = [
+            {'modules', 'get_num_hops', 'forward'}.issubset(dir(model_manager.gnn)),
+
+            # Should have at least 1 MessagePassing module
+            any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules()),
+        ]
+        return all(rules)
 
     def __init__(self,
                  gen_dataset,

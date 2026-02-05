@@ -68,13 +68,16 @@ class BeforeTrainBlock(Block):
             self,
             visible_part: VisiblePart,
             gmm: GNNModelManager
-    ) -> dict:
+    ) -> list:
         self.visible_part = visible_part
         self.gen_dataset = visible_part.gen_dataset
         self.model_manager = gmm
 
-        return FrameworkAttackDefenseManager.available_ad_methods(
-            self.gen_dataset, self.model_manager)
+        return [
+            FrameworkAttackDefenseManager.available_ad_methods(
+                self.gen_dataset, self.model_manager),
+            self.gen_dataset.dataset_var_config.task.is_edge_level()
+        ]
 
     def _finalize(
             self
@@ -161,13 +164,16 @@ class AfterTrainBlock(Block):
             self,
             visible_part: VisiblePart,
             gmm_and_metrics: list
-    ) -> dict:
+    ) -> list:
         self.visible_part = visible_part
         self.gen_dataset = visible_part.gen_dataset
         self.model_manager, self.metrics = gmm_and_metrics
 
-        return FrameworkAttackDefenseManager.available_ad_methods(
-            self.gen_dataset, self.model_manager)
+        return [
+            FrameworkAttackDefenseManager.available_ad_methods(
+                self.gen_dataset, self.model_manager),
+            self.gen_dataset.dataset_var_config.task.is_edge_level()
+        ]
 
     def _finalize(
             self
@@ -256,7 +262,6 @@ class AfterTrainBlock(Block):
 
             # Update dataset features
             dvd = self.visible_part.get_dataset_var_data()
-            print('dvd after attack', dvd.node['features'])
 
             dvd = add_into_dvd(self.gen_dataset, stats_data, dvd)
 

@@ -22,7 +22,7 @@ class RLS2VAttacker(EvasionAttacker):
             mlp_hidden: int = 64,
             max_lv: bool = True,
             gm: str = 'mean_field',
-            node_idx: int = 0
+            element_idx: int = 0
     ):
         """
         :param num_steps: rl training steps
@@ -35,7 +35,7 @@ class RLS2VAttacker(EvasionAttacker):
         :param mlp_hidden: mlp hidden layer size
         :param max_lv: max rounds of message passing
         :param gm: mean_field/loopy_bp/gcn
-        :param node_idx: index of node to be attacked
+        :param element_idx: index of node to be attacked
 
         """
         super().__init__()
@@ -49,7 +49,7 @@ class RLS2VAttacker(EvasionAttacker):
         self.mlp_hidden = mlp_hidden
         self.max_lv = max_lv
         self.gm = gm
-        self.node_idx = node_idx
+        self.element_idx = element_idx
 
         self.env = None
         self.agent = None
@@ -105,7 +105,7 @@ class RLS2VAttacker(EvasionAttacker):
 
         self.env = NodeAttackEnv(gen_dataset=gen_dataset, all_targets=total, list_action_space=dict_of_lists,
                                  classifier=gnn, num_mod=self.num_mod, reward_type=self.reward_type, gm=self.gm)
-        self.agent = RLS2VAgent(self.env, gen_dataset, node_idx=self.node_idx, idx_test=attack_list, num_wrong=1,
+        self.agent = RLS2VAgent(self.env, gen_dataset, node_idx=self.element_idx, idx_test=attack_list, num_wrong=1,
                                 list_action_space=dict_of_lists, num_mod=self.num_mod, reward_type=self.reward_type,
                                 batch_size=self.batch_size,
                                 bilin_q=self.bilin_q, embed_dim=self.embed_dim, mlp_hidden=self.mlp_hidden,
