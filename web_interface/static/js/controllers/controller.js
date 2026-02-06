@@ -12,13 +12,19 @@ class Controller {
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
             query: {mode: mode},
+
+            // Longer timeout for backend debug - 10 mins
+            timeout: 600*1000,
+            pingTimeout: 600*1000,
+            pingInterval: 600*1000,
         })
         this.socket.on('connect', () => {
             console.log('socket connected, sid=', this.socket.id)
             this.sid = this.socket.id
             if (this.isActive) {
+                console.log('This is a reconnection')
                 // FIXME seems sometimes it happens when backend is busy - we don't need to reload?
-                // Means re-connection to server. Need to reload the page
+                // // Means re-connection to server. Need to reload the page
                 alert("Web-socket connection is lost. Press OK to reload the page.")
                 this.isActive = false
                 window.location.reload(true)
@@ -49,14 +55,20 @@ class Controller {
             console.log('socket error', err)
         })
 
-        this.socket.on('disconnect', () => {
+        this.socket.on('disconnect', (reason) => {
             // this.isActive = false
-            console.log('Disconnected from server, sid=', this.socket.id);
+            console.log('Disconnected from server, reason=', reason, ', sid=', this.socket.id);
             if (this.isActive) {
-                // Show a notification to the user
-                alert("Web-socket connection is lost. Press OK to reload the page.")
-                this.isActive = false
-                window.location.reload(true)
+                const softDisconnectReasons = ['ping timeout', 'transport error'];
+                if (softDisconnectReasons.includes(reason)) {
+                    console.log('Soft disconnect, will try to reconnect...');
+                    // this.reconnectStartTime = Date.now()
+                } else {
+                    // Show a notification to the user
+                    alert("Web-socket connection is lost. Press OK to reload the page.")
+                    this.isActive = false
+                    window.location.reload(true)
+                }
             }
         })
 

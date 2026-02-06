@@ -9,6 +9,7 @@ class MenuBeforeTrainView extends MenuView {
 
         // Variables
         this.availableMethods = null
+        this.isEdgeLevel = null
 
         //Elements
         this.paramsBuilders = Object.fromEntries(MenuBeforeTrainView.names.map(x => [x, null]))
@@ -16,11 +17,12 @@ class MenuBeforeTrainView extends MenuView {
         this.$methodSelects = Object.fromEntries(MenuBeforeTrainView.names.map(x => [x, null]))
     }
 
-    async init(arg) {
+    async init(args) {
         super.init()
         this.appendAcceptBreakButtons()
 
-        this.availableMethods = arg
+        this.availableMethods = args[0]
+        this.isEdgeLevel = args[1]
         await this.addConfigMenu()
     }
 
@@ -90,12 +92,24 @@ class MenuBeforeTrainView extends MenuView {
             this.paramsBuilders[name] = new ParamsBuilder($methodParamsDiv,
                 name, this.idPrefix + "-AD-param-" + name + '-')
 
+            // For params builder, to replace param name "node" with "edge" for edge task
+            let localPostFunction = (algorithm) => {
+                if ("element_idx" in this.paramsBuilders[name].selectors) {
+                    let elemName = "Node"
+                    if (this.multi)
+                        elemName = "Graph"
+                    if (this.isEdgeLevel)
+                        elemName = "Pair"
+                    this.paramsBuilders[name].renameParam("element_idx", elemName)
+                }
+            }
+
             let self = this
             this.$methodSelects[name].change(async function () {
                 self.paramsBuilders[name].drop()
                 // await self.unlock(true) // Clear chosen values
                 self.$acceptDiv.hide()
-                await self.paramsBuilders[name].build(this.value)
+                await self.paramsBuilders[name].build(this.value, localPostFunction, self.isEdgeLevel)
                 self.$acceptDiv.show()
             })
 

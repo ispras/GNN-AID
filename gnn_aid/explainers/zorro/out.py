@@ -15,9 +15,12 @@ class ZorroExplainer(Explainer, Zorro):
     @staticmethod
     def check_availability(gen_dataset, model_manager):
         """ Availability check for the given dataset and model manager. """
-        return\
-            not gen_dataset.is_multi() and\
-            {'get_num_hops', 'flow', 'get_answer'}.issubset(dir(model_manager.gnn))
+        rules = [
+            not gen_dataset.is_multi(),
+            gen_dataset.dataset_var_config.task.is_node_level(),
+            {'get_num_hops', 'flow', 'get_answer'}.issubset(dir(model_manager.gnn)),
+        ]
+        return all(rules)
 
     def __init__(self, gen_dataset, model, device, greedy=True, add_noise=False, samples=100):
         Zorro.__init__(self, model, device, log=False, record_process_time=False,

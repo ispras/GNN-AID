@@ -25,11 +25,15 @@ class GraphMaskExplainer(Explainer, ExplainerBase):
     @staticmethod
     def check_availability(gen_dataset, model_manager):
         """ Availability check for the given dataset and model manager. """
-        # Should have at least 1 MessagePassing module
-        return\
-            not gen_dataset.is_multi() and\
-            {'modules', 'flow', 'get_num_hops', 'parameters', 'forward'}.issubset(dir(model_manager.gnn)) and\
-            any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules())
+        rules = [
+            not gen_dataset.is_multi(),
+            gen_dataset.dataset_var_config.task.is_node_level(),
+            {'modules', 'flow', 'get_num_hops', 'parameters', 'forward'}.issubset(dir(model_manager.gnn)),
+
+            # Should have at least 1 MessagePassing module
+            any(isinstance(m, MessagePassing) for m in model_manager.gnn.modules()),
+        ]
+        return all(rules)
 
     def __init__(self,
                  gen_dataset,

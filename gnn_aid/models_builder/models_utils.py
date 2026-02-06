@@ -1,4 +1,4 @@
-from typing import Any, Optional, List, Callable, Union
+from typing import Any, Optional, List, Callable, Union, Tuple
 from typing import Callable
 
 import sklearn.metrics
@@ -7,6 +7,8 @@ import torch.nn as nn
 from torch import tensor
 from torch.utils.hooks import RemovableHandle
 from torch_geometric.nn import MessagePassing
+
+from gnn_aid.datasets import GeneralDataset
 
 
 def apply_message_gradient_capture(
@@ -695,3 +697,67 @@ def _predict_full_enumeration(model, data, h, existing_set, k, is_directed, remo
     print(f"Top-{final_k} edges found with scores from {top_scores[-1]:.4f} to {top_scores[0]:.4f}")
 
     return top_edges.cpu(), top_scores.cpu()
+
+
+def mask_to_tensor(
+        gen_dataset: GeneralDataset,
+        mask: Union[str, int, Tuple[int], list, torch.Tensor] = 'test'
+) -> torch.Tensor:
+    """
+    Convert a mask over nodes/edges/graphs to tensor of specific size.
+    Mask can be 'train', 'val', 'test', 'all', or id, or a list of ids, or a tensor.
+
+    :param gen_dataset: dataset
+    :param mask: part of the dataset on which the output will be obtained.
+     Can be a node id, graph id, or edge as a tuple (i,j).
+     Can be string: 'train', 'val', 'test', 'all'.
+     Can be Tensor of specific nodes/edges/graphs.
+    :return: tensor of nodes/edges/graphs
+    """
+    task = gen_dataset.dataset_var_config.task
+
+    if isinstance(mask, str):
+        mask_tensor = {
+            'train': gen_dataset.train_mask,
+            'val': gen_dataset.val_mask,
+            'test': gen_dataset.test_mask,
+            'all': tensor([True] * len(gen_dataset.labels)),
+        }[mask]
+
+    elif isinstance(mask, torch.Tensor):
+        mask_tensor = mask
+
+    elif task.is_node_level():  # Node id
+        assert not gen_dataset.is_multi()
+        mask_tensor = tensor([False] * gen_dataset.info.nodes[0])
+        mask_tensor[mask] = True  # for int or list of ints
+
+    elif task.is_graph_level():  # Graph id
+        assert gen_dataset.is_multi()
+        mask_tensor = tensor([False] * len(gen_dataset.info.nodes))
+        mask_tensor[mask] = True  # for int or list of ints
+
+    elif task.is_edge_level():  # Edge
+        if isinstance(mask, list) and isinstance(mask[0], (list, tuple)):
+            # List of edges - not support yet
+            raise NotImplementedError
+        # One edge
+        mask = tuple(mask)
+        if not gen_dataset.is_directed():
+            mask = (min(mask), max(mask))
+        mask_tensor = tensor([False] * len(gen_dataset.edge_label_index[0]))
+        # Linear search
+        # TODO consider sort edge_label_index when create to use binsearch
+        found = False
+        for ix, (i, j) in enumerate(zip(*gen_dataset.edge_label_index)):
+            if (i, j) == mask:
+                mask_tensor[ix] = True
+                found = True
+                break
+        if not found:
+            raise RuntimeError(f"Could not find edge {mask} in gen_dataset.edge_label_index.")
+
+    else:
+        raise RuntimeError(f"Cannot infer mask tensor for given mask {mask}.")
+
+    return mask_tensor

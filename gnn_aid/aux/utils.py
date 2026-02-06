@@ -125,11 +125,13 @@ def setting_class_default_parameters(
                           f"in def setting_class_default_parameters")
             continue
         key_1 = class_kwargs_default[key][1]
-        if key_1 == 'int_or_tuple':
+        if key_1 == 'int_or_tuple' or key_1 == 'int_or_tuple_or_mask':
             try:
                 class_kwargs[key] = int(val)
-            except TypeError:
+            except TypeError:  # tuple
                 class_kwargs[key] = tuple(val)
+            except ValueError:  # string
+                class_kwargs[key] = val
         elif val is None or key_1 == 'string'\
                 or (key_1 == 'dynamic' and isinstance(val, str))\
                 or np.isinf(val):
@@ -140,11 +142,13 @@ def setting_class_default_parameters(
         if key != TECHNICAL_PARAMETER_KEY and key not in class_kwargs.keys():
             if val[2] is None or val[1] == 'string' or val[2] == np.inf:
                 class_kwargs[key] = val[2]
-            elif val[1] == 'int_or_tuple':
+            elif val[1] == 'int_or_tuple' or val[1] == 'int_or_tuple_or_mask':
                 try:
                     class_kwargs[key] = int(val[2])
-                except TypeError:
+                except TypeError:  # tuple
                     class_kwargs[key] = tuple(val[2])
+                except ValueError:  # string
+                    class_kwargs[key] = val[2]
             else:
                 class_kwargs[key] = locate(val[1])(val[2])
 

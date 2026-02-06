@@ -240,7 +240,7 @@ class AdvTraining(
             self,
             model_manager: Type,
             batch,
-            task_type: str = None,
+            task_type: str = None,  # FIXME remove
             **kwargs,
     ):
         super().pre_batch(model_manager=model_manager, batch=batch)
@@ -261,7 +261,7 @@ class AdvTraining(
                 model_manager=model_manager,
                 gen_dataset=self.perturbed_gen_dataset,
                 mask_tensor=torch.arange(0, batch.batch_size),
-                task_type=task_type,
+                # task_type=task_type,
             )
 
     def post_batch(

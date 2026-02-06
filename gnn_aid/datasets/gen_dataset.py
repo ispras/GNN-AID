@@ -204,10 +204,11 @@ class GeneralDataset(ABC):
         if self.dataset is None:
             raise RuntimeError(f"Cannot get node features: dataset {self} is not built."
                                f" Define {DatasetVarConfig.__name__} and call build() method")
-        if self.is_multi():
-            return [data.x for data in self.dataset]
-        else:
-            return self.dataset[0].x
+        # if self.is_multi():
+        #     return [data.x for data in self.dataset]
+        # else:
+        #     return self.dataset[0].x
+        return self.data.x
 
     @property
     def edge_features(
@@ -219,11 +220,12 @@ class GeneralDataset(ABC):
             raise RuntimeError(f"Cannot get edge features: dataset {self} is not built."
                                f" Define {DatasetVarConfig.__name__} and call build() method")
 
-        if self.is_multi():
-            return [data.edge_attr for data in self.dataset]
-        else:
-            return self.dataset[0].edge_attr
+        # if self.is_multi():
+        #     return [data.edge_attr for data in self.dataset]
+        # else:
+        #     return self.dataset[0].edge_attr
         # TODO misha implement
+        return self.data.edge_attr
 
     def __len__(
             self

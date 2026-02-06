@@ -101,8 +101,11 @@ class SubgraphXExplainer(Explainer):
     @staticmethod
     def check_availability(gen_dataset, model_manager):
         """ Availability check for the given dataset and model manager. """
-        return\
-            {'get_num_hops', 'get_predictions'}.issubset(dir(model_manager.gnn))
+        rules = [
+            gen_dataset.dataset_var_config.task.is_node_level(),
+            {'get_num_hops', 'get_predictions'}.issubset(dir(model_manager.gnn)),
+        ]
+        return all(rules)
 
     def __init__(self, gen_dataset, model, device,
                  verbose: bool = False,

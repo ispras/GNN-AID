@@ -5,8 +5,9 @@ import torch
 
 from gnn_aid.attacks import MIAttacker
 from gnn_aid.aux import DataInfo
-from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, EvasionAttackConfig, \
-    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig
+from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, \
+    EvasionAttackConfig, \
+    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig, CONFIG_OBJ
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     MI_DEFENSE_PARAMETERS_PATH
@@ -14,6 +15,7 @@ from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.attack_defense_manager import FrameworkAttackDefenseManager
 from gnn_aid.models_builder.model_managers import GNNModelManager
+from gnn_aid.models_builder.models_utils import mask_to_tensor
 from . import VisiblePart
 from .block import Block
 from .utils import WebInterfaceError, send_epoch_results, compute_stats_data
@@ -66,13 +68,16 @@ class BeforeTrainBlock(Block):
             self,
             visible_part: VisiblePart,
             gmm: GNNModelManager
-    ) -> dict:
+    ) -> list:
         self.visible_part = visible_part
         self.gen_dataset = visible_part.gen_dataset
         self.model_manager = gmm
 
-        return FrameworkAttackDefenseManager.available_ad_methods(
-            self.gen_dataset, self.model_manager)
+        return [
+            FrameworkAttackDefenseManager.available_ad_methods(
+                self.gen_dataset, self.model_manager),
+            self.gen_dataset.dataset_var_config.task.is_edge_level()
+        ]
 
     def _finalize(
             self
@@ -159,13 +164,16 @@ class AfterTrainBlock(Block):
             self,
             visible_part: VisiblePart,
             gmm_and_metrics: list
-    ) -> dict:
+    ) -> list:
         self.visible_part = visible_part
         self.gen_dataset = visible_part.gen_dataset
         self.model_manager, self.metrics = gmm_and_metrics
 
-        return FrameworkAttackDefenseManager.available_ad_methods(
-            self.gen_dataset, self.model_manager)
+        return [
+            FrameworkAttackDefenseManager.available_ad_methods(
+                self.gen_dataset, self.model_manager),
+            self.gen_dataset.dataset_var_config.task.is_edge_level()
+        ]
 
     def _finalize(
             self
@@ -212,11 +220,12 @@ class AfterTrainBlock(Block):
 
             # Apply evasion attack
             if self.ad_configs["AD-ea"] is not None:
-                # attack_mask =
+                element_idx = getattr(self.ad_configs["AD-ea"], CONFIG_OBJ).element_idx
+                attack_mask = mask_to_tensor(self.gen_dataset, element_idx)
 
                 self.model_manager.call_evasion_attack(
                     gen_dataset=self.gen_dataset,
-                    mask=torch.empty(1),
+                    mask=attack_mask,
                 )
 
             # Evaluate metrics without attacks

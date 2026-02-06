@@ -6,6 +6,7 @@ from gnn_aid.attacks.attack_base import Attacker
 from gnn_aid.aux.utils import move_to_same_device
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
+from gnn_aid.data_structures.configs import Task
 
 # Nettack imports
 from .evasion_attacks_collection.nettack.utils import NettackSurrogate, NettackAttack
@@ -64,6 +65,9 @@ class FGSMAttacker(
             model_manager: GNNModelManager
     ):
         """ Availability check for the given dataset and model manager. """
+        rules = [
+            gen_dataset.dataset_var_config.task
+        ]
         return True
 
     def __init__(
@@ -85,7 +89,7 @@ class FGSMAttacker(
             model_manager: Type,
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor,
-            task_type: str = None,
+            task_type: str = None,  # FIXME remove
     ):
         task = gen_dataset.dataset_var_config.task
         device = gen_dataset.data.x.device
@@ -94,7 +98,7 @@ class FGSMAttacker(
             model = model_manager.gnn
             model.eval()
 
-            if task.is_edge_level():
+            if task == Task.EDGE_PREDICTION:
                 data = gen_dataset.data
                 x = data.x
                 x.requires_grad = True
@@ -109,9 +113,9 @@ class FGSMAttacker(
                 edge_out = model.decode(src, dst).unsqueeze(dim=0).to(device)
 
                 # TODO use model_manager.loss_function when BCE support
-                # loss = model_manager.loss_function(edge_out, edge_label)
-                criterion = torch.nn.BCEWithLogitsLoss()
-                loss = criterion(edge_out, edge_label)
+                loss = model_manager.loss_function(edge_out, edge_label)
+                # criterion = torch.nn.BCEWithLogitsLoss()
+                # loss = criterion(edge_out, edge_label)
                 model.zero_grad()
                 loss.backward()
                 sign_data_grad = x.grad.sign()
@@ -119,7 +123,7 @@ class FGSMAttacker(
                 perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
                 gen_dataset.data.x = perturbed_data_x.detach()
 
-            elif task.is_graph_level() and task.is_classification():  # graph_classification
+            elif task == Task.GRAPH_CLASSIFICATION:
                 graph_idx = self.element_idx
                 x = gen_dataset.dataset[graph_idx].x
                 x.requires_grad = True
@@ -135,7 +139,7 @@ class FGSMAttacker(
                 perturbed_data_x = torch.clamp(perturbed_data_x, 0, 1)
                 gen_dataset.dataset[graph_idx].x = perturbed_data_x.detach()
 
-            elif task.is_node_level() and task.is_classification():  # node_classification
+            elif task == Task.NODE_CLASSIFICATION:
                 node_idx = self.element_idx
                 x = gen_dataset.data.x
                 x.requires_grad = True
@@ -152,7 +156,7 @@ class FGSMAttacker(
                 gen_dataset.data.x = perturbed_data_x.detach()
 
             else:
-                pass
+                raise NotImplementedError
 
             # if task_type:
             #     gni = GlobalNodeIndexer(gen_dataset.dataset)
@@ -424,7 +428,7 @@ class PGDAttacker(
             model_manager: Type,
             gen_dataset: GeneralDataset,
             mask_tensor: torch.Tensor,
-            task_type: str = None,
+            task_type: str = None,  # FIXME remove
     ) -> None:
         if task_type is None:
             task_type = gen_dataset.is_multi()
@@ -542,6 +546,7 @@ class PGDAttacker(
                         x.copy_(torch.clamp(x, -self.epsilon, self.epsilon))
 
                 self.attack_res = Data(x=x, edge_index=edge_index, y=y)
+                gen_dataset.data.x = x  # FIXME tmp
 
         else:  # structure attack
             if task_type:
@@ -660,7 +665,7 @@ class NettackAttacker(
 
     def __init__(
             self,
-            node_idx: int = 0,
+            element_idx: int = 0,
             budget: Union[int, None] = None,
             perturb_features: bool = True,
             perturb_structure: bool = True,
@@ -672,7 +677,7 @@ class NettackAttacker(
     ):
         super().__init__()
         self.attack_diff = None
-        self.node_idx = node_idx
+        self.element_idx = element_idx
         self.budget = budget
         self.perturb_features = perturb_features
         self.perturb_structure = perturb_structure
@@ -698,13 +703,13 @@ class NettackAttacker(
         # surrogate.evaluate(x, edge_index, y)
 
         attacker = NettackAttack(
-            real_class=data.y[self.node_idx].item(),
+            real_class=data.y[self.element_idx].item(),
             gnn_model=model_manager.gnn,
             model=surrogate,
             x=x,
             edge_index=edge_index,
             num_classes=num_classes,
-            target_node=self.node_idx,
+            target_node=self.element_idx,
             attack_diff=self.attack_diff,
             direct=self.direct,
             depth=self.depth,
@@ -717,14 +722,14 @@ class NettackAttacker(
         elif self.perturb_structure and not self.perturb_features:
             mode = "structure"
 
-        # logits_before = surrogate.forward(edge_index, x)[self.node_idx]
+        # logits_before = surrogate.forward(edge_index, x)[self.element_idx]
         # pred_before = logits_before.argmax().item()
         # prob_before = torch.softmax(logits_before, dim=0)[pred_before].item()
         # print(f"Surrogate prediction before attack: {pred_before} (confidence: {prob_before:.4f})")
 
         attacker.attack(budget=self.budget, mode=mode)
 
-        # logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.node_idx]
+        # logits_after = surrogate.forward(attacker.edge_index, attacker.x)[self.element_idx]
         # pred_after = logits_after.argmax().item()
         # prob_after = torch.softmax(logits_after, dim=0)[pred_after].item()
         # print(f"Surrogate prediction after attack: {pred_after} (confidence: {prob_after:.4f})")
