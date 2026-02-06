@@ -729,12 +729,12 @@ def mask_to_tensor(
 
     elif task.is_node_level():  # Node id
         assert not gen_dataset.is_multi()
-        mask_tensor = tensor([False] * gen_dataset.info.nodes[0])
+        mask_tensor = tensor([False] * gen_dataset.num_nodes)
         mask_tensor[mask] = True  # for int or list of ints
 
     elif task.is_graph_level():  # Graph id
         assert gen_dataset.is_multi()
-        mask_tensor = tensor([False] * len(gen_dataset.info.nodes))
+        mask_tensor = tensor([False] * gen_dataset.info.count)
         mask_tensor[mask] = True  # for int or list of ints
 
     elif task.is_edge_level():  # Edge

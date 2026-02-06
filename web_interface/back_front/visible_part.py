@@ -4,7 +4,7 @@ from typing import Union, List, Tuple, Dict
 
 from gnn_aid.aux.custom_decorators import timing_decorator
 from gnn_aid.aux.utils import short_str, edge_index_to_edge_list
-from gnn_aid.data_structures import Task
+from gnn_aid.data_structures import Task, GraphModificationArtifact
 from gnn_aid.datasets import GeneralDataset
 from web_interface.back_front import json_dumps
 
@@ -103,6 +103,29 @@ class DatasetVarData:
     ) -> str:
         """ Return json string. """
         return json.dumps(self.__dict__, **dump_args)
+
+
+class DatasetDiffData:
+    """
+    Container for dataset diff (modification artifact) to transfer to frontend.
+    """
+    def __init__(
+            self,
+            artifact: GraphModificationArtifact
+    ):
+        self._artifact = artifact
+
+    def __str__(
+            self
+    ):
+        return f"DatasetDiffData{self._artifact.to_json()}"
+
+    def to_json(
+            self,
+            **dump_args
+    ) -> str:
+        """ Return json string. """
+        return json.dumps(self._artifact.to_json(), **dump_args)
 
 
 class ViewPoint:
@@ -304,7 +327,7 @@ class VisiblePart:
 
             else:  # Get whole graph
                 if elem == 'nodes':
-                    for n in range(self.gen_dataset.info.nodes[0]):
+                    for n in range(self.gen_dataset.num_nodes):
                         yield n
 
                 elif elem == 'edges':
@@ -342,7 +365,7 @@ class VisiblePart:
 
         return [array[ix] for ix in self.iterate(elem, pairs_for_edges=True)]
 
-    @timing_decorator
+    # @timing_decorator
     def get_dataset_data(
             self,
             view_point: ViewPoint = None
@@ -358,7 +381,7 @@ class VisiblePart:
         graphs = None
         center = self.dataset_index.view_point.center
         if self.gen_dataset.is_multi():
-            nodes = [self.gen_dataset.info.nodes[ix] for ix in self.dataset_index.graph_index]
+            nodes = [self.gen_dataset.num_nodes[ix] for ix in self.dataset_index.graph_index]
             ptg_edges = self.gen_dataset.edges
             edges = [edge_index_to_edge_list(
                 ptg_edges[ix], self.gen_dataset.is_directed()) for ix in self.dataset_index.graph_index]
@@ -376,7 +399,7 @@ class VisiblePart:
                 # edges = copy(self.dataset_index.edge_index)
 
             else:  # Get whole graph
-                nodes = self.gen_dataset.info.nodes[0]
+                nodes = self.gen_dataset.num_nodes
                 edges = edge_index_to_edge_list(self.gen_dataset.edges[0], self.gen_dataset.is_directed())
 
         dataset_data.nodes = nodes
@@ -395,16 +418,16 @@ class VisiblePart:
             if center is not None:  # neighborhood
                 for a, vals_list in node_attributes.items():
                     dataset_data.node_attributes[a] = [{
-                        n: (vals_list[0][n] if n in vals_list[0] else None) for n in self.iterate('nodes')}]
+                        n: (vals_list[0].get(n, None) if n in vals_list[0] else None) for n in self.iterate('nodes')}]
 
             else:  # whole graph
                 for a, vals_list in node_attributes.items():
                     dataset_data.node_attributes[a] = [{
-                        n: vals_list[0][n] for n in range(nodes)}]
+                        n: vals_list[0].get(n, None) for n in range(nodes)}]
 
         return dataset_data
 
-    @timing_decorator
+    # @timing_decorator
     def get_dataset_var_data(
             self,
             view_point: ViewPoint = None,

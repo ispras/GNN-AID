@@ -57,10 +57,6 @@ class ForceLayout extends Layout {
         for (let n = 0; n < this.numNodes; n++) {
             this.v[n] = new Vec(0, 0)
             this.a[n] = new Vec(0, 0)
-            for (const [i, j] of this.visibleGraph.getEdges()) {
-                this.m[i]++
-                this.m[j]++
-            }
 
             // if (this.directed) {
             //     if (n in this.visibleGraph.adj) {
@@ -72,7 +68,31 @@ class ForceLayout extends Layout {
             // else
             //     this.m[n] = Math.max(1, this.visibleGraph.getDegree(n))
         }
+        for (const [i, j] of this.visibleGraph.getEdges()) {
+            this.m[i]++
+            this.m[j]++
+        }
     }
+
+    // Add new nodes
+    addNodes(nodes) {
+        for (const n of nodes) {
+            this.m[n] = 0.1
+            this.v[n] = new Vec(0, 0)
+            this.a[n] = new Vec(0, 0)
+        }
+
+        // Add mass from edges
+        nodes = new Set(nodes)
+        for (const [i, j] of this.visibleGraph.getEdges()) {
+            if (i in nodes)
+                this.m[i]++
+            if (j in nodes)
+                this.m[j]++
+        }
+        super.addNodes(nodes)
+    }
+
 /*
     _repulseNodes(i, j) {
         const d0 = 0.4

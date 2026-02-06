@@ -12,11 +12,17 @@ class Neighborhood extends VisibleGraph {
 
         // Constants
         this.edgeColor = {
-            1: '#000000',
-            2: '#242424',
-            3: '#838383',
-            4: '#d0d0d0',
+            1: '#ffffff',
+            2: '#d0d0d0',
+            3: '#888888',
+            4: '#444444',
         }
+        // this.edgeColor = {
+        //     1: '#000000',
+        //     2: '#242424',
+        //     3: '#838383',
+        //     4: '#d0d0d0',
+        // }
         this.nodeRadiuses = {0: 30, 1: 20, 2: 10, 3: 8, 4: 6}
         this.nodeStrokeWidthes = {0: 5, 1: 4, 2: 3, 3: 2, 4: 2}
         this.edgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
@@ -49,11 +55,11 @@ class Neighborhood extends VisibleGraph {
         super.createListeners()
     }
 
-    createVarListeners() {
-        super.createVarListeners()
+    createVarListeners(tag) {
+        super.createVarListeners(tag)
 
         this.visView.addListener(this.visView.singleClassAsColorId,
-            (_, v) => this.showClassAsColor(v), this._tagVar)
+            (_, v) => this.showClassAsColor(v), tag)
     }
 
     defineVisibleConfig() {
@@ -217,6 +223,39 @@ class Neighborhood extends VisibleGraph {
         }
 
         super.createPrimitives()
+    }
+
+    // Create or change SVG primitives according to dataset diff
+    applyDiffToPrimitives() {
+        let nodesAdd = this.datasetDiff.node['add']
+        let edgesAdd = this.datasetDiff.edge['add']
+
+        // Edges add
+        let d = 0
+        for (const edges of edgesAdd) {
+            if (d >= this.edges.length)
+                break
+            for (const [i, j] of edges) {
+                this.edges[d].push([i, j])
+                let edgeKey = `${i},${j}`
+                let e = this.createEdgePrimitive(d, edgeKey, i, j, this.edgeRadius, this.edgeAddColor,
+                    this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
+            }
+            ++d
+        }
+
+        // Nodes add
+        d = 0
+        for (const nodes of nodesAdd) {
+            for (const n of nodes) {
+                let node = this.createNodePrimitive(this.svgElement, n, this.nodeRadiuses[d],
+                    "circle", this.nodeStrokeWidthes[d], this.nodeAddColor, this.showDepth[d])
+                this.nodes[d].push(n)
+            }
+            ++d
+        }
+
+        super.applyDiffToPrimitives()
     }
 
     showPart(part, show) {

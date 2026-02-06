@@ -72,6 +72,7 @@ class VisibleGraph {
         this.visView = controller.presenter.visualsView
         this._tag = "vg-" + timeBasedId()
         this._tagVar = "vg-var-" + timeBasedId()
+        this._tagDiff = "vg-diff-" + timeBasedId()
         this.layoutFreezeButtonId = null // to be defined in subclass
 
         // Constants
@@ -90,7 +91,13 @@ class VisibleGraph {
         this.svgPos = new Vec(0, 0) // SVG viewBox left-top
         this.nodeColor = '#fff'
         this.edgeColor = '#000'
-        this.backgroundColor = "#e7e7e7"
+        // this.backgroundColor = "#e7e7e7"
+        this.backgroundColor = "#404040"
+
+        this.nodeAddColor = '#ffff00'
+        this.nodeRemoveColor = '#8b6700'
+        this.edgeAddColor = '#ffff00'
+        this.edgeRemoveColor = '#8b6700'
 
         // ----- Variables
 
@@ -99,7 +106,11 @@ class VisibleGraph {
         this.visibleConfig = {center: null, depth: null}
 
         // Satellites, is set later, don't edit - it is changed from outside
+        // {elem -> {satellite -> {id -> value}}}
         this.datasetVar = null
+
+        // Dataset diff after modification, don't edit - it is changed from outside
+        this.datasetDiff = null
 
         // {node -> primitive} on HTML element
         this.nodePrimitives = null
@@ -151,15 +162,15 @@ class VisibleGraph {
             (_, v) => this.freezeLayout(v), this._tag)
     }
 
-    // Register user control elements listeners associated to dataset var
-    createVarListeners() {
+    // Register user control elements listeners associated to dataset var (or diff var)
+    createVarListeners(tag) {
         for (const elem of VisibleGraph.ELEMS)
             for (const satellite of VisibleGraph.SATELLITES)
                 this.visView.addListener(this.visView.satellitesIds[satellite],
                     (_, v) => {
                         this.showSatellite(elem, satellite, v)
                         this.draw()
-                    }, this._tagVar)
+                    }, tag)
     }
 
     // Handle nodes and whole SVG drag&drop
@@ -409,7 +420,7 @@ class VisibleGraph {
         this.task = task
         this.labeling = labeling
         this.oneHotableFeature = oneHotableFeature
-        this.createVarListeners()
+        this.createVarListeners(this._tagVar)
 
         this._buildVar()
     }
@@ -444,6 +455,55 @@ class VisibleGraph {
         this.explanationEdges = null
     }
 
+    _convertDatasetDiff(datasetDiff) {
+        const converted = {node: {}, edge: {}}
+        converted.node['remove'] = Array.from(datasetDiff.nodes['remove'])
+        converted.node['add'] = Array.from(datasetDiff.nodes['add'])
+        converted.node['features'] = Object.assign({}, datasetDiff.nodes['features'])
+        converted.node['change_f'] = Object.assign({}, datasetDiff.nodes['change_f'])
+
+        converted.edge['remove'] = Array(...datasetDiff.edges['remove'])
+        converted.edge['add'] = Array(...datasetDiff.edges['add'])
+
+        return converted
+    }
+
+    initDiff(datasetDiff) {
+        this.datasetDiff = this._convertDatasetDiff(datasetDiff)
+        this.createVarListeners(this._tagDiff)
+        this._buildDiff()
+    }
+
+    // Remove all diff data
+    dropDiff() {
+        this.visView.removeListeners(this._tagDiff)
+        this._dropDiff()
+        this.datasetDiff = null
+    }
+
+    // Variable part of initDiff - to be overridden?
+    _buildDiff() {
+        this.applyDiffToPrimitives()
+
+        this.ready = true
+        for (const elem of VisibleGraph.ELEMS)
+            for (const satellite of VisibleGraph.SATELLITES)
+                this.setSatellite(elem, satellite)
+
+        this.visView.fireEventsByTag(this._tagDiff)
+    }
+
+    // Delete all elements of dataset diff data
+    _dropDiff() {
+        if (this.datasetDiff)
+            for (const elem of VisibleGraph.ELEMS)
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    this.setSatellite(elem, satellite, false)
+                    if (satellite in this.datasetDiff[elem])
+                        delete this.datasetDiff[elem][satellite]
+                }
+    }
+
     // Drops and builds with other parameters, handling Var part properly, keeping listeners
     async _reinit() {
         this.ready = false
@@ -460,6 +520,10 @@ class VisibleGraph {
 
         if (this.datasetVar) {
             await this._buildVar()
+        }
+
+        if (this.datasetDiff) {
+            await this._buildDiff()
         }
         this.checkLightMode()
     }
@@ -551,7 +615,7 @@ class VisibleGraph {
         return res
     }
 
-    // Create HTML for SVG primitives on the given element
+    // Create HTML for SVG primitives on the svg panel
     createPrimitives() {
         // *** some work at subclass, then:
 
@@ -581,7 +645,45 @@ class VisibleGraph {
         }
     }
 
-    // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
+    // Create or change SVG primitives according to dataset diff
+    applyDiffToPrimitives() {
+        // *** some work at subclass, then:
+
+        let edgesAdd = this.datasetDiff.edge['add']
+        let nodesAdd = this.datasetDiff.node['add']
+
+        // Add new nodes to layout
+        this.layout.addNodes(nodesAdd)
+
+        // Add new elements to svg panel
+        let first = edgesAdd[0]
+        if (first.length === 0 || Array.isArray(first[0]))
+            edgesAdd = [].concat(...edgesAdd)
+        // Edges add  todo simplify linear quadratic search
+        let gEdge = this.svgPanel.get("edge")[0]
+        for (const [i, j] of edgesAdd) {
+
+            for (const edges of Object.values(this.edgePrimitives))
+                for (const [key, edge] of Object.entries(edges)) {
+                    if (key === `${i},${j}`)
+                        gEdge.append(edge.path)
+                }
+        }
+
+        // Nodes add
+        if (Array.isArray(nodesAdd[0]))
+            nodesAdd = [].concat(...nodesAdd)
+        let g = this.svgPanel.get("node")[0]
+        for (const id of nodesAdd) {
+            let node = this.nodePrimitives[id]
+            g.appendChild(node.body)
+            g.appendChild(node.text)
+        }
+
+        this.showDiff(true)
+    }
+
+    // Create/remove SVG primitives for node/edge/graph satellites: labels, features, predictions, etc
     setSatellite(elem, satellite, on=true) {
         if (!this.ready)
             // Could happen when we reinit graph while satellites data is being received
@@ -603,8 +705,19 @@ class VisibleGraph {
                         edge.satellites[satellite].blocks = null
             }
         }
-        else if (satellite in this.datasetVar[elem]) {
-            let values = this.datasetVar[elem][satellite]
+        else {
+            // let varStores = [this.datasetVar[elem]]
+            // if (this.datasetDiff && elem in this.datasetDiff)
+            //     varStores.push(this.datasetDiff[elem])
+            // for (const varStore of varStores) {
+            let values = {}
+            if (satellite in this.datasetVar[elem])
+                values = Object.assign({}, this.datasetVar[elem][satellite])
+            if (this.datasetDiff && elem in this.datasetDiff && satellite in this.datasetDiff[elem])
+                values = Object.assign({}, values, this.datasetDiff[elem][satellite])
+            if (Object.keys(values).length === 0)
+                return
+
             if (elem === "node") {
                 if (!this.nodePrimitives) return
 
@@ -632,8 +745,7 @@ class VisibleGraph {
                                 $g.append(e)
                     }
                 }
-            }
-            else if (elem === "edge") {
+            } else if (elem === "edge") {
                 if (!this.edgePrimitives) return
                 if (satellite === 'labels') {
                     // FIXME tmp
@@ -643,8 +755,7 @@ class VisibleGraph {
                             if (edge.setLabels(values[edgeKey], numClasses))
                                 for (const e of edge.satellites[satellite].blocks)
                                     $g.append(e)
-                }
-                else {
+                } else {
                     for (const es of Object.values(this.edgePrimitives))
                         for (const [edgeKey, edge] of Object.entries(es))
                             if (edge.setSatellite(satellite, values[edgeKey]))
@@ -697,6 +808,7 @@ class VisibleGraph {
             node.body.oncontextmenu = (e) => this.onNodeClick("right", i)
             node.body.ondblclick = (e) => this.onNodeClick("double", i)
         }
+        return node
     }
 
     debugInfo() {
@@ -905,6 +1017,58 @@ class VisibleGraph {
         }
         else {
             console.log('not implemented')
+        }
+    }
+
+    // Show dataset diff on/off
+    showDiff(show) {
+        let nodesRemove = this.datasetDiff.node['remove']
+        let nodesAdd = this.datasetDiff.node['add']
+        let nodesFeatureChange = this.datasetDiff.node['change_f']
+        let edgesRemove = this.datasetDiff.edge['remove']
+        let edgesAdd = this.datasetDiff.edge['add']
+
+        // Edges remove
+        // todo unite Edges add
+        let first = edgesRemove[0]
+        if (first.length === 0 || Array.isArray(first[0]))
+            edgesRemove = [].concat(...edgesRemove)
+        for (const [i, j] of edgesRemove) {
+            for (const edges of Object.values(this.edgePrimitives))
+                for (const [key, edge] of Object.entries(edges)) {
+                    if (key === `${i},${j}`) {
+                        edge.markDiff(show, false, this.edgeRemoveColor)
+                    }
+                }
+        }
+
+        // Edges add
+        first = edgesAdd[0]
+        if (first.length === 0 || Array.isArray(first[0]))
+            edgesAdd = [].concat(...edgesAdd)
+        for (const [i, j] of edgesAdd) {
+            for (const edges of Object.values(this.edgePrimitives))
+                for (const [key, edge] of Object.entries(edges)) {
+                    if (key === `${i},${j}`) {
+                        edge.markDiff(show, true, this.edgeAddColor)
+                    }
+                }
+        }
+
+        // Nodes remove
+        if (Array.isArray(nodesRemove[0]))
+            nodesRemove = [].concat(...nodesRemove)
+        for (const id of nodesRemove) {
+            let node = this.nodePrimitives[id]
+            node.markDiff(show, false, this.nodeRemoveColor)
+        }
+
+        // Nodes add
+        if (Array.isArray(nodesAdd[0]))
+            nodesAdd = [].concat(...nodesAdd)
+        for (const id of nodesAdd) {
+            let node = this.nodePrimitives[id]
+            node.markDiff(show, true, this.nodeAddColor)
         }
     }
 }

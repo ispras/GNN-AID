@@ -165,18 +165,18 @@ class KnownFormatDataset(
                     for _ in range(end - start):
                         all_nodes[ix].update(map(int, f.readline().split()))
                     if self.info.remap:
-                        assert len(all_nodes[ix]) == self.info.nodes[ix]
+                        assert len(all_nodes[ix]) == self.num_nodes[ix]
                     else:
-                        assert all_nodes[ix] == set(range(self.info.nodes[ix]))
+                        assert all_nodes[ix] == set(range(self.num_nodes[ix]))
                     start = end
         else:
             with open(self.edges_path, 'r') as f:
                 for line in f.readlines():
                     all_nodes[0].update(map(int, line.split()))
                 if self.info.remap:
-                    assert len(all_nodes[0]) == self.info.nodes[0]
+                    assert len(all_nodes[0]) == self.num_nodes
                 else:
-                    assert all_nodes[0] == set(range(self.info.nodes[0]))
+                    assert all_nodes[0] == set(range(self.num_nodes))
 
         # Check node attributes
         for ix, attr in enumerate(self.info.node_attributes["names"]):
@@ -284,7 +284,7 @@ class KnownFormatDataset(
 
         self._ptg_edge_index = [torch.tensor(np.asarray(ptg_edge_index))]
         if self.info.remap:
-            if len(node_map) < self.info.nodes[0]:
+            if len(node_map) < self.num_nodes:
                 labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
                 with open(labeling_path, 'r') as f:
                     labeling_dict = json.load(f)
@@ -293,12 +293,12 @@ class KnownFormatDataset(
                     if node not in node_map:
                         node_map[node] = node_index
                         node_index += 1
-            # assert node_index == self.info.nodes[0]
+            # assert node_index == self.num_nodes
             # Original ids in the order of appearance
             self.node_map = list(node_map.keys())
             # self.info.node_info = {"id": self.node_map}
 
-        assert node_index == self.info.nodes[0], f"Number of nodes in file {node_index} != {self.info.nodes[0]} - number of nodes in metainfo"
+        assert node_index == self.num_nodes, f"Number of nodes in file {node_index} != {self.num_nodes} - number of nodes in metainfo"
         assert len(self._ptg_edge_index) == self.info.count
 
     def _read_multi(
@@ -324,7 +324,7 @@ class KnownFormatDataset(
 
                 if l == edge_index[g_ix] - 1:
                     if self.info.remap:
-                        if len(node_maps[g_ix]) < self.info.nodes[g_ix]:
+                        if len(node_maps[g_ix]) < self.num_nodes[g_ix]:
                             # Get the full nodes list from 1st labeling
                             labeling_path = self.labels_dir / os.listdir(self.labels_dir)[0]
                             with open(labeling_path, 'r') as f:
@@ -350,7 +350,7 @@ class KnownFormatDataset(
                 self.node_map.append(list(node_map.keys()))
             # self.info.node_info = {"id": self.node_map}
 
-        assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
+        assert sum(len(_) for _ in node_maps) == sum(self.num_nodes)
         assert len(self._ptg_edge_index) == self.info.count
 
     def _read_edge(
@@ -464,7 +464,7 @@ class KnownFormatDataset(
             for ix, orig in enumerate(node_map):
                 yield ix, str(orig)
         else:
-            for n in range(self.info.nodes[graph or 0]):
+            for n in range(self.num_nodes[graph or 0]):
                 yield n, str(n)
 
     def _iter_edges(
@@ -553,12 +553,12 @@ class KnownFormatDataset(
                                 f" but {type(fc)} is given")
 
         if self.is_multi():
-            num_nodes = self.info.nodes[g_ix]
+            num_nodes = self.num_nodes[g_ix]
             # FIXME for each graph?
             num_edges = shape(self.edges[g_ix])[1]
             # num_edges = self.stats.get('num_edges')[g_ix]
         else:  # single
-            num_nodes = self.info.nodes[0]
+            num_nodes = self.num_nodes
             num_edges = shape(self.edges[0])[1]
             # num_edges = self.stats.get('num_edges')
         # if not self.is_directed():
@@ -660,6 +660,24 @@ class KnownFormatDataset(
         if len(node_features[0]) == 0:
             raise RuntimeError("Node feature vector size must be > 0")
         return node_features, edge_features
+
+    def _reset_cached(
+            self,
+            nodes: bool = True,
+            edges: bool = True,
+            graphs: bool = True,
+    ):
+        """ Reset internal storage due to dataset modifications.
+        """
+        super()._reset_cached(nodes=nodes, edges=edges, graphs=graphs)
+        if nodes:
+            # self._node_attributes = None
+            pass
+        if edges:
+            # self._edge_attributes = None
+            if self.is_multi():
+                raise NotImplementedError
+            self._ptg_edge_index = [self.data.edge_index]
 
 
 def one_hot(

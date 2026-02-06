@@ -62,9 +62,9 @@ def _create_single_ij(dc: DatasetConfig):
     with open(raw / 'node_attributes' / 'c', 'w') as f:
         json.dump({"10": [0.3, -0.2], "11": [0, 0], "12": [1e5, 0]}, f)
 
-    # (raw / 'edge_attributes').mkdir()
-    # with open(raw / 'edge_attributes' / 'weight', 'w') as f:
-    #     json.dump({"10": 0.0, "11": 0.1, "12": 0.2}, f)
+    (raw / 'edge_attributes').mkdir()
+    with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+        json.dump({"10,11": 0.0, "10,12": 0.2}, f)
 
 
 def _create_single2_ij(dc: DatasetConfig):
@@ -78,9 +78,11 @@ def _create_single2_ij(dc: DatasetConfig):
         f.write("11 13\n")
         f.write("11 15\n")
         f.write("12 13\n")
+        f.write("12 14\n")
         f.write("12 17\n")
         f.write("15 14\n")
         f.write("15 16\n")
+        f.write("16 17\n")
     with open(root / 'metainfo', 'w') as f:
         json.dump({
             "class_name": "KnownFormatDataset",
@@ -117,6 +119,11 @@ def _create_single2_ij(dc: DatasetConfig):
     with open(raw / 'node_attributes' / 'b', 'w') as f:
         json.dump(
             {"10": "A", "11": "A", "12": "B", "13": "C", "14": "B", "15": "A", "16": "A", "17": "C"}, f)
+
+    (raw / 'edge_attributes').mkdir()
+    with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+        json.dump({"10,11": 0.0, "11,12": 0.1, "11,13": 0.2, "11,15": 0.3, "12,13": 0.4,
+                   "12,14": 0.3, "12,17": 0.5, "14,15": 0.6, "15,16": 0.7, "16,17": 0.3}, f)
 
 
 def _create_multi_ij(dc: DatasetConfig):
@@ -176,9 +183,11 @@ def _create_multi_ij(dc: DatasetConfig):
             {"0": "gamma", "1": "beta", "2": "gamma", "3": "gamma"},
             {"0": "beta", "1": "gamma", "2": "gamma", "3": "alpha", "4": "beta"}], f)
 
-    # (raw / 'edge_attributes').mkdir()
-    # with open(raw / 'edge_attributes' / 'weight', 'w') as f:
-    #     json.dump([[0.1,0.1,0.1,0.2,0.2,0.2,],[0.1,0.1,0.1,0.1],[0.2,0.2,0.2,0.2]], f)
+    (raw / 'edge_attributes').mkdir()
+    with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+        json.dump([{"0,1": 0.1, "1,0": 0.1, "1,2": 0.2},
+                   {"0,1": 0.1, "1,2": 0.2, "2,3": 0.3, "3,0": 0.2},
+                   {"0,1": 0.2, "0,2": 0.1, "0,3": 0.2,"0,4": 0.3}], f)
 
 
 class DatasetsTest(unittest.TestCase):
@@ -460,28 +469,28 @@ class DatasetsTest(unittest.TestCase):
         multi.build(dvc)
 
         # TODO misha add hetero
+        from web_interface.back_front.visible_part import VisiblePart, ViewPoint
 
         # Test that getting functions work
         for dataset in [single, multi]:
-            dataset.set_visible_part({})
-            dataset.set_visible_part({'center': 0})
-            dataset.set_visible_part({'center': 0, 'depth': 2})
-            dataset.visible_part.get_dataset_data()
-            dataset.visible_part.get_dataset_var_data()
+            visible_part = VisiblePart(ViewPoint(center=0), dataset)
+            visible_part = VisiblePart(ViewPoint(center=0, depth=2), dataset)
+            visible_part.get_dataset_data()
+            visible_part.get_dataset_var_data()
 
         # Test correctness
-        single.set_visible_part({'center': 1, 'depth': 2})
-        dd = single.visible_part.get_dataset_data()
-        self.assertEqual(dd.edges, [
+        visible_part = VisiblePart(ViewPoint(center=1, depth=2), single)
+        dd = visible_part.get_dataset_data()
+        self.assertEqual([
             [],
-            [(0, 1), (2, 1), (4, 1), (3, 1)],
-            [(6, 4), (2, 3), (3, 2), (5, 2), (7, 4)]])
-        self.assertEqual(dd.nodes, [[1], [0, 2, 3, 4], [5, 6, 7]])
-        self.assertEqual(dd.graphs, None)
+            [(0, 1), (1, 2), (1, 3), (1, 4)],
+            [(2, 3), (2, 5), (2, 6), (4, 5), (4, 7)]], dd.edges)
+        self.assertEqual([[1], [0, 2, 3, 4], [5, 6, 7]], dd.nodes)
+        self.assertEqual(None, dd.graphs)
 
-        dvd = single.visible_part.get_dataset_var_data()
-        self.assertEqual(dvd.labels, {1: 1, 0: 1, 2: 1, 3: 1, 4: 0, 5: 0, 6: 0, 7: 0})
-        self.assertEqual(set(dvd.node_features.keys()), set(range(8)))
+        dvd = visible_part.get_dataset_var_data()
+        self.assertEqual([1, 1, 1, 1, 0, 0, 0, 0], dvd.node.labels)
+        self.assertEqual(8, len(dvd.node.features))
 
     def test_stats(self):
         """ Statistics
@@ -687,6 +696,36 @@ class DatasetsTest(unittest.TestCase):
         single.build(dvc)
         single.train_test_split()
 
+    def test_modifications(self):
+        """ Applying diffs, reverse diffs
+        """
+        dc = DatasetConfig(('modif', 'single'))
+        _create_single_ij(dc)
+        dvc = DatasetVarConfig(
+            task=Task.NODE_CLASSIFICATION,
+            features=FeatureConfig(node_attr=['b']), labeling='binary', dataset_ver_ind=0)
+        original = KnownFormatDataset(dc).build(dvc)
+        from web_interface.back_front.visible_part import VisiblePart, ViewPoint
+        visible_part = VisiblePart(ViewPoint(), original)
+        print("original data\n", visible_part.get_dataset_data())
+        print("original var data\n", visible_part.get_dataset_var_data())
+
+        from gnn_aid.data_structures import GraphModificationArtifact
+
+        diff1 = GraphModificationArtifact()
+        diff1.add_node(4, [1, 1, 1])
+        diff1.add_node(3, [1, 1, 1])
+        diff1.remove_node(1)
+        diff1.remove_edge(0, 1)
+        diff1.add_edge(2, 3)
+        diff1.add_edge(4, 3)
+        diff1.add_edge(4, 2)
+
+        original.apply_modification(diff1)
+        print("Applied diff", diff1.to_json())
+
+        print("after diff1 data\n", visible_part.get_dataset_data().to_json(indent=2))
+        print("after diff1 var data\n", visible_part.get_dataset_var_data().to_json(indent=2))
 
 
 if __name__ == '__main__':

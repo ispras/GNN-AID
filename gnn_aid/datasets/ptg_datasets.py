@@ -202,6 +202,16 @@ class PTGDataset(GeneralDataset):
             res.check()
         return res
 
+    def _reset_cached(
+            self,
+            nodes: bool = True,
+            edges: bool = True,
+            graphs: bool = True,
+    ):
+        """ Reset internal storage due to dataset modifications.
+        """
+        raise NotImplementedError
+
 
 class LocalPTGDataset(PTGDataset):
     """

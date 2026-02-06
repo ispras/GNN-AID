@@ -26,6 +26,9 @@ class MockController {
             if (params.get === 'var_data') {
                 return this._varData || '';
             }
+            if (params.get === 'diff_data') {
+                return this._diffData || '';
+            }
             if (params.set === 'visible_part') {
                 this._visiblePart = JSON.parse(params.part);
                 console.log('Visible part set:', this._visiblePart);
@@ -43,6 +46,7 @@ class MockController {
     setDatasetInfo(info) { this._datasetInfo = info; }
     setDatasetData(data) { this._datasetData = data; }
     setVarData(data) { this._varData = data; }
+    setDiffData(data) { this._diffData = data; }
 }
 
 // ============================================================================
@@ -95,44 +99,47 @@ const EXAMPLE_NEIGHBORHOOD = {
         }
     },
     datasetData: {
-        nodes: [
-            [0],
-            [1],
-            [2, 3, 4]
+      "edges": [
+        [],
+        [[1,0],[1,2],[1,3],[1,4]],
+        [[2,3],[2,5],[2,6],[4,5],[4,7]]
+      ],
+      "nodes": [[0],[1,2,3,4],[5,6,7]],
+      "graphs": null,
+      "node_attributes": {
+        "a": [
+          {"0": 1,"1": 1,"2": 0.6,"3": 0.7,"4": 0.5,"5": 0.5,"6": 0.7,"7": 0.5}
         ],
-        edges: [
-            [],
-            [[1, 0]],
-            [[2, 1], [4, 1], [3, 1]]
-        ],
-        graphs: null,
-        node_attributes: {
-            "a": [{"0": 1, "1": 1, "2": 0.6, "3": 0.7, "4": 0.5}],
-            "b": [{"0": "A", "1": "A", "2": "B", "3": "C", "4": "A"}]
-        }
+        "b": [
+          {"0": "A","1": "A","2": "B","3": "C","4": "A","5": "B","6": "C","7": "A"}
+        ]
+      }
     },
     datasetVar: {
       "node": {
-        "labels": [1, 1, 0, 0, 1],
-        "features": [[1], [1], [0], [1], [1]],
-        "logits": null,
-        "predictions": null,
-        "answers": null
+        "features": [[1],[1],[0.6],[0.6999],[0.5],[0.5],[0.699],[0.5]],
+        "labels": [1,1,1,1,0,0,0,0]
       },
-      "edge": {
-        "features": [[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2]],
-        "logits": [[0.1],[-0.4],[0.1],[0.1]],
-        "predictions": [[0.1],[0.4],[0.1],[0.1]],
-        "train-test-mask": [1,2,3,1],
-        "labels": [0,1,0,1]
-      },
-      "graph": {
-        "labels": null,
-        "features": null,
-        "logits": null,
-        "predictions": null,
-        "answers": null
-      }
+      "edge": {},
+      "graph": {}
+    },
+    datasetDiff: {
+        'nodes': {
+            'remove': [5],
+            'add': [[],[],[8,9]],
+            'features': {8: [3], 9: [3]},
+            'change_f': {0: {0: 3}}
+            },
+        'edges': {
+            'remove': [[0, 2], [2, 5], [4, 5]],
+            'add': [
+                [],
+                [[3, 4]],
+                [[3, 8], [9, 3]],
+                // [[8, 9]],
+            ],
+            'features': {}
+        }
     },
     labeling: "binary",
     // task: "edge-prediction",
@@ -183,6 +190,18 @@ const EXAMPLE_SINGLE_GRAPH = {
         "labels": [0,1,0,1,0,1,0,1,0,1]
       },
       "graph": {}
+    },
+    datasetDiff: {
+        'nodes': {
+            'remove': [5],
+            'add': [8, 9],
+            'features': {8: [3], 9: [3]},
+            'change_f': {1: {0: 3}}
+            },
+        'edges': {
+            'remove': [[1, 2], [2, 5], [4, 5]],
+            'add': [[3, 4], [3, 8], [9, 3], [8, 9]]
+        }
     },
     // task: "edge-prediction",
     task: "edge-classification",
@@ -297,6 +316,7 @@ class TestDatasetView extends View {
 
         this.datasetInfo = null;
         this.datasetVar = null;
+        this.datasetDiff = null;
         this.explanation = null;
         this.visibleGraph = null;
         this.task = null;
@@ -336,6 +356,7 @@ class TestDatasetView extends View {
 
     async setDataset() {
         blockLeftMenu(true);
+        this.dropDatasetDiff();
         this.dropDatasetVar();
         this.dropDataset();
 
@@ -371,6 +392,9 @@ class TestDatasetView extends View {
 
         if (this.datasetVar)
             this.setDatasetVar();
+
+        if (this.datasetDiff)
+            this.setDatasetDiff();
     }
 
     dropDataset() {
@@ -382,8 +406,26 @@ class TestDatasetView extends View {
         this.visibleGraph.initVar(this.datasetVar, this.task, this.labeling, this.oneHotableFeature);
     }
 
+    setDatasetDiff() {
+        this.visibleGraph.initDiff(this.datasetDiff);
+    }
+
     dropDatasetVar() {
-        if (this.visibleGraph) this.visibleGraph.dropVar();
+        if (this.visibleGraph) {
+            this.visibleGraph.dropVar()
+        }
+    }
+
+    dropDatasetDiff() {
+        if (this.visibleGraph) {
+            this.visibleGraph.dropDiff()
+        }
+    }
+
+    showDiff(show) {
+        if (this.visibleGraph) {
+            this.visibleGraph.showDiff(show)
+        }
     }
 
     async beforeInit() {
@@ -398,6 +440,11 @@ class TestDatasetView extends View {
         let data = await controller.ajaxRequest('/dataset', {get: "var_data"});
         if (data !== '') {
             this.datasetVar = data;
+        }
+
+        data = await controller.ajaxRequest('/dataset', {get: "diff_data"});
+        if (data !== '') {
+            this.datasetDiff = data;
         }
 
         this.visibleGraph.checkLightMode();
@@ -424,6 +471,7 @@ async  function initTestStand() {
         controller.setDatasetInfo(config.datasetInfo);
         controller.setDatasetData(config.datasetData);
         controller.setVarData(config.datasetVar);
+        controller.setDiffData(config.datasetDiff);
 
         let $container = $('#dataset-container');
         testDatasetView = new TestDatasetView($container);
@@ -431,6 +479,7 @@ async  function initTestStand() {
 
         testDatasetView.datasetInfo = config.datasetInfo;
         testDatasetView.datasetVar = config.datasetVar;
+        testDatasetView.datasetDiff = config.datasetDiff;
         testDatasetView.task = config.task;
         testDatasetView.labeling = config.labeling;
         testDatasetView.oneHotableFeature = config.oneHotableFeature;
@@ -474,6 +523,12 @@ function setupUIHandlers() {
     $('#btn-reinit').on('click', async function() {
         await testDatasetView.setDataset();
         updateStatus('Reinitialized');
+    });
+
+    let diffShown = true
+    $('#diff-btn').on('click', async function() {
+        diffShown = !diffShown
+        await testDatasetView.showDiff(diffShown);
     });
 
     $('#btn-download').on('click', function() {

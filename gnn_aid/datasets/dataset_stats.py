@@ -202,7 +202,7 @@ class DatasetStats:
         # assert self.info.count == 1
         # data: Data = self.dataset[0]
         edges = edge_index_to_edge_list(self.gen_dataset.edges[0], self.gen_dataset.is_directed())
-        num_nodes = self.gen_dataset.info.nodes[0]
+        num_nodes = self.gen_dataset.num_nodes
 
         # Simple stats
         if stat == "num_nodes":
@@ -368,7 +368,7 @@ class DatasetStats:
 
         # Simple stats
         if stat in ["num_nodes", "num_edges", "avg_degree"]:
-            num_nodes = list(self.gen_dataset.info.nodes)
+            num_nodes = list(self.gen_dataset.num_nodes)
             num_edges = [len(e) for e in edges]
             avg_degree = [e / n * (1 if self.is_directed else 2) for n, e in zip(num_nodes, num_edges)]
 

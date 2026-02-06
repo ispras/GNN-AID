@@ -263,7 +263,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_example.info.nodes[0], size=attack_cnt,
+        target_list = np.random.choice(self.gen_dataset_sg_example.num_nodes, size=attack_cnt,
                                        replace=False)
 
         gnn_model_manager_sg_example.train_model(gen_dataset=self.gen_dataset_sg_example, steps=100,
@@ -304,7 +304,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.num_nodes, size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])
@@ -764,7 +764,7 @@ class AttacksTest(unittest.TestCase):
         seed = None
         if seed is not None:
             np.random.seed(seed)
-        target_list = np.random.choice(self.gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
+        target_list = np.random.choice(self.gen_dataset_sg_cora.num_nodes, size=attack_cnt, replace=False)
 
         gnn_model_manager_sg_cora.train_model(gen_dataset=self.gen_dataset_sg_cora, steps=100,
                                               metrics=[Metric("Accuracy", mask='test')])

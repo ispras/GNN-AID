@@ -27,7 +27,7 @@ class GraphModificationArtifact:
     @staticmethod
     def to_scalar_str(
         idx: Union[str, int, torch.Tensor]
-    ) -> str:
+    ) -> int:
         """
         Converts an index to string. Handles int, str, and scalar torch.Tensor.
 
@@ -36,13 +36,15 @@ class GraphModificationArtifact:
         """
         if isinstance(idx, torch.Tensor):
             assert idx.numel() == 1, "Only scalar tensors allowed as indices"
-            return str(idx.item())
-        return str(idx)
+            return idx.item()
+        # FIXME int better than str
+        # return str(idx)
+        return int(idx)
 
     def add_node(
         self,
         node_id: Union[str, int, torch.Tensor],
-        feature_tensor: torch.Tensor
+        feature_tensor: Union[list, torch.Tensor]
     ) -> None:
         """
         Adds a new node with associated features.
@@ -50,6 +52,8 @@ class GraphModificationArtifact:
         :param node_id: Identifier of the node to add.
         :param feature_tensor: Feature tensor for the node.
         """
+        if isinstance(feature_tensor, list):
+            feature_tensor = torch.tensor(feature_tensor)
         assert isinstance(feature_tensor, torch.Tensor), "feature_tensor must be a torch.Tensor"
         self.nodes["add"][self.to_scalar_str(node_id)] = feature_tensor
 
@@ -248,7 +252,7 @@ class GraphModificationArtifact:
         self,
     ) -> Dict:
         """
-        Serialized the artifact to a JSON format.
+        Serialize the artifact to a JSON format.
         """
         serialized = {
             "nodes": {

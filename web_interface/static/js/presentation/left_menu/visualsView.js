@@ -435,7 +435,8 @@ class VisualsView extends View {
             let initConfig = [
                 // [this.showModeId, 'whole-graph'],
                 [this.showModeId, 'neighborhood'],
-                [this.singleGraphLayoutId, 'random'],
+                [this.singleGraphLayoutId, 'force'],
+                // [this.singleGraphLayoutId, 'random'],
                 [this.singleNeighLayoutId, 'force'],
                 [this.singleNeighNodeId, 0],
                 [this.singleNeighDepthId, 1],

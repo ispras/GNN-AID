@@ -16,6 +16,8 @@ class SvgElement {
         this.y = y
         // Size
         this.r = r
+        // default color
+        this.color = color
         // scale
         this.s = 1
         // Flag whether all is shown or not
@@ -84,9 +86,15 @@ class SvgElement {
     }
 
     setFeatures(feats) {
+        if (feats == null) {
+            console.error('null')
+            return
+        }
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
         let features = this.satellites['features']
+        if (features.blocks)
+            return false // already created
         features.blocks = []
         let tipText = "Feature:"
         if (feats.length > this.maxFeaturesShown) {
@@ -182,6 +190,8 @@ class SvgElement {
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8*r
         let labels = this.satellites['labels']
+        if (labels.blocks)
+            return false // already created
         labels.blocks = []
         for (let i=0; i<numClasses; i++) {
             let includes = Array.isArray(classIndex) ? classIndex.includes(i) : i === classIndex
@@ -198,6 +208,10 @@ class SvgElement {
 
     // Add node predictions
     setPredictions(preds) {
+        if (preds == null) {
+            console.error('null')
+            return
+        }
         if (!Array.isArray(preds))
             preds = [preds]
         let predictions = this.satellites['predictions']
@@ -231,6 +245,10 @@ class SvgElement {
 
     // Add node logits
     setLogits(embeds) {
+        if (embeds == null) {
+            console.error('null')
+            return
+        }
         if (!Array.isArray(embeds))
             embeds = [embeds]
         let logits = this.satellites['logits']
@@ -305,5 +323,10 @@ class SvgElement {
     // Set visibility for all elements
     visible(show) {
         this.show = show
+    }
+
+    // Modify element to represent dataset diff - added or removed
+    markDiff(on, addOrRemove, color) {
+        // to be defined in subclass
     }
 }

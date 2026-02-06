@@ -49,7 +49,7 @@ class ExplanationGraphs extends MultipleGraphs {
             (_, v) => this.setArrange(v), this._tag)
     }
 
-    createVarListeners() {
+    createVarListeners(tag) {
         for (let [satellite, $showInput] of Object.entries(this.satelliteShowInputs)) {
             $showInput.off()
             $showInput.change(() => this.showSatellite(satellite, $showInput.is(':checked')))

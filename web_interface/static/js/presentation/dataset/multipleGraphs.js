@@ -37,11 +37,11 @@ class MultipleGraphs extends VisibleGraph {
         super.createListeners()
     }
 
-    createVarListeners() {
-        super.createVarListeners()
+    createVarListeners(tag) {
+        super.createVarListeners(tag)
 
         this.visView.addListener(this.visView.multiNodeTypeAsColorId,
-            (_, v) => this.showClassAsColor(v), this._tagVar)
+            (_, v) => this.showClassAsColor(v), tag)
     }
 
     // Handle nodes and whole SVG drag&drop

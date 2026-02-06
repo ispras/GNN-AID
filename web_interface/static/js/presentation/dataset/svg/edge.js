@@ -84,6 +84,29 @@ class SvgEdge extends SvgElement{
     dropColor() {
         this.path.setAttribute('stroke', this.color)
     }
+
+    // Modify element to represent dataset diff - added or removed
+    markDiff(on, addOrRemove, color) {
+
+        if (addOrRemove) { // new added edge
+            if (on) { // show
+                this.visible(true)
+            }
+            else {
+                this.visible(false)
+            }
+        }
+        else { // removed edge
+            if (on) {// add stroke and color
+                this.path.setAttribute('stroke', color)
+                this.path.setAttribute('stroke-dasharray', "5,5")
+            }
+            else { // turn back
+                this.path.removeAttribute('stroke-dasharray')
+                this.path.setAttribute('stroke', this.color)
+            }
+        }
+    }
 }
 
 // Curvature of an arc for a directed edge ( =2*sin(alpha/2), 0 < alpha < PI)

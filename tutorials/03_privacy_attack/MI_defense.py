@@ -78,7 +78,7 @@ attack_cnt = 100
 seed = None
 if seed is not None:
     np.random.seed(seed)
-target_list = np.random.choice(gen_dataset_sg_cora.info.nodes[0], size=attack_cnt, replace=False)
+target_list = np.random.choice(gen_dataset_sg_cora.num_nodes, size=attack_cnt, replace=False)
 
 gnn_model_manager_sg_cora.train_model(gen_dataset=gen_dataset_sg_cora, steps=100,
                                       metrics=[Metric("Accuracy", mask='test')])

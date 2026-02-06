@@ -38,11 +38,11 @@ class Graph extends VisibleGraph {
         super.createListeners()
     }
 
-    createVarListeners() {
-        super.createVarListeners()
+    createVarListeners(tag) {
+        super.createVarListeners(tag)
 
         this.visView.addListener(this.visView.singleClassAsColorId,
-            (_, v) => this.showClassAsColor(v), this._tagVar)
+            (_, v) => this.showClassAsColor(v), tag)
     }
 
     // Check parameters to decide whether to turn on a light mode
@@ -170,6 +170,29 @@ class Graph extends VisibleGraph {
                 this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
 
         super.createPrimitives()
+    }
+
+    // Create or change SVG primitives according to dataset diff
+    applyDiffToPrimitives() {
+        let nodesAdd = Object.keys(this.datasetDiff.node['features'])
+        let edgesAdd = this.datasetDiff.edge['add']
+
+        // Edges add
+        for (const [i, j] of edgesAdd) {
+            this.edges.push([i, j])
+            let edgeKey = `${i},${j}`
+            let e = this.createEdgePrimitive(0, edgeKey, i, j, this.edgeRadius, this.edgeAddColor,
+                this.edgeStrokeWidth, this.datasetInfo.directed, true)
+        }
+
+        // Nodes add
+        this.numNodes += nodesAdd.length
+        for (const id of nodesAdd) {
+            let node = this.createNodePrimitive(this.svgElement, id,
+                this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
+        }
+
+        super.applyDiffToPrimitives()
     }
 
     // Move all primitives on a specified vector

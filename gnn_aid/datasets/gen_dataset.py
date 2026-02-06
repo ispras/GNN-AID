@@ -75,6 +75,9 @@ class GeneralDataset(ABC):
         self.edge_label_index = None  # [train, val, test] edges indices concatenated
         self.edge_labels = None  # labels of edges corresponding to edge_label_index
 
+        # Modification history
+        self._modifications = []
+
         # Build graph structure
         self._compute_dataset_data()
 
@@ -185,8 +188,25 @@ class GeneralDataset(ABC):
     def num_classes(
             self
     ) -> int:
-        # FIXME depends on task
-        return self.dataset.num_classes
+        if self.dataset_var_config.task.is_classification():
+            return self.dataset.num_classes
+        else:
+            return 0
+
+    @property
+    def num_nodes(
+            self
+    ) -> Union[int, List[int]]:
+        """ Get the number of nodes. Single number for single graph, a list for multiple graphs.
+        """
+        res = self.info.nodes
+        if len(self._modifications) > 0:
+            res = [self.data.x.size(0)]
+        # for m in self._modifications:
+        #     raise NotImplementedError
+        if len(res) == 1:
+            res = res[0]
+        return res
 
     @property
     def num_node_features(
@@ -253,14 +273,14 @@ class GeneralDataset(ABC):
     def build(
             self,
             dataset_var_config: Union[ConfigPattern, DatasetVarConfig]
-    ) -> None:
+    ) -> 'GeneralDataset':
         """ Create node feature tensors from attributes based on dataset_var_config.
         """
         if dataset_var_config == self.dataset_var_config:
-            return
-        self.dataset_var_config = dataset_var_config
+            return self
 
         # Recompute var data
+        self.dataset_var_config = dataset_var_config
         self._compute_dataset_var_data()
 
         # Save configs
@@ -269,6 +289,8 @@ class GeneralDataset(ABC):
             json.dump(self.dataset_config.to_json(), f, indent=2)
         with open(dvc, 'w') as f:
             json.dump(self.dataset_var_config.to_json(), f, indent=2)
+
+        return self
 
     @abstractmethod
     def _compute_dataset_data(
@@ -284,6 +306,9 @@ class GeneralDataset(ABC):
         """ Finalize the dataset if not yet. Have effect on the first call.
         Add info about class to metainfo.
         """
+        if len(self._modifications) > 0:
+            raise RuntimeError(f"Cannot register dataset with modifications.")
+
         if self.info.class_name is None:
             import inspect
             self.info.class_name = self.__class__.__name__
@@ -308,6 +333,8 @@ class GeneralDataset(ABC):
     ) -> Union[int, float, dict, str]:
         """ Get statistics.
         """
+        if len(self._modifications) > 0:
+            raise RuntimeError(f"Cannot get stats for dataset with modifications.")
         return self.stats.get(stat)
 
     def train_test_split(
@@ -402,6 +429,23 @@ class GeneralDataset(ABC):
                     (self.percent_train_class, self.percent_test_class)],
                    path / 'train_test_split')
 
+    def _reset_cached(
+            self,
+            nodes: bool = True,
+            edges: bool = True,
+            graphs: bool = True,
+    ):
+        """ Reset internal storage due to dataset modifications.
+        Should be extended in subclasses.
+        """
+        if nodes:
+            self._data = None
+        if edges:
+            self._data = None
+        if graphs:
+            self._data = None
+        # TODO extend in subclasses
+
     def apply_modification(
             self,
             artifact: 'GraphModificationArtifact'
@@ -418,166 +462,202 @@ class GeneralDataset(ABC):
           - Reindexing nodes to maintain consistent connectivity
 
         :param artifact: GraphModificationArtifact containing node and edge changes
-        :return: self (GeneralDataset)
+        :return: modified self (GeneralDataset)
         """
+        if self.is_multi():
+            raise NotImplementedError
+        if self.is_hetero():
+            raise NotImplementedError
+
         data: Data = self.data
         device = data.x.device if hasattr(data, 'x') else 'cpu'
-        from gnn_aid.data_structures.graph_modification_artifacts import GraphModificationArtifact
-        assert isinstance(artifact, GraphModificationArtifact), (
-            f"Invalid type: expected GraphModificationArtifact, got {type(artifact).__name__}"
-        )
-        # === Handle node operations ===
         y = data.y
         edge_index = data.edge_index
         x = data.x
         num_nodes = x.size(0)
-        feature_dim = x.size(1)
+        # TODO Data can have other attributes, e.g. pos
 
-        # Validate node removals
-        removed_node_ids = set(int(n) for n in artifact.nodes['remove'])
-        assert all(0 <= n < num_nodes for n in removed_node_ids), (
-            f"Invalid node IDs in 'remove': {removed_node_ids} (max index {num_nodes - 1})"
-        )
+        assert validate_modification(self, artifact)
 
-        # Validate node additions
-        existing_ids = set(range(num_nodes))
-        add_node_items = artifact.nodes['add'].items()
-        added_node_ids = set(int(n) for n in artifact.nodes['add'].keys())
-        assert not (added_node_ids & existing_ids), (
-            f"Cannot add nodes with existing IDs: {added_node_ids & existing_ids}"
-        )
+        # === Handle node operations ===
 
-        # Validate node feature changes
-        change_features = artifact.nodes['change_f']
-        for node_id, feats in change_features.items():
-            nid = int(node_id)
-            assert 0 <= nid < num_nodes or nid in added_node_ids, (
-                f"Invalid node id {nid} in change_f: not in current or added nodes"
-            )
-            for feat_idx in feats:
-                fid = int(feat_idx)
-                assert 0 <= fid < feature_dim, (
-                    f"Invalid feature index {fid} for node {nid}"
-                )
-
-        # Build initial mapping and mask for nodes to keep
-        if removed_node_ids:
-            keep_mask = torch.tensor([
-                i not in removed_node_ids for i in range(num_nodes)
-            ], dtype=torch.bool, device=device)
-            remap = {}
-            new_index = 0
-            for old_index in range(num_nodes):
-                if old_index not in removed_node_ids:
-                    remap[old_index] = new_index
-                    new_index += 1
-
-            x = data.x[keep_mask]
-
-            if hasattr(data, 'y') and data.y is not None:
-                y = data.y[keep_mask]
-        else:
-            remap = {i: i for i in range(num_nodes)}
-
-        # Add new nodes (after reindexing existing ones)
-        if add_node_items:
-            new_node_start = len(remap)
-            for i, (node_id, _) in enumerate(add_node_items):
-                remap[int(node_id)] = new_node_start + i
-
+        # Add new nodes
+        add_nodes = artifact.nodes['add']
+        if add_nodes:
+            # FIXME what if no features?
             new_features = torch.stack([
-                feat.to(device) for _, feat in add_node_items
-            ])
-            x = torch.cat([data.x, new_features], dim=0)
+                add_nodes[n].to(device) for n in range(num_nodes, num_nodes+len(add_nodes))])
+            x = torch.cat([x, new_features], dim=0)
 
-            if hasattr(data, 'y') and data.y is not None:
+            # Add -1 as new labels
+            # TODO do we want to specify labels?
+            if y is not None:
                 new_labels = torch.full(
-                    (new_features.size(0),),
+                    (new_features.size(0), ),
                     -1,
-                    dtype=data.y.dtype,
+                    dtype=y.dtype,
                     device=device
                 )
                 y = torch.cat([data.y, new_labels], dim=0)
 
         # Modify node features
+        removed_node_ids = set(int(n) for n in artifact.nodes['remove'])
+        change_features = artifact.nodes['change_f']
         for node_id, feature_changes in change_features.items():
-            true_node_id = int(node_id)
-            if true_node_id in removed_node_ids:
+            if node_id in removed_node_ids:
                 continue  # Skip modifications to removed nodes
-
-            mapped_id = remap.get(true_node_id, None)
-            if mapped_id is None:
-                continue
 
             for feat_idx, new_val in feature_changes.items():
                 feat_idx = int(feat_idx)
-                assert 0 <= feat_idx < feature_dim, (
-                    f"Feature index {feat_idx} out of bounds for node {true_node_id}"
-                )
-                data.x[mapped_id, feat_idx] = new_val
+                data.x[node_id, feat_idx] = new_val
 
         # === Edge processing ===
-        edge_index_cpu = data.edge_index.cpu()
-        edge_attr = getattr(data, 'edge_attr', None)
-        has_edge_attr = edge_attr is not None
+        if len(artifact.edges["remove"]) + len(artifact.edges["add"]) > 0:
+            edge_attr = getattr(data, 'edge_attr', None)
+            has_edge_attr = edge_attr is not None
 
-        edge_list = edge_index_cpu.t().tolist()
-        edge_attr_list = (
-            edge_attr.cpu().tolist() if has_edge_attr else [None] * len(edge_list)
-        )
-        current_edge_set = set((u, v) for u, v in edge_list)
+            edge_list = self.edges[0].t().tolist()
+            edge_attr_list = (
+                edge_attr.cpu().tolist() if has_edge_attr else [None] * len(edge_list)
+            )
+            current_edge_set = set((u, v) for u, v in edge_list)
+            # TODO suggest sort edge_list at dataset creation
 
-        # Validate edge removals
-        removed_edges_set = set((int(u), int(v)) for u, v in artifact.edges['remove'])
-        assert removed_edges_set <= current_edge_set, (
-            f"Some edges to remove do not exist: {removed_edges_set - current_edge_set}"
-        )
+            # Validate edge removals
+            removed_edges_set = set((u, v) for u, v in artifact.edges['remove'])
+            assert removed_edges_set <= current_edge_set, (
+                f"Some edges to remove do not exist: {removed_edges_set - current_edge_set}"
+            )
 
-        # Validate edge additions
-        added_edges_set = set((int(u), int(v)) for u, v, _ in artifact.edges['add'])
-        assert not (added_edges_set & current_edge_set), (
-            f"Some added edges already exist: {added_edges_set & current_edge_set}"
-        )
+            # Validate edge additions
+            added_edges_set = set((u, v) for u, v, _ in artifact.edges['add'])
+            # added_edges_set = set((int(u), int(v)) for u, v, _ in artifact.edges['add'])
+            assert not (added_edges_set & current_edge_set), (
+                f"Some added edges already exist: {added_edges_set & current_edge_set}"
+            )
 
-        filtered_edges = []
-        filtered_attrs = []
+            filtered_edges = []
+            filtered_attrs = []
 
-        for idx, (u, v) in enumerate(edge_list):
-            if u in removed_node_ids or v in removed_node_ids:
-                continue
-            if (u, v) in removed_edges_set:
-                continue
-            filtered_edges.append([remap[u], remap[v]])
+            for idx, (u, v) in enumerate(edge_list):
+                # Omit edges incident to removed nodes
+                if u in removed_node_ids or v in removed_node_ids:
+                    continue
+                # Omit remove edges
+                if (u, v) in removed_edges_set:
+                    continue
+                if not self.is_directed() and (v, u) in removed_edges_set:
+                    continue
+                filtered_edges.append([u, v])
+                if has_edge_attr:
+                    filtered_attrs.append(edge_attr_list[idx])
+
+            for edge in artifact.edges['add']:
+                u, v, attr = edge
+                # Omit new edges incident to removed nodes
+                if u in removed_node_ids or v in removed_node_ids:
+                    continue
+
+                filtered_edges.append([u, v])
+                if has_edge_attr:
+                    filtered_attrs.append(attr.tolist() if attr is not None else [None])
+
+                if not self.is_directed():
+                    # Check that only 1 direction is in added
+                    if (v, u) in added_edges_set:
+                        raise RuntimeError(
+                            f"For undirected dataset expect only 1 edge to be added, but have both: {(u, v)} and {(v, u)}.")
+                    # Add opposite direction
+                    filtered_edges.append([v, u])
+                    if has_edge_attr:
+                        filtered_attrs.append(attr.tolist() if attr is not None else [None])
+
+            edge_index_tensor = torch.tensor(filtered_edges, dtype=torch.long).t().contiguous()
+            edge_index = edge_index_tensor.to(device)
+
             if has_edge_attr:
-                filtered_attrs.append(edge_attr_list[idx])
-
-        for edge in artifact.edges['add']:
-            u, v, attr = edge
-            u = int(u)
-            v = int(v)
-            if u in removed_node_ids or v in removed_node_ids:
-                continue
-            filtered_edges.append([remap.get(u, u), remap.get(v, v)])
-            if has_edge_attr:
-                filtered_attrs.append(attr.tolist() if attr is not None else [0.0])
-
-        edge_index_tensor = torch.tensor(filtered_edges, dtype=torch.long).t().contiguous()
-        edge_index = edge_index_tensor.to(device)
-
-        if has_edge_attr:
-            edge_attr_tensor = torch.tensor(
-                filtered_attrs, dtype=edge_attr.dtype
-            ).to(device)
-            edge_attr = edge_attr_tensor
+                edge_attr = torch.tensor(filtered_attrs, dtype=edge_attr.dtype).to(device)
 
         # === Update GeneralDataset properties ===
         self.dataset.data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
-        self._data = None  # to be recomputed
+        # self._data = None  # to be recomputed
         # self.dataset.num_classes = int(data.y.max().item()) + 1 if hasattr(data, 'y') and data.y is not None else 0
         # self.dataset.num_node_features = data.x.size(1)
-        self._labels = data.y if hasattr(data, 'y') else None
+        # self._labels = data.y if hasattr(data, 'y') else None
+
+        # version += 1
+        self.dataset_var_config = self.dataset_var_config.clone_with(
+            {"dataset_ver_ind": self.dataset_var_config.dataset_ver_ind + 1})
+
+        nodes_changed = len(add_nodes) + len(removed_node_ids) + len(change_features) > 0
+        self._reset_cached(
+            nodes=nodes_changed,
+            edges=nodes_changed or (len(artifact.edges["remove"]) + len(artifact.edges["add"]) > 0),
+            graphs=False
+        )
+
+        self._modifications.append(artifact)
+        # TODO create reverse diff
 
         return self
+
+
+def validate_modification(
+        gen_dataset: 'GeneralDataset',
+        artifact: 'GraphModificationArtifact'
+) -> bool:
+    data = gen_dataset.data
+    x = data.x
+    num_nodes = x.size(0)
+    feature_dim = x.size(1)
+
+    # Validate node removals
+    for n in artifact.nodes['remove']:
+        if not (0 <= n < num_nodes):
+            raise ValueError(f"Invalid node {n} for removal, allowed are 0 to {num_nodes - 1}.")
+
+    # Validate node additions
+    new_nodes_ids = list(artifact.nodes['add'].keys())
+    if not len(new_nodes_ids) == len(artifact.nodes['add']):
+        raise ValueError(f"Nodes for adding have repetitions: {new_nodes_ids}.")
+
+    _new_from = num_nodes
+    _new_to = num_nodes + len(new_nodes_ids)
+    if not (min(new_nodes_ids) == _new_from and max(new_nodes_ids) == _new_to-1):
+        raise ValueError(
+            f"Nodes for adding are expected to be from {_new_from} to {_new_to-1}, but have"
+            f" {new_nodes_ids}.")
+
+    # Validate node feature changes
+    for nid, feats in artifact.nodes["change_f"].items():
+        if not (0 <= nid < _new_to):
+            raise ValueError(
+                f"Invalid node id {nid} in change_f: expected to be from 0 to {_new_to-1}.")
+        for feat_idx in feats:
+            fid = int(feat_idx)
+            if not (0 <= fid < feature_dim):
+                raise ValueError(f"Invalid feature index {fid} for node {nid}")
+
+    # Validate edge removals
+    edge_remove = list(zip(*artifact.edges["remove"]))
+    if len(edge_remove) > 0:
+        if min(edge_remove[0] + edge_remove[1]) < 0:
+            raise ValueError(f"Edges to remove must have nodes from 0 to {_new_to-1}, but have {artifact.edges['remove']}.")
+        if max(edge_remove[0] + edge_remove[1]) >= _new_to:
+            raise ValueError(f"Edges to remove must have nodes from 0 to {_new_to-1}, but have {artifact.edges['remove']}.")
+
+    # Validate edge additions
+    edge_add = list(zip(*artifact.edges["add"]))
+    if len(edge_add) > 0:
+        if min(edge_add[0] + edge_add[1]) < 0:
+            raise ValueError(f"Edges to add must have nodes from 0 to {_new_to-1}, but have {artifact.edges['add']}.")
+        if max(edge_add[0] + edge_add[1]) >= _new_to:
+            raise ValueError(f"Edges to add must have nodes from 0 to {_new_to-1}, but have {artifact.edges['add']}.")
+
+    # TODO check that edge_remove really exist
+    # TODO check that when remove node we remove all incident edges
+
+    return True
 
 
 class LocalDataset(

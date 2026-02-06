@@ -4,7 +4,6 @@ class SvgGraph extends SvgElement {
         super(x, y, 30, color, show, $tip)
         this.width = width
         this.height = height
-        this.color = color // default color
 
         this.frame = document.createElementNS("http://www.w3.org/2000/svg", "rect")
         this.frame.setAttribute('x', x)

@@ -231,8 +231,10 @@ class DatasetView extends View {
 
     dropDatasetVar() {
         // this.datasetVar = null
-        if (this.visibleGraph)
+        if (this.visibleGraph) {
             this.visibleGraph.dropVar()
+            this.visibleGraph.dropDiff()
+        }
     }
 
     setExplanation(explanationData) {

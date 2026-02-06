@@ -33,6 +33,17 @@ class Layout {
             this.pos[n] = new Vec(r*Math.random(), r*Math.random())
     }
 
+    // Add new nodes
+    addNodes(nodes) {
+        // todo Get spawn area
+        let r = 1
+        for (const n of nodes) {
+            console.assert(!(n in this.pos))
+            this.pos[n] = new Vec(r*Math.random(), r*Math.random())
+        }
+        this.startMoving()
+    }
+
     // Start recomputing positions - when respawn or manual move
     startMoving() {
         if (this.freeze) return

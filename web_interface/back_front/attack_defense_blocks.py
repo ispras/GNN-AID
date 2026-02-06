@@ -242,7 +242,7 @@ class AfterTrainBlock(Block):
                 import numpy as np
                 assert not self.gen_dataset.is_multi()
                 target_list = np.random.choice(
-                    self.gen_dataset.info.nodes[0], size=100, replace=False)
+                    self.gen_dataset.num_nodes, size=100, replace=False)
                 mask_loc = Metric.create_mask_by_target_list(
                     y_true=self.gen_dataset.labels, target_list=target_list)
                 # Apply MI attack on a special mask

@@ -42,7 +42,26 @@ class ForceNeighborhoodLayout extends Layout {
                 for (const n of this.visibleGraph.nodes[d])
                     this.m[n] = 1
     }
-/*
+
+    // Add new nodes
+    addNodes(nodes) {
+        let depth = 0
+        for (const nodesAtDepth of nodes) {
+            for (const n of nodesAtDepth) {
+                if (depth === 1)
+                    this.m[n] = this.visibleGraph.getDegree(n)
+                else if (depth >= 2)
+                    this.m[n] = 1
+                this.v[n] = new Vec(0, 0)
+                this.a[n] = new Vec(0, 0)
+            }
+            ++depth
+        }
+        // Transform to 1-d list
+        super.addNodes([].concat(...nodes))
+    }
+
+    /*
     _repulseNodes(i, j) {
         const d0 = 0.4
         const k = 0.1
