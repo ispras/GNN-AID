@@ -1,6 +1,6 @@
 import json
-from copy import copy
-from typing import Union, List, Tuple, Dict
+from copy import copy, deepcopy
+from typing import Union, List, Tuple, Dict, Any
 
 from gnn_aid.aux.custom_decorators import timing_decorator
 from gnn_aid.aux.utils import short_str, edge_index_to_edge_list
@@ -111,21 +111,33 @@ class DatasetDiffData:
     """
     def __init__(
             self,
-            artifact: GraphModificationArtifact
     ):
-        self._artifact = artifact
+        self.node: Dict[str, Any] = {
+            "remove": None,
+            "add": None,
+            "feature": None,
+            "change_f": None
+        }
+        self.edge: Dict[str, Any] = {
+            "remove": None,
+            "add": None,
+            "feature": None,
+            "change_f": None
+        }
 
     def __str__(
             self
     ):
-        return f"DatasetDiffData{self._artifact.to_json()}"
+        return f"DatasetDiffData[\n" \
+               f"  node:{self.node}\n" \
+               f"  edge:{self.edge}]"
 
     def to_json(
             self,
             **dump_args
     ) -> str:
         """ Return json string. """
-        return json.dumps(self._artifact.to_json(), **dump_args)
+        return json.dumps(self.__dict__, **dump_args)
 
 
 class ViewPoint:
@@ -492,6 +504,62 @@ class VisiblePart:
             elem.labels = [labels[ix] for ix in iterated]
 
         return dataset_var_data
+
+    # @timing_decorator
+    def get_dataset_diff_data(
+            self,
+            view_point: ViewPoint = None,
+            artifact: GraphModificationArtifact = None
+    ) -> DatasetDiffData:
+        """
+        Get DatasetDiffData for a specified dataset diff.
+        """
+        if self.gen_dataset.is_multi():
+            raise NotImplementedError
+
+        self.update_view_point(view_point)
+
+        dataset_diff_data = DatasetDiffData()
+        print("Computing dataset_diff_data for", view_point)
+
+        center = self.dataset_index.view_point.center
+        if center is None:  # Graph
+            # Node level
+            if len(artifact.nodes["remove"]) > 0:
+                dataset_diff_data.node["remove"] = list(artifact.nodes["remove"])
+            if len(artifact.nodes["add"]) > 0:
+                dataset_diff_data.node["add"] = list(artifact.nodes["add"].keys())
+                dataset_diff_data.node["feature"] = dict(artifact.nodes["add"])
+            if len(artifact.nodes["change_f"]) > 0:
+                dataset_diff_data.node["change_f"] = deepcopy(artifact.nodes["change_f"])
+            # Edge level
+            if len(artifact.edges["remove"]) > 0:
+                dataset_diff_data.edge["remove"] = deepcopy(artifact.edges["remove"])
+            if len(artifact.edges["add"]) > 0:
+                dataset_diff_data.edge["add"] = [[i, j] for i, j, _ in artifact.edges["add"]]
+                # dataset_diff_data.edge["feature"] = dict(artifact.edges["add"])
+            # if len(artifact.edges["change_f"]) > 0:
+            #     dataset_diff_data.edge["change_f"] = deepcopy(artifact.edges["change_f"])
+
+        else:  # Neighborhood
+            node_index = self.dataset_index.node_index
+            edge_index = self.dataset_index.edge_index
+            # Node level
+            if len(artifact.nodes["remove"]) > 0:
+                dataset_diff_data.node["remove"] = list(artifact.nodes["remove"])
+            if len(artifact.nodes["add"]) > 0:
+                dataset_diff_data.node["add"] = list(artifact.nodes["add"].keys())
+                dataset_diff_data.node["feature"] = dict(artifact.nodes["add"])
+            if len(artifact.nodes["change_f"]) > 0:
+                dataset_diff_data.node["change_f"] = deepcopy(artifact.nodes["change_f"])
+            # Edge level
+            if len(artifact.edges["remove"]) > 0:
+                dataset_diff_data.edge["remove"] = deepcopy(artifact.edges["remove"])
+            if len(artifact.edges["add"]) > 0:
+                dataset_diff_data.edge["add"] = [[i, j] for i, j, _ in artifact.edges["add"]]
+
+
+        return dataset_diff_data
 
     def get_train_test_mask(
             self,
