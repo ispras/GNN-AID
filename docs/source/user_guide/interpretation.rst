@@ -1,8 +1,22 @@
-Interpretation methods
+Методы интерпретации
 **********************
 
 .. contents::
     :local:
 
 
+Методы объяснения постфактум:
 
+- GNNExplainer,
+- PGExplainer,
+- PGMExplainer,
+- SubgraphX,
+- Zorro,
+- GraphMask.
+
+Эти методы работают с результатами работы GNN модели и могут быть относительно легко адаптированы из публично доступных реализаций.
+
+Методы встраивания интерпретируемости:
+
+- NeuralAnalisis,
+- ProtGNN

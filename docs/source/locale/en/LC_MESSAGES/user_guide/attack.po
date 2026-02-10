@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 16:11+0300\n"
+"POT-Creation-Date: 2026-02-10 22:24+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -21,8 +21,57 @@ msgstr ""
 
 #: ../../user_guide/attack.rst:2
 msgid "Методы атак"
+msgstr "Attack methods"
+
+#: ../../user_guide/attack.rst:9
+msgid "Атаки отравления"
+msgstr "Poison attacks"
+
+#: ../../user_guide/attack.rst:11
+msgid "RandomPoison"
 msgstr ""
 
-#~ msgid "Attack methods"
-#~ msgstr ""
+#: ../../user_guide/attack.rst:12
+msgid "CLGA"
+msgstr ""
+
+#: ../../user_guide/attack.rst:13
+msgid "MetaAttack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:15
+msgid "Атаки уклонения"
+msgstr "Evasion attacks"
+
+#: ../../user_guide/attack.rst:17
+msgid "QAttack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:18
+msgid "FGSM"
+msgstr ""
+
+#: ../../user_guide/attack.rst:19
+msgid "PGD"
+msgstr ""
+
+#: ../../user_guide/attack.rst:20
+msgid "ReWatt"
+msgstr ""
+
+#: ../../user_guide/attack.rst:21
+msgid "Nettack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:23
+msgid "Атаки с выводом о членстве"
+msgstr "Membership inference attacks"
+
+#: ../../user_guide/attack.rst:25
+msgid "NaiveMIAttacker"
+msgstr ""
+
+#: ../../user_guide/attack.rst:26
+msgid "ShadowModelMIAttacker"
+msgstr ""
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-02-10 22:09+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -20,6 +20,46 @@ msgstr ""
 "Generated-By: Babel 2.18.0\n"
 
 #: ../../user_guide/defense.rst:2
-msgid "Defense methods"
+msgid "Методы защит"
+msgstr "Defense methods"
+
+#: ../../user_guide/defense.rst:9
+msgid "методы защит GNN моделей"
+msgstr "GNN defense methods"
+
+#: ../../user_guide/defense.rst:11
+msgid "JaccardDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:12
+msgid "GNNGuard"
+msgstr ""
+
+#: ../../user_guide/defense.rst:13
+msgid "ProGNNDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:14
+msgid "NoiseMIDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:15
+msgid "GradientRegularization"
+msgstr ""
+
+#: ../../user_guide/defense.rst:16
+msgid "Quantization"
+msgstr ""
+
+#: ../../user_guide/defense.rst:17
+msgid "Distillation"
+msgstr ""
+
+#: ../../user_guide/defense.rst:18
+msgid "AutoEncoder"
+msgstr ""
+
+#: ../../user_guide/defense.rst:19
+msgid "AdvTraining"
 msgstr ""
 

@@ -1,4 +1,4 @@
-Defense methods
+Методы защит
 ***************
 
 .. contents::
@@ -6,3 +6,14 @@ Defense methods
 
 
 
+методы защит GNN моделей
+
+- JaccardDefender
+- GNNGuard
+- ProGNNDefender
+- NoiseMIDefender
+- GradientRegularization
+- Quantization
+- Distillation
+- AutoEncoder
+- AdvTraining

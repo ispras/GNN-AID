@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:27+0300\n"
+"POT-Creation-Date: 2026-02-10 22:09+0300\n"
 "PO-Revision-Date: 2026-02-09 22:00+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -31,20 +31,16 @@ msgid ""
 "GNN-AID разрабатывался и тестировался под Ubuntu 20.04 и 22.04, поэтому "
 "они подходят лучше всего."
 msgstr ""
-"GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit best "
-"for it."
-
-#: ../../getting_started.rst:24
-msgid "Для других операционных систем рекомендуется использовать Docker."
-msgstr "For another OS consider docker."
+"GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit "
+"best for it."
 
 #: ../../getting_started.rst:26
 msgid ""
 "Вам понадобится Python версии ``3.11`` или выше. Мы рекомендуем создать "
 "виртуальное окружение с помощью ``pip``."
 msgstr ""
-"You need python of version ``3.11`` or higher. We advice to create virtual "
-"environment with ``pip``."
+"You need python of version ``3.11`` or higher. We advice to create "
+"virtual environment with ``pip``."
 
 #: ../../getting_started.rst:33
 msgid "Сначала установите вспомогательные библиотеки"
@@ -59,8 +55,8 @@ msgid "Третий набор зависимостей устанавливае
 msgstr "The 3rd pack of requirements will take around 20 minutes."
 
 #: ../../getting_started.rst:50
-msgid "Проблемы"
-msgstr "Problems"
+msgid "Возможные проблемы"
+msgstr "Possible problems"
 
 #: ../../getting_started.rst:52
 msgid ""
@@ -90,56 +86,40 @@ msgstr "Install all torch packages again."
 msgid "Запуск бэкенда"
 msgstr "Run in backend"
 
-#: ../../getting_started.rst:63 ../../getting_started.rst:71
-#: ../../getting_started.rst:79 ../../getting_started.rst:120
-msgid "План"
-msgstr "Plan"
+#: ../../getting_started.rst:63
+msgid ""
+"Если установлены все зависимости, можно переходить к :doc:`учебным "
+"примерам <tutorials>`"
+msgstr ""
 
-#: ../../getting_started.rst:65 ../../getting_started.rst:73
-#: ../../getting_started.rst:81 ../../getting_started.rst:122
-msgid "TODO"
-msgstr "TODO"
-
-#: ../../getting_started.rst:69
-msgid "Создание датасета"
-msgstr "Create dataset"
-
-#: ../../getting_started.rst:77
-msgid "Сборка и обучение модели"
-msgstr "Build and train model"
-
-#: ../../getting_started.rst:85
+#: ../../getting_started.rst:67
 msgid "Запуск фронтенда"
 msgstr "Run in frontend"
 
-#: ../../getting_started.rst:87
+#: ../../getting_started.rst:69
 msgid ""
 "Предполагается, что вы находитесь в корневой директории проекта. "
 "Активируйте виртуальное окружение"
-msgstr ""
-"Suppose you are at the project root folder. Activate virtual environment"
+msgstr "Suppose you are at the project root folder. Activate virtual environment"
 
-#: ../../getting_started.rst:94
-msgid "Перейдите в каталог ``gnn_aid`` и добавьте его в зависимости Python"
-msgstr "Go to ``gnn_aid`` folder and add it to python dependencies"
+#: ../../getting_started.rst:76
+msgid "Добавьте библиотеку ``gnn_aid`` в зависимости Python"
+msgstr "Add ``gnn_aid`` library to Python dependencies"
 
-#: ../../getting_started.rst:101
-msgid "Запустите скрипт ``main.py``"
-msgstr "Run ``main.py`` script"
+#: ../../getting_started.rst:82
+msgid "Запустите скрипт ``main.py`` из пакета ``web_interface``"
+msgstr "Run ``main.py`` script from ``web_interface`` package"
 
-#: ../../getting_started.rst:107
-msgid "Вы увидите примерно следующее"
-msgstr "You will see something like this"
+#: ../../getting_started.rst:88
+msgid "Подождав около минуты вы увидите примерно следующее"
+msgstr "Over a minute, you will see something like this"
 
-#: ../../getting_started.rst:114
+#: ../../getting_started.rst:95
 msgid ""
 "Затем откройте `127.0.0.1:5000 <http://127.0.0.1:5000>`__ в браузере. Вы "
-"должны увидеть загруженный веб-интерфейс."
+"должны увидеть загруженную веб-страницу. Теперь можно переходить к работе"
+" в :doc:`веб-интерфейсе <user_guide/frontend>`"
 msgstr ""
-"Then go to `127.0.0.1:5000 <http://127.0.0.1:5000>`__ in your browser. You "
-"should see web-interface is loaded."
-
-#: ../../getting_started.rst:118
-msgid "Версия с Docker"
-msgstr "Docker version"
+"Then go to `127.0.0.1:5000 <http://127.0.0.1:5000>`__ in your browser. "
+"You should see web-interface is loaded. Now you can start working in :doc:`web-interface <user_guide/frontend>`"
 

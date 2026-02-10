@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-02-10 22:09+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -20,6 +20,12 @@ msgstr ""
 "Generated-By: Babel 2.18.0\n"
 
 #: ../../user_guide/pipeline.rst:2
-msgid "Pipeline"
+msgid "Пайплайн работы"
+msgstr "Pipeline"
+
+#: ../../user_guide/pipeline.rst:7
+msgid ""
+"На рисунке представлен общий пайплайн и представлены все ключевые этапы "
+"работы фреймворка."
 msgstr ""
 
