@@ -1,5 +1,16 @@
 # Configuration file for the Sphinx documentation builder.
 
+# # Извлечь тексты для перевода
+# sphinx-build -b gettext . _build/gettext
+#
+# # Создать/обновить англ переводы
+# sphinx-intl update -p _build/gettext -l en
+#
+# # Собрать документацию на англ и русском
+# sphinx-build -b html -D language=en . _build/html/en
+# sphinx-build -b html -D language=ru . _build/html/ru
+
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -15,6 +26,7 @@ sys.setrecursionlimit(1500)
 # Use fake imports sto avoid readthedocs fails because of installation timeout
 sys.path.insert(0, os.path.abspath("../"))    # path to docs/
 import docs.mock_imports
+import sphinx_rtd_theme
 
 # -- Project information
 
@@ -53,20 +65,6 @@ intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
 
-# -- Options for HTML output
-
-html_theme = 'sphinx_rtd_theme'
-html_theme_options = {
-    'collapse_navigation': True,
-    'titles_only': False,
-}
-
-html_static_path = ["_static"]
-html_logo = "_static/logo.png"
-
-# -- Options for EPUB output
-epub_show_urls = 'footnote'
-
 # ---------------------
 autodoc_member_order = 'bysource'
 autodoc_special_members = '__init__'
@@ -83,3 +81,24 @@ autosummary_generate = True
 add_module_names = False  # убирает 'datasets.ptg_datasets.' перед именем
 
 todo_include_todos = True
+
+# -- locale
+
+language = 'ru'  # русский как основной
+locale_dirs = ['locale/']
+gettext_compact = False
+
+# -- Options for HTML output
+
+html_theme = 'sphinx_rtd_theme'
+html_theme_options = {
+    'collapse_navigation': True,
+    'titles_only': False,
+}
+
+html_static_path = ["_static"]
+html_logo = "_static/logo.png"
+
+# -- Options for EPUB output
+epub_show_urls = 'footnote'
+

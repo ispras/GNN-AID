@@ -1,0 +1,752 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/datasets.rst:2
+msgid "datasets"
+msgstr ""
+
+#: ../../api/datasets.rst:10
+msgid "Short overview"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+":py:obj:`datasets.dataset_info.DatasetInfo "
+"<datasets.dataset_info.DatasetInfo>`"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid "Description for a dataset, its metainfo."
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+":py:obj:`datasets.gen_dataset.GeneralDataset "
+"<datasets.gen_dataset.GeneralDataset>`"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid "Abstract class to represent a dataset in framework."
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+":py:obj:`datasets.ptg_datasets.PTGDataset "
+"<datasets.ptg_datasets.PTGDataset>`"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid "Generalisation and a wrapper over a single ptg Dataset."
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+":py:obj:`datasets.known_format_datasets.KnownFormatDataset "
+"<datasets.known_format_datasets.KnownFormatDataset>`"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+"Custom dataset in 'ij' format or one of popular formats (see "
+":class:`~datasets.dataset_converter.DatasetConverter.supported_formats`)."
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid ""
+":py:obj:`datasets.datasets_manager.DatasetManager "
+"<datasets.datasets_manager.DatasetManager>`"
+msgstr ""
+
+#: ../../api/datasets.rst:21:<autosummary>:1
+msgid "Class for working with datasets."
+msgstr ""
+
+#: ../../api/datasets.rst:23
+msgid "Base classes"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:1 of
+msgid ""
+"Description for a dataset, its metainfo. It is created with the dataset "
+"and does not change. Some fields are obligate, others are not."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:6 of
+msgid "Class Attributes"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:8 of
+msgid ""
+"``class_name`` (*str*) The name of the class used to initialize the "
+"object."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:11 of
+msgid "``import_from`` (*str*) The module name from which to import the class."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:14 of
+msgid ""
+"``name`` (*str*, optional) The dataset name. Defaults to the dataset path"
+" if not specified."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:17 of
+msgid ""
+"``format`` (*str*, optional) The format of the raw data. Default is "
+"``ij``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:20 of
+msgid "``count`` (*int*) The number of graphs."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:23 of
+msgid ""
+"``directed`` (*bool*, optional) Flag indicating whether the edges are "
+"directed. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:26 of
+msgid ""
+"``hetero`` (*bool*, optional) Flag indicating whether the graph is "
+"heterogeneous. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:29 of
+msgid "``nodes`` (*List[int]*) List containing the number of nodes in each graph."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:32 of
+msgid ""
+"``remap`` (*bool*, optional) Flag indicating whether to remap node "
+"indices. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:35 of
+msgid ""
+"``node_attributes`` (*dict*, optional) Information about node attributes."
+" The dictionary keys may include intermediate keys for node types (used "
+"in heterogeneous graphs). Contains the following fields:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:40 of
+msgid "``names`` (*List[str]*) List of attribute names."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:42 of
+msgid ""
+"``types`` (*List[str]*) List of attribute types, each being one of the "
+"following:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:45 of
+msgid "``\"continuous\"`` — continuous numerical values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:46 of
+msgid "``\"categorical\"`` — categorical values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:47 of
+msgid "``\"vector\"`` — continuous vector values (e.g., as in PyTorch)"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:48 of
+msgid "``\"other\"`` — other types, such as strings"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:49 of
+msgid ""
+"``values`` (*List*) Possible values for the attributes, depending on "
+"their type:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:52 of
+msgid "For ``continuous`` — list containing minimum and maximum values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:53 of
+msgid "For ``categorical`` — list enumerating possible categories"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:54 of
+msgid "For ``vector`` — list containing minimum and maximum values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:55 of
+msgid ""
+"For ``other`` — an empty list or some instructions on how to process the "
+"values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:57 of
+msgid ""
+"``edge_attributes`` (*dict*, optional) Information about edge attributes,"
+" structured similarly to ``node_attributes``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:60 of
+msgid ""
+"``labelings`` (*dict*) Information about labelings. The dictionary keys "
+"may include intermediate keys for node types (in heterogeneous graphs). "
+"Each labeling entry maps a label name to a value, for example:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:64 of
+msgid "For classification — the number of classes"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:65 of
+msgid "For regression on nodes — minimum and maximum values or 0"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:66 of
+msgid "Other label types as applicable"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.check_validity:1 of
+msgid "Check existing fields have allowed values."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.check_consistency:1 of
+msgid "Check existing fields are consistent."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.check_sufficiency:1 of
+msgid "Check all obligate fields are defined."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.check_consistency_with_ptg_dataset:1 of
+msgid "Check if metainfo fields are consistent with PTG dataset."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.check:1 of
+msgid "Check metainfo is sufficient, consistent, and valid."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.to_dict:1 of
+msgid "Return info as a dictionary."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.save:1 of
+msgid "Save into file non-null info."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo.read:1 of
+msgid "Read info from a file."
+msgstr ""
+
+#: datasets.dataset_info.is_graph_directed:1 of
+msgid ""
+"Detect whether graph is directed or not (for each edge i->j, exists "
+"j->i). NOTE: torch func data.is_undirected() does not work correctly, "
+"e.g. for TUDataset/MUTAG it incorrectly says directed."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:1 of
+msgid ""
+"Abstract class to represent a dataset in framework. It is a "
+"generalisation of a :class:`torch_geometric.data.Dataset` to a family of "
+"such datasets. To fully define a GeneralDataset you should provide 2 "
+"configs:"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:5 of
+msgid ""
+":class:`~data_structures.configs.DatasetConfig` - specifies structure of "
+"the graph;"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:6 of
+msgid ""
+":class:`~data_structures.configs.DatasetVarConfig` - specifies how to "
+"build features and labels."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:9 of
+msgid ""
+":class:`~datasets.gen_dataset.GeneralDataset` also requires "
+":class:`~datasets.DatasetInfo` which describes metainformation about the "
+"dataset family."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:12 of
+msgid "See also:"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:14 of
+msgid ":class:`datasets.ptg_datasets.PTGDataset`"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:15 of
+msgid ":class:`datasets.known_format_datasets.KnownFormatDataset`"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.__init__:1 of
+msgid "Initialize structural part of the dataset."
+msgstr ""
+
+#: ../../api/datasets.rst
+msgid "Параметры"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.__init__:3 of
+msgid ""
+"config to define where to get raw files and initialization parameters. "
+"Can be :class:`~data_structures.configs.DatasetConfig` object or "
+":class:`~data_structures.configs.ConfigPattern` with dictionary."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.root_dir:1 of
+msgid "Dataset root directory with folder 'raw/' and metainfo file."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.raw_dir:1 of
+msgid ""
+"Path to 'raw/' folder where raw data is stored. For ptg datasets, "
+"dataset.root_dir folder should point here."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.prepared_dir:1 of
+msgid "Path to folder where tensor data is stored."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.metainfo_path:1 of
+msgid "Path to 'metainfo' file."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.data:1 of
+msgid ""
+"Get tensors of the whole dataset as "
+":class:`torch_geometric.data.data.Data` object."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.data:3 of
+msgid ""
+"NOTE: this will load the whole dataset into memory, be careful if the "
+"size is large."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.edges:1
+#: datasets.known_format_datasets.KnownFormatDataset.edges:1 of
+msgid "Edge index as a list of tensors"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.edge_attributes:1
+#: datasets.gen_dataset.GeneralDataset.node_attributes:1
+#: datasets.known_format_datasets.KnownFormatDataset.node_attributes:1
+#: datasets.ptg_datasets.PTGDataset.node_attributes:1 of
+#, python-brace-format
+msgid "Get node attributes as a dict {name -> list}"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.node_features:1 of
+msgid "Get a list of tensors of node features, one for each graph in the dataset."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.edge_features:1 of
+msgid "Get a list of tensors of edge features, one for each graph in the dataset."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.is_directed:1 of
+msgid "Return whether edges in this dataset are directed."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.is_multi:1 of
+msgid "Return whether this dataset is multiple-graphs or single-graph."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.is_hetero:1 of
+msgid "Return whether this dataset is hetero graph."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.build:1 of
+msgid "Create node feature tensors from attributes based on dataset_var_config."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.get_stat:1 of
+msgid "Get statistics."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.train_test_split:1 of
+msgid "Compute train-validation-test split of graphs/nodes."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.save_train_test_mask:1 of
+msgid "Save current train/test mask to a given path (together with the model)."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:1 of
+msgid ""
+"Applies graph structure and feature modifications described in a "
+"GraphModificationArtifact to the current GeneralDataset object and "
+"returns the modified version."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:4 of
+msgid "This includes:"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:5 of
+msgid "Removing and adding edges"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:6 of
+msgid "Adding new nodes and their features"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:7 of
+msgid "Removing nodes and updating the feature matrix with index remapping"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:8 of
+msgid "Modifying individual node features"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:9 of
+msgid "Reindexing nodes to maintain consistent connectivity"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:11 of
+msgid "GraphModificationArtifact containing node and edge changes"
+msgstr ""
+
+#: ../../api/datasets.rst
+msgid "Результат"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.apply_modification:12 of
+msgid "self (GeneralDataset)"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset:1 of
+msgid "Locally saved PTG Dataset. Does not write anything to data/ folder"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.__init__:1 of
+msgid "optionally, list of ready torch_geometric.data.Data objects"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.__init__:2 of
+msgid "directory where tensors are stored"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.__init__:3 of
+msgid ""
+"optionally, custom process() function, which converts raw files into "
+"tensors"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.__init__:4 of
+msgid "optionally, kwargs to InMemoryDataset constructor, e.g. transform"
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.process:1 of
+msgid "Processes the dataset to the :obj:`self.processed_dir` folder."
+msgstr ""
+
+#: datasets.gen_dataset.LocalDataset.processed_file_names:1 of
+msgid ""
+"The name of the files in the :obj:`self.processed_dir` folder that must "
+"be present in order to skip processing."
+msgstr ""
+
+#: ../../api/datasets.rst:31
+msgid "Inherited dataset classes"
+msgstr ""
+
+#: datasets.ptg_datasets.PTGDataset:1 of
+msgid ""
+"Generalisation and a wrapper over a single ptg Dataset. Features and "
+"labels are defined at initialisation. Extend this class if you have a "
+"dataset extending :class:`torch_geometric.data.Dataset`."
+msgstr ""
+
+#: datasets.ptg_datasets.LibPTGDataset.__init__:1
+#: datasets.ptg_datasets.PTGDataset.__init__:1 of
+msgid "dataset config dictionary"
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.edge_attributes:1
+#: datasets.ptg_datasets.PTGDataset.edge_attributes:1 of
+#, python-brace-format
+msgid "Get edge attributes as a dict {name -> list}"
+msgstr ""
+
+#: datasets.ptg_datasets.PTGDataset.induce_dataset_info:1 of
+msgid "Induce metainfo for the PTG dataset."
+msgstr ""
+
+#: datasets.ptg_datasets.LocalPTGDataset:1 of
+msgid "A single ptg Dataset defined online by tensors."
+msgstr ""
+
+#: datasets.ptg_datasets.LocalPTGDataset.__init__:1 of
+msgid "list of ready :class:`torch_geometric.data.data.Data` objects"
+msgstr ""
+
+#: datasets.ptg_datasets.LocalPTGDataset.__init__:2 of
+msgid "unique dataset name"
+msgstr ""
+
+#: datasets.ptg_datasets.LocalPTGDataset.__init__:3 of
+msgid "is optional here"
+msgstr ""
+
+#: datasets.ptg_datasets.LibPTGDataset:1 of
+msgid "A single ptg Dataset from Pytorch-Geometric library."
+msgstr ""
+
+#: datasets.ptg_datasets.LibPTGDataset.__init__:2 of
+msgid ""
+"additional parameters to init ptg class, e.g. constructor params or "
+"torch_geometric.transforms. Possible only if dataset is not created yet."
+msgstr ""
+
+#: datasets.ptg_datasets.LibPTGDataset.move_processed_to_prepared:1 of
+msgid "Move (link) processed data to self.prepared_dir"
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset:1 of
+msgid ""
+"Custom dataset in 'ij' format or one of popular formats (see "
+":class:`~datasets.dataset_converter.DatasetConverter.supported_formats`)."
+" User defines functions for building graph from raw files and feature "
+"creation."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset:5 of
+msgid "Example of usage"
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.__init__:1 of
+msgid "config to define dataset"
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.__init__:3 of
+#, python-brace-format
+msgid ""
+"dict as {attr -> value} with default node attributes values to apply "
+"where missing."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.__init__:6 of
+#, python-brace-format
+msgid ""
+"dict as {attr -> value} with default edge attributes values to apply "
+"where missing."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.raw_dir:1 of
+msgid "Path to folder where raw ij data is stored."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.node_attributes_dir:1 of
+msgid "Path to dir with node attributes."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.edge_attributes_dir:1 of
+msgid "Path to dir with edge attributes."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.labels_dir:1 of
+msgid "Path to dir with labels."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.edges_path:1 of
+msgid "Path to file with edge list."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.edge_index_path:1 of
+msgid "Path to file with edge indices, for multiple graphs."
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.check_validity:1 of
+msgid ""
+"Check that dataset files (graph and attributes) are valid and consistent "
+"with metainfo."
+msgstr ""
+
+#: datasets.known_format_datasets.one_hot:1 of
+msgid "Make a 1-hot encoded vector"
+msgstr ""
+
+#: datasets.known_format_datasets.append_features_from_attributes:1 of
+msgid ""
+"Convert attributes to features using a given function, and append vectors"
+" to current features."
+msgstr ""
+
+#: datasets.known_format_datasets.append_features_from_attributes:3 of
+msgid "list of attributes"
+msgstr ""
+
+#: datasets.known_format_datasets.append_features_from_attributes:4 of
+msgid "converter, attribute value -> feature vector"
+msgstr ""
+
+#: datasets.known_format_datasets.append_features_from_attributes:5 of
+msgid ""
+"current list of lists of features, each element will be extended with new"
+" feature vector"
+msgstr ""
+
+#: ../../api/datasets.rst:41
+msgid "Additional dataset related modules"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager:1 of
+msgid ""
+"Class for working with datasets. Methods: get - loads dataset in "
+"torch_geometric format for gnn along the path specified in full_name as "
+"tuple. Currently also supports automatic loading and processing of all "
+"datasets from torch_geometric.datasets"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.get_by_config:1 of
+msgid "Get GeneralDataset by dataset config. Convenient to use from the frontend."
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.get_by_config:5 of
+msgid "additional parameters to init dataset class"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:1 of
+msgid "Adds a new labeling to datasets with a specified dataset_config."
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:7 of
+msgid "name for a new labeling"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:9 of
+#, python-brace-format
+msgid "dictionary with labels {node/edge/graph -> value}"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:11 of
+msgid ""
+"possible value depending on the task: number of classes or regression "
+"value bounds. Will be induced if omitted"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:14 of
+msgid "if True, will rewrite labeling if exists"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter:1 of
+msgid "Converts graph data from one format to another."
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.supported_formats:1 of
+msgid "Supported raw graph data formats"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:1 of
+msgid ""
+"Convert a dataset in popular format to our 'ij' format. It looks for "
+"files with extension '.<format>'. It reads data to networkx.(Di)Graph, "
+"then writes to files. Uses `default_node_attr_value` and "
+"`default_edge_attr_value` to fill missing values."
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:6 of
+msgid "metainfo for the dataset"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:7 of
+msgid "directory with original dataset"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:8
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:6 of
+msgid "new raw directory where to write all data"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:9
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:7
+#: datasets.dataset_converter.extract_attributes:5 of
+#, python-brace-format
+msgid "dict of {attr name -> default value} to use when node attribute is missing"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.format_to_ij:11
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:9
+#: datasets.dataset_converter.extract_attributes:7 of
+#, python-brace-format
+msgid "dict of {attr name -> default value} to use when edge attribute is missing"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:1 of
+msgid ""
+"Write a networkx graph to files according to a specified format. "
+"Attribute files will be created if necessary."
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:4
+#: datasets.dataset_converter.extract_attributes:4 of
+msgid "networkx Graph"
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:5 of
+msgid ""
+"one of supported formats: \"adjlist\", \"edgelist\", \"gml\", \"g6\", "
+"\"s6\""
+msgstr ""
+
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format:11 of
+msgid "output graph file will be named as <name>.<format>"
+msgstr ""
+
+#: datasets.dataset_converter.extract_attributes:1 of
+msgid ""
+"Extract nodes and edges attributes from a networkx graph. Uses "
+"`default_node_attr_value` and `default_edge_attr_value` to fill missing "
+"values."
+msgstr ""
+
+#: datasets.dataset_converter.networkx_to_ptg:1 of
+msgid ""
+"Convert networkx graph to a PTG Data. Nodes and edges attributes, that "
+"numeric, are concatenated."
+msgstr ""
+
+#: datasets.dataset_stats.DatasetStats:1 of
+msgid "Stores statistics for a dataset."
+msgstr ""
+
+#: datasets.dataset_stats.DatasetStats.get:1 of
+msgid ""
+"Get the specified statistics. It will be read from file or computed and "
+"saved."
+msgstr ""
+
+#: datasets.dataset_stats.DatasetStats.set:1 of
+msgid "Set statistics to a specified value and save to file."
+msgstr ""
+
+#: datasets.dataset_stats.list_to_hist:1 of
+msgid ""
+"Convert a list of integers/floats to a frequency histogram, return it as "
+"a dict"
+msgstr ""
+

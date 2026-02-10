@@ -1,0 +1,55 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../dev_guide/extend.rst:2
+msgid "How to extend"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:8
+msgid "План"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:10
+msgid ""
+"детали и тонкости для разработчика, как помочь внести вклад или расширить"
+" библиотеку"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:12
+msgid "Архитектура кода: модули, классы, потоки данных"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:13
+msgid "бэк фронт"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:15
+msgid "инструкция по добавлению нового метода (интерпр, атака, защита)"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:16
+msgid "в рамках текущего апи с расширением апи (гетерограф, предск ребер и тп)"
+msgstr ""
+
+#: ../../dev_guide/extend.rst:18
+msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
+msgstr ""
+

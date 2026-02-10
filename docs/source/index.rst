@@ -1,41 +1,43 @@
-Welcome to GNN-AID documentation!
-=================================
+Добро пожаловать в документацию GNN-AID!
+=========================================
 
-GNN-AID is an open framework for **A**\ nalysis, **I**\ nterpretation, and **D**\ efensing Graph Neural Networks.
-It is built on `PyTorch-Geometric <https://pytorch-geometric.readthedocs.io>`_ and:
+**GNN-AID** — это открытый фреймворк для визуализации, анализа, интерпретации графовых нейронных сетей с возможность применять атаки и защиты.
+Фреймворк построен на базе `PyTorch-Geometric <https://pytorch-geometric.readthedocs.io>`_ и:
 
-- includes preloaded `datasets from PyG <https://pytorch-geometric.readthedocs.io/en/latest/cheatsheet/data_cheatsheet.html>`_
-- extendable API for custom architectures: datasets, models, explainers, attacks and defense methods
-- MLOps features for experiments reproducibility
+- включает готовые `датасеты из PyG <https://pytorch-geometric.readthedocs.io/en/latest/cheatsheet/data_cheatsheet.html>`_
+- расширяемый API для пользовательских архитектур на уровне датасетов, моделей, методов интерпретации, атак и защит
+- MLOps техники для воспроизводимых экспериментов
 
-GNN-AID has a web interface which supports:
+GNN-AID имеет веб-интерфейс, который поддерживает:
 
-- graph visualization and analysis tools
-- no-code model building
-- visualization of models explanations
+- интерактивную визуализацию графов
+- конструктор модели "без кода"
+- визуализация объяснений решения модели
+- визуализация результатов атак на модель
+
 
 .. Check out :doc:`installation` of the project.
 
 .. .. note::
 
-..    This project is under active development.
+..    Проект находится в разработке.
 
 
 .. toctree::
     :maxdepth: 1
-    :caption: Getting started
+    :caption: Начало
 
     getting_started
 
 .. toctree::
     :maxdepth: 1
-    :caption: Tutorials
+    :caption: Примеры
 
     tutorials
 
 .. toctree::
     :maxdepth: 1
-    :caption: User guide
+    :caption: Руководство пользователя
 
     user_guide/pipeline
     user_guide/backend
@@ -47,7 +49,7 @@ GNN-AID has a web interface which supports:
 
 .. toctree::
     :maxdepth: 1
-    :caption: Developer guide
+    :caption: Руководство разработчика
 
     dev_guide/arch_back.rst
     dev_guide/arch_front.rst
@@ -56,7 +58,7 @@ GNN-AID has a web interface which supports:
 
 .. toctree::
     :maxdepth: 1
-    :caption: Package reference
+    :caption: Обзор пакетов
 
     api/aux
     api/data_structures

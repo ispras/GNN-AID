@@ -1,4 +1,4 @@
-Attack methods
+Методы атак
 **************
 
 .. contents::

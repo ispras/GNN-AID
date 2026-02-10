@@ -1,42 +1,42 @@
-Getting started
-***************
+Начало работы
+*************
 
 .. contents::
     :local:
     :depth: 2
 
 ..
-    гайд по установке и запуску (на не более 30мин), с ощущением достижения для читателя
+    гайд по установке и запуску (не более 30 минут), с ощущением достижения для читателя
 
     установка
-    запуск на бэке
+    запуск на бэкенде
         взять датасет, обучить модель, добавить 2 атаки и посмотреть числа
-    запуск фронта
+    запуск фронтенда
         запуск main и как открыть в браузере
         запуск из докера?
 
 
-Installation
-============
+Установка
+=========
 
-| GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they
-  suit best for it.
-| For another OS consider docker.
+| GNN-AID разрабатывался и тестировался под Ubuntu 20.04 и 22.04, поэтому
+  они подходят лучше всего.
+| Для других операционных систем рекомендуется использовать Docker.
 
-You need python of version ``3.11`` or higher. We advice to create
-virtual environment with ``pip``.
+Вам понадобится Python версии ``3.11`` или выше. Мы рекомендуем создать
+виртуальное окружение с помощью ``pip``.
 
 ::
 
    python -m pip install --upgrade pip
 
-First, get auxiliary libraries
+Сначала установите вспомогательные библиотеки
 
 ::
 
    sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
 
-Then install all project dependencies
+Затем установите все зависимости проекта
 
 ::
 
@@ -44,20 +44,20 @@ Then install all project dependencies
    pip install -r requirements2.txt
    pip install -r requirements3.txt
 
-The 3rd pack of requirements will take around 20 minutes.
+Третий набор зависимостей устанавливается примерно 20 минут.
 
-Problems
+Проблемы
 --------
 
-If you see 139 or 134 error code when run the script, it is likely a
-compatibility issue. Try the following:
+Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего,
+это проблема совместимости. Попробуйте следующее:
 
-1. Update video card drivers (if you have decided to use cuda).
-2. Update gcc to the most recent version.
-3. Remove all torch modules that use С++ code.
-4. Install all torch packages again.
+1. Обновите драйверы видеокарты (если вы используете CUDA).
+2. Обновите gcc до самой новой версии.
+3. Удалите все модули torch, использующие C++ код.
+4. Установите все пакеты torch заново.
 
-Run in backend
+Запуск бэкенда
 ==============
 
 .. todo::
@@ -65,55 +65,57 @@ Run in backend
     TODO
 
 
-Create dataset
---------------
+Создание датасета
+-----------------
 
 .. todo::
 
     TODO
 
 
-Build and train model
----------------------
+Сборка и обучение модели
+------------------------
 
 .. todo::
 
     TODO
 
-Run in frontend
-===============
 
-Suppose you are at the project root folder. Activate virtual environment
+Запуск фронтенда
+================
+
+Предполагается, что вы находитесь в корневой директории проекта.
+Активируйте виртуальное окружение
 
 .. code:: text
 
    source venv/bin/activate
 
-Go to ``gnn_aid`` folder and add it to python dependencies
+Перейдите в каталог ``gnn_aid`` и добавьте его в зависимости Python
 
 .. code:: text
 
    cd gnn_aid
    export PYTHONPATH=.
 
-Run ``main.py`` script
+Запустите скрипт ``main.py``
 
 .. code:: text
 
    python web_interface/main.py
 
-You will see something like this
+Вы увидите примерно следующее
 
 .. code:: text
 
    ======== Running on http://0.0.0.0:5000 ========
    (Press CTRL+C to quit)
 
-Then go to `127.0.0.1:5000 <http://127.0.0.1:5000>`__ in your browser.
-You should see web-interface is loaded.
+Затем откройте `127.0.0.1:5000 <http://127.0.0.1:5000>`__ в браузере.
+Вы должны увидеть загруженный веб-интерфейс.
 
-Docker version
---------------
+Версия с Docker
+---------------
 
 .. todo::
 

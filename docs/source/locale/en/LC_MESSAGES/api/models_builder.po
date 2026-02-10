@@ -1,0 +1,376 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/models_builder.rst:2
+msgid "models_builder"
+msgstr ""
+
+#: ../../api/models_builder.rst:10
+msgid "Base classes"
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.available_ad_methods:1
+#: of
+msgid ""
+"Get a list of attack and defense methods applicable for current model and"
+" dataset."
+msgstr ""
+
+#: models_builder.custom_layers.DummyLayer.__init__:1
+#: models_builder.custom_layers.ExtractorMLP.__init__:1
+#: models_builder.custom_layers.GMM.__init__:1
+#: models_builder.custom_layers.GSATLayer.__init__:1
+#: models_builder.custom_layers.GSATMLP.__init__:1
+#: models_builder.custom_layers.ProtLayer.__init__:1
+#: models_builder.models_utils.Concat.__init__:1
+#: models_builder.models_utils.DotProduct.__init__:1
+#: models_builder.models_utils.EdgeMaskingWrapper.__init__:1 of
+msgid ""
+"Initializes internal Module state, shared by both nn.Module and "
+"ScriptModule."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:1 of
+msgid "Runs the forward pass of the module."
+msgstr ""
+
+#: models_builder.custom_layers.DummyLayer.forward:1
+#: models_builder.custom_layers.ExtractorMLP.forward:1
+#: models_builder.custom_layers.GSATLayer.forward:1
+#: models_builder.custom_layers.GSATMLP.forward:1
+#: models_builder.custom_layers.ProtLayer.forward:1
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:1
+#: models_builder.models_utils.Concat.forward:1
+#: models_builder.models_utils.DotProduct.forward:1
+#: models_builder.models_utils.EdgeMaskingWrapper.forward:1 of
+msgid "Defines the computation performed at every call."
+msgstr ""
+
+#: models_builder.custom_layers.DummyLayer.forward:3
+#: models_builder.custom_layers.ExtractorMLP.forward:3
+#: models_builder.custom_layers.GSATLayer.forward:3
+#: models_builder.custom_layers.GSATMLP.forward:3
+#: models_builder.custom_layers.ProtLayer.forward:3
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:3
+#: models_builder.models_utils.Concat.forward:3
+#: models_builder.models_utils.DotProduct.forward:3
+#: models_builder.models_utils.EdgeMaskingWrapper.forward:3 of
+msgid "Should be overridden by all subclasses."
+msgstr ""
+
+#: models_builder.custom_layers.DummyLayer.forward:6
+#: models_builder.custom_layers.ExtractorMLP.forward:6
+#: models_builder.custom_layers.GSATLayer.forward:6
+#: models_builder.custom_layers.GSATMLP.forward:6
+#: models_builder.custom_layers.ProtLayer.forward:6
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:6
+#: models_builder.models_utils.Concat.forward:6
+#: models_builder.models_utils.DotProduct.forward:6
+#: models_builder.models_utils.EdgeMaskingWrapper.forward:6 of
+msgid ""
+"Although the recipe for forward pass needs to be defined within this "
+"function, one should call the :class:`Module` instance afterwards instead"
+" of this since the former takes care of running the registered hooks "
+"while the latter silently ignores them."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.set_last_layer_incorrect_connection:1
+#: of
+msgid "The incorrect strength will be actual strength if -0.5 then input -0.5"
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.result_prototypes:1 of
+msgid "saving projected prototypes"
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor:1 of
+msgid ""
+"The base class of all models. Contains the following methods: forward, "
+"get_all_layer_embeddings, get_architecture, get_num_hops, "
+"reset_parameters, get_predictions, get_answer, get_name"
+msgstr ""
+
+#: ../../api/models_builder.rst
+msgid "Параметры"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:1
+#: models_builder.gnn_constructor.GNNConstructor.decode:1 of
+msgid ""
+"Used for edge tasks, takes as input embeddings of two nodes. Returns an "
+"unnormalized score in general case."
+msgstr ""
+
+#: ../../api/models_builder.rst
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers
+#: models_builder.gnn_constructor.GNNConstructor.get_answer
+#: models_builder.gnn_constructor.GNNConstructor.get_predictions
+#: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers of
+msgid "Результат"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_all_layer_embeddings:1
+#: models_builder.gnn_constructor.GNNConstructor.get_all_layer_embeddings:1 of
+msgid ""
+"vectors representing the input data from the outputs of each layer of the"
+" neural network"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_architecture:1
+#: models_builder.gnn_constructor.GNNConstructor.get_architecture:1 of
+msgid "the architecture of the model, for display on the front"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_num_hops:1
+#: models_builder.gnn_constructor.GNNConstructor.get_num_hops:1 of
+msgid ""
+"the number of graph convolution layers. Required for some model "
+"interpretation algorithms to work"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.reset_parameters:1
+#: models_builder.gnn_constructor.GNNConstructor.reset_parameters:1 of
+msgid ""
+"resets all model parameters. Required for the reset button on the front "
+"to work."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:1
+#: models_builder.gnn_constructor.GNNConstructor.get_predictions:1 of
+msgid "a vector of estimates for the distribution of input data by class."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:3
+#: models_builder.gnn_constructor.GNNConstructor.get_predictions:3 of
+msgid ""
+"Required for some interpretation algorithms to work. Does not require a "
+"mandatory redefinition of def forward."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_parameters:1
+#: models_builder.gnn_constructor.GNNConstructor.get_parameters:1 of
+msgid "matrix with model parameters"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:1
+#: models_builder.gnn_constructor.GNNConstructor.get_answer:1 of
+msgid "an answer to which class the input belongs to."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:3
+#: models_builder.gnn_constructor.GNNConstructor.get_answer:3 of
+msgid ""
+"Required for some interpretation methods to work. Does not require "
+"redefinition of def forward or get_predictions."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers:1
+#: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers:1 of
+msgid "a set of names of suitable model manager classes."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers:3
+#: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers:3 of
+msgid "Model manager classes must be inherited from the GNNModelManager class"
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_full_info:1 of
+msgid "Get available info about model for frontend"
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch:1 of
+msgid ""
+"Base class for writing models using the torch library. Inherited from "
+"GNNConstructor and torch.nn.Module classes."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.flow:1 of
+msgid "Flow direction of message passing, usually 'source_to_target'"
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.get_neurons:1 of
+msgid ""
+"Return number of neurons of each convolution layer as list: [n_1, n_2, "
+"..., n_k]"
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.get_weights:1 of
+msgid ""
+"Get model weights calling torch.nn.Module.state_dict() to draw them on "
+"the frontend."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor:1 of
+msgid ""
+"A class that uses metaprogramming to form a wide variety of models using "
+"the 'structure' variable in json format. Inherited from the "
+"GNNConstructorTorch class."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.__init__:1 of
+msgid "description of the gnn structure"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.register_my_forward_hook:1
+#: of
+msgid "Registers a forward hook on the module."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:1 of
+msgid ""
+"The method is launched when the forward is executed extracts from the "
+"variable data or kwargs the data necessary to pass the forward: x, "
+"edge_index, batch"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:4 of
+msgid "!! ATTENTION: Must not be changed !!"
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:8 of
+msgid "x, edge_index, batch: TORCH TENSORS"
+msgstr ""
+
+#: models_builder.models_utils.apply_message_gradient_capture:1 of
+#, python-brace-format
+msgid ""
+"# Example how get Tensors # for name, layer in self.gnn.named_children():"
+" #     if isinstance(layer, MessagePassing): #         print(f\"{name}: "
+"{layer.get_message_gradients()}\")"
+msgstr ""
+
+#: models_builder.models_utils.apply_decorator_to_graph_layers:1 of
+msgid "Example how use this def apply_decorator_to_graph_layers(gnn)"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:1 of
+msgid "Calculate precision@k, recall@k, or f1@k metric for edge prediction"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:3 of
+msgid ""
+"Precision@k = (number of correctly predicted edges in top-k) / k Recall@k"
+" = (number of correctly predicted edges in top-k) / (total true edges) "
+"F1@k = 2 * (Precision@k * Recall@k) / (Precision@k + Recall@k)"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:7 of
+msgid "torch.Tensor shape (2, N) - ground truth edges"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:8 of
+msgid "torch.Tensor shape (2, M) - predicted edges (M >= k)"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:9 of
+msgid "int - number of top predictions to evaluate"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:10 of
+msgid "str - metric to calculate: 'precision', 'recall', or 'f1'"
+msgstr ""
+
+#: models_builder.models_utils.top_k_metric:12 of
+msgid "float - metric value in range [0, 1]"
+msgstr ""
+
+#: ../../api/models_builder.rst
+msgid "Тип результата"
+msgstr ""
+
+#: models_builder.models_utils.Concat:1 of
+msgid ""
+"Concatenation of tensors as a torch function. Convenient to use as a "
+"model layer."
+msgstr ""
+
+#: models_builder.models_utils.DotProduct:1 of
+msgid ""
+"Dot-product of 2 tensors as a torch function. Convenient to use as a "
+"model layer."
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:1 of
+msgid "Predict top-k new edges with FAISS support for large graphs"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:3 of
+msgid "trained GNN model"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:4 of
+msgid "PyG Data object with graph structure"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:5 of
+msgid "torch.Tensor shape (2, num_edges) - edges to exclude from predictions"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:6 of
+msgid "number of top edges to return (globally)"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:7 of
+msgid "use FAISS for fast search (recommended for large graphs)"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:8 of
+msgid "how many candidates to search per node via FAISS"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:9 of
+msgid "if False, normalize edges to (i,j) where i < j and remove duplicates"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:10 of
+msgid "if True, exclude self-loops (i,i) from predictions"
+msgstr ""
+
+#: models_builder.models_utils.predict_top_k_edges:12 of
+msgid ""
+"torch.Tensor shape (2, k) - indices of top-k node pairs top_scores: "
+"torch.Tensor shape (k,) - scores for these pairs"
+msgstr ""
+
+#: models_builder.models_utils.mask_to_tensor:1 of
+msgid ""
+"Convert a mask over nodes/edges/graphs to tensor of specific size. Mask "
+"can be 'train', 'val', 'test', 'all', or id, or a list of ids, or a "
+"tensor."
+msgstr ""
+
+#: models_builder.models_utils.mask_to_tensor:4 of
+msgid "dataset"
+msgstr ""
+
+#: models_builder.models_utils.mask_to_tensor:5 of
+msgid ""
+"part of the dataset on which the output will be obtained. Can be a node "
+"id, graph id, or edge as a tuple (i,j). Can be string: 'train', 'val', "
+"'test', 'all'. Can be Tensor of specific nodes/edges/graphs."
+msgstr ""
+
+#: models_builder.models_utils.mask_to_tensor:9 of
+msgid "tensor of nodes/edges/graphs"
+msgstr ""
+

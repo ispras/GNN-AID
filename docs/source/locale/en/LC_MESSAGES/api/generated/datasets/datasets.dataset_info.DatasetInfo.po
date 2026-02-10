@@ -1,0 +1,246 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/generated/datasets/datasets.dataset_info.DatasetInfo.rst:2
+msgid "datasets.dataset\\_info.DatasetInfo"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:1 of
+msgid ""
+"Description for a dataset, its metainfo. It is created with the dataset "
+"and does not change. Some fields are obligate, others are not."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:6 of
+msgid "Class Attributes"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:8 of
+msgid ""
+"``class_name`` (*str*) The name of the class used to initialize the "
+"object."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:11 of
+msgid "``import_from`` (*str*) The module name from which to import the class."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:14 of
+msgid ""
+"``name`` (*str*, optional) The dataset name. Defaults to the dataset path"
+" if not specified."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:17 of
+msgid ""
+"``format`` (*str*, optional) The format of the raw data. Default is "
+"``ij``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:20 of
+msgid "``count`` (*int*) The number of graphs."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:23 of
+msgid ""
+"``directed`` (*bool*, optional) Flag indicating whether the edges are "
+"directed. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:26 of
+msgid ""
+"``hetero`` (*bool*, optional) Flag indicating whether the graph is "
+"heterogeneous. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:29 of
+msgid "``nodes`` (*List[int]*) List containing the number of nodes in each graph."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:32 of
+msgid ""
+"``remap`` (*bool*, optional) Flag indicating whether to remap node "
+"indices. Default is ``False``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:35 of
+msgid ""
+"``node_attributes`` (*dict*, optional) Information about node attributes."
+" The dictionary keys may include intermediate keys for node types (used "
+"in heterogeneous graphs). Contains the following fields:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:40 of
+msgid "``names`` (*List[str]*) List of attribute names."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:42 of
+msgid ""
+"``types`` (*List[str]*) List of attribute types, each being one of the "
+"following:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:45 of
+msgid "``\"continuous\"`` — continuous numerical values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:46 of
+msgid "``\"categorical\"`` — categorical values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:47 of
+msgid "``\"vector\"`` — continuous vector values (e.g., as in PyTorch)"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:48 of
+msgid "``\"other\"`` — other types, such as strings"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:49 of
+msgid ""
+"``values`` (*List*) Possible values for the attributes, depending on "
+"their type:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:52 of
+msgid "For ``continuous`` — list containing minimum and maximum values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:53 of
+msgid "For ``categorical`` — list enumerating possible categories"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:54 of
+msgid "For ``vector`` — list containing minimum and maximum values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:55 of
+msgid ""
+"For ``other`` — an empty list or some instructions on how to process the "
+"values"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:57 of
+msgid ""
+"``edge_attributes`` (*dict*, optional) Information about edge attributes,"
+" structured similarly to ``node_attributes``."
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:60 of
+msgid ""
+"``labelings`` (*dict*) Information about labelings. The dictionary keys "
+"may include intermediate keys for node types (in heterogeneous graphs). "
+"Each labeling entry maps a label name to a value, for example:"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:64 of
+msgid "For classification — the number of classes"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:65 of
+msgid "For regression on nodes — minimum and maximum values or 0"
+msgstr ""
+
+#: datasets.dataset_info.DatasetInfo:66 of
+msgid "Other label types as applicable"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.dataset_info.DatasetInfo.rst:13
+msgid "Methods"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`__init__ <datasets.dataset_info.DatasetInfo.__init__>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`check <datasets.dataset_info.DatasetInfo.check>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Check metainfo is sufficient, consistent, and valid."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`check_consistency "
+"<datasets.dataset_info.DatasetInfo.check_consistency>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Check existing fields are consistent."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`check_consistency_with_ptg_dataset "
+"<datasets.dataset_info.DatasetInfo.check_consistency_with_ptg_dataset>`\\"
+" \\(dataset\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Check if metainfo fields are consistent with PTG dataset."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`check_sufficiency "
+"<datasets.dataset_info.DatasetInfo.check_sufficiency>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Check all obligate fields are defined."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`check_validity "
+"<datasets.dataset_info.DatasetInfo.check_validity>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Check existing fields have allowed values."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`read <datasets.dataset_info.DatasetInfo.read>`\\ \\(path\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Read info from a file."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`save <datasets.dataset_info.DatasetInfo.save>`\\ \\(path\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Save into file non-null info."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`to_dict <datasets.dataset_info.DatasetInfo.to_dict>`\\ \\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Return info as a dictionary."
+msgstr ""
+
