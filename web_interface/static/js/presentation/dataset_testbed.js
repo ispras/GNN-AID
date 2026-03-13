@@ -139,13 +139,15 @@ const EXAMPLE_NEIGHBORHOOD = {
     task: "edge-classification",
 };
 
+const nNodes = 300
+const nEdges = 2000
 const EXAMPLE_SINGLE_GRAPH = {
     datasetInfo: {
         name: "example_whole_graph",
         count: 1,
         directed: false,
         hetero: false,
-        nodes: [8],
+        nodes: [nNodes],
         node_attributes: {
             names: ["a", "b"],
             types: ["continuous", "categorical"],
@@ -156,36 +158,46 @@ const EXAMPLE_SINGLE_GRAPH = {
                 "binary": 2
             },
             "edge-classification": {
-                "binary": 2
+                "binary": 3
             }
         }
     },
     datasetData: {
-        nodes: 8,
-        edges: [[0,1],[1,2],[1,3],[1,4],[2,3],[2,5],[2,6],[4,5],[4,7],[6,7]],
+        nodes: nNodes,
+        // edges: [[0,1],[1,2],[1,3],[1,4],[2,3],[2,5],[2,6],[4,5],[4,7],[6,7]],
+        // edges: Array.from(Array(nEdges).keys()).map(i => [i%nNodes, parseInt(i * i * 1/4)%nNodes]),
+        edges: Array.from(Array(nEdges).keys()).map(i => [parseInt(Math.random() * nNodes), parseInt(Math.random() * nNodes)]),
         graphs: null,
         node_attributes: {
-            "a": [{"0": 1, "1": 1, "2": 0.6, "3": 0.7, "4": 0.5, "5": 0.7, "6": 0.5, "7": 0.5}],
-            "b": [{"0": "A", "1": "A", "2": "B", "3": "C", "4": "A", "5": "C", "6": "B", "7": "A"}]
+            // "a": [{"0": 1, "1": 1, "2": 0.6, "3": 0.7, "4": 0.5, "5": 0.7, "6": 0.5, "7": 0.5}],
+            // "b": [{"0": "A", "1": "A", "2": "B", "3": "C", "4": "A", "5": "C", "6": "B", "7": "A"}]
         }
     },
     datasetVar: {
       "node": {
-        "features": [
-            [1],[1],[0.6000000238418579],[0.699999988079071],[0.5],[0.5],[0.699999988079071],[0.5]],
+        // "features": Array.from(Array(nNodes).keys()).map(i => [Math.random(),Math.random(),Math.random(),Math.random(),Math.random(),Math.random(),Math.random(),Math.random()]),
+        // "features": [
+        //     [1],[1],[0.6000000238418579],[0.699999988079071],[0.5],[0.5],[0.699999988079071],[0.5]],
         // "labels": [1,1,1,1,0,0,0,0]
+        "labels": Array.from(Array(nNodes).keys()).map(i => parseInt(2*Math.random()))
       },
       "edge": {
-        "features": [[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2]],
-        "logits": [[0.1],[-0.4],[0.1],[0.1],[-0.1],[0.2],[0.1],[-0.6],[1.1],[0.3]],
-        "predictions": [[0.1],[0.4],[0.1],[0.1],[0.1],[0.2],[0.1],[0.1],[0.1],[0.3]],
-        "train-test-mask": [1,2,3,1,2,3,1,2,3,1],
-        "labels": [0,1,0,1,0,1,0,1,0,1]
+        // "features": Array.from(Array(nEdges).keys()).map(i => [Math.random(),Math.random(),Math.random()]),
+        // "logits": Array.from(Array(nEdges).keys()).map(i => [Math.random()]),
+        // "predictions": Array.from(Array(nEdges).keys()).map(i => [Math.random()]),
+        // "train-test-mask": Array.from(Array(nEdges).keys()).map(i => parseInt(1+3*Math.random())),
+        // "labels": Array.from(Array(nEdges).keys()).map(i => parseInt(3*Math.random())),
+        // "features": [[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2],[0, 1, 2]],
+        // "logits": [[0.1],[-0.4],[0.1],[0.1],[-0.1],[0.2],[0.1],[-0.6],[1.1],[0.3]],
+        // "predictions": [[0.1],[0.4],[0.1],[0.1],[0.1],[0.2],[0.1],[0.1],[0.1],[0.3]],
+        // "train-test-mask": [1,2,3,1,2,3,1,2,3,1],
+        // "labels": [0,1,0,1,0,1,0,1,0,1]
       },
       "graph": {}
     },
     // task: "edge-prediction",
-    task: "edge-classification",
+    // task: "edge-classification",
+    task: "node-classification",
     labeling: "binary",
     oneHotableFeature: false
 }
@@ -283,14 +295,16 @@ class TestDatasetView extends View {
             .css({
                 position: "absolute",
                 top: 0, bottom: 0, left: 0, right: 0,
-                overflow: "scroll"
+                height: "100%"
+                // overflow: "scroll"
             });
         this.$div.append($svgDiv);
         this.svgPanel = new SvgPanel($svgDiv[0]);
 
         this.$upLeftInfoDiv = $('#info-upleft');
         this.$bottomLeftInfoDiv = $('#info-bottomleft');
-        this.$upRightInfoDiv = $('#info-upright');
+        this.$upRightInfoDiv = $('#info-upright').attr("id", "dataset-info-upright")
+            .attr("style", "position: absolute; top: 1px; right: 2px; background: #eeeeeeff; padding: 5px; pointer-events: none;")
         this.$bottomRightInfoDiv = $('#info-bottomright');
 
         createColormapImage(this.$bottomLeftInfoDiv[0], IMPORTANCE_COLORMAP);
@@ -400,7 +414,6 @@ class TestDatasetView extends View {
             this.datasetVar = data;
         }
 
-        this.visibleGraph.checkLightMode();
         this.visibleGraph.draw();
         this.setNodeInfo();
     }
@@ -412,7 +425,7 @@ class TestDatasetView extends View {
 
 let testDatasetView = null;
 
-async  function initTestStand() {
+async function initTestStand() {
     console.log('Initializing test stand...');
     updateStatus('Initializing...');
 

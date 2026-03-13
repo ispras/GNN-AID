@@ -44,87 +44,86 @@ class MultipleGraphs extends VisibleGraph {
             (_, v) => this.showClassAsColor(v), this._tagVar)
     }
 
-    // Handle nodes and whole SVG drag&drop
-    handleDragging() {
-        this.svgElement.onmousedown = (e) => {
-            if (e.buttons === 1 && e.ctrlKey) {
-                this.svgGrabbed = true
-                this.svgGrabbedMousePos.x = e.screenX
-                this.svgGrabbedMousePos.y = e.screenY
-                this.svgGrabbedScreenPos.x = this.screenPos.x
-                this.svgGrabbedScreenPos.y = this.screenPos.y
-                this.svgElement.style.cursor = 'grabbing'
-            }
-        }
-        $(window).mouseup((e) => {
-            this.svgGrabbed = false
-            this.nodeGrabbed = null
-            this.svgElement.style.cursor = 'default'
-            if (this.layouts && this.graphGrabbed != null) {
-                this.layouts[this.graphGrabbed].release()
-            }
-            this.graphGrabbed = null
-        })
-        this.svgElement.onmousemove = (e) => {
-            this.mousePos.x = e.offsetX
-            this.mousePos.y = e.offsetY
-            if (this.svgGrabbed) {
-                this.screenPos.x = this.svgGrabbedScreenPos.x - e.screenX + this.svgGrabbedMousePos.x
-                this.screenPos.y = this.svgGrabbedScreenPos.y - e.screenY + this.svgGrabbedMousePos.y
-                this.draw()
-            }
+    // // Handle nodes and whole SVG drag&drop
+    // handleDragging() {
+    //     this.svgElement.onmousedown = (e) => {
+    //         if (e.buttons === 1 && e.ctrlKey) {
+    //             this.svgGrabbed = true
+    //             this.svgGrabbedMousePos.x = e.screenX
+    //             this.svgGrabbedMousePos.y = e.screenY
+    //             this.svgGrabbedScreenPos.x = this.screenPos.x
+    //             this.svgGrabbedScreenPos.y = this.screenPos.y
+    //             this.svgElement.style.cursor = 'grabbing'
+    //         }
+    //     }
+    //     $(window).mouseup((e) => {
+    //         this.svgGrabbed = false
+    //         this.nodeGrabbed = null
+    //         this.svgElement.style.cursor = 'default'
+    //         if (this.layouts && this.graphGrabbed != null) {
+    //             this.layouts[this.graphGrabbed].release()
+    //         }
+    //         this.graphGrabbed = null
+    //     })
+    //     this.svgElement.onmousemove = (e) => {
+    //         this.mousePos.x = e.offsetX
+    //         this.mousePos.y = e.offsetY
+    //         if (this.svgGrabbed) {
+    //             this.screenPos.x = this.svgGrabbedScreenPos.x - e.screenX + this.svgGrabbedMousePos.x
+    //             this.screenPos.y = this.svgGrabbedScreenPos.y - e.screenY + this.svgGrabbedMousePos.y
+    //             this.draw()
+    //         }
+    //
+    //         else if (this.nodeGrabbed != null) {
+    //             this.layouts[this.graphGrabbed].lock(this.nodeGrabbed, Vec.add(this.mousePos, this.svgPos).mul(1/this.scale))
+    //             this.layouts[this.graphGrabbed].startMoving()
+    //             this.draw()
+    //         }
+    //         this.debugInfo()
+    //     }
+    //
+    //     // Handle zoom
+    //     this.svgElement.onwheel = (e) => {
+    //         if (e.ctrlKey) {
+    //             e.preventDefault()
+    //             let z = e.wheelDelta > 0 ? this.zoomFactor : 1/this.zoomFactor
+    //             if (this.scale * z > this.scaleMax || this.scale * z < this.scaleMin)
+    //                 return
+    //             this.scale *= z
+    //             for (const graph of Object.values(this.graphs))
+    //                 graph.scale = this.scale
+    //
+    //             // Compute SVG and screen new positions
+    //             this.screenPos.x += (z-1)*(this.mousePos.x + this.svgPos.x)
+    //             this.screenPos.y += (z-1)*(this.mousePos.y + this.svgPos.y)
+    //
+    //             this.draw()
+    //             // Update mouse pos AFTER draw
+    //             this.mousePos.x = e.layerX
+    //             this.mousePos.y = e.layerY
+    //         }
+    //         this.debugInfo()
+    //     }
+    //
+    //     // To avoid computing scroll from screenPos
+    //     this.svgElement.parentElement.onscroll = (e) => {
+    //         this.screenPos.x = this.svgElement.parentElement.scrollLeft + this.svgPos.x
+    //         this.screenPos.y = this.svgElement.parentElement.scrollTop + this.svgPos.y
+    //     }
+    // }
 
-            else if (this.nodeGrabbed != null) {
-                this.layouts[this.graphGrabbed].lock(this.nodeGrabbed, Vec.add(this.mousePos, this.svgPos).mul(1/this.scale))
-                this.layouts[this.graphGrabbed].startMoving()
-                this.draw()
-            }
-            this.debugInfo()
-        }
-
-        // Handle zoom
-        this.svgElement.onwheel = (e) => {
-            if (e.ctrlKey) {
-                e.preventDefault()
-                let z = e.wheelDelta > 0 ? this.zoomFactor : 1/this.zoomFactor
-                if (this.scale * z > this.scaleMax || this.scale * z < this.scaleMin)
-                    return
-                this.scale *= z
-                for (const graph of Object.values(this.graphs))
-                    graph.scale = this.scale
-
-                // Compute SVG and screen new positions
-                this.screenPos.x += (z-1)*(this.mousePos.x + this.svgPos.x)
-                this.screenPos.y += (z-1)*(this.mousePos.y + this.svgPos.y)
-
-                this.checkLightMode()
-                this.draw()
-                // Update mouse pos AFTER draw
-                this.mousePos.x = e.layerX
-                this.mousePos.y = e.layerY
-            }
-            this.debugInfo()
-        }
-
-        // To avoid computing scroll from screenPos
-        this.svgElement.parentElement.onscroll = (e) => {
-            this.screenPos.x = this.svgElement.parentElement.scrollLeft + this.svgPos.x
-            this.screenPos.y = this.svgElement.parentElement.scrollTop + this.svgPos.y
-        }
-    }
-
-    async drawCycle() {
-        while (true) {
-            if (!this.alive) break
-            // At least 1 layout is moving
-            for (const layout of Object.values(this.layouts))
-                if (layout.moving) {
-                    this.draw()
-                    break
-                }
-            await sleep(100)
-        }
-    }
+    // async drawCycle() {
+    //     while (true) {
+    //         if (!this.alive) break
+    //         // At least 1 layout is moving
+    //         for (const layout of Object.values(this.layouts))
+    //             if (layout.moving) {
+    //                 this.draw()
+    //                 break
+    //             }
+    //         await sleep(100)
+    //     }
+    // }
 
     defineVisibleConfig() {
         this.visibleConfig["center"] = parseInt(this.visView.getValue(this.visView.multiGraphId))
@@ -159,6 +158,25 @@ class MultipleGraphs extends VisibleGraph {
             this._count = "several" // fixme what if not several?
         }
         await super._build()
+    }
+
+    // Create reverse mappings of nodes and edges to define radius, stroke width, color when drawing
+    _createMappings() {
+        this.nodeRadiuses = {}
+        this.nodeStrokeWidthes = {}
+        for (let d=0; d<this.nodes.length; ++d)
+            for (let n of this.nodes[d]) {
+                this.nodeRadiuses[n] = this.depthNodeRadiuses[d]
+                this.nodeStrokeWidthes[n] = this.depthNodeStrokeWidthes[d]
+            }
+
+        this.edgeStrokeWidthes = {}
+        this.edgeColors = {}
+        for (let d=0; d<this.edges.length; ++d)
+            for (let [i, j] of this.edges[d]) {
+                this.edgeStrokeWidthes[`${i},${j}`] = this.depthEdgeStrokeWidthes[d]
+                this.edgeColors[`${i},${j}`] = this.depthEdgeColors[d]
+            }
     }
 
     _drop() {
@@ -320,17 +338,6 @@ class MultipleGraphs extends VisibleGraph {
     freezeLayout(freeze) {
         for (let g of Object.values(this.graphs))
             g.layout.setFreeze(freeze)
-    }
-
-    // Check parameters to decide whether to turn on a light mode
-    checkLightMode() {
-        this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_MULTI
-        for (let aGraph of Object.values(this.graphs))
-            for (const node of Object.values(aGraph.nodePrimitives))
-                node.lightMode = !this.nodesVisible
-        for (const graph of Object.values(this.graphPrimitives))
-            graph.lightMode = !this.nodesVisible
-        super.checkLightMode(this.nodesVisible)
     }
 
     // Assign/remove SVG primitives for node satellites: labels, features, predictions, etc
@@ -544,25 +551,25 @@ class MultipleGraphs extends VisibleGraph {
         }
     }
 
-    // Turn on/off visibility of labels, features, predictions, etc
-    showSatellite(elem, satellite, show) {
-        // console.log('multi.showSatellite', satellite, show)
-        if (elem === "node" && satellite === "features") {
-            for (const graph of Object.values(this.graphs))
-                graph.showSatellite(elem, satellite, show)
-        }
-        else if (elem === "graph") {
-            this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
-            for (const graph of Object.values(this.graphPrimitives)) {
-                graph.satellites[satellite].show = show
-                graph.visible(graph.show)
-            }
-        }
-        else if (elem === "edge") {
-            // todo
-            // console.error('not implemented')
-        }
-    }
+    // // Turn on/off visibility of labels, features, predictions, etc
+    // showSatellite(elem, satellite, show) {
+    //     // console.log('multi.showSatellite', satellite, show)
+    //     if (elem === "node" && satellite === "features") {
+    //         for (const graph of Object.values(this.graphs))
+    //             graph.showSatellite(elem, satellite, show)
+    //     }
+    //     else if (elem === "graph") {
+    //         this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
+    //         for (const graph of Object.values(this.graphPrimitives)) {
+    //             graph.satellites[satellite].show = show
+    //             graph.visible(graph.show)
+    //         }
+    //     }
+    //     else if (elem === "edge") {
+    //         // todo
+    //         // console.error('not implemented')
+    //     }
+    // }
 
     // Remove all explanation elements
     dropExplanation() {

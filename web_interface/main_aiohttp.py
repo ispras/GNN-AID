@@ -5,7 +5,7 @@ import logging
 # mp.set_start_method("spawn", force=True)
 
 from multiprocessing import Process, Queue
-from typing import Dict
+from typing import Dict, Tuple
 from aiohttp import web
 import socketio
 import jinja2
@@ -13,7 +13,7 @@ import aiohttp_jinja2
 
 from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
-from web_interface.back_front.utils import WebInterfaceError, json_loads, json_dumps, SocketConnect
+from web_interface.back_front.utils import json_dumps, SocketConnect, STATIC_DIR, TEMPLATES_DIR
 
 # Socket.IO server (ASGI not used here)
 sio = socketio.AsyncServer(
@@ -25,10 +25,10 @@ sio = socketio.AsyncServer(
 app = web.Application()
 sio.attach(app)
 
-aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader("templates"))
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
 
 clients = {}  # client_id (sid) -> asyncio.Task
-queues: Dict[str, Queue] = {}
+queues: Dict[str, Tuple[Queue, Queue, Queue, Process]] = {}
 
 
 # Route for interpretation
@@ -97,7 +97,7 @@ async def handle_url(request):
         if sid not in clients:
             return web.Response(status=404, text="Unknown SID")
 
-        response_queue, _, request_queue = queues[sid]
+        response_queue, _, request_queue, _ = queues[sid]
 
         print(url, 'http request from', sid, 'args', dict(data))
         request_queue.put({"type": url, "args": dict(data)})
@@ -117,7 +117,7 @@ app.router.add_get("/interpretation", handle_interpretation)
 app.router.add_post("/ask", handle_ask)
 app.router.add_post("/{url}", handle_url)
 
-app.router.add_static('/static/', path='static', name='static')
+app.router.add_static('/static/', path=str(STATIC_DIR), name='static')
 
 
 # Socket.IO connection
@@ -137,6 +137,8 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print(f"[disconnect] {sid}")
+    proc = queues[sid][-1]
+    # proc.terminate()  # FIXME
     clients.pop(sid, None)
 
 
@@ -144,13 +146,13 @@ async def client_wrapper(sid: str, mode: ClientMode):
     response_queue = Queue()
     msg_queue = Queue()
     request_queue = Queue()
-    queues[sid] = response_queue, msg_queue, request_queue
 
     print("creating process")
     proc = Process(
         target=worker_process,
         args=(sid, response_queue, msg_queue, request_queue, mode))
     proc.start()
+    queues[sid] = response_queue, msg_queue, request_queue, proc
     print("Process created")
 
     loop = asyncio.get_event_loop()

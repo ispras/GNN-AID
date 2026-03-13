@@ -2,11 +2,16 @@ const IMPORTANCE_COLORMAP = 'cool'
 const PREDICTION_COLORMAP = 'binary'
 const EMBEDDING_COLORMAP = 'bwr'
 const CORRELATION_COLORMAP = 'bwr'
-const EDGE_MINIBATCH_SIZE = 10000 // Not necessary
-// todo make customizable
-const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 5 // When Scale < THR, light mode is on to improve visibility (for single graph)
-const LIGHT_MODE_SCALE_THRESHOLD_MULTI = 20 // When Scale < THR, light mode is on to improve visibility (for multiple graph)
+// const EDGE_MINIBATCH_SIZE = 10000 // Not necessary
 const EXPLANATION_EDGE_IMPORTANCE_THRESHOLD = 0.5 // When edge importance < THR, it is not drawn
+
+class Thresholds {
+    static MAX_VISIBLE_SATELLITES_SCALE = 25 // When Scale < THR, satellite are hidden
+    static MAX_VISIBLE_SATELLITES_COUNT = 200 // When count > THR, satellite are hidden
+    static MAX_VISIBLE_NODES_SCALE = 5 // When Scale < THR, nodes are hidden
+    static MAX_VISIBLE_NODES_COUNT = 1000 // When count > THR, nodes are hidden
+    static MAX_VISIBLE_EDGES_COUNT = 3000 // Max number of edges to draw
+}
 
 function createColormapImage(element, colormap, width=120, height=25) {
     element.innerHTML = ''
@@ -79,7 +84,7 @@ class VisibleGraph {
         this.edgeRadius = 12
         this.nodeStrokeWidth = 2
         this.nodeExplainedStrokeWidth = 4
-        this.edgeStrokeWidth = 1
+        this.edgeStrokeWidth = 0.6
         this.edgeExplainedStrokeWidth = 4
         this.pad = 30 // additional space around elements to SVG border
         this.scale = 100 // scale to adjust element
@@ -87,7 +92,7 @@ class VisibleGraph {
         this.scaleMin = 1e-1 // minimal scale
         this.zoomFactor = 1.15 // scaling coefficient on zoom
         this.screenPos = new Vec(-300, -400) // left-top of part of SVG visible on screen
-        this.svgPos = new Vec(0, 0) // SVG viewBox left-top
+        this.svgPos = new Vec(0, 0) // SVG viewBox left-top in the world coordinates
         this.nodeColor = '#fff'
         this.edgeColor = '#000'
         this.backgroundColor = "#e7e7e7"
@@ -112,11 +117,14 @@ class VisibleGraph {
         // Key is: depth for neighborhood, 0 for graph, graph ix for multi graph
         this.edgePrimitives = null
 
+        this._showClassAsColor = null
+
         // ----- External parameters - TODO must be assigned when switch view neighborhood/graph
 
         this.task = null // which labeling is chosen
         this.labeling = null // which labeling is chosen
         this.oneHotableFeature = null // whether feature is be 1-hot encoded
+        this.numClasses = null
         this.coloredNodes = null // {class -> node fill color}
         this.explanation = null
         this.explanationEdges = null // {edge -> SVG primitive} for current explanation
@@ -133,15 +141,29 @@ class VisibleGraph {
         this.svgGrabbedMousePos = new Vec(0, 0) // mouse pos when SVG was grabbed
         this.svgGrabbedScreenPos = new Vec(0, 0) // screen pos when SVG was grabbed
 
+        this.frameDt = -1
+
     }
 
     async drawCycle() {
         while (true) {
             if (!this.alive) break
-            if (this.layout && this.layout.moving) {
+
+            let t = 0
+            let layoutUpdated = false
+            if (this.layout)
+                layoutUpdated = this.layout.consumePositionUpdates()
+
+            let needsRedraw = layoutUpdated || this.needsRedraw
+
+            if (needsRedraw) {
+                t = performance.now()
                 this.draw()
+                this.needsRedraw = false
+                t = performance.now() - t
+                // console.log(`Time of draw cycle(): ${t}ms`)
             }
-            await sleep(100)
+            await sleep(Math.max(0, 100 - t))
         }
     }
 
@@ -166,6 +188,7 @@ class VisibleGraph {
     handleDragging() {
         this.svgElement.onmousedown = (e) => {
             if (e.buttons === 1 && e.ctrlKey) {
+            // if (e.buttons === 1) {
                 this.svgGrabbed = true
                 this.svgGrabbedMousePos.x = e.screenX
                 this.svgGrabbedMousePos.y = e.screenY
@@ -189,12 +212,14 @@ class VisibleGraph {
             if (this.svgGrabbed) {
                 this.screenPos.x = this.svgGrabbedScreenPos.x - e.screenX + this.svgGrabbedMousePos.x
                 this.screenPos.y = this.svgGrabbedScreenPos.y - e.screenY + this.svgGrabbedMousePos.y
-                this.draw()
+                // this.draw()
+                this.needsRedraw = true
             }
             else if (this.nodeGrabbed != null) {
-                this.layout.lock(this.nodeGrabbed, Vec.add(this.mousePos, this.svgPos).mul(1/this.scale))
+                this.layout.lock(this.nodeGrabbed, Vec.add(this.mousePos, this.screenPos).mul(1/this.scale))
                 this.layout.startMoving()
-                this.draw()
+                // this.draw()
+                this.needsRedraw = true
             }
             this.debugInfo()
         }
@@ -202,20 +227,26 @@ class VisibleGraph {
         // Handle zoom
         // TODO move to SvgPanel
         this.svgElement.onwheel = (e) => {
-            if (e.ctrlKey) {
+            // if (e.ctrlKey) {
+            if (true) {
                 e.preventDefault()
-                let z = e.wheelDelta > 0 ? this.zoomFactor : 1/this.zoomFactor
+                const z = e.wheelDelta > 0 ? this.zoomFactor : 1 / this.zoomFactor
                 if (this.scale * z > this.scaleMax || this.scale * z < this.scaleMin)
                     return
+
+                // Мировая точка под курсором ДО зума:
+                // worldX = (screenPos.x + mousePos.x) / scale
+                // После зума она должна остаться под курсором:
+                // worldX = (screenPos.x_new + mousePos.x) / (scale * z)
+                // Из этого: screenPos.x_new = worldX * scale * z - mousePos.x
+                //                           = (screenPos.x + mousePos.x) * z - mousePos.x
+
+                this.screenPos.x = (this.screenPos.x + this.mousePos.x) * z - this.mousePos.x
+                this.screenPos.y = (this.screenPos.y + this.mousePos.y) * z - this.mousePos.y
+
                 this.scale *= z
 
-                // Compute SVG and screen new positions
-                this.screenPos.x += (z-1)*(this.mousePos.x + this.svgPos.x)
-                this.screenPos.y += (z-1)*(this.mousePos.y + this.svgPos.y)
-
-                this.checkLightMode()
-                this.draw()
-                // Update mouse pos AFTER draw
+                this.needsRedraw = true
                 this.mousePos.x = e.layerX
                 this.mousePos.y = e.layerY
             }
@@ -223,10 +254,40 @@ class VisibleGraph {
         }
 
         // To avoid computing scroll from screenPos
-        this.svgElement.parentElement.onscroll = (e) => {
-            this.screenPos.x = this.svgElement.parentElement.scrollLeft + this.svgPos.x
-            this.screenPos.y = this.svgElement.parentElement.scrollTop + this.svgPos.y
-        }
+        this.svgElement.parentElement.onscroll = null
+        // (e) => {
+        //     this.screenPos.x = this.svgElement.parentElement.scrollLeft + this.svgPos.x
+        //     this.screenPos.y = this.svgElement.parentElement.scrollTop + this.svgPos.y
+        //     // this.draw(true, true)
+        //     this.needsRedraw = true
+        // }
+
+        // Cache SVG size to avoid getting clientWidth at each draw
+        this.svgParentSize = new Vec(
+            this.svgElement.parentElement.clientWidth, this.svgElement.parentElement.clientHeight)
+        // this.svgParentScroll = new Vec(0, 0)
+        // this.svgElementStyle = new Vec(this.svgElement.style.width, this.svgElement.style.height)
+
+        this.svgParentSize = new Vec(
+            this.svgElement.parentElement.clientWidth,
+            this.svgElement.parentElement.clientHeight
+        )
+
+        const parent = this.svgElement.parentElement
+
+        // Фиксируем размер родителя через CSS чтобы он не зависел от содержимого
+        parent.style.overflow = 'hidden'
+        parent.style.position = 'relative' // нужен для minimap
+
+        // Читаем размер один раз
+        this.svgParentSize = new Vec(parent.clientWidth, parent.clientHeight)
+
+        // Если нужно реагировать на resize окна — вешаем на window:
+        window.addEventListener('resize', () => {
+            this.svgParentSize.x = parent.clientWidth
+            this.svgParentSize.y = parent.clientHeight
+            this.needsRedraw = true
+        })
     }
 
     // Initialize elements and start layout
@@ -262,18 +323,31 @@ class VisibleGraph {
         // *** some work at subclass (getting graph data), then:
 
         this.svgElement.parentElement.scrollLeft = 0
-        this.svgElement.parentElement.scrollTop = 0
-        this.createPrimitives()
+        this.svgElement.parentElement.scrollTop  = 0
+        this.svgElement.style.width  = '100%'
+        this.svgElement.style.height = '100%'
+
+        this.nodePrimitives = {}      // оставляем — там хранятся цвета/satellites
+        this.edgePrimitives = {0: {}} // оставляем для совместимости с setSatellite
+
+        this.createPrimitives()       // создаёт пул DOM-элементов
+        this._initMinimap()           // добавляет canvas
+
         if (this.explanation)
             this.setExplanation(this.explanation)
 
-        this.visView.fireEventsByTag(this._tag) // will call setLayout and others
+        this.visView.fireEventsByTag(this._tag)
 
-        if (!this.alive) { // To avoid multiple draw cycles
+        if (!this.alive) {
             this.alive = true
             this.drawCycle()
         }
         $(this.svgElement).css("background-color", this.backgroundColor)
+    }
+
+    // Create reverse mappings of nodes and edges to define radius, stroke width, color when drawing
+    _createMappings() {
+        // *** to be defined in subclasses
     }
 
     // Variable part of drop - to be overridden
@@ -419,27 +493,22 @@ class VisibleGraph {
         this.visView.removeListeners(this._tagVar)
         this._dropVar()
         this.datasetVar = null
+        this.needsRedraw = true
     }
 
     // Variable part of initVar - to be overridden
     _buildVar() {
         this.ready = true
-        for (const elem of VisibleGraph.ELEMS)
-            for (const satellite of VisibleGraph.SATELLITES)
-                this.setSatellite(elem, satellite)
+        this.numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
+        if (this.numClasses <= 12)
+            this.coloredNodes = createSetOfColors(this.numClasses, this.svgPanel.$svg)
 
         this.visView.fireEventsByTag(this._tagVar)
+        this.needsRedraw = true
     }
 
     // Remove all elements associated with dataset var data - to be overridden
     _dropVar() {
-        if (this.datasetVar)
-            for (const elem of VisibleGraph.ELEMS)
-                for (const satellite of VisibleGraph.SATELLITES) {
-                    this.setSatellite(elem, satellite, false)
-                    if (satellite in this.datasetVar[elem])
-                        delete this.datasetVar[elem][satellite]
-                }
         this.explanation = null
         this.explanationEdges = null
     }
@@ -461,27 +530,6 @@ class VisibleGraph {
         if (this.datasetVar) {
             await this._buildVar()
         }
-        this.checkLightMode()
-    }
-
-    // Check parameters to decide whether to turn on a light mode.
-    // Value of 'visible' can be passed from a superclass.
-    checkLightMode(visible=null) {
-        if (visible == null)
-            this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_MULTI
-        if (this.nodesVisible) {
-            this.svgPanel.get("node").show()
-            for (const satellite of VisibleGraph.SATELLITES) {
-                this.svgPanel.get("node-" + satellite).show()
-                this.showSatellite("node", satellite,
-                    this.visView.getValue(this.visView.satellitesIds[satellite]))
-            }
-        }
-        else {
-            this.svgPanel.get("node").hide()
-            for (const satellite of VisibleGraph.SATELLITES)
-                this.svgPanel.get("node-" + satellite).hide()
-        }
     }
 
     // Set or Update graph layout
@@ -489,6 +537,7 @@ class VisibleGraph {
         // *** some work at subclass (setting Layout), then:
         this.layout.setVisibleGraph(this)
         this.visView.fireEvent(this.layoutFreezeButtonId)
+        this._buildMinimapCache()
     }
 
     freezeLayout(freeze) {
@@ -555,148 +604,53 @@ class VisibleGraph {
     createPrimitives() {
         // *** some work at subclass, then:
 
-        // Add <g> for explanation edges
-        this.svgPanel.add("explanation-edges")
-        // Explanation will be set after the layout
+        // // Add <g> for explanation edges
+        // this.svgPanel.add("explanation-edges")
+        // // Explanation will be set after the layout
+        //
+        // // Add edge primitives
+        // if (this.edgePrimitives) {
+        //     let gEdge = this.svgPanel.add("edge")
+        //     for (const es of Object.values(this.edgePrimitives))
+        //         for (const edge of Object.values(es))
+        //             gEdge.appendChild(edge.path)
+        // }
+        //
+        // // Add node primitives
+        // let g = this.svgPanel.add("node")
+        // for (const node of Object.values(this.nodePrimitives)) {
+        //     g.appendChild(node.body)
+        //     g.appendChild(node.text)
+        // }
+        //
+        // // Add satellite elements for nodes and edges
+        // for (const satellite of VisibleGraph.SATELLITES) {
+        //     this.svgPanel.add("node-" + satellite)
+        //     this.svgPanel.add("edge-" + satellite)
+        // }
 
-        // Add edge primitives
-        if (this.edgePrimitives) {
-            let gEdge = this.svgPanel.add("edge")
-            for (const es of Object.values(this.edgePrimitives))
-                for (const edge of Object.values(es))
-                    gEdge.appendChild(edge.path)
+        let gEdge = this.svgPanel.add("edge")
+        this.edgePrimitives = {0:{}}
+        for (let n=0; n<Thresholds.MAX_VISIBLE_EDGES_COUNT; ++n) {
+            let edge = new SvgEdge(0, 0, 0, 0, this.edgeRadius, '#fff',
+                this.edgeStrokeWidth, false, true, this.svgPanel.$tip)
+            this.edgePrimitives[0][n] = edge
+            gEdge.appendChild(edge.g)
         }
 
-        // Add node primitives
-        let g = this.svgPanel.add("node")
-        for (const node of Object.values(this.nodePrimitives)) {
-            g.appendChild(node.body)
-            g.appendChild(node.text)
+        let gEdgeSat = this.svgPanel.add("edge-satellites")
+
+        // Add max slots for nodes
+        let gNode = this.svgPanel.add("node")
+        for (let n=0; n<Thresholds.MAX_VISIBLE_NODES_COUNT; ++n) {
+            let node = new SvgNode(0, 0, this.nodeRadius, 'circle', this.nodeStrokeWidth,
+                '#fff', '', true, this.svgPanel.$tip)
+            this.nodePrimitives[n] = node
+            gNode.appendChild(node.g)
         }
 
-        // Add satellite elements for nodes and edges
-        for (const satellite of VisibleGraph.SATELLITES) {
-            this.svgPanel.add("node-" + satellite)
-            this.svgPanel.add("edge-" + satellite)
-        }
-    }
-
-    // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
-    setSatellite(elem, satellite, on=true) {
-        if (!this.ready)
-            // Could happen when we reinit graph while satellites data is being received
-            return
-
-        // Replace satellite elements
-        let $g = this.svgPanel.get(elem + "-" + satellite)
-        if (!on) {
-            $g.empty()
-            if (elem === "node" && this.nodePrimitives) {
-                for (const node of Object.values(this.nodePrimitives))
-                    node.satellites[satellite].blocks = null
-                if (satellite === 'labels')
-                    this.showClassAsColor(false)
-            }
-            else if (elem === "edge" && this.edgePrimitives) {
-                for (const es of Object.values(this.edgePrimitives))
-                    for (const edge of Object.values(es))
-                        edge.satellites[satellite].blocks = null
-            }
-        }
-        else if (satellite in this.datasetVar[elem]) {
-            let values = this.datasetVar[elem][satellite]
-            if (elem === "node") {
-                if (!this.nodePrimitives) return
-
-                if (satellite === 'labels') {
-                    // FIXME tmp
-                    let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
-                    for (const [i, node] of Object.entries(this.nodePrimitives)) {
-                        node.setLabels(values[i], numClasses)
-                        for (const e of node.satellites[satellite].blocks)
-                            $g.append(e)
-                    }
-
-                    if (numClasses <= 12) {
-                        this.coloredNodes = createSetOfColors(numClasses, this.svgPanel.$svg)
-                        this.visView.setEnabled(this.visView.singleClassAsColorId, true)
-                        // this.showClassAsColor()
-                    } else {
-                        this.visView.setValue(this.visView.singleClassAsColorId, false)
-                        this.visView.setEnabled(this.visView.singleClassAsColorId, false)
-                    }
-                } else {
-                    for (const [i, node] of Object.entries(this.nodePrimitives)) {
-                        if (node.setSatellite(satellite, values[i]))
-                            for (const e of node.satellites[satellite].blocks)
-                                $g.append(e)
-                    }
-                }
-            }
-            else if (elem === "edge") {
-                if (!this.edgePrimitives) return
-                if (satellite === 'labels') {
-                    // FIXME tmp
-                    let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
-                    for (const es of Object.values(this.edgePrimitives))
-                        for (const [edgeKey, edge] of Object.entries(es))
-                            if (edge.setLabels(values[edgeKey], numClasses))
-                                for (const e of edge.satellites[satellite].blocks)
-                                    $g.append(e)
-                }
-                else {
-                    for (const es of Object.values(this.edgePrimitives))
-                        for (const [edgeKey, edge] of Object.entries(es))
-                            if (edge.setSatellite(satellite, values[edgeKey]))
-                                for (const e of edge.satellites[satellite].blocks)
-                                    $g.append(e)
-                }
-            }
-        }
-    }
-
-    // Add SVG path for a batch of edges
-    addEdgePrimitivesBatch(key, batch, color, width, directed, show) {
-        if (this.edgePrimitivesBatches == null)
-            this.edgePrimitivesBatches = {}
-        if (this.edgePrimitivesBatches[key] == null)
-            this.edgePrimitivesBatches[key] = []
-        let count = Math.ceil(batch.length / EDGE_MINIBATCH_SIZE)
-        for (let i = 0; i < count; i++) {
-            let miniBatch = batch.slice(i*EDGE_MINIBATCH_SIZE, (i+1)*EDGE_MINIBATCH_SIZE)
-            let svg = new SvgEdgeBatch(miniBatch, color, width, directed, show)
-            this.edgePrimitivesBatches[key].push(svg)
-            this.svgElement.appendChild(svg.path)
-        }
-    }
-
-    // Create a single edge SVG primitive
-    createEdgePrimitive(key, edgeKey, i, j, radius, color, width, directed, show) {
-        if (!this.edgePrimitives)
-            this.edgePrimitives = {}
-        if (!this.edgePrimitives[key])
-            this.edgePrimitives[key] = {}
-
-        let edge = new SvgEdge(0, 0, 0, 0, radius, color, width, directed, show, this.svgPanel.$tip)
-        edge.sourceNode = i
-        edge.targetNode = j
-        this.edgePrimitives[key][edgeKey] = edge
-
-        return edge
-    }
-
-    // Create a node SVG (will be added later together)
-    createNodePrimitive(element, i, radius, form, width, color, show) {
-        let node = new SvgNode(0, 0, radius, form, width, color, i.toString(), show, this.svgPanel.$tip)
-        this.nodePrimitives[i] = node
-
-        // Add listeners
-        node.body.onmousedown = (e) => this.nodeGrabbed = i
-        if (this.onNodeClick) {
-            node.body.onclick = (e) => this.onNodeClick("left", i)
-            node.body.oncontextmenu = (e) => this.onNodeClick("right", i)
-            node.body.ondblclick = (e) => this.onNodeClick("double", i)
-        }
+        this.visNodes = new Set()
+        this.visEdges = []
     }
 
     debugInfo() {
@@ -704,128 +658,357 @@ class VisibleGraph {
         html += `scale: ${this.scale.toPrecision(3)}`
         html += `<br> svg pos: ${this.svgPos.str(5)}`
         html += `<br> screen pos: ${this.screenPos.str(5)}`
-        html += `<br> mouse pos: ${this.mousePos.str()}`
+        html += `<br> mouse pos: ${this.mousePos.str(5)}`
         html += `<br> layout pos: ${Vec.add(this.mousePos, this.svgPos).mul(1/this.scale).str(5)}`
+
+        // Drawing times
+        // {key -> {edgeKey -> SvgEdge}} for individual edges.
+        // Key is: depth for neighborhood, 0 for graph, graph ix for multi graph
+        let numEdgePrimitives = 0
+        for (const es of Object.values(this.edgePrimitives))
+            numEdgePrimitives += Object.keys(es).length
+        let numNodePrimitives = Object.keys(this.nodePrimitives).length
+
+        // let last = 0;
+        // const self = this
+        // let rafTick = (t) => {
+        //     if (last) {
+        //         this.frameDt = t - last;
+        //         // dt ~ 16.7ms на 60Hz, ~8.3ms на 120Hz, больше = просадки
+        //         console.log("frame dt:", this.frameDt.toFixed(2), "ms");
+        //     }
+        //     last = t;
+        //     requestAnimationFrame(rafTick);
+        // }
+        // requestAnimationFrame(rafTick);
+
+        html += `<br> draw nodes time [${this.visNodes.size}]: ${Debug.DRAW_NODES_TIME}`
+        html += `<br> draw edges time [${this.visEdges.length}]: ${Debug.DRAW_EDGES_TIME}`
+        html += `<br> adjustVisibleArea time: ${Debug.ADJUST_VIS_AREA_TIME}`
+        html += `<br> draw minimap time: ${Debug.DRAW_MINIMAP_TIME}`
+        html += `<br> draw total time: ${Debug.DRAW_TOTAL_TIME}`
+        html += `<br> frame dt: ${this.frameDt.toFixed(2)}`
+        html += `<br> layout step time: ${Debug.LAYOUT_STEP_TIME}`
+
         // html += `<br> viewBoxShift: ${this.svgPos.str(4)}`
         // html += `<br> viewBox: ${this.element.getAttribute("viewBox")}`
         // html += `<br> scroll: ${new Vec(this.element.parentElement.scrollLeft, this.element.parentElement.scrollTop).str(4)}`
         // $("#dataset-info-bottomleft").html(html)
-        // $("#dataset-info-upright").html(html)
+        $("#dataset-info-upright").html(html)
         // controller.presenter.datasetView.$upRightInfoDiv.html(html)
     }
 
-    // Compute approximate bounding box using nodes positions
-    approxBBox() {
-        let pos = this.layout.pos
-        let xMin = Infinity
-        let yMin = Infinity
-        let xMax = -Infinity
-        let yMax = -Infinity
-        for (const vec of Object.values(pos)) {
-            xMin = Math.min(xMin, vec.x)
-            yMin = Math.min(yMin, vec.y)
-            xMax = Math.max(xMax, vec.x)
-            yMax = Math.max(yMax, vec.y)
-        }
-        xMin *= this.scale
-        yMin *= this.scale
-        xMax *= this.scale
-        yMax *= this.scale
-        let r = Math.max(MIN_NODE_RADIUS, Math.ceil(this.nodeRadius * (this.scale/100) ** 0.5))
-        let padx = 2.1 * r
-        let pady = 2.8 * r
-        return {
-            x: xMin - padx,
-            y: yMin - pady,
-            width: xMax-xMin + 2*padx,
-            height: yMax-yMin + 2*pady
-        }
+    // Adjust SVG viewBox
+    adjustVisibleArea() {
+        const t = performance.now()
+
+        const w = this.svgParentSize.x
+        const h = this.svgParentSize.y
+
+        // this.svgElement.style.width  = w + 'px'
+        // this.svgElement.style.height = h + 'px'
+        this.svgElement.setAttribute('viewBox',
+            `${this.screenPos.x} ${this.screenPos.y} ${w} ${h}`)
+
+        Debug.ADJUST_VIS_AREA_TIME = performance.now() - t
     }
 
-    // Adjust SVG viewBox, visible view and scroll according to elements positions on SVG
-    adjustVisibleArea() {
-        // TODO move this to SvgPanel
+    // ── Minimap setup (вызвать один раз в init) ───────────────────────────────
+    _initMinimap() {
+        // Создаём canvas поверх SVG-контейнера
+        const wrap = this.svgElement.parentElement
+        const mc = document.createElement('canvas')
+        mc.style.cssText = `
+            position:absolute; bottom:12px; right:12px;
+            width:160px; height:100px; border-radius:8px;
+            background:rgba(15,17,23,0.85);
+            border:1px solid rgba(100,120,255,0.25);
+            pointer-events:none; z-index:10;
+        `
+        // parentElement должен быть position:relative
+        wrap.style.position = 'relative'
+        wrap.appendChild(mc)
+        this._minimapCanvas = mc
+        this._minimapCtx   = mc.getContext('2d')
+
+        // Предвычисляем фиксированную выборку и bounding box
+        this._minimapSample = null
+        this._minimapBBox   = null
+    }
+
+    _buildMinimapCache() {
+        const pos     = this.layout.pos
+        const allKeys = Object.keys(pos)
+        if (!allKeys.length) return
+
+        // Bounding box по ВСЕМ точкам — чтобы крайние точки не зависели от сэмпла
+        let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity
+        for (const k of allKeys) {
+            const v = pos[k]
+            if (v.x < xMin) xMin = v.x; if (v.x > xMax) xMax = v.x
+            if (v.y < yMin) yMin = v.y; if (v.y > yMax) yMax = v.y
+        }
+        this._minimapBBox = { xMin, yMin, xMax, yMax }
+
+        // Фиксированная выборка 1000 точек
+        const SAMPLE = 1000
+        let seed = 42
+        const rand = () => {
+            seed = (seed * 1664525 + 1013904223) & 0xffffffff
+            return (seed >>> 0) / 0xffffffff
+        }
+        this._minimapSample = allKeys.length <= SAMPLE
+            ? allKeys
+            : Array.from({length: SAMPLE}, () => allKeys[Math.floor(rand() * allKeys.length)])
+    }
+
+    _drawMinimap() {
         let t = performance.now()
-        let parent = this.svgElement.parentElement
+        const mc  = this._minimapCanvas
+        const ctx = this._minimapCtx
+        if (!mc || !ctx || !this.layout || !this._minimapSample || !this._minimapBBox) return
 
-        // Define new SVG viewBox - minimal rectangle covering SVG bbox and current visible screen
-        // let bbox = this.element.getBBox()
-        let bbox = this.approxBBox()
-        // console.log(`Time of getBBox(): ${performance.now() - t}ms`)
-        this.svgPos.x = Math.min(this.screenPos.x, bbox.x)
-        this.svgPos.y = Math.min(this.screenPos.y, bbox.y)
-        let svgX1 = Math.max(this.screenPos.x + parent.clientWidth, bbox.x + bbox.width)
-        let svgY1 = Math.max(this.screenPos.y + parent.clientHeight, bbox.y + bbox.height)
-        let w = svgX1 - this.svgPos.x
-        let h = svgY1 - this.svgPos.y
-        this.svgElement.setAttribute("viewBox", `${this.svgPos.x} ${this.svgPos.y} ${w} ${h}`)
-        let dx = parseInt(this.svgElement.style.borderLeftWidth) + parseInt(this.svgElement.style.borderRightWidth) || 0
-        let dy = parseInt(this.svgElement.style.borderBottomWidth) + parseInt(this.svgElement.style.borderTopWidth) || 0
-        this.svgElement.style.width = `${w-dx}px`
-        this.svgElement.style.height = `${h-4-dy}px` // TODO what is the magic number: 4px ? Check other browsers
+        const MW = mc.offsetWidth  || 160
+        const MH = mc.offsetHeight || 100
+        mc.width  = MW
+        mc.height = MH
 
-        // Set scroll after SVG resize
-        parent.scrollLeft = Math.max(0, this.screenPos.x - this.svgPos.x)
-        parent.scrollTop = Math.max(0, this.screenPos.y - this.svgPos.y)
-        // console.log(`Time of adjustVisibleArea(): ${performance.now() - t}ms`)
+        const { xMin, yMin, xMax, yMax } = this._minimapBBox
+        const ww = xMax - xMin || 1
+        const wh = yMax - yMin || 1
+
+        // Сохраняем соотношение сторон — вписываем граф в minimap с отступами
+        const PAD = 4
+        const availW = MW - PAD * 2
+        const availH = MH - PAD * 2
+        const scale  = Math.min(availW / ww, availH / wh)
+
+        // Смещение чтобы отцентрировать
+        const offX = PAD + (availW - ww * scale) / 2
+        const offY = PAD + (availH - wh * scale) / 2
+
+        const toMX = (wx) => (wx - xMin) * scale + offX
+        const toMY = (wy) => (wy - yMin) * scale + offY
+
+        ctx.fillStyle = '#0f1117'
+        ctx.fillRect(0, 0, MW, MH)
+
+        const pos = this.layout.pos
+        ctx.fillStyle = '#6070ff'
+        for (const k of this._minimapSample) {
+            const v = pos[k]; if (!v) continue
+            ctx.beginPath()
+            ctx.arc(toMX(v.x), toMY(v.y), 1.5, 0, Math.PI * 2)
+            ctx.fill()
+        }
+
+        // Viewport
+        const vx = toMX(this.screenPos.x / this.scale)
+        const vy = toMY(this.screenPos.y / this.scale)
+        const vw = (this.svgParentSize.x / this.scale) * scale
+        const vh = (this.svgParentSize.y / this.scale) * scale
+        ctx.strokeStyle = 'rgba(160,170,255,0.85)'
+        ctx.lineWidth = 1
+        ctx.strokeRect(vx, vy, vw, vh)
+        Debug.DRAW_MINIMAP_TIME = performance.now() - t
+    }
+
+    // Set attributes specific to this node
+    setNodeAttributes(node, n) {
+        // *** to be defined in subclasses
+    }
+
+    // Set attributes specific to this edge
+    setEdgeAttributes(edge, i, j) {
+        // *** to be defined in subclasses
     }
 
     // Change SVG elements positions according to layout positions and scale
-    draw(adjust=true) {
-        console.log('draw')
+    draw(adjust = true) {
         let t = performance.now()
-        let pos = this.layout.pos
-        // Update SVG elements according to layout and scale
-        if (this.nodesVisible)
-            for (const [n, node] of Object.entries(this.nodePrimitives)) {
-                let newPos = Vec.mul(pos[n], this.scale)
-                node.moveTo(newPos.x, newPos.y)
-                node.scale(this.scale)
-            }
-        // console.log(`Time of node moving: ${performance.now() - t}ms`)
-        let scaledPos = {}
-        for (const [n, vec] of Object.entries(pos)) {
-            scaledPos[n] = Vec.mul(vec, this.scale)
+
+        const pos   = this.layout.pos
+        const scale = this.scale
+
+        // ── 1. Viewport в мировых координатах ────────────────────────────────
+        const x0 = this.screenPos.x / scale
+        const y0 = this.screenPos.y / scale
+        const x1 = (this.screenPos.x + this.svgParentSize.x) / scale
+        const y1 = (this.screenPos.y + this.svgParentSize.y) / scale
+
+        // ── 2. Culling узлов ──────────────────────────────────────────────────
+        const visNodeKeys = []
+        for (const n in pos) {
+            const v = pos[n]
+            if (v.x >= x0 && v.x <= x1 && v.y >= y0 && v.y <= y1)
+                visNodeKeys.push(n)
         }
 
-        // Update individual edge primitives
-        if (this.edgePrimitives) {
-            for (const es of Object.values(this.edgePrimitives))
-                for (const edge of Object.values(es)) {
-                    let i = edge.sourceNode
-                    let j = edge.targetNode
-                    if (i in scaledPos && j in scaledPos) {
-                        edge.moveTo(scaledPos[i].x, scaledPos[i].y, scaledPos[j].x, scaledPos[j].y)
-                        edge.scale(this.scale)
+        // ── 3. Culling рёбер (хотя бы один конец виден) ───────────────────────
+        const visNodeSet = new Set(visNodeKeys.map(Number))
+        let visEdges   = []
+        let e = 0
+        const allEdges = this.getEdges() // fixme keep this ?
+        for (const [i, j] of allEdges) {
+            if (visNodeSet.has(i) || visNodeSet.has(j))
+                visEdges.push(e)
+            ++e
+            // if (visEdges.length >= Thresholds.MAX_VISIBLE_NODES_COUNT) break
+        }
+
+        // Прореживание ребер
+        if (visEdges.length > Thresholds.MAX_VISIBLE_EDGES_COUNT) {
+            let newArray = []
+            let r = visEdges.length / Thresholds.MAX_VISIBLE_EDGES_COUNT
+            for (let i=0; i<Thresholds.MAX_VISIBLE_EDGES_COUNT; ++i) {
+                newArray.push(visEdges[parseInt(i*r)])
+            }
+            visEdges = newArray
+        }
+
+        // ── 4. Обновляем пул узлов ────────────────────────────────────────────
+        let drawSatellites = (visNodeKeys.length <= Thresholds.MAX_VISIBLE_SATELLITES_COUNT) &&
+            (this.scale > Thresholds.MAX_VISIBLE_SATELLITES_SCALE)
+
+        let drawNodes = (visNodeKeys.length <= Thresholds.MAX_VISIBLE_NODES_COUNT) &&
+            (this.scale > Thresholds.MAX_VISIBLE_NODES_SCALE)
+        console.log('drawNodes', drawNodes)
+
+        if (!drawNodes) {
+            // Hide all nodes
+            this.svgPanel.get("node").hide()
+            this.visNodes = new Set()
+        }
+        else {
+            let gNode = this.svgPanel.get("node")
+            gNode.show()
+
+            for (let si = 0; si < Thresholds.MAX_VISIBLE_NODES_COUNT; si++) {
+                const node = this.nodePrimitives[si]
+
+                if (si >= visNodeKeys.length) {
+                    // Скрываем неиспользуемые слоты
+                    node.visible(false)
+                    continue
+                }
+                node.visible(true)
+
+                const nKey = visNodeKeys[si]
+
+                // Set attributes specific to this node
+                this.setNodeAttributes(node, parseInt(nKey))
+
+                // Позиция через transform — один setAttribute вместо cx/cy
+                node.translate(pos[nKey].x * scale, pos[nKey].y * scale)
+                node.scale(this.scale)
+
+                // Текст — номер узла
+                if (node.text.textContent !== nKey)
+                    node.text.textContent = nKey
+
+                // Set var
+                if (this.datasetVar) {
+                    // Set color
+                    if (this._showClassAsColor && this.numClasses && this.numClasses <= 12)
+                        node.setFillColorIdx(this.datasetVar['node']['labels'][nKey])
+                    else
+                        node.dropFillColor()
+
+                    // Set satellites
+                    for (const satellite of VisibleGraph.SATELLITES) {
+                        if (!drawSatellites) {
+                            node.removeSatellites()
+                            // node.setText()
+                            node.text.textContent = ''
+                            continue
+                        }
+
+                        let values = this.datasetVar["node"][satellite]
+                        if (values) {
+                            if (satellite === "labels") {
+                                node.setLabels(values[nKey], this.numClasses)
+                            } else
+                                node.setSatellite(satellite, values[nKey])
+                        }
+                    }
+                }
+                else {
+                    node.removeSatellites()
+                    node.dropFillColor()
+                }
+
+                // Drag listener: передаём реальный ключ узла
+                const n = parseInt(nKey)
+                node.body.onmousedown = (e) => this.nodeGrabbed = n
+                if (this.onNodeClick) {
+                    node.body.onclick = (e) => this.onNodeClick("left", n)
+                    node.body.oncontextmenu = (e) => this.onNodeClick("right", n)
+                    node.body.ondblclick = (e) => this.onNodeClick("double", n)
+                }
+            }
+        }
+        Debug.DRAW_NODES_TIME = performance.now() - t
+
+        // ── 5. Обновляем пул рёбер ────────────────────────────────────────────
+        for (let ei = 0; ei < Thresholds.MAX_VISIBLE_EDGES_COUNT; ei++) {
+            const edge = this.edgePrimitives[0][ei]  // TODO
+
+            if (ei >= visEdges.length) {
+                edge.visible(false)
+                continue
+            }
+
+            const e = visEdges[ei]
+            const [i, j] = allEdges[e]
+            if (!(i in pos) || !(j in pos)) {
+                edge.visible(false)
+                continue
+            }
+            edge.visible(true)
+
+            const x1e = pos[i].x * scale, y1e = pos[i].y * scale
+            const x2e = pos[j].x * scale, y2e = pos[j].y * scale
+
+            edge.scale(scale)
+            edge.moveTo(x1e, y1e, x2e, y2e) // fixme only when node is moving
+            // if (this.layout && this.layout.moving)
+                // edge.moveTo(pos[i].x, pos[i].y, pos[j].x, pos[j].y) // fixme only when node is moving
+
+            // Set attributes specific to this node
+            this.setEdgeAttributes(edge, i, j)
+
+            // Set satellites
+            let eKey = `${i},${j}`
+            if (this.datasetVar)
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    if (!drawSatellites) {
+                        edge.removeSatellites()
+                        continue
+                    }
+                    let values = this.datasetVar["edge"][satellite]
+                    if (values) {
+                        if (satellite === "labels") {
+                            edge.setLabels(values[eKey], this.numClasses)
+                        }
+                        else
+                            edge.setSatellite(satellite, values[eKey])
                     }
                 }
         }
 
-        // Update edge batches
-        if (this.edgePrimitivesBatches) {
-            for (const batch of Object.values(this.edgePrimitivesBatches))
-                for (const svg of batch) {
-                    svg.setScale(this.scale)
-                    svg.moveTo(scaledPos)
-                }
-        }
-        // console.log(`Time of node+edge moving: ${performance.now() - t}ms`)
+        Debug.DRAW_EDGES_TIME = performance.now() - t - Debug.DRAW_NODES_TIME
 
-        // Explanation edges
-        if (this.explanation)
-            for (const [edge, svg] of Object.entries(this.explanationEdges)) {
-                let [i, j] = edge.split(',') // TODO simplify: parse at explanation init
-                i = parseInt(i)
-                j = parseInt(j)
-                if (i in pos && j in pos) { // Only edges that can be visible
-                    let pos1 = Vec.mul(pos[i], this.scale)
-                    let pos2 = Vec.mul(pos[j], this.scale)
-                    svg.moveTo(pos1.x, pos1.y, pos2.x, pos2.y)
-                }
-            }
+        // ── 6. Minimap ────────────────────────────────────────────────────────
+        this._drawMinimap()
+
+        // ── 7. adjustVisibleArea (твоя логика, не трогаем) ────────────────────
         if (adjust)
             this.adjustVisibleArea()
-        // console.log(`Time of draw(): ${performance.now() - t}ms`) // 310-360 for Cora (with attr and preds)
+
+        this.visEdges  = visEdges
+        this.visNodes  = visNodeSet
+        Debug.DRAW_TOTAL_TIME = performance.now() - t
+        this.debugInfo()
     }
 
     // Add (new) explanation
@@ -874,37 +1057,12 @@ class VisibleGraph {
     }
 
     showClassAsColor(show) {// TODO unite in subclasses     dropClassAsColor()
-        // console.log('showClassAsColor', show)
-        if (show) {
-            if (this.coloredNodes && this.datasetVar['node']['labels'])
-                for (const [n, node] of Object.entries(this.nodePrimitives))
-                    node.setFillColorIdx(this.datasetVar['node']['labels'][n])
-        }
-        else // drop
-            for (const node of Object.values(this.nodePrimitives))
-                node.dropFillColor()
+        this._showClassAsColor = show
+        this.needsRedraw = true
     }
 
     // Turn on/off visibility of labels, features, predictions, etc
     showSatellite(elem, satellite, show) {
-        // console.log('showSatellite', satellite, show)
-        this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
-
-        if (elem === "node" && this.nodePrimitives) {
-            for (const node of Object.values(this.nodePrimitives)) {
-                node.satellites[satellite].show = show
-                node.visible(node.show)
-            }
-        }
-        else if (elem === "edge" && this.edgePrimitives) {
-            for (const es of Object.values(this.edgePrimitives))
-                for (const edge of Object.values(es)) {
-                    edge.satellites[satellite].show = show
-                    edge.visible(edge.show)
-                }
-        }
-        else {
-            console.log('not implemented')
-        }
+        this.svgPanel.getSatellite(elem, satellite).css("display", show ? 'inline' : 'none')
     }
 }

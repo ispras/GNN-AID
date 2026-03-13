@@ -11,28 +11,31 @@ class Neighborhood extends VisibleGraph {
         this.layoutFreezeButtonId = this.visView.singleNeighLayoutFreezeId
 
         // Constants
-        this.edgeColor = {
-            1: '#000000',
-            2: '#242424',
-            3: '#838383',
-            4: '#d0d0d0',
+        this.depthEdgeColors = {
+            1: '#ffffff',
+            2: '#d0d0d0',
+            3: '#888888',
+            4: '#555555',
         }
-        this.nodeRadiuses = {0: 30, 1: 20, 2: 10, 3: 8, 4: 6}
-        this.nodeStrokeWidthes = {0: 5, 1: 4, 2: 3, 3: 2, 4: 2}
-        this.edgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
-        this.nodeRadius = this.nodeRadiuses[0]
+        this.depthNodeRadiuses = {0: 30, 1: 20, 2: 10, 3: 8, 4: 6}
+        this.depthNodeStrokeWidthes = {0: 5, 1: 4, 2: 3, 3: 2, 4: 2}
+        this.depthEdgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
 
         // Variables
         this.nodes = null // {depth -> List of d-th neighbors nodes}
         this.edges = null // {depth -> List of d-th depth incoming/adjacent edges}
         this.n0 = null // main node
         this.depth = null // neighborhood depth
+        this.nodeRadiuses = null // {node -> radius}
+        this.nodeStrokeWidthes = null // {node -> StrokeWidth}
+        this.edgeColors = null // {edge -> color}
+        this.edgeStrokeWidthes = null // {edge -> StrokeWidth}
         this.showDepth = Array(Neighborhood.PARTS+1).fill(true) // whether to show depth
     }
 
     createListeners() {
-        this.visView.addListener(this.visView.singleClassAsColorId,
-            (_, v) => this.showClassAsColor(v), this._tag)
+        // this.visView.addListener(this.visView.singleClassAsColorId,
+        //     (_, v) => this.showClassAsColor(v), this._tag)
         this.visView.addListener(this.visView.singleNeighLayoutId,
             (k, v) => this.setLayout(v), this._tag)
         this.visView.addListener(this.visView.singleNeighNodeId,
@@ -75,9 +78,31 @@ class Neighborhood extends VisibleGraph {
             if (this.depth !== depth) { // Received another depth
                 this.visView.setValue(this.visView.singleNeighDepthId, this.depth)
             }
+
+            // Create reverse mappings of nodes and edges for radius, stroke width, color
+            this._createMappings()
         }
 
         await super._build()
+    }
+
+    // Create reverse mappings of nodes and edges to define radius, stroke width, color when drawing
+    _createMappings() {
+        this.nodeRadiuses = {}
+        this.nodeStrokeWidthes = {}
+        for (let d=0; d<this.nodes.length; ++d)
+            for (let n of this.nodes[d]) {
+                this.nodeRadiuses[n] = this.depthNodeRadiuses[d]
+                this.nodeStrokeWidthes[n] = this.depthNodeStrokeWidthes[d]
+            }
+
+        this.edgeStrokeWidthes = {}
+        this.edgeColors = {}
+        for (let d=0; d<this.edges.length; ++d)
+            for (let [i, j] of this.edges[d]) {
+                this.edgeStrokeWidthes[`${i},${j}`] = this.depthEdgeStrokeWidthes[d]
+                this.edgeColors[`${i},${j}`] = this.depthEdgeColors[d]
+            }
     }
 
     // Set central node
@@ -121,14 +146,6 @@ class Neighborhood extends VisibleGraph {
                 break
         }
         super.setLayout()
-    }
-
-    // Check parameters to decide whether to turn on a light mode
-    checkLightMode() {
-        this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_SINGLE
-        for (const node of Object.values(this.nodePrimitives))
-            node.lightMode = !this.nodesVisible
-        super.checkLightMode(this.nodesVisible)
     }
 
     // Get degree of a node in an induced subgraph (for 2nd neighbors it is less than the actual)
@@ -184,39 +201,17 @@ class Neighborhood extends VisibleGraph {
         return `<b>Neighborhood</b> of '${n}' with ${nodesString} nodes, ${e} edges`
     }
 
-    // Create HTML for SVG primitives on the given element
-    createPrimitives() {
-        // this.svgElement.innerHTML = ''
-        this.svgPanel.$svg.empty()
-        this.nodePrimitives = {}
+    // Set attributes specific to this node
+    setNodeAttributes(node, n) {
+        node.r = this.nodeRadiuses[n]
+        node.body.setAttribute('stroke-width', this.nodeStrokeWidthes[n])
+    }
 
-        // Add edges
-        // this.edgePrimitivesBatches = []
-        // for (const [d, es] of Object.entries(this.edges))
-        //     this.addEdgePrimitivesBatch(
-        //         d, es, this.edgeColor[d], this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
-
-        // Edges - create individual edge primitives
-        let d = 1
-        for (const es of this.edges) {
-            for (const [i, j] of es) {
-                this.createEdgePrimitive(
-                    d, `${i},${j}`, i, j, this.edgeRadius, this.edgeColor[d],
-                    this.edgeStrokeWidthes[d], this.datasetInfo.directed, this.showDepth[d])
-            }
-            ++d
-        }
-
-        // Add nodes
-        for (const [d, ns] of Object.entries(this.nodes)) {
-            for (const n of ns) {
-                this.createNodePrimitive(
-                    this.svgElement, n, this.nodeRadiuses[d], "circle", this.nodeStrokeWidthes[d],
-                    this.nodeColor, this.showDepth[d])
-            }
-        }
-
-        super.createPrimitives()
+    // Set attributes specific to this edge
+    setEdgeAttributes(edge, i, j) {
+        edge.path.setAttribute("stroke-width", this.edgeStrokeWidthes[`${i},${j}`])
+        edge.path.setAttribute("stroke-width", this.edgeStrokeWidthes[`${i},${j}`])
+        edge.path.setAttribute("stroke", this.edgeColors[`${i},${j}`])
     }
 
     showPart(part, show) {

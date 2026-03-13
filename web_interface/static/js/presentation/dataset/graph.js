@@ -45,14 +45,6 @@ class Graph extends VisibleGraph {
             (_, v) => this.showClassAsColor(v), this._tagVar)
     }
 
-    // Check parameters to decide whether to turn on a light mode
-    checkLightMode() {
-        this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_SINGLE
-        for (const node of Object.values(this.nodePrimitives))
-            node.lightMode = !this.nodesVisible
-        super.checkLightMode(this.nodesVisible)
-    }
-
     setLayout(layout) {
         if (layout == null)
             layout = this.visView.getValue(this.visView.singleGraphLayoutId)
@@ -62,6 +54,10 @@ class Graph extends VisibleGraph {
                 break
             case "force":
                 this.layout = new ForceLayout()
+                break
+            case "forceAtlas2":
+                this.layout = new ForceAtlas2Layout()
+                this.layout.rad = 0.08
                 break
         }
         super.setLayout()
@@ -144,32 +140,6 @@ class Graph extends VisibleGraph {
     // Get information HTML
     getInfo() {
         return '<b>Whole graph</b>'
-    }
-
-    // Create HTML for SVG primitives on the given element
-    createPrimitives() {
-        this.svgElement.innerHTML = ''
-        this.nodePrimitives = {}
-        this.edgePrimitives = {}
-        let directed = this.datasetInfo.directed
-
-        // Edges
-        // this.addEdgePrimitivesBatch(
-        //    0, this.getEdges(), this.edgeColor, this.edgeStrokeWidth, directed, true)
-
-        // Edges - create individual edge primitives
-        let edges = this.getEdges()
-        for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
-            let [i, j] = edges[edgeIdx]
-            this.createEdgePrimitive(0, `${i},${j}`, i, j, this.edgeRadius, this.edgeColor, this.edgeStrokeWidth, directed, true)
-        }
-
-        // Nodes
-        for (let n=0; n<this.numNodes; n++)
-            this.createNodePrimitive(this.svgElement, n,
-                this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
-
-        super.createPrimitives()
     }
 
     // Move all primitives on a specified vector

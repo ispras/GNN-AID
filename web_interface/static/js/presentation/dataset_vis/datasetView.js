@@ -8,8 +8,9 @@ class DatasetView extends View {
         // main SVG
         let $svgDiv = $("<div></div>").attr("id", "dataset-svg")
             .attr("style", "top: 0; bottom: 0; left: 0; right: 0")
+            .css("height", "100%")
             .css("position", "absolute")
-            .css("overflow", "scroll")
+            // .css("overflow", "scroll")
         this.$div.append($svgDiv)
         this.svgPanel = new SvgPanel($svgDiv[0])
 
@@ -296,7 +297,6 @@ class DatasetView extends View {
         if (this.explanation)
             this.visibleGraph.setExplanation(this.explanation)
 
-        this.visibleGraph.checkLightMode()
         this.visibleGraph.draw()
         this.setNodeInfo()
     }

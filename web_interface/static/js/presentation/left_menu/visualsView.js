@@ -239,6 +239,7 @@ class VisualsView extends View {
         $cb.append($select)
         $select.append($("<option></option>").val("random").text("random"))
         $select.append($("<option></option>").val("force").text("force"))
+        $select.append($("<option></option>").val("forceAtlas2").text("forceAtlas2"))
         $select.change((e) => this._update(this.singleGraphLayoutId, $select.val()))
         $cb.append(this._createLayoutStopButton(this.singleGraphLayoutFreezeId))
 
@@ -435,7 +436,9 @@ class VisualsView extends View {
             let initConfig = [
                 // [this.showModeId, 'whole-graph'],
                 [this.showModeId, 'neighborhood'],
-                [this.singleGraphLayoutId, 'random'],
+                // [this.singleGraphLayoutId, 'forceAtlas2'],
+                [this.singleGraphLayoutId, 'force'],
+                // [this.singleGraphLayoutId, 'random'],
                 [this.singleNeighLayoutId, 'force'],
                 [this.singleNeighNodeId, 0],
                 [this.singleNeighDepthId, 1],

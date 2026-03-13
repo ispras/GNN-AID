@@ -567,3 +567,13 @@ const Task = Object.freeze({
     EDGE_CLASSIFICATION: "edge-classification",
     EDGE_REGRESSION: "edge-regression",
 })
+
+// Debug variables
+class Debug {
+    static LAYOUT_STEP_TIME = -1
+    static DRAW_NODES_TIME = -1
+    static DRAW_EDGES_TIME = -1
+    static ADJUST_VIS_AREA_TIME = -1
+    static DRAW_TOTAL_TIME = -1
+    static DRAW_MINIMAP_TIME = -1
+}
