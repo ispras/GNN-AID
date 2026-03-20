@@ -94,7 +94,8 @@ class SocketConnect:
         :param obligate: if not obligate, this message would be replaced by a new one if the queue
          is not empty
         """
-        data = {"block": block or "", "msg": json_dumps(msg)}
+        data = {"block": block or "", "msg": msg}
+        # data = {"block": block or "", "msg": json_dumps(msg)}
         if func is not None:
             data["func"] = func
 
@@ -123,8 +124,8 @@ class SocketConnect:
         if data is None:
             return
 
-        size = len(json_dumps(data))
-        if size > 25e6:
+        size = len(str(data))
+        if size > 25e7:
             raise RuntimeError(f"Too big package size: {size} bytes")
         self._send_data(data)
         self.sleep_time = 0.5 * size / 25e6 * 10

@@ -445,6 +445,7 @@ class VisualsView extends View {
                 [this.singleClassAsColorId, true],
                 [this.multiNodeTypeAsColorId, true],
                 [this.multiLayoutId, 'random'],
+                // [this.multiGraphId, 1],
                 [this.multiGraphId, 0],
                 [this.multiDepthId, 0],
                 [this.multiCountId, "several"],

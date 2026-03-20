@@ -8,6 +8,7 @@ class Controller {
 
         // Setup socket connection
         this.socket = io({
+            parser: window["msgpack"],
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,

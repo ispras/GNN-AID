@@ -95,6 +95,8 @@ class SvgElement {
     }
 
     setFeatures(feats) {
+        if (feats == null)
+            console.error('null')
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
         let features = this.satellites['features']

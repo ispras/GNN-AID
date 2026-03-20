@@ -84,22 +84,32 @@ class Neighborhood extends VisibleGraph {
         }
 
         await super._build()
+        $(this.svgElement).css("background-color", "#404040")
     }
+
+    // // Convert node,edge,graph attributes
+    // _convertDatasetData(datasetData) {
+    //
+    // }
 
     // Create reverse mappings of nodes and edges to define radius, stroke width, color when drawing
     _createMappings() {
+        this.nodesList = []
         this.nodeRadiuses = {}
         this.nodeStrokeWidthes = {}
         for (let d=0; d<this.nodes.length; ++d)
             for (let n of this.nodes[d]) {
+                this.nodesList.push(n)
                 this.nodeRadiuses[n] = this.depthNodeRadiuses[d]
                 this.nodeStrokeWidthes[n] = this.depthNodeStrokeWidthes[d]
             }
 
+        this.edgesList = []
         this.edgeStrokeWidthes = {}
         this.edgeColors = {}
         for (let d=0; d<this.edges.length; ++d)
             for (let [i, j] of this.edges[d]) {
+                this.edgesList.push([i, j])
                 this.edgeStrokeWidthes[`${i},${j}`] = this.depthEdgeStrokeWidthes[d]
                 this.edgeColors[`${i},${j}`] = this.depthEdgeColors[d]
             }
@@ -162,32 +172,19 @@ class Neighborhood extends VisibleGraph {
     }
 
     getNodes(exceptMain=false) {
-        let list = []
-        let d = 0
-        for (const ns of this.nodes) {
-            if (d === 0 && exceptMain) {
-                d++
-                continue
-            }
-            ns.forEach(n => list.push(n))
-        }
-        return list
+        if (exceptMain)
+            return this.nodesList.slice(1)
+        else
+            return this.nodesList
     }
 
     getEdges() {
-        let list = []
-        for (const es of this.edges) {
-            es.forEach(e => list.push(e))
-        }
-        return list
+        return this.edgesList
     }
 
     // Get the number of edges depending on show options
     numEdges() {
-        let e = 0
-        for (const es of Object.values(this.edges))
-            e += es.length
-        return e
+        return this.edgesList.length
     }
 
     // Get information HTML
@@ -215,19 +212,20 @@ class Neighborhood extends VisibleGraph {
     }
 
     showPart(part, show) {
-        console.assert(Neighborhood.PARTS.includes(part))
-        if (this.depth < part)
-            return
-        this.showDepth[part] = show
-        if (this.edgePrimitivesBatches)
-            for (const svg of this.edgePrimitivesBatches[part])
-                svg.visible(show)
-        if (this.edgePrimitives) {
-            for (const es of Object.values(this.edgePrimitives))
-                for (const edge of Object.values(es))
-                    edge.visible(show)
-        }
-        for (const n of this.nodes[part])
-            this.nodePrimitives[n].visible(show)
+        // FIXME
+    //     console.assert(Neighborhood.PARTS.includes(part))
+    //     if (this.depth < part)
+    //         return
+    //     this.showDepth[part] = show
+    //     if (this.edgePrimitivesBatches)
+    //         for (const svg of this.edgePrimitivesBatches[part])
+    //             svg.visible(show)
+    //     if (this.edgePrimitives) {
+    //         for (const es of Object.values(this.edgePrimitives))
+    //             for (const edge of Object.values(es))
+    //                 edge.visible(show)
+    //     }
+    //     for (const n of this.nodes[part])
+    //         this.nodePrimitives[n].visible(show)
     }
 }

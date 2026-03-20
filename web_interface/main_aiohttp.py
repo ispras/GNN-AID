@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 # import multiprocessing as mp
 # mp.set_start_method("spawn", force=True)
 
@@ -13,14 +12,15 @@ import aiohttp_jinja2
 
 from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
-from web_interface.back_front.utils import json_dumps, SocketConnect, STATIC_DIR, TEMPLATES_DIR
+from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR
 
 # Socket.IO server (ASGI not used here)
 sio = socketio.AsyncServer(
     async_mode="aiohttp",
     ping_timeout=600,  # wait pong from client
     ping_interval=25,
-    cors_allowed_origins='*'
+    cors_allowed_origins='*',
+    serializer='msgpack'
 )
 app = web.Application()
 sio.attach(app)
@@ -77,7 +77,7 @@ async def handle_ask(request):
     if ask_cmd == "parameters":
         type_ = data.get('type')
         params = FrontendClient.get_parameters(type_)
-        params = json_dumps(params)
+        params = json.dumps(params)
         return web.Response(text=params)
     else:
         return web.Response(status=400, text=f"Unknown 'ask' command {ask_cmd}")
@@ -122,7 +122,7 @@ app.router.add_static('/static/', path=str(STATIC_DIR), name='static')
 
 # Socket.IO connection
 @sio.event
-async def connect(sid, environ):
+async def connect(sid, environ, auth=None):
     # Parse mode from query
     query_string = environ.get('QUERY_STRING', '')
     query = dict(qc.split('=') for qc in query_string.split('&') if '=' in qc)

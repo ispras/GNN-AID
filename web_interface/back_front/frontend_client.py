@@ -1,8 +1,8 @@
 import json
 import logging
 from enum import Enum
+from multiprocessing import Queue
 from typing import Union
-from multiprocessing import Process, Queue
 
 from gnn_aid.aux.utils import (
     FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH,
@@ -10,7 +10,7 @@ from gnn_aid.aux.utils import (
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH,
     POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH,
     EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH)
-from . import json_loads, json_dumps, ViewPoint
+from . import json_loads, ViewPoint
 from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
 from .dataset_blocks import DatasetBlock, DatasetVarBlock
 from .diagram import Diagram
@@ -205,7 +205,8 @@ class FrontendClient:
 
                 elif get == "data":
                     dataset_data = self.dvcBlock.visible_part.get_dataset_data(self.view_point)
-                    data = dataset_data.to_json()
+                    data = dataset_data.to_dict()
+                    # data = dataset_data.to_json()
                     logging.info(f"Length of dataset_data: {len(data)}")
                     result = data
 
@@ -214,13 +215,13 @@ class FrontendClient:
                         result = ''
                     else:
                         dataset_var_data = self.dvcBlock.visible_part.get_dataset_var_data(self.view_point)
-                        data = dataset_var_data.to_json()
+                        data = dataset_var_data.to_dict()
                         logging.info(f"Length of dataset_var_data: {len(data)}")
                         result = data
 
                 elif get == "stat":
                     stat = args.get('stat')
-                    result = json_dumps(self.dcBlock.get_stat(stat))
+                    result = self.dcBlock.get_stat(stat)
 
                 elif get == "index":
                     result = self.dcBlock.get_index()
@@ -251,9 +252,9 @@ class FrontendClient:
                     if do == 'index':
                         type = args.get('type')
                         if type == "saved":
-                            result = json_dumps(self.mloadBlock.get_index())
+                            result = self.mloadBlock.get_index()
                         elif type == "custom":
-                            result = json_dumps(self.mcustomBlock.get_index())
+                            result = self.mcustomBlock.get_index()
                     elif do in ['train', 'reset', 'run', 'save']:
                         result = self.mtBlock.do(do, args)
                     elif do in ['run with attacks']:
@@ -269,7 +270,7 @@ class FrontendClient:
                                 part = json_loads(part)
                                 is_new = self._set_view_point(part)
                             dvd = self.mmcBlock.get_satellites(self.view_point)
-                            data = dvd.to_json()
+                            data = dvd.to_dict()
                             logging.info(f"Length of dataset_var_data: {len(data)}")
                             result = data
                         else:

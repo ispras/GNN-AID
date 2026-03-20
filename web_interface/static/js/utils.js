@@ -417,6 +417,7 @@ function sleep(ms) {
 }
 
 function JSON_parse(string) {
+    return string
     // console.log('parsing JSON from string:', string)
     return JSON.parse(string, function (key, value) {
         if (value === 'NaN')

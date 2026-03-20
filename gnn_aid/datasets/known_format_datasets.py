@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from numbers import Number
 from pathlib import Path
 from typing import Union, List, Dict, Any, Generator, Tuple
 
@@ -67,6 +68,7 @@ class KnownFormatDataset(
         # TODO IMP replace dict with list
         self._node_attributes: dict = None  # python lists
         self._edge_attributes: dict = None
+        self._node_info: dict = None
 
         super(KnownFormatDataset, self).__init__(dataset_config)
 
@@ -138,6 +140,13 @@ class KnownFormatDataset(
         if attrs is None:
             attrs = sorted(self._edge_attributes.keys())
         return {a: self._edge_attributes[a] for a in attrs}
+
+    @property
+    def node_info(
+            self
+    ) -> Dict[str, Any]:
+        """ Get node info as a dict {node -> obj}"""
+        return self._node_info
 
     def check_validity(
             self
@@ -267,6 +276,8 @@ class KnownFormatDataset(
         else:
             self._read_single()
         self._read_attributes()
+
+        self._read_info()
 
     def _read_single(
             self
@@ -417,6 +428,20 @@ class KnownFormatDataset(
                                 edge_attributes[ix] = orig_edge_attributes[g][orig]
 
                         self._edge_attributes[a].append(edge_attributes)
+
+    def _read_info(
+            self
+    ) -> None:
+        """ Read node info and remap it.
+        """
+        node_info_path = self.metainfo_path.parent / "node_info"
+        if node_info_path.exists():
+            with node_info_path.open('r') as f:
+                node_info = json.load(f)
+            self._node_info = {}  # {node -> info}
+            assert self.info.count == 1
+            for ix, orig in self._iter_nodes():
+                self._node_info[ix] = node_info.get(orig)
 
     def _compute_dataset_var_data(
             self
@@ -605,6 +630,8 @@ class KnownFormatDataset(
                 def func(x): return one_hot(x, node_attributes_info["values"][ix])
             elif _type == "continuous" or _type == "vector":
                 def func(x): return x if isinstance(x, list) else [x]
+            elif _type == "other":
+                def func(x): return self._attribute_to_feature(attr, x)
             else:
                 raise RuntimeError(f"{self.__class__.__name__} cannot convert attribute of type"
                                    f" '{_type}' to feature.")
@@ -660,6 +687,17 @@ class KnownFormatDataset(
         if len(node_features[0]) == 0:
             raise RuntimeError("Node feature vector size must be > 0")
         return node_features, edge_features
+
+    def _attribute_to_feature(
+            self,
+            attr: str,
+            value: Any
+    ) -> List[Number]:
+        """
+        Convert attribute of type "other" to feature.
+        Can be specified in subclass
+        """
+        raise NotImplementedError("This should be implemented in subclass")
 
 
 def one_hot(

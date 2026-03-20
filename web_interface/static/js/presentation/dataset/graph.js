@@ -3,21 +3,24 @@ class Graph extends VisibleGraph {
         super(datasetInfo, element)
         this.layoutFreezeButtonId = this.visView.singleGraphLayoutFreezeId
 
+        // Constants
+        this.edgeColor = '#ffffff'
+
         // Variables
         this.numNodes = null // Number of nodes
         this.edges = null // List of pairs [i, j]
-
-        // Constants
-        this.edgeColor = '#ffffff'
+        this.nodes = null // List of nodes (from 0 to N-1)
     }
 
     async _build() {
         // Set graph data from dataset
-        this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
+        // this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
+        // console.log('Graph._build()', this.datasetData)
 
         // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes
         this.edges = this.datasetData.edges
+        this.nodes = Array.from(Array(this.numNodes).keys())
 
         await super._build()
         $(this.svgElement).css("background-color", "#404040")
@@ -74,10 +77,7 @@ class Graph extends VisibleGraph {
     }
 
     getNodes() {
-        let nodes = [] // NOTE copying is not good
-        for (let i = 0; i < this.numNodes; i++)
-            nodes.push(i)
-        return nodes
+        return this.nodes
     }
 
     getNumNodes() {

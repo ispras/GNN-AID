@@ -261,8 +261,7 @@ class DatasetView extends View {
             {set: "visible_part", part: JSON_stringify(this.visibleGraph.visibleConfig)})
 
         let data = await controller.ajaxRequest('/dataset', {get: "data"})
-        console.log('datasetData')
-        console.log(data)
+        console.log('datasetView.beforeInit()', data)
         this.visibleGraph.datasetData = data
     }
 

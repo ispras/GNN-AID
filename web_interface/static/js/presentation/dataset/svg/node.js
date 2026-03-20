@@ -62,6 +62,12 @@ class SvgNode extends SvgElement {
         // this.g.appendChild(trainmask)
     }
 
+    // Add tip to this node
+    addTip(text) {
+        this.tipText["node"] = text
+        this._addTip([this.body], "node")
+    }
+
     // Add node features values
     setFeatures(feats) {
         if (feats == null)

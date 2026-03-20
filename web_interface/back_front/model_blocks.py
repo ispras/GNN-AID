@@ -2,7 +2,7 @@ import json
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import Union
+from typing import Union, List, Any
 
 import torch
 
@@ -22,7 +22,7 @@ from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart, ViewPoint, DatasetVarData
 from .block import Block, WrapperBlock
-from .utils import WebInterfaceError, json_dumps, get_config_keys, send_epoch_results, \
+from .utils import WebInterfaceError, get_config_keys, send_epoch_results, \
     compute_stats_data
 from .visible_part import add_into_dvd
 
@@ -100,7 +100,7 @@ class ModelLoadBlock(Block):
 
     def get_index(
             self
-    ) -> list[str]:
+    ) -> List[str]:
         """ Get all available models with respect to current dataset
         """
         DataInfo.refresh_models_dir_structure()
@@ -117,7 +117,7 @@ class ModelLoadBlock(Block):
             path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
         ps = index.filter(values_info)
         # ps = index.filter(dict(zip(keys_list, values_info)))
-        return [ps.to_json(), json_dumps(info)]
+        return [ps.to_dict(), info]
 
     def _load_train_test_mask(
             self,
@@ -179,7 +179,7 @@ class ModelCustomBlock(Block):
     def _init(
             self,
             visible_part: VisiblePart
-    ) -> list[str]:
+    ) -> List[str]:
         self.gen_dataset = visible_part.gen_dataset
         return self.get_index()
 
@@ -212,7 +212,7 @@ class ModelCustomBlock(Block):
 
     def get_index(
             self
-    ) -> list[str]:
+    ) -> List[Any]:
         """ Get all available models with respect to current dataset
         """
         user_models_obj_dict_info = UserCodeInfo.user_models_list_ref()
@@ -226,7 +226,7 @@ class ModelCustomBlock(Block):
         # cfg = self.gen_dataset.dataset_config.to_saveable_dict()
         # cfg.update(self.gen_dataset.dataset_var_config.to_saveable_dict())
         # ps = index.filter(cfg)
-        return [ps.to_json(), json_dumps(None)]
+        return [ps.to_dict(), None]
 
 
 class ModelManagerBlock(Block):

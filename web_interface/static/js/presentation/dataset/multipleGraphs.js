@@ -1,589 +1,340 @@
-class MultipleGraphs extends VisibleGraph {
-    static MAX_DEPTH = 5
+function un1hot(arr) {
+    for (let i = 0; i < arr.length; i++)
+        if (arr[i] === 1)
+            return i
+    return -1
+}
 
+class MultipleGraphs extends Graph {
     constructor(datasetInfo, svgPanel) {
         super(datasetInfo, svgPanel)
+
         this.layoutFreezeButtonId = this.visView.multiLayoutFreezeId
 
-        // Constants
-        this.edgeColor = '#000'
+        // All-graphs storage (incoming format)
+        this._graphs = []           // [graphId...]
+        this._nodesByGraph = []     // [numNodes...]
+        this._edgesByGraph = []     // [edgeList...]
+        this._graphIdToIx = {}      // graphId -> ix
 
-        // Variables
-        this.graphPrimitives = null // {graph ix -> primitive} on HTML element
-        this.graphs = null // {graph ix -> Graph}
-        this.layouts = null // {graph ix -> layouts}
-        this.graphGrabbed = null // graph index, whose node is currently dragged
-        this.arrange = null // arranges graph
+        // Active graph
+        this._graph = null
+        this._graphIx = null
+        this._layout = null
 
-        this._count = null // Chosen param value
-        this._graph = null // Chosen param value (!= visibleConfig["center"])
-        this._arrange = null // Chosen param value
-        this._layout = null // Chosen param value
+        // Graph frame + satellites
+        this.graphPrimitive = null
+
+        // Optional feature-as-color (one-hot)
+        this._showNodeTypeAsColor = false
+        this._featureColors = null
     }
 
-    createListeners() {
-        this.visView.addListener(this.visView.multiCountId,
-            async (_, v) => await this.setCount(v), this._tag)
-        this.visView.addListener(this.visView.multiGraphId,
-            async (_, v) => await this.setGraph(parseInt(v)), this._tag)
-        this.visView.addListener(this.visView.multiDepthId,
-            async (_, v) => await this.setDepth(parseInt(v)), this._tag)
-        this.visView.addListener(this.visView.multiLayoutId,
-            (_, v) => this.setLayout(v), this._tag)
-        this.visView.addListener(this.visView.multiArrangeId,
-            (_, v) => this.setArrange(v), this._tag)
-        this.visView._getById(this.visView.multiGraphId).attr("max", this.datasetInfo.count-1)
-
-        super.createListeners()
-    }
-
-    createVarListeners() {
-        super.createVarListeners()
-
-        this.visView.addListener(this.visView.multiNodeTypeAsColorId,
-            (_, v) => this.showClassAsColor(v), this._tagVar)
-    }
-
-    // // Handle nodes and whole SVG drag&drop
-    // handleDragging() {
-    //     this.svgElement.onmousedown = (e) => {
-    //         if (e.buttons === 1 && e.ctrlKey) {
-    //             this.svgGrabbed = true
-    //             this.svgGrabbedMousePos.x = e.screenX
-    //             this.svgGrabbedMousePos.y = e.screenY
-    //             this.svgGrabbedScreenPos.x = this.screenPos.x
-    //             this.svgGrabbedScreenPos.y = this.screenPos.y
-    //             this.svgElement.style.cursor = 'grabbing'
-    //         }
-    //     }
-    //     $(window).mouseup((e) => {
-    //         this.svgGrabbed = false
-    //         this.nodeGrabbed = null
-    //         this.svgElement.style.cursor = 'default'
-    //         if (this.layouts && this.graphGrabbed != null) {
-    //             this.layouts[this.graphGrabbed].release()
-    //         }
-    //         this.graphGrabbed = null
-    //     })
-    //     this.svgElement.onmousemove = (e) => {
-    //         this.mousePos.x = e.offsetX
-    //         this.mousePos.y = e.offsetY
-    //         if (this.svgGrabbed) {
-    //             this.screenPos.x = this.svgGrabbedScreenPos.x - e.screenX + this.svgGrabbedMousePos.x
-    //             this.screenPos.y = this.svgGrabbedScreenPos.y - e.screenY + this.svgGrabbedMousePos.y
-    //             this.draw()
-    //         }
-    //
-    //         else if (this.nodeGrabbed != null) {
-    //             this.layouts[this.graphGrabbed].lock(this.nodeGrabbed, Vec.add(this.mousePos, this.svgPos).mul(1/this.scale))
-    //             this.layouts[this.graphGrabbed].startMoving()
-    //             this.draw()
-    //         }
-    //         this.debugInfo()
-    //     }
-    //
-    //     // Handle zoom
-    //     this.svgElement.onwheel = (e) => {
-    //         if (e.ctrlKey) {
-    //             e.preventDefault()
-    //             let z = e.wheelDelta > 0 ? this.zoomFactor : 1/this.zoomFactor
-    //             if (this.scale * z > this.scaleMax || this.scale * z < this.scaleMin)
-    //                 return
-    //             this.scale *= z
-    //             for (const graph of Object.values(this.graphs))
-    //                 graph.scale = this.scale
-    //
-    //             // Compute SVG and screen new positions
-    //             this.screenPos.x += (z-1)*(this.mousePos.x + this.svgPos.x)
-    //             this.screenPos.y += (z-1)*(this.mousePos.y + this.svgPos.y)
-    //
-    //             this.draw()
-    //             // Update mouse pos AFTER draw
-    //             this.mousePos.x = e.layerX
-    //             this.mousePos.y = e.layerY
-    //         }
-    //         this.debugInfo()
-    //     }
-    //
-    //     // To avoid computing scroll from screenPos
-    //     this.svgElement.parentElement.onscroll = (e) => {
-    //         this.screenPos.x = this.svgElement.parentElement.scrollLeft + this.svgPos.x
-    //         this.screenPos.y = this.svgElement.parentElement.scrollTop + this.svgPos.y
-    //     }
-    // }
-
-    // async drawCycle() {
-    //     while (true) {
-    //         if (!this.alive) break
-    //         // At least 1 layout is moving
-    //         for (const layout of Object.values(this.layouts))
-    //             if (layout.moving) {
-    //                 this.draw()
-    //                 break
-    //             }
-    //         await sleep(100)
-    //     }
-    // }
+    /* -------------------------- listeners / visible config -------------------------- */
 
     defineVisibleConfig() {
         this.visibleConfig["center"] = parseInt(this.visView.getValue(this.visView.multiGraphId))
-        this.visibleConfig["depth"] = parseInt(this.visView.getValue(this.visView.multiDepthId))
     }
+
+    createListeners() {
+        this.visView.addListener(
+            this.visView.multiGraphId,
+            async (_, v) => await this.setGraph(parseInt(v)),
+            this._tag
+        )
+
+        this.visView.addListener(
+            this.visView.multiLayoutId,
+            (_, v) => this.setLayout(v),
+            this._tag
+        )
+
+        this.visView._getById(this.visView.multiGraphId).attr("max", this.datasetInfo.count - 1)
+
+        // IMPORTANT: bypass Graph.createListeners() (it registers singleGraph UI)
+        VisibleGraph.prototype.createListeners.call(this)
+    }
+
+    createVarListeners() {
+        // super.createVarListeners()
+        VisibleGraph.prototype.createVarListeners.call(this)
+        this.visView.addListener(
+            this.visView.multiNodeTypeAsColorId,
+            (_, v) => this.showNodeTypeAsColor(v),
+            this._tagVar
+        )
+    }
+
+    /* ---------------------------------- build/drop --------------------------------- */
 
     async _build() {
-        // Set graph data from dataset
-        this.count = this.datasetInfo.count
-        this.graphs = {} // ix -> Graph
-
-        let nodesData = this.datasetData.nodes
-        let edgesData = this.datasetData.edges
-        let graphsData = this.datasetData.graphs
-
-        let ix = 0
-        for (let g of graphsData) {
-            // for (let i=0; i<this.count; i++) { // TODO what if not all graphs ?
-
-            let graph = new Graph(this.datasetInfo, this.svgPanel)
-            graph.numNodes = nodesData[ix]
-            graph.edges = edgesData[ix]
-            graph.scale = this.scale
-            this.graphs[g] = graph
-            graph.onNodeClick = this.onNodeClick
-            graph.datasetVar = {}
-            ix++
+        // Cache datasetData (avoid refetch on setGraph())
+        if (!this.datasetData) {
+            this.datasetData = await controller.ajaxRequest('/dataset', { get: "data" })
         }
-        // To avoid calling _build several times
-        if (this.visibleConfig["center"] !== null) {
-            this._graph = this.visibleConfig["center"] // fixme what if not
-            this._count = "several" // fixme what if not several?
-        }
-        await super._build()
-    }
 
-    // Create reverse mappings of nodes and edges to define radius, stroke width, color when drawing
-    _createMappings() {
-        this.nodeRadiuses = {}
-        this.nodeStrokeWidthes = {}
-        for (let d=0; d<this.nodes.length; ++d)
-            for (let n of this.nodes[d]) {
-                this.nodeRadiuses[n] = this.depthNodeRadiuses[d]
-                this.nodeStrokeWidthes[n] = this.depthNodeStrokeWidthes[d]
-            }
+        // multipleGraphs: nodes/edges/graphs are arrays for a set of graphs
+        this._nodesByGraph = this.datasetData.nodes
+        this._edgesByGraph = this.datasetData.edges
+        this._graphs = this.datasetData.graphs
+        this.nodes = Object.fromEntries(this._graphs.map(g => [g, Array.from(Array(this._nodesByGraph[g]).keys())]))
+        this.edges = this._edgesByGraph
 
-        this.edgeStrokeWidthes = {}
-        this.edgeColors = {}
-        for (let d=0; d<this.edges.length; ++d)
-            for (let [i, j] of this.edges[d]) {
-                this.edgeStrokeWidthes[`${i},${j}`] = this.depthEdgeStrokeWidthes[d]
-                this.edgeColors[`${i},${j}`] = this.depthEdgeColors[d]
-            }
+        this._graphIdToIx = {}
+        for (let i = 0; i < this._graphs.length; i++) this._graphIdToIx[this._graphs[i]] = i
+
+        const fallbackGraphId = (this._graphs.length ? this._graphs[0] : 0)
+        const requested = (this.visibleConfig["center"] !== null && this.visibleConfig["center"] !== undefined)
+            ? this.visibleConfig["center"]
+            : fallbackGraphId
+
+        this._setActiveGraphInternal(requested)
+
+        // Omit Graph._build()
+        await VisibleGraph.prototype._build.call(this)
+
+        $(this.svgElement).css("background-color", "#404040")
     }
 
     _drop() {
-        super._drop()
-        this.graphs = null
-        this.layouts = null
-        this.graphGrabbed = null
-        this.arrange = null
+        // IMPORTANT: bypass Graph._drop() (it resets background to light)
+        VisibleGraph.prototype._drop.call(this)
+
+        this.graphPrimitive = null
+        // this.allDatasetVar = null
+        this._layout = null
+        // this._featureColorKey = null
+        this._featureColors = null
     }
 
     _buildVar() {
-        for (const [ix, graph] of Object.entries(this.graphs)) {
-            graph.datasetVar = {}
-            for (const elem of VisibleGraph.ELEMS) {
-                graph.datasetVar[elem] = {}
-                for (const satellite of VisibleGraph.SATELLITES)
-                    if (elem in this.datasetVar && satellite in this.datasetVar[elem])
-                        graph.datasetVar[elem][satellite] = this.datasetVar[elem][satellite][ix]
+        // Prepare one-hot feature palette if present
+        // this._featureColorKey = null
+        this._featureColors = null
+
+        if (this.oneHotableFeature && this.datasetVar?.node?.features) {
+            const keys = Object.keys(this.datasetVar.node.features)
+            if (keys.length) {
+                const key = keys[0]
+                const first = this.datasetVar.node.features[key]?.[0]
+                if (Array.isArray(first)) {
+                    // this._featureColorKey = key
+                    this._featureColors = createSetOfColors(first.length, this.svgPanel.$svg)
+                }
             }
         }
 
-        // Check for feature color coding possibility
-        if (this.oneHotableFeature) {
-            let key = Object.keys(this.datasetVar['node']['features'])[0]
-            this.coloredNodes = createSetOfColors(
-                this.datasetVar['node']['features'][key][0].length, this.svgPanel.$svg)
-            this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, true)
-        }
-        else {
-            this.coloredNodes = null
-            this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, false)
-        }
-
-        for (const graph of Object.values(this.graphs))
-            graph.ready = true
+        this.visView.setEnabled(this.visView.multiNodeTypeAsColorId, !!this._featureColors)
 
         super._buildVar()
     }
 
-    // Update according to show mode - all graphs or some
-    async setCount(count) {
-        if (count == null)
-            count = this.visView.getValue(this.visView.multiCountId)
-        if (count === this._count)
-            return
-
-        console.log("setCount")
-        switch (count) {
-            case "all":
-                this.visibleConfig["center"] = null
-                break
-            case "several":
-                this.visibleConfig["center"] = parseInt(this.visView.getValue(this.visView.multiGraphId))
-                break
-            default:
-                console.error('Not implemented')
-        }
-        this._count = count
-        this._arrange = null // need to be recalculated
-        this._layout = null // need to be recalculated
-        await this._reinit()
-    }
-
-    // Update according to a graph to be shown
-    async setGraph(graph) {
-        if (graph == null)
-            graph = this.visView.getValue(this.visView.multiGraphId)
-        if (graph === this._graph)
-            return
-
-        console.log("setGraph")
-        switch (this.visView.getValue(this.visView.multiCountId)) {
-            case "several":
-                this.visibleConfig["center"] = graph
-                this.visibleConfig["depth"] = parseInt(this.visView.getValue(this.visView.multiDepthId))
-                break
-            case "all":
-                this.visibleConfig["center"] = null
-                this.visibleConfig["depth"] = null
-                break
-            default:
-                console.error('Not implemented')
-        }
-        this._graph = graph
-        this._layout = null // need to be recalculated
-        this._arrange = null // need to be recalculated
-        await this._reinit()
-    }
-
-    // Set depth
-    async setDepth(depth) {
-        if (depth === this.visibleConfig["depth"])
-            return
-
-        this.visView.setValue(this.visView.multiDepthId, depth, false)
-        this._layout = null // need to be recalculated
-        this._arrange = null // need to be recalculated
-        this.visibleConfig["depth"] = depth
-        await this._reinit()
-    }
-
-    // Update according to a chosen arrange method
-    setArrange(arrange) {
-        if (arrange == null)
-            arrange = this.visView.getValue(this.visView.multiArrangeId)
-        if (arrange === this._arrange)
-            return
-
-        console.log("setArrange")
-        switch (arrange) {
-            case "vertical":
-                this.arrange = new VerticalArrange()
-                break
-            case "free":
-                this.arrange = new Arrange()
-                break
-            case "grid":
-                this.arrange = new GridArrange()
-                break
-        }
-        this._arrange = arrange
-        this.arrange.setGraphs(this.graphs)
-        this.draw()
-    }
-
-    // Update layout for all graphs
-    setLayout(layout) {
-        if (layout == null)
-            layout = this.visView.getValue(this.visView.multiLayoutId)
-        if (layout === this._layout)
-            return
-
-        console.log("setLayout")
-        if (this.layouts)
-            for (const layout of Object.values(this.layouts))
-                layout.stopMoving()
-        this.layouts = {}
-        for (const [ix, graph] of Object.entries(this.graphs)) {
-            let aLayout = null
-            switch (layout) {
-                case "random":
-                    aLayout = new Layout()
-                    break
-                case "force":
-                    aLayout = new ForceLayout()
-                    break
-                default:
-                    console.error('Unknown layout', layout)
-            }
-            this.layouts[ix] = aLayout
-            graph.layout = aLayout
-            aLayout.setVisibleGraph(graph)
-        }
-        this._layout = layout
-        this.setArrange()
-        this.draw()
-    }
-
-    freezeLayout(freeze) {
-        for (let g of Object.values(this.graphs))
-            g.layout.setFreeze(freeze)
-    }
-
-    // Assign/remove SVG primitives for node satellites: labels, features, predictions, etc
-    setSatellite(elem, satellite, on=true) {
-        if (!this.ready)
-            // Could happen when we reinit graph while satellites data is being received
-            return
-        let $g = this.svgPanel.get("graph-" + satellite)
-        if (!on) {
-            // Remove SVGs
-            if (elem === 'node' && satellite === "features") {
-                for (const graph of Object.values(this.graphs))
-                    graph.setSatellite(elem, "features", null)
-                    this.showClassAsColor(false)
-            }
-
-            else if (elem === 'graph') {
-                $g.empty()
-                for (const graph of Object.values(this.graphPrimitives))
-                    graph.satellites[satellite].blocks = null
-            }
-        }
-        else { // Draw or update SVGs
-            if (elem === 'node' && satellite === "features") { // Draw feature for each node
-                for (const [n, graph] of Object.entries(this.graphs))
-                    graph.setSatellite(elem, "features")
-
-                if (this.coloredNodes)
-                    this.showClassAsColor(true)
-
-            }
-            else if (elem === 'graph') {
-                // todo later features, merge with upper
-
-                let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
-                if (elem in this.datasetVar && satellite in this.datasetVar[elem])
-                    for (const [i, graph] of Object.entries(this.graphPrimitives))
-                        if (graph.setSatellite(
-                            satellite, this.datasetVar[elem][satellite][i], numClasses))
-                            for (const e of graph.satellites[satellite].blocks)
-                                $g.append(e)
-            }
-        }
-    }
-
-    // Add (new) explanation
-    setExplanation(explanation) {
-        if (this.explanation)
-            this.dropExplanation()
-        this.explanation = explanation
-
-        // Replace explanation elements
-        if (this.explanation == null) {
-            for (const graph of Object.values(this.graphs))
-                graph.dropExplanation()
-        }
-        else
-            for (const [n, graph] of Object.entries(this.graphs))
-                graph.setExplanation(this.explanation.reduce(n))
-    }
+    /* --------------------------------- public actions -------------------------------- */
 
     getNodes() {
-        let nodes = {} // NOTE copying is not good
-        for (const [n, graph] of Object.entries(this.graphs)) {
-            nodes[n] = graph.getNodes()
-        }
-        return nodes
+        return this.nodesList
+    }
+
+    getNumNodes() {
+        return this.numNodes
     }
 
     getEdges() {
-        let res = {}
-        for (const [n, graph] of Object.entries(this.graphs)) {
-            res[n] = graph.getEdges()
-        }
-        return res
+        return this.edgesList
     }
 
-    // Get information HTML
-    getInfo() {
-        return '<b>Multiple graphs</b>'
+    async setGraph(graph) {
+        if (graph == null) graph = parseInt(this.visView.getValue(this.visView.multiGraphId))
+        if (graph === this._graph) return
+
+        this.visibleConfig["center"] = graph
+        this._graph = graph
+        this._layout = null
+
+        await this._reinit()
     }
 
-    // Change SVG elements positions according to layout positions and scale
-    draw() {
-        if (this.arrange)
-            this.arrange.apply(this.graphGrabbed)
-        for (const graph of Object.values(this.graphs)) {
-            graph.draw(false)
+    setLayout(layout) {
+        if (layout == null) layout = this.visView.getValue(this.visView.multiLayoutId)
+        if (layout === this._layout && this.layout) return
+
+        if (this.layout) this.layout.stopMoving()
+
+        switch (layout) {
+            case "random":
+                this.layout = new Layout()
+                break
+            case "force":
+                this.layout = new ForceLayout()
+                break
+            case "forceAtlas2":
+                this.layout = new ForceAtlas2Layout()
+                this.layout.rad = 0.08
+                break
+            default:
+                console.error('Unknown layout', layout)
+                this.layout = new Layout()
         }
-        // Update SVG elements according to layout and scale
-        for (const [n, svgGraph] of Object.entries(this.graphPrimitives)) {
-            let aGraph = this.graphs[n]
-            // FIXME approxBBox() is called twice
-            let bbox = aGraph.approxBBox()
-            svgGraph.moveTo(bbox.x, bbox.y, bbox.width, bbox.height)
-            svgGraph.scale(this.scale)
-        }
-        this.adjustVisibleArea() // do it once
+
+        this.layout.setVisibleGraph(this)
+        this._layout = layout
+        this.needsRedraw = true
     }
+
+    showNodeTypeAsColor(show) {
+        this._showNodeTypeAsColor = !!show
+        this.needsRedraw = true
+    }
+
+    /* -------------------- primitives: add graph frame + satellites groups -------------------- */
 
     createPrimitives() {
-        // Clear all
-        this.svgElement.innerHTML = ''
-
-        // Graph-level elements
-        this.graphPrimitives = {} // {graph ix -> graph}
-        for (const [n, graph] of Object.entries(this.graphs))
-            this.graphPrimitives[n] = new SvgGraph(0, 0, 1, 1, "#ffffff",
-                `Graph ${n}`, true, this.svgPanel.$tip)
-
-        // Edges for all graphs
-        for (const graph of Object.values(this.graphs))
-            graph.addEdgePrimitivesBatch(
-                0, graph.edges, this.edgeColor, this.edgeStrokeWidth, this.datasetInfo.directed, true)
-
-        let _addEvent = (element, node, graph) => {
-            element.onmousedown = (e) => {
-                this.nodeGrabbed = node
-                this.graphGrabbed = graph
-            }
-            if (this.onNodeClick) {
-                element.onclick = (e) => this.onNodeClick("left", node, graph)
-                element.oncontextmenu = (e) => this.onNodeClick("right", node, graph)
-                element.ondblclick = (e) => this.onNodeClick("double", node, graph)
-            }
-        }
-
-        // Nodes for all graphs
-        this.nodePrimitives = {} // empty
-        for (let [graphIx, aGraph] of Object.entries(this.graphs)) {
-            aGraph.nodePrimitives = {}
-            graphIx = parseInt(graphIx)
-            for (let n = 0; n < aGraph.numNodes; n++) {
-                aGraph.createNodePrimitive(this.svgElement, n, this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
-                _addEvent(aGraph.nodePrimitives[n].body, n, graphIx)
-            }
-            // Object.assign(this.nodePrimitives, aGraph.nodePrimitives)
-            // this.nodePrimitives.push(...Object.values(aGraph.nodePrimitives))
-        }
-
-        // Add <g> for explanation edges
-        this.svgPanel.add("explanation-edges")
-        // Explanation will be set after the layout
-
-        // Add graph primitives for all graphs
-        let g = this.svgPanel.add("graph")
-        for (const svgGraph of Object.values(this.graphPrimitives)) {
-            g.appendChild(svgGraph.frame)
-            g.appendChild(svgGraph.text)
-        }
-
-        // Add <g> for graphs satellites
-        for (const satellite of VisibleGraph.SATELLITES)
-            this.svgPanel.add("graph-" + satellite)
-        this.svgPanel.add("graph-scores")
+        // this.svgElement.innerHTML = ''
         super.createPrimitives()
 
-        // Add nodes of visible graphs
-        g = this.svgPanel.get("node")
-        for (const aGraph of Object.values(this.graphs))
-            for (const node of Object.values(aGraph.nodePrimitives)) {
-                g.append(node.body)
-                g.append(node.text)
-            }
+        const gGraph = this.svgPanel.add("graph")
+        this.graphPrimitive = new SvgGraph(0, 0, 1, 1, "#ffffff",
+            `Graph ${this._graph}`, true, this.svgPanel.$tip)
+        gGraph.appendChild(this.graphPrimitive.g)
     }
 
-    // Compute approximate bounding box using nodes positions
-    approxBBox() {
-        let xMin = Infinity
-        let yMin = Infinity
-        let xMax = -Infinity
-        let yMax = -Infinity
-        for (const graph of Object.values(this.graphs))
-            for (const vec of Object.values(graph.layout.pos)) {
-                xMin = Math.min(xMin, vec.x)
-                yMin = Math.min(yMin, vec.y)
-                xMax = Math.max(xMax, vec.x)
-                yMax = Math.max(yMax, vec.y)
-            }
-        xMin *= this.scale
-        yMin *= this.scale
-        xMax *= this.scale
-        yMax *= this.scale
-        let r = Math.max(MIN_NODE_RADIUS, Math.ceil(this.nodeRadius * (this.scale/100) ** 0.5)) + 0*this.pad
-        return {
-            x: xMin - 2.2 * r,
-            y: yMin - 4.5 * r,
-            width: xMax-xMin + 6 * r,
-            height: yMax-yMin + 10 * r
+    /* ----------------------------- satellites (graph-level) ----------------------------- */
+
+    setSatellite(elem, satellite, on = true) {
+        if (!this.ready) return
+
+        if (elem !== 'graph') {
+            this.showSatellite(elem, satellite, on)
+            this.needsRedraw = true
+            return
+        }
+
+        const $g = this.svgPanel.get("graph-" + satellite)
+
+        if (!on) {
+            $g.empty()
+            if (this.graphPrimitive?.satellites?.[satellite])
+                this.graphPrimitive.satellites[satellite].blocks = null
+            return
+        }
+
+        $g.empty()
+        if (!this.datasetVar?.graph?.[satellite]) return
+
+        const numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
+        const ok = this.graphPrimitive.setSatellite(satellite, this.datasetVar.graph[satellite], numClasses)
+
+        if (ok && this.graphPrimitive?.satellites?.[satellite]?.blocks) {
+            for (const e of this.graphPrimitive.satellites[satellite].blocks) $g.append(e)
         }
     }
 
-    showClassAsColor(show) {
-        // console.log('showClassAsColor', show)
-        if (show) {
-            function un1hot(array) {
-                for (let i = 0; i < array.length; i++)
-                    if (array[i] === 1) return i
-                return -1
-            }
+    /* ------------------------------------ draw ------------------------------------ */
 
-            if (this.coloredNodes)
-                for (const [g, graph] of Object.entries(this.graphs))
-                    for (const [n, node] of Object.entries(graph.nodePrimitives))
-                        node.setFillColorIdx(un1hot(this.datasetVar['node']['features'][g][n]))
+    getVar(elem, satellite) {
+        return this.datasetVar?.[elem]?.[satellite]?.[this._graphIx]
+    }
+
+    setNodeColor(node, n) {
+        if (this._showNodeTypeAsColor && this._featureColors && this.datasetVar?.node?.features) {
+            const values = this.getVar('node', 'features')?.[n]
+
+            const cls = un1hot(values)
+            if (cls >= 0)
+                node.setFillColorIdx(cls)
+        }
+        else
+            node.dropFillColor()
+    }
+
+    drawGraphs(drawSatellites) {
+        if (!(this.graphPrimitive && this.layout?.pos))
+            return
+        const bbox = this._getWorldBBoxFromLayout(this.layout.pos)
+
+        this.graphPrimitive.scale(this.scale) // SCALE APPLIED ON PRIMITIVE
+        // this.graphPrimitive.moveTo(bbox.x, bbox.y, bbox.width, bbox.height) // WORLD
+        this.graphPrimitive.moveTo(
+            bbox.x * this.scale,
+            bbox.y * this.scale,
+            bbox.width * this.scale,
+            bbox.height * this.scale
+        )
+
+        this.graphPrimitive.text.textContent = `Graph ${this._graph}`
+
+        // Set var
+        if (this.datasetVar) {
+            // Set color
+            // TODO
+
+            // Set satellites
+            if (!drawSatellites) {
+                this.graphPrimitive.removeSatellites()
+            }
+            else
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    let values = this.getVar('graph', satellite)
+                    if (values) {
+                        if (satellite === "labels") {
+                            this.graphPrimitive.setLabels(values, this.numClasses)
+                        } else
+                            this.graphPrimitive.setSatellite(satellite, values)
+                    }
+                }
         }
         else {
-            for (const graph of Object.values(this.graphs))
-                for (const node of Object.values(graph.nodePrimitives))
-                    node.dropFillColor()
+            this.graphPrimitive.removeSatellites()
+            // this.graphPrimitive.dropFillColor()
         }
+
     }
 
-    // // Turn on/off visibility of labels, features, predictions, etc
-    // showSatellite(elem, satellite, show) {
-    //     // console.log('multi.showSatellite', satellite, show)
-    //     if (elem === "node" && satellite === "features") {
-    //         for (const graph of Object.values(this.graphs))
-    //             graph.showSatellite(elem, satellite, show)
-    //     }
-    //     else if (elem === "graph") {
-    //         this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
-    //         for (const graph of Object.values(this.graphPrimitives)) {
-    //             graph.satellites[satellite].show = show
-    //             graph.visible(graph.show)
-    //         }
-    //     }
-    //     else if (elem === "edge") {
-    //         // todo
-    //         // console.error('not implemented')
-    //     }
+    // draw(adjust = true) {
+    //     const cb = this.onNodeClick
+    //     if (cb) this.onNodeClick = (kind, node) => cb(kind, node, this._graph)
+    //
+    //     const prevShowClassAsColor = this._showClassAsColor
+    //     if (this._showNodeTypeAsColor) this._showClassAsColor = false
+    //
+    //     super.draw(false)
+    //
+    //     this._showClassAsColor = prevShowClassAsColor
+    //     if (cb) this.onNodeClick = cb
+    //
+    //
+    //
     // }
 
-    // Remove all explanation elements
-    dropExplanation() {
-        if (!this.explanation) return
-        console.log('MultipleGraphs.dropExplanation')
-        let $g = this.svgPanel.get("explanation-edges")
-        $g.empty()
-        if (this.explanation.nodes)
-            for (const [g, nodes] of Object.entries(this.explanation.nodes)) {
-                if (g in this.graphs)
-                    for (const node of Object.keys(nodes))
-                        this.graphs[g].nodePrimitives[node].dropColor()
-            }
-        this.explanation = null
-        this.explanationEdges = null
+    /* ---------------------------------- helpers ---------------------------------- */
+
+    _setActiveGraphInternal(graphId) {
+        const ix = (graphId in this._graphIdToIx) ? this._graphIdToIx[graphId] : 0
+        this._graph = this._graphs.length ? this._graphs[ix] : graphId
+        this._graphIx = ix
+
+        this.visibleConfig["center"] = this._graph
+
+        this.numNodes = this._nodesByGraph[ix] ?? 0
+        // this.nodes = Array.from(Array(this.numNodes).keys())
+        this.nodesList = this.nodes[this._graphIx]
+        this.edgesList = this.edges[this._graphIx]
+    }
+
+    _getWorldBBoxFromLayout(pos) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        for (const k in pos) {
+            const v = pos[k]
+            if (!v) continue
+            if (v.x < minX) minX = v.x
+            if (v.y < minY) minY = v.y
+            if (v.x > maxX) maxX = v.x
+            if (v.y > maxY) maxY = v.y
+        }
+        if (!isFinite(minX)) {
+            minX = minY = -1
+            maxX = maxY = 1
+        }
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
     }
 }

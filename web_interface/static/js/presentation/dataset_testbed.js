@@ -78,12 +78,13 @@ const EXAMPLE_NEIGHBORHOOD = {
         name: "example_neighborhood",
         count: 1,
         directed: false,
+        remap: true,
         hetero: false,
         nodes: [5],
         node_attributes: {
-            names: ["a", "b"],
-            types: ["continuous", "categorical"],
-            values: [[0, 1], ["A", "B", "C"]]
+            names: ["a", "b", "text"],
+            types: ["continuous", "categorical", "other"],
+            values: [[0, 1], ["A", "B", "C"], []]
         },
         labelings: {
             "node-classification": {
@@ -92,7 +93,22 @@ const EXAMPLE_NEIGHBORHOOD = {
             "edge-classification": {
                 "binary": 2
             }
-        }
+        },
+        node_info: {
+            "0": "By default, this command will start an HTTP server on port 8000, serving the contents of the current directory. To specify a different port, add the port number as an argument after the server command, for example,\n" +
+                    "\n" +
+                "python -m http.server 9000",
+            "1": ["Jun Gao", "BingAn Li"],
+            "2": "By default, Python serves the files located in your current working directory where you executed the command to start the server. So, when you visit the home address ( / ) of your server in a web browser, then you’ll see all the files and folders in the corresponding directory",
+            "3":
+            "|             | single neigh        | single graph        | multi graph                 | hetero single neigh | hetero single graph | hetero multi graph |\n" +
+            "| ----------- | ------------------- | ------------------- | --------------------------- | ------------------- | ------------------- | ------------------ |\n" +
+            "| **node.X**  | словарь id -> value | словарь id -> value | словарь  id -> список value |                     |                     |                    |\n" +
+            "| **edge.X**  | словарь id -> value | словарь id -> value | словарь  id -> список value |                     |                     |                    |\n" +
+            "| **graph.X** | -                   | -                   | словарь id -> value         | -                   | -                   |                    |\n" +
+            "TODO",
+            "4": "NIPS 2024 [GFT: Graph Foundation Model with Transferable Tree Vocabulary](https://arxiv.org/pdf/2411.06070)"
+        },
     },
     datasetData: {
         nodes: [
@@ -106,10 +122,13 @@ const EXAMPLE_NEIGHBORHOOD = {
             [[2, 1], [4, 1], [3, 1]]
         ],
         graphs: null,
-        node_attributes: {
-            "a": [{"0": 1, "1": 1, "2": 0.6, "3": 0.7, "4": 0.5}],
-            "b": [{"0": "A", "1": "A", "2": "B", "3": "C", "4": "A"}]
-        }
+        node_attributes: [
+            [1, 'A', "text 1"],
+            [2, 'A', "text 23"],
+            [1, 'B', "text 3"],
+            [3, 'C', "text 23"],
+            [1, 'B', "text 123"]
+        ]
     },
     datasetVar: {
       "node": {
@@ -226,10 +245,10 @@ const EXAMPLE_MULTIPLE_GRAPHS = {
     datasetData: {
       "edges": [
           [[0,1],[1,2],[2,3],[0,3]],
-          [[0,1],[0,2],[0,3],[0,4]]]
-        ,
+          [[0,1],[0,2],[0,3],[0,4]]
+      ],
       "nodes": [4,5],
-      "graphs": [1,2],
+      "graphs": [0,1],
       "node_attributes": {
         "type": {
           "1": {
