@@ -73,11 +73,11 @@
 
    source venv/bin/activate
 
-Добавьте библиотеку ``gnn_aid`` в зависимости Python
+Добавьте текущую директорию ``.`` в зависимости Python
 
 .. code:: text
 
-   export PYTHONPATH=gnn_aid
+   export PYTHONPATH=.
 
 Запустите скрипт ``main.py`` из пакета ``web_interface``
 

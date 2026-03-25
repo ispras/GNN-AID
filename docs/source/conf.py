@@ -20,6 +20,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../gnn_aid'))
+sys.path.insert(0, os.path.abspath('../../web_interface'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.setrecursionlimit(1500)
 
