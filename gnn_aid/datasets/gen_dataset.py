@@ -165,7 +165,7 @@ class GeneralDataset(ABC):
             self,
             attrs: List[str] = None
     ) -> Dict[str, Union[list, torch.Tensor]]:
-        """ Get node attributes as a dict {name -> list}"""
+        """ Get edge attributes as a dict {name -> list}"""
 
     @property
     def labels(

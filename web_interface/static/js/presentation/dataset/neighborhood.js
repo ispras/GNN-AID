@@ -19,7 +19,8 @@ class Neighborhood extends VisibleGraph {
         }
         this.depthNodeRadiuses = {0: 30, 1: 20, 2: 10, 3: 8, 4: 6}
         this.depthNodeStrokeWidthes = {0: 5, 1: 4, 2: 3, 3: 2, 4: 2}
-        this.depthEdgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
+        this.depthEdgeStrokeWidthes = {1: 1.5, 2: 1, 3: 0.8, 4: 0.5}
+        // this.depthEdgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
 
         // Variables
         this.nodes = null // {depth -> List of d-th neighbors nodes}
@@ -65,6 +66,59 @@ class Neighborhood extends VisibleGraph {
         this.visibleConfig["center"] = node
         this.visibleConfig["depth"] = depth
     }
+
+    _convertDatasetVar(datasetVar) {
+        if (!datasetVar) return null;
+        const converted = {};
+
+        const nodeKeys = this.getNodes()
+        const edges = this.getEdges()
+        const edgeKeys = edges.map(([i, j]) => `${i},${j}`)
+
+        for (const elem of VisibleGraph.ELEMS) {
+            if (!datasetVar[elem]) continue;
+
+            converted[elem] = {};
+            for (const [field, dataArray] of Object.entries(datasetVar[elem])) {
+                if (!dataArray || !Array.isArray(dataArray)) continue;
+
+                if (elem === "graph") {
+                    converted[elem][field] = dataArray;
+                    continue;
+                }
+
+                if (elem === "edge") {
+                    const actualArray =
+                        dataArray.length === 1 && Array.isArray(dataArray[0]) ? dataArray[0] : dataArray;
+
+                    const varDict = {};
+                    edgeKeys.forEach((key, index) => {
+                        if (index < actualArray.length && actualArray[index] !== null) {
+                            varDict[key] = actualArray[index];
+                        }
+                    });
+
+                    converted[elem][field] = varDict;
+                    continue;
+                }
+
+                const varDict = {};
+                nodeKeys.forEach((key, index) => {
+                    if (index < dataArray.length && dataArray[index] !== null) {
+                        varDict[key] = dataArray[index];
+                    }
+                });
+
+                converted[elem][field] = varDict;
+            }
+
+            if (Object.keys(converted[elem]).length === 0)
+                delete converted[elem]
+        }
+
+        return converted;
+    }
+
 
     // Initialize elements and start layout
     async _build() {

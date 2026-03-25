@@ -16,7 +16,7 @@ class DatasetView extends View {
 
         // Info panels
         this.$upLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-upleft")
-            .attr("style", "position: fixed; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
+            .attr("style", "position: fixed; background: #eeeeeeb0; padding: 5px; pointer-events: none; top: 0;")
         this.$div.append(this.$upLeftInfoDiv)
         this.$bottomLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-bottomleft")
             .attr("style", "position: absolute; bottom: 1px; left: 2px; background: #eeeeeeb0; padding: 5px; pointer-events: none;")

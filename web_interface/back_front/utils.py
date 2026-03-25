@@ -86,7 +86,9 @@ class SocketConnect:
             tag: str = 'all',
             obligate: bool = True
     ):
-        """ Send info message to frontend.
+        """
+        Send info message to frontend.
+
         :param block: destination block, e.g. "" (to console), "model", "explainer"
         :param msg: dict
         :param tag: keep messages in a separate queue with this tag, all but last unobligate

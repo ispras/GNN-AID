@@ -17,6 +17,7 @@ class SvgEdge extends SvgElement{
         this.path.setAttribute('stroke', color)
         this.path.setAttribute('display', show ? "inline" : "none")
         this.path.setAttribute('stroke-width', width)
+        this.path.setAttribute('class', 'graph-node')
         this.g.prepend(this.path)
 
         // Initialize satellites for edges

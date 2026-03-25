@@ -28,9 +28,93 @@ class CitHepPhDataset(
     ):
         """
         """
+        self._create_if_not(dataset_config)
+
         super(CitHepPhDataset, self).__init__(dataset_config)
 
         self._node_attributes = {}
+
+    def _create_if_not(self, dataset_config: DatasetConfig):
+        """
+        """
+        root, files_paths = Declare.dataset_root_dir(dataset_config)
+        if (root / 'metainfo').exists():
+            return
+
+        raw = root / 'raw'
+        raw.mkdir(parents=True, exist_ok=True)
+
+        # Download edges
+        import gzip
+        import shutil
+        import urllib.request
+
+        tmp_gz = raw / "temp_download.gz"
+        tmp_out = raw / "temp_extracted"
+        edges_path = raw / "edges.ij"
+        if not edges_path.exists():
+            try:
+                print(f"Downloading edges from {CitHepPhDataset.url_edges_snap}...")
+                # download
+                with urllib.request.urlopen(CitHepPhDataset.url_edges_snap) as response, open(tmp_gz, "wb") as f:
+                    shutil.copyfileobj(response, f)
+
+                # extract
+                with gzip.open(tmp_gz, "rb") as f_in, open(tmp_out, "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
+                # rename
+                if edges_path.exists():
+                    edges_path.unlink()
+                tmp_out.rename(edges_path)
+
+                print("Done.")
+            finally:
+                # cleanup
+                if tmp_gz.exists():
+                    tmp_gz.unlink()
+
+        # Get ids
+        ids = set()
+
+        with open(edges_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                ids.add(parts[0])
+                ids.add(parts[1])
+
+        # Get attributes
+        (raw / 'node_attributes').mkdir(exist_ok=True)
+        attrs = ["authors", "title", "abstract"]
+
+        fetch_all(
+            article_ids=ids ,
+            fields=attrs,
+            batch_size=100,
+            delay=3.1,
+            output_dir=raw / 'node_attributes',
+        )
+
+        # Create DatasetInfo
+        info = DatasetInfo()
+        info.name = dc.full_name[-1]
+        info.format = "ij"
+        info.count = 1
+        info.directed = True
+        info.hetero = False
+        info.nodes = [len(ids)]
+        info.remap = True
+        info.node_attributes = {
+            "names": attrs,
+            "types": ["other"]*len(attrs),
+            "values": [None]*len(attrs)}
+        info.edge_attributes = None
+        info.labelings = {}
+
+        info.save(root / 'metainfo')
 
     def node_attributes(
             self,
@@ -162,138 +246,62 @@ def fetch_all(
         fields: list[str],
         batch_size: int = 20,
         delay: float = 3.0,
-        output_dir: Path | str = "."
+        output_dir: Path = Path("."),
 ) -> None:
     """
-    Main function: fetch metadata for all IDs, split by field, write output files.
+    Fetch metadata for all IDs and save everything into a single JSON file as dict
+     {id -> {field -> value}}.
 
     Args:
-        article_ids:   Raw IDs (will be padded to 7 digits).
-        fields:        Subset of ["authors", "title", "abstract"] to save.
-        batch_size:    How many IDs to request per API call.
-        delay:         Seconds to wait between batches.
-        output_dir:         Seconds to wait between batches.
+        article_ids: Raw IDs (will be padded to 7 digits).
+        fields: Subset of ["authors", "title", "abstract"] to save.
+        batch_size: How many IDs to request per API call.
+        delay: Seconds to wait between batches.
+        output_dir: Directory to put result file.
     """
-    # Map original_id -> padded_id  (keep original for output keys)
+    valid_fields = {"authors", "title", "abstract"}
+    invalid_fields = [field for field in fields if field not in valid_fields]
+    if invalid_fields:
+        raise ValueError(f"Unsupported fields: {invalid_fields}. Allowed: {sorted(valid_fields)}")
+
     id_map = {str(aid).strip(): pad_id(aid) for aid in article_ids}
     original_ids = list(id_map.keys())
-    padded_ids = [id_map[o] for o in original_ids]
+    padded_ids = [id_map[original_id] for original_id in original_ids]
 
-    all_meta: dict[str, dict] = {}  # padded_id -> {authors, title, abstract}
-
+    all_meta: dict[str, dict] = {}
     batches = [padded_ids[i:i + batch_size] for i in range(0, len(padded_ids), batch_size)]
     print(f"Fetching {len(padded_ids)} articles in {len(batches)} batch(es)...")
 
-    for idx, batch in tqdm(enumerate(batches, 1)):
-        # print(f"  Batch {idx}/{len(batches)}: {batch}")
+    for idx, batch in tqdm(list(enumerate(batches, 1))):
         batch_result = fetch_batch(batch)
         all_meta.update(batch_result)
+
         if idx < len(batches):
             time.sleep(delay)
 
     print(f"Fetched metadata for {len(all_meta)} articles.")
 
-    # Build per-field output dicts keyed by ORIGINAL id
-    for field in fields:
-        output: dict[str, object] = {}
-        for orig_id, padded in id_map.items():
-            entry = all_meta.get(padded)
-            if entry is None:
-                print(f"  [!] No data found for id={orig_id} (hep-ph/{padded})")
-                output[orig_id] = None
-            else:
-                output[orig_id] = entry[field]
+    node_info: dict = {}
 
-        filename = output_dir / field
-        Path(filename).write_text(json.dumps(output, ensure_ascii=False, indent=2),
-                                  encoding="utf-8")
-        print(f"  Saved {field} -> {filename}")
+    for orig_id, padded_id in id_map.items():
+        entry = all_meta.get(padded_id)
 
+        if entry is None:
+            print(f"  [!] No data found for id={orig_id} (hep-ph/{padded_id})")
+            node_info[orig_id] = {field: None for field in fields}
+            continue
 
-def create(dc):
-    root, files_paths = Declare.dataset_root_dir(dc)
-    raw = root / 'raw'
-    raw.mkdir(parents=True, exist_ok=True)
+        node_info[orig_id] = {field: entry.get(field) for field in fields}
 
-    # Download edges
-    import gzip
-    import shutil
-    import urllib.request
-
-    tmp_gz = raw / "temp_download.gz"
-    tmp_out = raw / "temp_extracted"
-    edges_path = raw / "edges.ij"
-    if not edges_path.exists():
-        try:
-            print(f"Downloading edges from {CitHepPhDataset.url_edges_snap}...")
-            # download
-            with urllib.request.urlopen(CitHepPhDataset.url_edges_snap) as response, open(tmp_gz, "wb") as f:
-                shutil.copyfileobj(response, f)
-
-            # extract
-            with gzip.open(tmp_gz, "rb") as f_in, open(tmp_out, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-
-            # rename
-            if edges_path.exists():
-                edges_path.unlink()
-            tmp_out.rename(edges_path)
-
-            print("Done.")
-        finally:
-            # cleanup
-            if tmp_gz.exists():
-                tmp_gz.unlink()
-
-    # Get ids
-    ids = set()
-
-    with open(edges_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split()
-            ids.add(parts[0])
-            ids.add(parts[1])
-
-    # Get attributes
-    (raw / 'node_attributes').mkdir(exist_ok=True)
-    attrs = ["authors", "title", "abstract"]
-
-    fetch_all(
-        article_ids=ids ,
-        fields=attrs,
-        batch_size=100,
-        delay=3.1,
-        output_dir=raw / 'node_attributes',
-    )
-
-    # Create DatasetInfo
-    info = DatasetInfo()
-    # info.class_name: str = None
-    # info.import_from: str = None
-
-    info.name = dc.full_name[-1]
-    info.format = "ij"
-    info.count = 1
-    info.directed = True
-    info.hetero = False
-    info.nodes = [len(ids)]
-    info.remap = True
-    info.node_attributes = {
-        "names": attrs,
-        "types": ["other"]*len(attrs),
-        "values": [None]*len(attrs)}
-    info.edge_attributes = None
-    info.labelings = {}
-
-    info.save(root / 'metainfo')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filename = output_dir / "node_info"
+    filename.write_text(
+        json.dumps(node_info, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Saved node info -> {filename}")
 
 
 if __name__ == '__main__':
     dc = DatasetConfig(('my', 'snap', "Cit-Hep-Ph"))
-    # create(dc)
     dataset = CitHepPhDataset(dc)
 
     print(dataset.info.to_dict())

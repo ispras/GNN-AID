@@ -220,13 +220,13 @@ class DatasetIndex:
                                 if i not in ns:
                                     ns_next.add(i)
 
-                            if not gen_dataset.info.directed:
-                                # Check also outcoming edge i -> *, excluding already added
-                                if i in ns and j not in prev_nodes:
-                                    es_next.add(ix)
-                                    # es_next.append((i, j))
-                                    if j not in ns:
-                                        ns_next.add(j)
+                            # if not gen_dataset.info.directed:
+                            # Check also outcoming edge i -> *, excluding already added
+                            if i in ns and j not in prev_nodes:
+                                es_next.add(ix)
+                                # es_next.append((i, j))
+                                if j not in ns:
+                                    ns_next.add(j)
 
                         prev_nodes.update(ns)
                         nodes[d] = ns_next
@@ -450,7 +450,7 @@ class VisiblePart:
                         dataset_data.edge_attributes.append(edge_attrs)
 
                 else:  # whole graph
-                    for n in range(edges):
+                    for n in range(len(edges)):  # FIXME check
                         edge_attrs = [edge_attributes[a][0][n] for a in attr_keys]
                         dataset_data.edge_attributes.append(edge_attrs)
 

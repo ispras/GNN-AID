@@ -363,10 +363,15 @@ class VisibleGraph {
         this.layout = null
         this.alive = false
         this.svgElement.innerHTML = ''
+        this.svgPanel.$tip.hide()
     }
 
     // Convert new datasetVar format (arrays) to old format (dicts) for compatibility
+
     _convertDatasetVar(datasetVar) {
+        console.error('Not implemented generally')
+        return
+
         if (!datasetVar) return null;
         const converted = {};
 
@@ -609,7 +614,7 @@ class VisibleGraph {
         this.edgePrimitives = {0:{}}
         for (let n=0; n<Thresholds.MAX_VISIBLE_EDGES_COUNT; ++n) {
             let edge = new SvgEdge(0, 0, 0, 0, this.edgeRadius, '#fff',
-                this.edgeStrokeWidth, false, true, this.svgPanel.$tip)
+                this.edgeStrokeWidth, this.datasetInfo.directed, true, this.svgPanel.$tip)
             this.edgePrimitives[0][n] = edge
             gEdge.appendChild(edge.g)
         }
@@ -906,7 +911,7 @@ class VisibleGraph {
                     edge.removeSatellites()
                     continue
                 }
-                let values = this.datasetVar["edge"][satellite]
+                let values = this.datasetVar?.edge?.satellite
                 if (values) {
                     if (satellite === "labels") {
                         edge.setLabels(values[eKey], this.numClasses)

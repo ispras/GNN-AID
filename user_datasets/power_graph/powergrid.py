@@ -13,7 +13,6 @@ import os.path as osp
 import shutil
 from pathlib import Path
 
-import mat73
 import numpy as np
 import requests
 import zipfile
@@ -114,6 +113,7 @@ class PowerGrid(InMemoryDataset):
             return tensor[mask]
 
         # load branch list also called edge order or edge index
+        import mat73
         path = os.path.join(self.raw_dir, 'blist.mat')
         edge_order = mat73.loadmat(path)
         edge_order = torch.tensor(edge_order["bList"] - 1)

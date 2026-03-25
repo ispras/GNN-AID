@@ -96,6 +96,89 @@ class MultipleGraphs extends Graph {
         $(this.svgElement).css("background-color", "#404040")
     }
 
+    _convertDatasetVar(datasetVar) {
+        if (!datasetVar) return null;
+        const converted = {};
+
+        const nodeKeys = this.nodes
+        const edges = { [this._graphIx]: this.getEdges() }
+        const edgeKeys = {}
+
+        for (const [graphId, edgeList] of Object.entries(edges)) {
+            edgeKeys[graphId] = edgeList.map(([i, j]) => `${i},${j}`)
+        }
+
+        for (const elem of VisibleGraph.ELEMS) {
+          if (!datasetVar[elem]) continue;
+
+          converted[elem] = {};
+          for (const [field, dataArray] of Object.entries(datasetVar[elem])) {
+            if (!dataArray || !Array.isArray(dataArray)) continue;
+
+            if (elem === "graph") {
+              const varDict = {};
+              const graphIds = Object.keys(nodeKeys);
+
+              graphIds.forEach((graphId, arrayIdx) => {
+                if (arrayIdx < dataArray.length && dataArray[arrayIdx] !== null) {
+                  varDict[graphId] = dataArray[arrayIdx];
+                }
+              });
+
+              converted[elem][field] = varDict;
+              continue;
+            }
+
+            if (elem === "edge") {
+              const varDictDict = {};
+              const graphIds = Object.keys(nodeKeys);
+
+              graphIds.forEach((graphId, arrayIdx) => {
+                const varDict = {};
+                const graphEdgeKeys = edgeKeys[graphId] || [];
+
+                if (arrayIdx < dataArray.length && Array.isArray(dataArray[arrayIdx])) {
+                  graphEdgeKeys.forEach((key, edgeIdx) => {
+                    if (edgeIdx < dataArray[arrayIdx].length && dataArray[arrayIdx][edgeIdx] !== null) {
+                      varDict[key] = dataArray[arrayIdx][edgeIdx];
+                    }
+                  });
+                }
+
+                varDictDict[graphId] = varDict;
+              });
+
+              converted[elem][field] = varDictDict;
+              continue;
+            }
+
+            const varDictDict = {};
+            const graphIds = Object.keys(nodeKeys);
+
+            graphIds.forEach((graphId, arrayIdx) => {
+              const graphKeys = nodeKeys[graphId];
+              const varDict = {};
+
+              if (arrayIdx < dataArray.length && Array.isArray(dataArray[arrayIdx])) {
+                graphKeys.forEach((key, nodeIdx) => {
+                  if (nodeIdx < dataArray[arrayIdx].length && dataArray[arrayIdx][nodeIdx] !== null) {
+                    varDict[key] = dataArray[arrayIdx][nodeIdx];
+                  }
+                });
+              }
+
+              varDictDict[graphId] = varDict;
+            });
+
+            converted[elem][field] = varDictDict;
+          }
+
+          if (Object.keys(converted[elem]).length === 0) delete converted[elem];
+        }
+
+        return converted;
+    }
+
     _drop() {
         // IMPORTANT: bypass Graph._drop() (it resets background to light)
         VisibleGraph.prototype._drop.call(this)

@@ -26,6 +26,60 @@ class Graph extends VisibleGraph {
         $(this.svgElement).css("background-color", "#404040")
     }
 
+    _convertDatasetVar(datasetVar) {
+        if (!datasetVar) return null;
+        const converted = {};
+
+        const nodeKeys = this.getNodes()
+        const edges = this.getEdges()
+        const edgeKeys = edges.map(([i, j]) => `${i},${j}`)
+
+        for (const elem of VisibleGraph.ELEMS) {
+            if (!datasetVar[elem]) continue;
+
+            converted[elem] = {}
+            for (const [field, dataArray] of Object.entries(datasetVar[elem])) {
+                if (!dataArray || !Array.isArray(dataArray)) continue;
+
+                if (elem === "graph") {
+                    converted[elem][field] = dataArray;
+                    continue;
+                }
+
+                if (elem === "edge") {
+                    const actualArray =
+                        dataArray.length === 1 && Array.isArray(dataArray[0]) ? dataArray[0] : dataArray;
+
+                    const varDict = {};
+                    edgeKeys.forEach((key, index) => {
+                        if (index < actualArray.length && actualArray[index] !== null) {
+                            varDict[key] = actualArray[index];
+                        }
+                    });
+
+                    converted[elem][field] = varDict;
+                    continue;
+                }
+
+                const actualArray =
+                    dataArray.length === 1 && Array.isArray(dataArray[0]) ? dataArray[0] : dataArray;
+
+                const varDict = {};
+                nodeKeys.forEach((key, index) => {
+                    if (index < actualArray.length && actualArray[index] !== null) {
+                        varDict[key] = actualArray[index];
+                    }
+                });
+
+                converted[elem][field] = varDict;
+            }
+
+            if (Object.keys(converted[elem]).length === 0) delete converted[elem];
+        }
+
+        return converted
+    }
+
     // Variable part of drop - to be overridden
     _drop() {
         super._drop()
