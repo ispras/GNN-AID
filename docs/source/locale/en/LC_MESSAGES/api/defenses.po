@@ -1,0 +1,154 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/defenses.rst:2
+msgid "defenses"
+msgstr ""
+
+#: ../../api/defenses.rst:10
+msgid "Base classes"
+msgstr ""
+
+#: defenses.defense_base.Defender:1 of
+msgid "Base class for all defense methods."
+msgstr ""
+
+#: defenses.defense_base.Defender.check_availability:1 of
+msgid ""
+"Check whether the method can be applied for the given dataset and model "
+"manager."
+msgstr ""
+
+#: ../../api/defenses.rst
+msgid "Параметры"
+msgstr ""
+
+#: defenses.defense_base.Defender.check_availability:3 of
+msgid "dataset"
+msgstr ""
+
+#: defenses.defense_base.Defender.check_availability:4 of
+msgid "model manager"
+msgstr ""
+
+#: defenses.evasion_defense.EvasionDefender:1 of
+msgid "Base class for all evasion defense methods."
+msgstr ""
+
+#: defenses.evasion_defense.AdvTraining.post_batch:1
+#: defenses.evasion_defense.AdvTraining.pre_batch:1
+#: defenses.evasion_defense.EmptyEvasionDefender.post_batch:1
+#: defenses.evasion_defense.EmptyEvasionDefender.pre_batch:1
+#: defenses.evasion_defense.EvasionDefender.post_batch:1
+#: defenses.evasion_defense.EvasionDefender.pre_batch:1
+#: defenses.evasion_defense.GradientRegularizationDefender.post_batch:1
+#: defenses.evasion_defense.QuantizationDefender.pre_batch:1 of
+msgid "TODO Kirill add function docstring"
+msgstr ""
+
+#: defenses.evasion_defense.EmptyEvasionDefender:1 of
+msgid "Just a stub for evasion defense."
+msgstr ""
+
+#: defenses.evasion_defense.SimpleAutoEncoder.forward:1 of
+msgid "Defines the computation performed at every call."
+msgstr ""
+
+#: defenses.evasion_defense.SimpleAutoEncoder.forward:3 of
+msgid "Should be overridden by all subclasses."
+msgstr ""
+
+#: defenses.evasion_defense.SimpleAutoEncoder.forward:6 of
+msgid ""
+"Although the recipe for forward pass needs to be defined within this "
+"function, one should call the :class:`Module` instance afterwards instead"
+" of this since the former takes care of running the registered hooks "
+"while the latter silently ignores them."
+msgstr ""
+
+#: defenses.mi_defense.MIDefender:1 of
+msgid "Base class for all membership inference (MI) defense methods."
+msgstr ""
+
+#: defenses.mi_defense.EmptyMIDefender:1 of
+msgid "Just a stub for MI defense."
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:1 of
+msgid "Membership Inference defense through logit perturbation."
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:3 of
+msgid "Type of noise to apply ('reverse_sigmoid', 'random', or 'none')"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:4 of
+msgid "Magnitude parameter for reverse sigmoid"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:5 of
+msgid "Convergence parameter for reverse sigmoid"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:6 of
+msgid "Scale of random noise when noise_type='random'"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.__init__:7 of
+msgid "Temperature for softmax when converting probs back to logits"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.post_batch:1 of
+msgid "Apply noise to model logits and compute loss on modified logits."
+msgstr ""
+
+#: ../../api/defenses.rst
+msgid "Результат"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.post_batch:3 of
+msgid "- 'outputs': Modified logits - 'loss': Loss computed on modified logits"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.post_batch:5 of
+msgid "'outputs': Modified logits"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMIDefender.post_batch:6 of
+msgid "'loss': Loss computed on modified logits"
+msgstr ""
+
+#: ../../api/defenses.rst
+msgid "Тип результата"
+msgstr ""
+
+#: defenses.mi_defense.NoiseMILinkDefender:1 of
+msgid "MI defense for Link Prediction tasks via edge logit perturbation"
+msgstr ""
+
+#: defenses.poison_defense.PoisonDefender:1 of
+msgid "Base class for all poison defense methods."
+msgstr ""
+
+#: defenses.poison_defense.EmptyPoisonDefender:1 of
+msgid "Just a stub for poison defense."
+msgstr ""
+

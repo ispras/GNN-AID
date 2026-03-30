@@ -1,0 +1,252 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:2
+msgid "datasets.ptg\\_datasets.PTGDataset"
+msgstr ""
+
+#: datasets.ptg_datasets.PTGDataset:1 of
+msgid ""
+"Generalisation and a wrapper over a single ptg Dataset. Features and "
+"labels are defined at initialisation. Extend this class if you have a "
+"dataset extending :class:`torch_geometric.data.Dataset`."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst
+msgid "Параметры"
+msgstr ""
+
+#: datasets.ptg_datasets.PTGDataset.__init__:1 of
+msgid "dataset config dictionary"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:13
+msgid "Methods"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`__init__ <datasets.ptg_datasets.PTGDataset.__init__>`\\ "
+"\\(dataset\\_config\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`apply_modification "
+"<datasets.ptg_datasets.PTGDataset.apply_modification>`\\ \\(artifact\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+"Applies graph structure and feature modifications described in a "
+"GraphModificationArtifact to the current GeneralDataset object and "
+"returns the modified version."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`build <datasets.ptg_datasets.PTGDataset.build>`\\ "
+"\\(dataset\\_var\\_config\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Create node feature tensors from attributes based on dataset_var_config."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`edge_attributes "
+"<datasets.ptg_datasets.PTGDataset.edge_attributes>`\\ \\(\\[attrs\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+#, python-brace-format
+msgid "Get edge attributes as a dict {name -> list}"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`get_stat <datasets.ptg_datasets.PTGDataset.get_stat>`\\ "
+"\\(stat\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Get statistics."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`induce_dataset_info "
+"<datasets.ptg_datasets.PTGDataset.induce_dataset_info>`\\ \\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Induce metainfo for the PTG dataset."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`is_directed <datasets.ptg_datasets.PTGDataset.is_directed>`\\ "
+"\\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Return whether edges in this dataset are directed."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ":py:obj:`is_hetero <datasets.ptg_datasets.PTGDataset.is_hetero>`\\ \\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Return whether this dataset is hetero graph."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ":py:obj:`is_multi <datasets.ptg_datasets.PTGDataset.is_multi>`\\ \\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Return whether this dataset is multiple-graphs or single-graph."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`node_attributes "
+"<datasets.ptg_datasets.PTGDataset.node_attributes>`\\ \\(\\[attrs\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+#, python-brace-format
+msgid "Get node attributes as a dict {name -> list}"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`save_train_test_mask "
+"<datasets.ptg_datasets.PTGDataset.save_train_test_mask>`\\ \\(path\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Save current train/test mask to a given path (together with the model)."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid ""
+":py:obj:`train_test_split "
+"<datasets.ptg_datasets.PTGDataset.train_test_split>`\\ "
+"\\(\\[percent\\_train\\_class\\, ...\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:32:<autosummary>:1
+msgid "Compute train-validation-test split of graphs/nodes."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.ptg_datasets.PTGDataset.rst:34
+msgid "Attributes"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`data <datasets.ptg_datasets.PTGDataset.data>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+"Get tensors of the whole dataset as "
+":class:`torch_geometric.data.data.Data` object."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`default_dataset_var_config "
+"<datasets.ptg_datasets.PTGDataset.default_dataset_var_config>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`edge_features <datasets.ptg_datasets.PTGDataset.edge_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Get a list of tensors of edge features, one for each graph in the dataset."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`edges <datasets.ptg_datasets.PTGDataset.edges>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Edge index as a list of tensors"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`labels <datasets.ptg_datasets.PTGDataset.labels>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`metainfo_path <datasets.ptg_datasets.PTGDataset.metainfo_path>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to 'metainfo' file."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`node_features <datasets.ptg_datasets.PTGDataset.node_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Get a list of tensors of node features, one for each graph in the dataset."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`num_classes <datasets.ptg_datasets.PTGDataset.num_classes>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`num_node_features "
+"<datasets.ptg_datasets.PTGDataset.num_node_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`prepared_dir <datasets.ptg_datasets.PTGDataset.prepared_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to folder where tensor data is stored."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`raw_dir <datasets.ptg_datasets.PTGDataset.raw_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to 'raw/' folder where raw data is stored."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`root_dir <datasets.ptg_datasets.PTGDataset.root_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Dataset root directory with folder 'raw/' and metainfo file."
+msgstr ""
+

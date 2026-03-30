@@ -1,5 +1,6 @@
 import json
 from collections import deque
+from pathlib import Path
 from threading import Thread
 from time import sleep
 from typing import Any, Union
@@ -7,6 +8,11 @@ from typing import Any, Union
 import numpy as np
 
 from gnn_aid.aux.utils import SAVE_DIR_STRUCTURE_PATH
+
+root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
+WEB_DIR = root_dir / "web_interface"
+STATIC_DIR = WEB_DIR / "static"  # js, css code
+TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
 
 
 class WebInterfaceError(Exception):

@@ -1,0 +1,594 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/attacks.rst:2
+msgid "attacks"
+msgstr ""
+
+#: ../../api/attacks.rst:15
+msgid "Base classes"
+msgstr ""
+
+#: attacks.attack_base.Attacker:1 of
+msgid "Base class for all attack methods."
+msgstr ""
+
+#: attacks.attack_base.Attacker.check_availability:1
+#: attacks.metattack.meta_gradient_attack.BaseMeta.check_availability:1
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox.check_availability:1
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull.check_availability:1
+#: of
+msgid ""
+"Check whether the method can be applied for the given dataset and model "
+"manager."
+msgstr ""
+
+#: ../../api/attacks.rst
+msgid "Параметры"
+msgstr ""
+
+#: attacks.attack_base.Attacker.check_availability:3
+#: attacks.metattack.meta_gradient_attack.BaseMeta.check_availability:3
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox.check_availability:3
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull.check_availability:3
+#: of
+msgid "dataset"
+msgstr ""
+
+#: attacks.attack_base.Attacker.check_availability:4
+#: attacks.metattack.meta_gradient_attack.BaseMeta.check_availability:4
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox.check_availability:4
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull.check_availability:4
+#: of
+msgid "model manager"
+msgstr ""
+
+#: attacks.evasion_attacks.EvasionAttacker:1
+#: attacks.poison_attacks.PoisonAttacker:1 of
+msgid "Base class for all poison attack methods."
+msgstr ""
+
+#: attacks.poison_attacks.EmptyPoisonAttacker:1 of
+msgid "Just a stub for poison attack."
+msgstr ""
+
+#: attacks.evasion_attacks.EmptyEvasionAttacker:1 of
+msgid "Just a stub for evasion attack."
+msgstr ""
+
+#: attacks.evasion_attacks.FGSMAttacker.check_availability:1
+#: attacks.evasion_attacks.NettackAttacker.check_availability:1
+#: attacks.evasion_attacks.PGDAttacker.check_availability:1
+#: attacks.evasion_attacks.ReWattAttacker.check_availability:1 of
+msgid "Availability check for the given dataset and model manager."
+msgstr ""
+
+#: attacks.evasion_attacks.PGDAttacker.get_attack_loss:1 of
+msgid ""
+"Returns a loss function that computes -loss_fn(pred, target). Lower loss "
+"value means better attack."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker:1 of
+msgid "ReWatt: Reinforcement Learning-based Edge Rewiring Attack on GNNs."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:1 of
+msgid "Initialize the ReWattAttacker."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:3 of
+msgid ""
+"Index of the node (for node classification) or graph (for graph "
+"classification) to attack."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:6 of
+msgid ""
+"Fraction (0 < eps <= 1) of total edges to be considered for rewiring "
+"(defines the attack budget)."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:9 of
+msgid "Number of training epochs for the reinforcement learning agent."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:12 of
+msgid "Hidden dimension size for the MLPs used in the policy network."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:15 of
+msgid ""
+"Method used to combine node embeddings into edge representations. "
+"Options: 'sum', 'mul', 'max'."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:18 of
+msgid ""
+"Method for aggregating node embeddings into a graph-level representation."
+" Options: 'mean', 'max'."
+msgstr ""
+
+#: ../../api/attacks.rst
+msgid "Результат"
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.__init__:21 of
+msgid "None"
+msgstr ""
+
+#: ../../api/attacks.rst
+msgid "Тип результата"
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.attack:1 of
+msgid "Executes the ReWatt attack on the given graph data and GNN model."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.attack:3 of
+msgid "model manager."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.attack:6 of
+msgid "general dataset."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.attack:9 of
+msgid "desc."
+msgstr ""
+
+#: attacks.evasion_attacks.ReWattAttacker.attack:12 of
+msgid "None."
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker:1 of
+msgid "Base class for all membership inference (MI) attack methods."
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:1 of
+msgid ""
+"Computes accuracy for a single attack result (mask + inferred labels "
+"pair)."
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:3 of
+msgid "Key from results store (boolean tensor form)"
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:4 of
+msgid "Value from results store (predicted labels tensor)"
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:5 of
+msgid "Tensor of true labels for all nodes in the graph"
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:7 of
+msgid ""
+"Dict with metrics for predictions among attacked samples.        Returns "
+"0.0 if no samples were attacked"
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:9 of
+msgid "Dict with metrics for predictions among attacked samples."
+msgstr ""
+
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy:10 of
+msgid "Returns 0.0 if no samples were attacked"
+msgstr ""
+
+#: attacks.mi_attacks.EmptyMIAttacker:1 of
+msgid "Just a stub for MI attack."
+msgstr ""
+
+#: attacks.mi_attacks.NaiveMIAttacker:1 of
+msgid ""
+"Naive MI Attack: marks as train the data on which the model is most "
+"confident"
+msgstr ""
+
+#: attacks.mi_attacks.ShadowModelMIAttacker:1 of
+msgid ""
+"The surrogate model is trained on a part of the initial dataset. The "
+"classifier learns from its responses to determine whether the input is "
+"from train or test"
+msgstr ""
+
+#: attacks.mi_attacks.ShadowModelMIAttacker.attack:1 of
+msgid "Perform membership inference attack using shadow model technique."
+msgstr ""
+
+#: attacks.mi_attacks.ShadowModelMILinkAttacker:1 of
+msgid "Shadow model-based membership inference attack for Link Prediction."
+msgstr ""
+
+#: attacks.mi_attacks.ShadowModelMILinkAttacker.attack:1 of
+msgid "Perform membership inference attack on target model"
+msgstr ""
+
+#: ../../api/attacks.rst:30
+msgid "Poison Attacks"
+msgstr ""
+
+#: ../../api/attacks.rst:33
+msgid "CLGA"
+msgstr ""
+
+#: attacks.clga.CLGA.CLGAAttack.drop_edge:1 of
+msgid "Perform edge dropout based on the chosen scheme."
+msgstr ""
+
+#: attacks.clga.CLGA.CLGAAttack.train_gcn:1 of
+msgid "Train the GCN model with augmented graphs."
+msgstr ""
+
+#: attacks.clga.CLGA.CLGAAttack.compute_gradient:1 of
+msgid "Compute gradients of the contrastive loss w.r.t. adjacency matrix."
+msgstr ""
+
+#: attacks.clga.CLGA.CLGAAttack.attack:1 of
+msgid "Execute the CLGA attack."
+msgstr ""
+
+#: ../../api/attacks.rst:40
+msgid "Metattack"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:1 of
+msgid "Super class for Metattack on GNNs"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:3 of
+msgid "surrogate model that will be attacked directly"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:4 of
+msgid "number of nodes in the input graph"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:6 of
+msgid "number of initial training iterations for surrogate model"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:8 of
+msgid "number of training iterations for surrogate model for meta-gradient calc"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:10 of
+msgid "``lambda_`` is used to weight the two objectives in Eq. (10) in the paper."
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:12 of
+msgid "learning rate for surrogate meta-training"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:14 of
+msgid "shape of the input node features"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:16 of
+msgid "whether to attack graph structure"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:18 of
+msgid "whether to attack node features"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:20 of
+msgid "whether the graph is undirected"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta:22 of
+msgid "'cpu' or 'cuda'"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta.filter_potential_singletons:1
+#: of
+msgid ""
+"Computes a mask for entries potentially leading to singleton nodes, i.e. "
+"one of the two nodes corresponding to the entry have degree 1 and there "
+"is an edge between the two nodes."
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta.log_likelihood_constraint:1
+#: of
+msgid ""
+"Computes a mask for entries that, if the edge corresponding to the entry "
+"is added/removed, would lead to the log likelihood constraint to be "
+"violated."
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.BaseMeta.log_likelihood_constraint:4
+#: of
+msgid ""
+"Note that different data type (float, double) can effect the final "
+"results."
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull:1 of
+msgid "Attack GNNs with meta gradients"
+msgstr ""
+
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox:1 of
+msgid "Attack GNNs with approximate meta gradients"
+msgstr ""
+
+#: ../../api/attacks.rst:47
+msgid "Evasion Attacks"
+msgstr ""
+
+#: ../../api/attacks.rst:50
+msgid "Nettack"
+msgstr ""
+
+#: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate.__init__:1
+#: attacks.evasion_attacks_collection.rewatt.utils.MLP.__init__:1 of
+msgid ""
+"Initializes internal Module state, shared by both nn.Module and "
+"ScriptModule."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate.forward:1
+#: attacks.evasion_attacks_collection.rewatt.utils.MLP.forward:1 of
+msgid "Defines the computation performed at every call."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate.forward:3
+#: attacks.evasion_attacks_collection.rewatt.utils.MLP.forward:3 of
+msgid "Should be overridden by all subclasses."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate.forward:6
+#: attacks.evasion_attacks_collection.rewatt.utils.MLP.forward:6 of
+msgid ""
+"Although the recipe for forward pass needs to be defined within this "
+"function, one should call the :class:`Module` instance afterwards instead"
+" of this since the former takes care of running the registered hooks "
+"while the latter silently ignores them."
+msgstr ""
+
+#: ../../api/attacks.rst:56
+msgid "Projected Gradient Descent"
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:1 of
+msgid ""
+"Performs random sampling over a probabilistic edge mask to generate "
+"discrete binary masks, while respecting a budget constraint on the number"
+" of modified edges."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:4 of
+msgid "Probabilistic edge mask of shape [E]."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:6 of
+msgid "Maximum number of edges allowed to be modified."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:8 of
+msgid "Number of random sampling trials."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:10 of
+msgid "GNN model."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:11
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:12
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:13 of
+msgid "Graph data."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:14 of
+msgid "attack_loss loss function."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:15 of
+msgid "Target node index for node classification."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling:17 of
+msgid ""
+"Binary edge mask [E]. True values indicate that the edge should be "
+"removed to improve the attack quality."
+msgstr ""
+
+#: ../../api/attacks.rst:62
+msgid "Rewatt"
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.vc_representation:1 of
+msgid ""
+"Parameters: - v1_emb: The embedding of v_fir node. - edge_repr: "
+"Representation of an edge in the context of nodes v_fir and v_sec. - "
+"vc_emb: The embedding of v_c node."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:1 of
+msgid ""
+"Represents the current state of the graph for the reinforcement learning "
+"environment."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:3 of
+msgid "Node feature matrix."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:5 of
+msgid "Edge list."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:7 of
+msgid "Predicted class label."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:9 of
+msgid "Probability of the predicted class."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.Action:1 of
+msgid "Represents a rewiring action in the graph."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.Action:3 of
+msgid "The attacked node (target of the deleted edge)."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.Action:5 of
+msgid "Source node of the edge to be removed."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.Action:7 of
+msgid "New source node for the rewired edge."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:1 of
+msgid "Environment that applies actions (rewirings) and tracks state transitions."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:3 of
+msgid "The GNN model to attack."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:5 of
+msgid "Initial state of the graph."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:7 of
+msgid "Fraction of edges allowed to be changed (attack budget)."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:9 of
+msgid ""
+"Index of the node to attack in node classification tasks. If None, a "
+"graph classification task is assumed."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.__init__:1
+#: of
+msgid "An environment class that receives agent actions and updates the state."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step:1 of
+msgid ""
+"Performs the given action (rewiring), transitions to a new state, and "
+"computes the reward."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring:5
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step:3 of
+msgid "The rewiring action to apply."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step:5 of
+msgid "A tuple containing the new state and the corresponding reward."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring:1
+#: of
+msgid "Applies a single rewiring step: deletes one edge and adds a new one."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring:3
+#: of
+msgid "The current state before rewiring."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring:7
+#: of
+msgid "The new graph state after rewiring."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward:1
+#: of
+msgid "Calculates the reward for a transition to the new graph state."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward:3
+#: of
+msgid "The new state after applying an action."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward:5
+#: of
+msgid ""
+"The computed reward. Returns 1 if class has changed, otherwise a negative"
+" penalty."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:1
+#: of
+msgid "Initializes the policy network used for selecting graph rewiring actions."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:3
+#: of
+msgid "The GNN model used to extract node embeddings."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:5
+#: of
+msgid "Dimensionality of the embeddings."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:7
+#: of
+msgid "Index of the penultimate layer in the embedding list."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:9
+#: of
+msgid "Hidden size for the internal MLPs."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:11
+#: of
+msgid "Node index for node classification tasks. None for graph classification."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:13
+#: of
+msgid "Method to compute edge features from node pairs ('sum', 'mul', 'max')."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:15
+#: of
+msgid "Method for graph-level embedding pooling ('mean' or 'max')."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__:17
+#: of
+msgid "Device on which to run the model ('cpu' or 'cuda')."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward:1 of
+msgid "Selects an action based on the current graph state."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward:3 of
+msgid "The current graph state."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward:5 of
+msgid "The selected rewiring action and the log probability of selecting it."
+msgstr ""
+

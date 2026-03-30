@@ -1,0 +1,477 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/aux.rst:2
+msgid "aux"
+msgstr ""
+
+#: aux.data_info.DataInfo:1 of
+msgid ""
+"The class is responsible for populating prefix access trees to datasets, "
+"models, and interpretations based on the dir structure"
+msgstr ""
+
+#: aux.data_info.DataInfo.refresh_all_data_info:1 of
+msgid "Calling all files to update with information about saved objects"
+msgstr ""
+
+#: aux.data_info.DataInfo.refresh_data_dir_structure:1 of
+msgid "Calling a file update with information about saved raw datasets"
+msgstr ""
+
+#: aux.data_info.DataInfo.refresh_models_dir_structure:1 of
+msgid "Calling a file update with information about saved models"
+msgstr ""
+
+#: aux.data_info.DataInfo.refresh_explanations_dir_structure:1 of
+msgid "Calling a file update with information about saved explanations"
+msgstr ""
+
+#: aux.data_info.DataInfo.refresh_data_var_dir_structure:1 of
+msgid "Calling a file update with information about saved prepared datasets"
+msgstr ""
+
+#: ../../api/aux.rst aux.declaration.Declare.explanation_file_path
+#: aux.declaration.Declare.models_path of
+msgid "Параметры"
+msgstr ""
+
+#: aux.data_info.DataInfo.fill_prefix_storage:3
+#: aux.data_info.DataInfo.take_keys_etc_by_prefix:1
+#: aux.data_info.DataInfo.values_list_and_technical_files_by_path_and_prefix:2
+#: of
+msgid ""
+"what data and in what order were used to form the path when saving the "
+"object Example: modes=(\"datasets\", \"models\", \"explanations\")"
+msgstr ""
+
+#: ../../api/aux.rst aux.declaration.Declare.models_path of
+msgid "Результат"
+msgstr ""
+
+#: aux.data_info.DataInfo.take_keys_etc_by_prefix:3 of
+msgid ""
+"keys_list witch should use specific info about object, full_keys_list "
+"take all keys (with technical keys), dir_structure dict base on "
+"save_dir_structure.json without modes keys, empty_dir_shift number of "
+"technical keys"
+msgstr ""
+
+#: aux.data_info.DataInfo.values_list_and_technical_files_by_path_and_prefix:1
+#: aux.data_info.DataInfo.values_list_by_path_and_keys:1 of
+msgid "path of the saved object"
+msgstr ""
+
+#: aux.data_info.DataInfo.values_list_by_path_and_keys:2 of
+msgid "keys witch should use spesific info about object and technical keys"
+msgstr ""
+
+#: aux.data_info.DataInfo.values_list_by_path_and_keys:3 of
+msgid "dict base on save_dir_structure.json without modes keys"
+msgstr ""
+
+#: aux.data_info.DataInfo.values_list_by_path_and_keys:4 of
+msgid "object values based on object path"
+msgstr ""
+
+#: aux.data_info.DataInfo.values_list_and_technical_files_by_path_and_prefix:4
+#: of
+msgid "object values based on object path and dict with technical files"
+msgstr ""
+
+#: aux.data_info.DataInfo.fill_prefix_storage:1 of
+msgid "Fill prefix storage by file with paths"
+msgstr ""
+
+#: aux.data_info.DataInfo.fill_prefix_storage:5 of
+msgid "file with paths of saved objects"
+msgstr ""
+
+#: aux.data_info.DataInfo.fill_prefix_storage:6 of
+msgid "fill prefix storage and dict with description_info about objects use hash"
+msgstr ""
+
+#: aux.data_info.DataInfo.explainers_parse:1 of
+msgid ""
+"Parses the path to explainers from a technical file with the paths of all"
+" saved explainers."
+msgstr ""
+
+#: aux.data_info.DataInfo.models_parse:1 of
+msgid ""
+"Parses the path to models from a technical file with the paths of all "
+"saved models."
+msgstr ""
+
+#: aux.data_info.DataInfo.data_parse:1 of
+msgid ""
+"Parses the path to raw datasets from a technical file with the paths of "
+"all saved raw datasets."
+msgstr ""
+
+#: aux.data_info.DataInfo.data_var_parse:1 of
+msgid ""
+"Parses the path to prepared datasets from a technical file with the paths"
+" of all saved prepared datasets."
+msgstr ""
+
+#: aux.data_info.DataInfo.clean_prepared_data:1 of
+msgid "Remove all prepared data for all datasets."
+msgstr ""
+
+#: aux.data_info.DataInfo.all_obj_ver_by_obj_path:1 of
+msgid "path to the saved object"
+msgstr ""
+
+#: aux.data_info.DataInfo.all_obj_ver_by_obj_path:2 of
+msgid "set of all saved versions of the provided object"
+msgstr ""
+
+#: aux.data_info.DataInfo.del_all_empty_folders:1 of
+msgid ""
+"Deletes all empty folders and files with meta information in the selected"
+" directory"
+msgstr ""
+
+#: aux.data_info.DataInfo.del_all_empty_folders:3 of
+msgid "path to the directory in which empty folders should be deleted"
+msgstr ""
+
+#: aux.utils.import_by_name:1 of
+msgid ""
+"Import name from packages, return class :param name: class name, full or "
+"relative :param packs: list of packages to search in :return: <class>"
+msgstr ""
+
+#: aux.utils.model_managers_info_by_names_list:1 of
+msgid "set with model managers class names (user and framework)"
+msgstr ""
+
+#: aux.utils.model_managers_info_by_names_list:2 of
+msgid "dict with info about model managers"
+msgstr ""
+
+#: aux.utils.setting_class_default_parameters:1 of
+msgid "class name, should be same in default_parameters_file"
+msgstr ""
+
+#: aux.utils.setting_class_default_parameters:2 of
+msgid ""
+"dict with parameters, which needs to be supplemented with default "
+"parameters"
+msgstr ""
+
+#: aux.utils.setting_class_default_parameters:3 of
+msgid "path to the file with default parameters of the class_name object"
+msgstr ""
+
+#: aux.utils.setting_class_default_parameters:4 of
+msgid "new dict with all class kwargs"
+msgstr ""
+
+#: aux.utils.deep_update:1 of
+msgid ""
+"Recursively update a dictionary with values from overrides. Nested "
+"dictionaries are merged instead of overwritten."
+msgstr ""
+
+#: aux.utils.tmp_dir:1 of
+msgid "Temporary create a directory near the given path. Remove it on exit."
+msgstr ""
+
+#: aux.utils.MetaEnum:1 of
+msgid ""
+"A helper class which allows us to do \"x in XEnum\" if XEnum extends this"
+" class"
+msgstr ""
+
+#: aux.utils.ProgressBar.reset:1 of
+msgid "Resets to 0 iterations for repeated use."
+msgstr ""
+
+#: aux.utils.ProgressBar.reset:3 of
+msgid "Consider combining with `leave=True`."
+msgstr ""
+
+#: aux.utils.ProgressBar.update:1 of
+msgid ""
+"Manually update the progress bar, useful for streams such as reading "
+"files. E.g.: >>> t = tqdm(total=filesize) # Initialise >>> for "
+"current_buffer in stream: ...    ... ...    t.update(len(current_buffer))"
+" >>> t.close() The last line is highly recommended, but possibly not "
+"necessary if `t.update()` will be called in such a way that `filesize` "
+"will be exactly reached and printed."
+msgstr ""
+
+#: aux.utils.ProgressBar.update:13 of
+#, python-brace-format
+msgid ""
+"Increment to add to the internal counter of iterations [default: 1]. If "
+"using float, consider specifying `{n:.3f}` or similar in `bar_format`, or"
+" specifying `unit_scale`."
+msgstr ""
+
+#: aux.utils.ProgressBar.update:18 of
+msgid "**out** -- True if a `display()` was triggered."
+msgstr ""
+
+#: ../../api/aux.rst
+msgid "Тип результата"
+msgstr ""
+
+#: aux.declaration.Declare:1 of
+msgid ""
+"Forms a path for accessing, saving, loading for all key objects (data, "
+"model, explainer)"
+msgstr ""
+
+#: aux.declaration.Declare.obj_info_to_path:1 of
+msgid ""
+"the path for which object is being built. Now support: data_root, "
+"datasets, models, explanations"
+msgstr ""
+
+#: aux.declaration.Declare.obj_info_to_path:3 of
+msgid ""
+"the path over which you need to add the folder structure corresponding to"
+" the element being saved"
+msgstr ""
+
+#: aux.declaration.Declare.obj_info_to_path:5 of
+msgid ""
+"information about the object, which must match the dictionary keys "
+"(save_dir_structure.json, including the order must match)"
+msgstr ""
+
+#: aux.declaration.Declare.obj_info_to_path:7 of
+msgid "new path, list of technical files paths"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_root_dir:1 of
+msgid "Directory where dataset raw files and metainfo are stored."
+msgstr ""
+
+#: aux.declaration.Declare.dataset_info_path:3
+#: aux.declaration.Declare.dataset_root_dir:3 of
+msgid "DatasetConfig"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_root_dir:4 of
+msgid "path to the data folder, path to a specific dataset"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_info_path:1 of
+msgid "Path to metainfo file for a dataset."
+msgstr ""
+
+#: aux.declaration.Declare.dataset_info_path:4 of
+msgid "path to metainfo file for a specific dataset"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_prepared_dir:1 of
+msgid "Directory where the var part of a dataset is stored."
+msgstr ""
+
+#: aux.declaration.Declare.dataset_prepared_dir:3 of
+msgid ":class:`~data_structures.configs.DatasetConfig` object"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_prepared_dir:4 of
+msgid ":class:`~data_structures.configs.DatasetVarConfig` object"
+msgstr ""
+
+#: aux.declaration.Declare.dataset_prepared_dir:5 of
+msgid ""
+"path to the data folder, extra paths where to save dataset_config and "
+"dataset_var_config."
+msgstr ""
+
+#: aux.declaration.Declare.models_path:1 of
+msgid "class base on GNNModelManager"
+msgstr ""
+
+#: aux.declaration.Declare.models_path:2 of
+msgid "The path where the model will be saved"
+msgstr ""
+
+#: aux.declaration.Declare.models_path:4 of
+msgid ""
+"Feature of determining versions when saving: if the version is not "
+"defined, then saves the model with the smallest integer index that is not"
+" in the versions folder, starting from 0. If the version is defined, then"
+" the first save has the specified version, and subsequent ones are "
+"determined automatically."
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:1 of
+msgid ""
+"Formation of the way to save the path of the model in the root of the "
+"project according to its hyperparameters and features"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:4 of
+msgid "dataset path"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:5 of
+msgid "gnn model manager hash"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:6 of
+msgid "index of explain version"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:7 of
+msgid "gnn hash"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:8 of
+msgid "number of epochs during which the model was trained"
+msgstr ""
+
+#: aux.declaration.Declare.declare_model_by_config:15 of
+msgid "the path where the model is saved use information from ModelConfig"
+msgstr ""
+
+#: aux.declaration.Declare.explanation_file_path:1 of
+msgid "dict with kwargs for explainer class"
+msgstr ""
+
+#: aux.declaration.Declare.explanation_file_path:2 of
+msgid ""
+":param explainer_run_kwargs:dict with kwargs for run explanation :param "
+"models_path: model path :param explainer_name: explainer name. Example: "
+"Zorro :param explainer_ver_ind: index of explain version :param "
+"create_dir_flag: whether to save kwargs to file :return: path for "
+"explanations result file and list with technical files"
+msgstr ""
+
+#: aux.declaration.Declare.explainer_kwargs_path_full:1 of
+msgid "model path"
+msgstr ""
+
+#: aux.declaration.Declare.explainer_kwargs_path_full:2 of
+msgid "explanation path"
+msgstr ""
+
+#: aux.declaration.Declare.explainer_kwargs_path_full:3 of
+msgid ""
+"list with technical files (now json files with information about init and"
+" run kwargs)"
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage:1 of
+msgid ""
+"Prefix-tree like structure for keeping objects with index as a tuple of "
+"keys. Example of contents: ``` (k11), OBJ1 (k12), OBJ2 (k13, k21), OBJ3 "
+"(k13, k22, k31), OBJ4 (k13, k22, k32), OBJ5 (k13, k22, k33, k34), OBJ6 "
+"(k13, k22, k33, k35, k36), OBJ7 ``` Note that if a tuple t1 corresponds "
+"to some object, no tuple containing t1 as a prefix is allowed to be "
+"added. E.g. if `(a, b), OBJ3` is present, we cannot add any tuple like "
+"`(a, b, c, ...), OBJ4`."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage:4
+#: aux.prefix_storage.TuplePrefixStorage:15 of
+msgid "Supports:"
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage:6
+#: aux.prefix_storage.TuplePrefixStorage:17 of
+msgid "adding, removing, filtering, iterating elements;"
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage:7
+#: aux.prefix_storage.TuplePrefixStorage:18 of
+msgid "gathering contents from file structure."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage:20 of
+msgid ""
+"Implemented as a dict of dicts, where each value can be a dict or a tuple"
+" with object."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.add:1 of
+msgid ""
+"Adds one object with a specified key. If the key is not allowed, raises "
+"KeyError."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.merge:1 of
+msgid ""
+"Extend this with another TuplePrefixStorage. While merging objects are "
+"NOT copied."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.remove:1 of
+msgid "Remove one or a bunch of tuples if the specified key is present."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.filter:1 of
+msgid ""
+"Build a new TuplePrefixStorage containing a subtree starting with a given"
+" key."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.check:1 of
+msgid "Check if a tuple of values is present."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.from_json:1 of
+msgid ""
+"Construct PrefixStorage object from a json string. `loads_kwargs` are "
+"passed to json.loads for decoding objects."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage.to_json:1
+#: aux.prefix_storage.TuplePrefixStorage.to_json:1 of
+msgid ""
+"Return json string. `dump_kwargs` are passed to json.dumps to encode "
+"objects."
+msgstr ""
+
+#: aux.prefix_storage.TuplePrefixStorage.fill_from_folder:1 of
+msgid ""
+"Recursively walk over the given folder and repeat its structure. The "
+"content will be replaced."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage:1 of
+msgid ""
+"Prefix-tree like structure for keeping a set of tuples with important "
+"order. Depth is fixed and equals to the number of keys."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage.from_json:1 of
+msgid "Construct PrefixStorage object from a json string."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage.filter:1 of
+msgid ""
+"Build a new FixedKeysPrefixStorage containing a subtree starting with a "
+"given key."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage.remap:1 of
+msgid "Change keys order and combination."
+msgstr ""
+

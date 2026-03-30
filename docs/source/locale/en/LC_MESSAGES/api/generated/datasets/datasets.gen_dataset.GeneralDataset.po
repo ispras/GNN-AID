@@ -1,0 +1,282 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:2
+msgid "datasets.gen\\_dataset.GeneralDataset"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:1 of
+msgid ""
+"Abstract class to represent a dataset in framework. It is a "
+"generalisation of a :class:`torch_geometric.data.Dataset` to a family of "
+"such datasets. To fully define a GeneralDataset you should provide 2 "
+"configs:"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:5 of
+msgid ""
+":class:`~data_structures.configs.DatasetConfig` - specifies structure of "
+"the graph;"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:6 of
+msgid ""
+":class:`~data_structures.configs.DatasetVarConfig` - specifies how to "
+"build features and labels."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:9 of
+msgid ""
+":class:`~datasets.gen_dataset.GeneralDataset` also requires "
+":class:`~datasets.DatasetInfo` which describes metainformation about the "
+"dataset family."
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:12 of
+msgid "See also:"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:14 of
+msgid ":class:`datasets.ptg_datasets.PTGDataset`"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset:15 of
+msgid ":class:`datasets.known_format_datasets.KnownFormatDataset`"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+#: datasets.gen_dataset.GeneralDataset.__init__:1 of
+msgid "Initialize structural part of the dataset."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst
+msgid "Параметры"
+msgstr ""
+
+#: datasets.gen_dataset.GeneralDataset.__init__:3 of
+msgid ""
+"config to define where to get raw files and initialization parameters. "
+"Can be :class:`~data_structures.configs.DatasetConfig` object or "
+":class:`~data_structures.configs.ConfigPattern` with dictionary."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:13
+msgid "Methods"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`__init__ <datasets.gen_dataset.GeneralDataset.__init__>`\\ "
+"\\(dataset\\_config\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`apply_modification "
+"<datasets.gen_dataset.GeneralDataset.apply_modification>`\\ "
+"\\(artifact\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+"Applies graph structure and feature modifications described in a "
+"GraphModificationArtifact to the current GeneralDataset object and "
+"returns the modified version."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`build <datasets.gen_dataset.GeneralDataset.build>`\\ "
+"\\(dataset\\_var\\_config\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Create node feature tensors from attributes based on dataset_var_config."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`edge_attributes "
+"<datasets.gen_dataset.GeneralDataset.edge_attributes>`\\ "
+"\\(\\[attrs\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+#, python-brace-format
+msgid "Get node attributes as a dict {name -> list}"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`get_stat <datasets.gen_dataset.GeneralDataset.get_stat>`\\ "
+"\\(stat\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Get statistics."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`is_directed <datasets.gen_dataset.GeneralDataset.is_directed>`\\"
+" \\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Return whether edges in this dataset are directed."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`is_hetero <datasets.gen_dataset.GeneralDataset.is_hetero>`\\ "
+"\\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Return whether this dataset is hetero graph."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ":py:obj:`is_multi <datasets.gen_dataset.GeneralDataset.is_multi>`\\ \\(\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Return whether this dataset is multiple-graphs or single-graph."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`node_attributes "
+"<datasets.gen_dataset.GeneralDataset.node_attributes>`\\ "
+"\\(\\[attrs\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`save_train_test_mask "
+"<datasets.gen_dataset.GeneralDataset.save_train_test_mask>`\\ \\(path\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Save current train/test mask to a given path (together with the model)."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid ""
+":py:obj:`train_test_split "
+"<datasets.gen_dataset.GeneralDataset.train_test_split>`\\ "
+"\\(\\[percent\\_train\\_class\\, ...\\]\\)"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:31:<autosummary>:1
+msgid "Compute train-validation-test split of graphs/nodes."
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.gen_dataset.GeneralDataset.rst:33
+msgid "Attributes"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`data <datasets.gen_dataset.GeneralDataset.data>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+"Get tensors of the whole dataset as "
+":class:`torch_geometric.data.data.Data` object."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`edge_features "
+"<datasets.gen_dataset.GeneralDataset.edge_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Get a list of tensors of edge features, one for each graph in the dataset."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`edges <datasets.gen_dataset.GeneralDataset.edges>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Edge index as a list of tensors"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`labels <datasets.gen_dataset.GeneralDataset.labels>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`metainfo_path "
+"<datasets.gen_dataset.GeneralDataset.metainfo_path>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to 'metainfo' file."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`node_features "
+"<datasets.gen_dataset.GeneralDataset.node_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Get a list of tensors of node features, one for each graph in the dataset."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`num_classes <datasets.gen_dataset.GeneralDataset.num_classes>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`num_node_features "
+"<datasets.gen_dataset.GeneralDataset.num_node_features>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`prepared_dir <datasets.gen_dataset.GeneralDataset.prepared_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to folder where tensor data is stored."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`raw_dir <datasets.gen_dataset.GeneralDataset.raw_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Path to 'raw/' folder where raw data is stored."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ":py:obj:`root_dir <datasets.gen_dataset.GeneralDataset.root_dir>`"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Dataset root directory with folder 'raw/' and metainfo file."
+msgstr ""
+

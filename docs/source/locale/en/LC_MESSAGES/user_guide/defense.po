@@ -1,0 +1,65 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-10 22:09+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../user_guide/defense.rst:2
+msgid "Методы защит"
+msgstr "Defense methods"
+
+#: ../../user_guide/defense.rst:9
+msgid "методы защит GNN моделей"
+msgstr "GNN defense methods"
+
+#: ../../user_guide/defense.rst:11
+msgid "JaccardDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:12
+msgid "GNNGuard"
+msgstr ""
+
+#: ../../user_guide/defense.rst:13
+msgid "ProGNNDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:14
+msgid "NoiseMIDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:15
+msgid "GradientRegularization"
+msgstr ""
+
+#: ../../user_guide/defense.rst:16
+msgid "Quantization"
+msgstr ""
+
+#: ../../user_guide/defense.rst:17
+msgid "Distillation"
+msgstr ""
+
+#: ../../user_guide/defense.rst:18
+msgid "AutoEncoder"
+msgstr ""
+
+#: ../../user_guide/defense.rst:19
+msgid "AdvTraining"
+msgstr ""
+
