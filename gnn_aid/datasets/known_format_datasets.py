@@ -448,6 +448,7 @@ class KnownFormatDataset(
     ) -> None:
         """ Build PTG Dataset based on dataset_var_config.
         """
+        self._data = None  # drop cached
         self.dataset = LocalDataset(None, self.prepared_dir, process_func=self._create_ptg)
 
     def _create_ptg(

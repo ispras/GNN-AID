@@ -188,6 +188,7 @@ class VisibleGraph {
     // Handle nodes and whole SVG drag&drop
     handleDragging() {
         this.svgElement.onmousedown = (e) => {
+            // console.log(e.buttons)
             // if (e.buttons === 1 && e.ctrlKey) {
             if (e.buttons === 1 && this.nodeGrabbed === null) {
                 this.svgGrabbed = true
@@ -207,6 +208,8 @@ class VisibleGraph {
             }
         }
         this.svgElement.onmousemove = (e) => {
+            if (e.buttons !== 1)
+                return
             let rect = this.svgElement.getBoundingClientRect();
             this.mousePos.x = e.clientX - rect.left;
             this.mousePos.y = e.clientY - rect.top;
@@ -334,9 +337,6 @@ class VisibleGraph {
         this.svgElement.parentElement.scrollTop  = 0
         this.svgElement.style.width  = '100%'
         this.svgElement.style.height = '100%'
-
-        this.nodePrimitives = {}      // оставляем — там хранятся цвета/satellites
-        this.edgePrimitives = {0: {}} // оставляем для совместимости с setSatellite
 
         this.createPrimitives()       // создаёт пул DOM-элементов
         this._initMinimap()           // добавляет canvas
@@ -622,6 +622,7 @@ class VisibleGraph {
         let gEdgeSat = this.svgPanel.add("edge-satellites")
 
         // Add max slots for nodes
+        this.nodePrimitives = {}
         let gNode = this.svgPanel.add("node")
         for (let n=0; n<Thresholds.MAX_VISIBLE_NODES_COUNT; ++n) {
             let node = new SvgNode(0, 0, this.nodeRadius, 'circle', this.nodeStrokeWidth,

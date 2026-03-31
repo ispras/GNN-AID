@@ -52,7 +52,7 @@ class ForceNeighborhoodLayout extends Layout {
 
         return {
             depth: this.visibleGraph.depth,
-            n0: this.nodeToIndex.get(this.visibleGraph.n0),
+            n0: this.visibleGraph.n0.map(n => this.nodeToIndex.get(n)),
             layers,
             edgesByDepth
         }

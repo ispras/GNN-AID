@@ -1,3 +1,23 @@
+/// Parse array that is int or a list of ints separated by a comma
+function parseIntOrList(nodeString) {
+    if (nodeString.includes(','))
+        return nodeString.split(',').map(s => parseInt(s.trim()))
+    else
+        return [parseInt(nodeString)]
+}
+
+function sameSet(a, b) {
+    const setA = new Set(a)
+    const setB = new Set(b)
+
+    if (setA.size !== setB.size) return false
+
+    for (const x of setA) {
+        if (!setB.has(x)) return false
+    }
+    return true
+}
+
 ///
 // Node and edges info of the 2nd neighborhood of some node.
 // Keeps SVG primitives to draw.
@@ -12,20 +32,21 @@ class Neighborhood extends VisibleGraph {
 
         // Constants
         this.depthEdgeColors = {
+            0: '#ffffff',
             1: '#ffffff',
-            2: '#d0d0d0',
-            3: '#888888',
-            4: '#555555',
+            2: 'rgba(176,176,176,0.6)',
+            3: 'rgba(136,136,136,0.4)',
+            4: 'rgba(55,55,55,0.2)',
         }
         this.depthNodeRadiuses = {0: 30, 1: 20, 2: 10, 3: 8, 4: 6}
         this.depthNodeStrokeWidthes = {0: 5, 1: 4, 2: 3, 3: 2, 4: 2}
-        this.depthEdgeStrokeWidthes = {1: 1.5, 2: 1, 3: 0.8, 4: 0.5}
+        this.depthEdgeStrokeWidthes = {0: 1.5, 1: 1.5, 2: 1, 3: 0.8, 4: 0.5}
         // this.depthEdgeStrokeWidthes = {1: 5.5, 2: 3, 3: 2, 4: 1}
 
         // Variables
         this.nodes = null // {depth -> List of d-th neighbors nodes}
         this.edges = null // {depth -> List of d-th depth incoming/adjacent edges}
-        this.n0 = null // main node
+        this.n0 = null // main nodes list
         this.depth = null // neighborhood depth
         this.nodeRadiuses = null // {node -> radius}
         this.nodeStrokeWidthes = null // {node -> StrokeWidth}
@@ -40,10 +61,10 @@ class Neighborhood extends VisibleGraph {
         this.visView.addListener(this.visView.singleNeighLayoutId,
             (k, v) => this.setLayout(v), this._tag)
         this.visView.addListener(this.visView.singleNeighNodeId,
-            async (k, v) => await this.setNode(parseInt(v)), this._tag)
+            async (k, v) => await this.setNode(v), this._tag)
         this.visView._getById(this.visView.singleNeighNodeId).attr("max", this.datasetInfo.nodes[0]-1)
         this.visView.addListener(this.visView.singleNeighDepthId,
-            async (k, v) => await this.setDepth(parseInt(v)), this._tag)
+            async (k, v) => await this.setDepth(parseFloat(v)), this._tag)
 
         for (const part of Neighborhood.PARTS)
             this.visView.addListener(this.visView.singleNeighPartsIds[part],
@@ -61,8 +82,8 @@ class Neighborhood extends VisibleGraph {
     }
 
     defineVisibleConfig() {
-        let node = parseInt(this.visView.getValue(this.visView.singleNeighNodeId))
-        let depth = parseInt(this.visView.getValue(this.visView.singleNeighDepthId))
+        let node = parseIntOrList(this.visView.getValue(this.visView.singleNeighNodeId))
+        let depth = parseFloat(this.visView.getValue(this.visView.singleNeighDepthId))
         this.visibleConfig["center"] = node
         this.visibleConfig["depth"] = depth
     }
@@ -122,16 +143,17 @@ class Neighborhood extends VisibleGraph {
 
     // Initialize elements and start layout
     async _build() {
-        let node = this.visibleConfig["center"]
+        let center = this.visibleConfig["center"]
         let depth = this.visibleConfig["depth"]
-        if (node !== this.n0 || depth !== this.depth) { // Node changed - set graph data from dataset
+        if (!sameSet(center, this.n0) || depth !== this.depth) { // Node changed - set graph data from dataset
             this.nodes = this.datasetData.nodes
             this.edges = this.datasetData.edges
-            this.n0 = this.nodes[0][0]
-            this.depth = this.nodes.length-1
-            if (this.depth !== depth) { // Received another depth
-                this.visView.setValue(this.visView.singleNeighDepthId, this.depth)
-            }
+            this.n0 = this.nodes[0]
+            this.depth = depth
+            // this.depth = this.nodes.length-1
+            // if (this.depth !== depth) { // Received another depth
+            //     this.visView.setValue(this.visView.singleNeighDepthId, this.depth)
+            // }
 
             // Create reverse mappings of nodes and edges for radius, stroke width, color
             this._createMappings()
@@ -169,18 +191,22 @@ class Neighborhood extends VisibleGraph {
             }
     }
 
-    // Set central node
-    async setNode(node) {
-        if (node >= this.datasetInfo.nodes[0])
-            node = this.datasetInfo.nodes[0]-1
-        else if (node < 0)
-            node = 0
-        if (node === this.n0)
+    // Set central node(s)
+    async setNode(center) {
+        center = parseIntOrList(center)
+        for (let i=0; i<center.length; ++i) {
+            let n = center[i]
+            if (n >= this.datasetInfo.nodes[0])
+                center[i] = this.datasetInfo.nodes[0]-1
+            else if (n < 0)
+                center[i] = 0
+        }
+        if (sameSet(center, this.n0))
             return
 
-        this.visView.setValue(this.visView.singleNeighNodeId, node, false)
-        this.visibleConfig["center"] = node
-        await this._reinit(node)
+        this.visView.setValue(this.visView.singleNeighNodeId, center, false)
+        this.visibleConfig["center"] = center
+        await this._reinit(center)
     }
 
     // Set depth

@@ -115,7 +115,7 @@ class ViewPoint:
     """
     def __init__(
             self,
-            center: Union[int, Tuple[int], None] = None,
+            center: Union[int, Tuple[int], List[int], None] = None,
             depth: Union[int, None] = None
     ) -> None:
         """
@@ -189,23 +189,25 @@ class DatasetIndex:
             assert gen_dataset.info.count == 1
 
             if center is not None:  # Get neighborhood
-                if isinstance(center, list):
-                    raise NotImplementedError
                 if depth is None:
-                    depth = 2
+                    depth = 1.5
+
+                between = depth != int(depth)  # need edges between last neighbors
 
                 if gen_dataset.info.hetero:
                     # TODO misha hetero
                     raise NotImplementedError
 
                 else:  # homo
-                    nodes = {0: {center}}  # {depth: set of ids}
+                    if not isinstance(center, list):
+                        center = [center]
+                    nodes = {0: set(center)}  # {depth: set of ids}
                     edges = {0: []}  # incoming edges
                     prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
 
                     # We need iterate all edges even for undirected graph
                     all_edges = edge_index_to_edge_list(gen_dataset.edges[0], True)
-                    for d in range(1, depth + 1):
+                    for d in range(1, int(depth) + 1):
                         ns = nodes[d - 1]
                         es_next = set()
                         ns_next = set()
@@ -231,6 +233,19 @@ class DatasetIndex:
                         prev_nodes.update(ns)
                         nodes[d] = ns_next
                         edges[d] = list(sorted(es_next))
+
+                    if between:
+                        d = int(depth)
+                        ns = nodes[d]
+                        es_next = set()
+                        for ix, (i, j) in enumerate(all_edges):
+                            if not gen_dataset.info.directed and i > j:
+                                continue
+
+                            if j in ns and i in ns:
+                                es_next.add(ix)
+
+                        edges[d].extend(list(sorted(es_next)))
 
                     self.node_index = [list(ns) for ns in nodes.values()]
                     self.edge_index = [list(es) for es in edges.values()]

@@ -26,7 +26,8 @@ class WorkerForceNeighborhoodLayout extends WorkerLayout {
             this.m[i] = 0.1
         }
 
-        this.m[this.n0] = 3 * this.nodeCount
+        for (let n of this.n0)
+            this.m[n] = 3 * this.nodeCount
 
         if (this.depth >= 1 && this.layers[1]) {
             for (const n of this.layers[1]) {

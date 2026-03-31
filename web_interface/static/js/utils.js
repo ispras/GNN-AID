@@ -515,6 +515,8 @@ function addValueChecker($elem, type, defaultValue, min=null, max=null, on="chan
             typeCheck = false
         else if (type === "int")
             typeCheck = /^-?\d+$/.test(this.value)
+        else if (type === "int-list")
+            typeCheck = /^\d+(,\d+)*$/.test(value)
         else if (type === "natural")
             typeCheck = /^\d+$/.test(this.value)
         else if (type === "float")
