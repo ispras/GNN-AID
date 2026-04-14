@@ -324,7 +324,7 @@ class GeneralDataset(ABC):
             raise RuntimeError("percent_train_class + percent_test_class > 1")
 
         task_type = self.dataset_var_config.task
-        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION, Task.GRAPH_CLASSIFICATION]:
+        if task_type in [Task.NODE_CLASSIFICATION, Task.NODE_REGRESSION, Task.GRAPH_CLASSIFICATION, Task.GRAPH_REGRESSION]:
             train_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
             val_mask = torch.BoolTensor([False] * self.labels.size(dim=0))
             test_mask = torch.BoolTensor([False] * self.labels.size(dim=0))

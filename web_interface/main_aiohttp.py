@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 import json
 import logging
+import queue
 # import multiprocessing as mp
 # mp.set_start_method("spawn", force=True)
 
@@ -30,6 +32,13 @@ aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
 
 clients = {}  # client_id (sid) -> asyncio.Task
 queues: Dict[str, Tuple[Queue, Queue, Queue, Process]] = {}
+
+
+def queue_get_with_timeout(q, timeout=0.5):
+    try:
+        return q.get(timeout=timeout)
+    except queue.Empty:
+        return None
 
 
 # Route for interpretation
@@ -98,13 +107,17 @@ async def handle_url(request):
         if sid not in clients:
             return web.Response(status=404, text="Unknown SID")
 
-        response_queue, _, request_queue = queues[sid]
+        response_queue, _, request_queue, _ = queues[sid]
 
         print(url, 'http request from', sid, 'args', dict(data))
         request_queue.put({"type": url, "args": dict(data)})
 
-        # Wait for response from worker
-        result = response_queue.get()
+        # Wait for response from worker, but do not block forever
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, queue_get_with_timeout, response_queue, 10.0)
+        if result is None:
+            return web.Response(status=504, text="Timeout waiting for worker response")
+
         return web.Response(text=json.dumps(result), content_type='application/json')
 
     return web.Response(status=405, text="Method Not Allowed")
@@ -138,14 +151,18 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print(f"[disconnect] {sid}")
-    clients.pop(sid, None)
+    task = clients.get(sid)
+    if task is not None:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 async def client_wrapper(sid: str, mode: ClientMode):
     response_queue = Queue()
     msg_queue = Queue()
     request_queue = Queue()
-    queues[sid] = response_queue, msg_queue, request_queue
+    proc = None
 
     print("creating process")
     proc = Process(
@@ -154,28 +171,54 @@ async def client_wrapper(sid: str, mode: ClientMode):
     proc.start()
     print("Process created")
 
-    loop = asyncio.get_event_loop()
+    queues[sid] = (response_queue, msg_queue, request_queue, proc)
+
+    loop = asyncio.get_running_loop()
     try:
         while True:
             if not proc.is_alive() and msg_queue.empty():
                 print('proc is not alive anymore and queue is empty')
                 break
 
-            msg = await loop.run_in_executor(None, msg_queue.get)
+            msg = await loop.run_in_executor(None, queue_get_with_timeout, msg_queue, 0.5)
+            if msg is None:
+                continue
+
             print(f"got msg from queue [{len(msg)}] {str(msg)[:80]}")
             await sio.emit("message", msg, to=sid)
 
         print("end while")
 
-    # except asyncio.CancelledError:
-    #     print('asyncio.CancelledError')
-    #     stop_event.set()
-    #     proc.join(timeout=1)
-    #     if proc.is_alive():
-    #         proc.terminate()
-    #         proc.join(timeout=1)
+    except asyncio.CancelledError:
+        print('asyncio.CancelledError')
+        raise
+
     except Exception as e:
         print('exception', e)
+
+    finally:
+        print(f"cleanup for {sid}")
+
+        # Tell worker to stop if its loop supports a shutdown command
+        with contextlib.suppress(Exception):
+            request_queue.put("__shutdown__")
+
+        if proc is not None:
+            if proc.is_alive():
+                proc.join(timeout=1)
+
+            if proc.is_alive():
+                proc.terminate()
+                proc.join(timeout=1)
+
+        for q in (response_queue, msg_queue, request_queue):
+            with contextlib.suppress(Exception):
+                q.close()
+            with contextlib.suppress(Exception):
+                q.join_thread()
+
+        queues.pop(sid, None)
+        clients.pop(sid, None)
 
 
 # Worker process logic
@@ -207,6 +250,21 @@ class AiohttpSocketConnect(SocketConnect):
     def _send_data(self, data):
         self.mp_queue.put_nowait(data)
         print(f"put msg to mpqueue [{len(str(data))}] {str(data)[:40]}")
+
+
+async def on_shutdown(app):
+    tasks = []
+
+    for sid, task in list(clients.items()):
+        if task is not None and not task.done():
+            task.cancel()
+            tasks.append(task)
+
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+app.on_shutdown.append(on_shutdown)
 
 
 def run_aiohttp_server(port=5000):

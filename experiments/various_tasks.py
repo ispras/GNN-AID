@@ -61,9 +61,11 @@ def node_regression():
 
 def graph_regression():
     dc = DatasetConfig(('example', 'example3'))
-
-    labeling_dict = {"0": 0.3, "1": 0.4, "2": 0.2}
-    DatasetManager.add_labeling(dc, Task.GRAPH_REGRESSION, "regression", labeling_dict)
+    try:
+        labeling_dict = {"0": 0.3, "1": 0.4, "2": 0.2}
+        DatasetManager.add_labeling(dc, Task.GRAPH_REGRESSION, "regression", labeling_dict)
+    except (NameError, FileExistsError):
+        pass
 
     dvc = DatasetVarConfig(task=Task.GRAPH_REGRESSION, labeling='regression',
                            features=FeatureConfig(node_attr=['type']), dataset_ver_ind=0)
@@ -72,6 +74,97 @@ def graph_regression():
     gen_dataset.info.check()
 
     print(gen_dataset.data)
+
+    gen_dataset.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
+
+    gnn = FrameworkGNNConstructor(
+        model_config=ModelConfig(
+            structure=ModelStructureConfig(
+                [
+                    {
+                        'label': 'n',
+                        'layer': {
+                            'layer_name': 'SAGEConv',
+                            'layer_kwargs': {
+                                'in_channels': gen_dataset.num_node_features,
+                                'out_channels': 16,
+                            },
+                        },
+                        'connections': [
+                            {
+                                'into_layer': 1,
+                                'connection_kwargs': {
+                                    'pool': {
+                                        'pool_type': 'global_add_pool',
+                                    },
+                                    'aggregation_type': 'cat',
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        'label': 'g',
+                        'layer': {
+                            'layer_name': 'Linear',
+                            'layer_kwargs': {
+                                'in_features': 16,
+                                'out_features': 1,
+                            },
+                        },
+                        'activation': {
+                            'activation_name': 'LogSoftmax',
+                            'activation_kwargs': None,
+                        },
+                    },
+                ]
+            )))
+
+    manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "batch": 16,
+            "mask_features": [],
+            "optimizer": {
+                "_class_name": "Adam",
+                "_config_kwargs": {},
+            },
+            "loss_function": {
+                "_config_class": "Config",
+                "_class_name": "MSELoss",
+                "_import_path": FUNCTIONS_PARAMETERS_PATH,
+                "_class_import_info": ["torch.nn"],
+                "_config_kwargs": {},
+            }
+        }
+    )
+
+    steps_epochs = 3
+    # my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
+    my_device = 'cpu'
+    gnn_model_manager = FrameworkGNNModelManager(
+        gnn=gnn,
+        dataset_path=gen_dataset.prepared_dir,
+        manager_config=manager_config,
+        modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
+    )
+
+    gnn_model_manager.gnn.to(my_device)
+    gen_dataset.data.to(my_device)
+
+    gnn_model_manager.modification.epochs = 0
+    gnn_model_manager.train_model(
+        gen_dataset=gen_dataset, steps=steps_epochs,
+        save_model_flag=False,
+        metrics=[Metric("F1", mask='train', average=None)]
+    )
+    print("Training was successful")
+
+    res = gnn_model_manager.run_model(
+        gen_dataset=gen_dataset,
+        mask='all',
+        out='predictions'
+    )
+    print(json.dumps(res.tolist(), indent=2))
 
 
 def edge_regression():
@@ -405,10 +498,10 @@ def ptg_example():
 
 if __name__ == '__main__':
     # node_regression()
-    # graph_regression()
+    graph_regression()
 
     # edge_regression()
-    link_prediction()
+    # link_prediction()
 
     # ptg_example()
     # for c in all_subclasses(Attacker):
