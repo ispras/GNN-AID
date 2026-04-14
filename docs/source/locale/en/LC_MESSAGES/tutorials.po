@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 15:20+0300\n"
+"POT-Creation-Date: 2026-04-14 15:34+0300\n"
 "PO-Revision-Date: 2026-02-10 15:40+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../tutorials.rst:14
 msgid "Учебные примеры"
@@ -62,17 +62,25 @@ msgstr "Assessing the quality of the trained model."
 
 #: ../../tutorials.rst:35
 msgid ""
+"Пример находится в файле `<https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/00_basics/train_gnn.py>`__"
+msgstr ""
+"Find code in file `training <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/00_basics/train_gnn.py>`__"
+
+#: ../../tutorials.rst:38
+msgid ""
 "Следующие учебные примеры **01–05** демонстрируют различные сценарии "
 "использования фреймворка."
 msgstr ""
 "The following tutorials **01–05** demonstrate various usage scenarios of "
 "the framework."
 
-#: ../../tutorials.rst:39
+#: ../../tutorials.rst:42
 msgid "01 - атака уклонения (evasion)"
 msgstr "01 - evasion attack"
 
-#: ../../tutorials.rst:41
+#: ../../tutorials.rst:44
 msgid ""
 "Демонстрирует поведение графовой модели при атаке уклонения (*evasion "
 "attack*), а также защитные возможности защитника на основе градиентной "
@@ -83,16 +91,32 @@ msgstr ""
 "the defense capabilities of the Gradient Regularization Defender. The "
 "**Cora** dataset and the **GNN** model are used."
 
-#: ../../tutorials.rst:47 ../../tutorials.rst:58 ../../tutorials.rst:69
-#: ../../tutorials.rst:85 ../../tutorials.rst:96
-msgid "Добавить ссылку на файл учебного примера."
-msgstr "Add a link to the tutorial file."
+#: ../../tutorials.rst:49 ../../tutorials.rst:63 ../../tutorials.rst:76
+#: ../../tutorials.rst:105
+msgid "Код находится в файлах:"
+msgstr "Find code in files:"
 
-#: ../../tutorials.rst:50
+#: ../../tutorials.rst:51
+msgid ""
+"`атака <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/01_evasion_attack_defense/evasion_attack.py>`__"
+msgstr ""
+"`attack <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/01_evasion_attack_defense/evasion_attack.py>`__"
+
+#: ../../tutorials.rst:52
+msgid ""
+"`защита <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/01_evasion_attack_defense/defense_against_evasion.py>`__"
+msgstr ""
+"`defense <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/01_evasion_attack_defense/defense_against_evasion.py>`__"
+
+#: ../../tutorials.rst:56
 msgid "02 - атака отравления (poison)"
 msgstr "02 - poison attack"
 
-#: ../../tutorials.rst:52
+#: ../../tutorials.rst:58
 msgid ""
 "Демонстрирует поведение графовой модели при атаке отравления данных "
 "(*poisoning attack*), а также защитные возможности защитника на основе "
@@ -103,11 +127,27 @@ msgstr ""
 "the defense capabilities of a Jaccard-based defender. The **Cora** "
 "dataset and the **GIN** model are used."
 
-#: ../../tutorials.rst:61
+#: ../../tutorials.rst:65
+msgid ""
+"`атака <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/02_poisoning_attack_defense/poisoning_attack.py>`__"
+msgstr ""
+"`attack <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/02_poisoning_attack_defense/poisoning_attack.py>`__"
+
+#: ../../tutorials.rst:66
+msgid ""
+"`защита <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/02_poisoning_attack_defense/defense_against_poisoning.py>`__"
+msgstr ""
+"`defense <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/02_poisoning_attack_defense/defense_against_poisoning.py>`__"
+
+#: ../../tutorials.rst:69
 msgid "03 - атака вывода принадлежности (MI)"
 msgstr "03 - MI attack"
 
-#: ../../tutorials.rst:63
+#: ../../tutorials.rst:71
 msgid ""
 "Демонстрирует поведение графовой модели при атаке на вывод принадлежности"
 " (*membership inference attack*) и эффективность защиты на основе "
@@ -118,11 +158,27 @@ msgstr ""
 "attack and the effectiveness of an output noise-based defense. The "
 "**Cora** dataset and the **GCN** model are used."
 
-#: ../../tutorials.rst:72
+#: ../../tutorials.rst:78
+msgid ""
+"`атака <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/03_privacy_attack/MI_attack.py>`__"
+msgstr ""
+"`attack <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/03_privacy_attack/MI_attack.py>`__"
+
+#: ../../tutorials.rst:79
+msgid ""
+"`защита <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/03_privacy_attack/MI_defense.py>`__"
+msgstr ""
+"`defense <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/03_privacy_attack/MI_defense.py>`__"
+
+#: ../../tutorials.rst:82
 msgid "04 - интерпретация GNN"
 msgstr "04 - GNN interpretation"
 
-#: ../../tutorials.rst:74
+#: ../../tutorials.rst:84
 msgid ""
 "Демонстрирует, как интерпретировать поведение обученной графовой "
 "нейронной сети (GNN) с использованием встроенного интерпретатора "
@@ -131,7 +187,7 @@ msgstr ""
 "Demonstrates how to interpret the behavior of a trained graph neural "
 "network (GNN) using the built-in **GNNExplainer** interpreter."
 
-#: ../../tutorials.rst:78
+#: ../../tutorials.rst:88
 msgid ""
 "GNNExplainer позволяет определить, какие вершины, признаки и связи "
 "повлияли на процесс принятия решений моделью. Фреймворк GNN-AID "
@@ -145,11 +201,19 @@ msgstr ""
 "GNNExplainer. You can easily change the interpreter in the configuration "
 "if needed."
 
-#: ../../tutorials.rst:88
+#: ../../tutorials.rst:94
+msgid ""
+"Код находится в файле `интерпретация <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/04_interpretability/gnn_explainer_example.py>`__"
+msgstr ""
+"Find code in file `interpretaion <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/04_interpretability/gnn_explainer_example.py>`__"
+
+#: ../../tutorials.rst:98
 msgid "05 - комбинирование нескольких атак, защит"
 msgstr "05 - complex usage scenarios"
 
-#: ../../tutorials.rst:90
+#: ../../tutorials.rst:100
 msgid ""
 "Демонстрирует сложные сценарии использования фреймворка, включая "
 "комбинированные атаки, многоуровневые пайплайны защиты и интегрированные "
@@ -159,4 +223,31 @@ msgstr ""
 "Demonstrates complex usage scenarios of the framework, including combined"
 " attacks, multi-defense pipelines, and integrated interpretation "
 "workflows. The **Cora** dataset and the **GIN** model are used."
+
+#: ../../tutorials.rst:107
+msgid ""
+"`несколько атак <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/multi_attack_pipeline.py>`__"
+msgstr ""
+"`several attacks <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/multi_attack_pipeline.py>`__"
+
+#: ../../tutorials.rst:108
+msgid ""
+"`несколько защит <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/multi_defense_pipeline.py>`__"
+msgstr ""
+"`several defenses <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/multi_defense_pipeline.py>`__"
+
+#: ../../tutorials.rst:109
+msgid ""
+"`комбинация <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/combined_workflow.py>`__"
+msgstr ""
+"`combination <https://github.com/ispras/GNN-"
+"AID/tree/main/tutorials/05_complex_scenarios/combined_workflow.py>`__"
+
+#~ msgid "Добавить ссылку на файл учебного примера."
+#~ msgstr "Add a link to the tutorial file."
 

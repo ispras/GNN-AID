@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 22:09+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,55 +17,735 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../user_guide/interpretation.rst:2
 msgid "Методы интерпретации"
 msgstr "Interpretation methods"
 
 #: ../../user_guide/interpretation.rst:8
-msgid "Методы объяснения постфактум:"
-msgstr "Post-factum"
-
-#: ../../user_guide/interpretation.rst:10
-msgid "GNNExplainer,"
+msgid ""
+"Фреймворк **GNN-AID** предоставляет набор алгоритмов интерпретации "
+"графовых нейронных сетей (GNN), позволяющих объяснять предсказание модели"
+" и выявлять важные элементы графовой структуры."
 msgstr ""
 
-#: ../../user_guide/interpretation.rst:11
-msgid "PGExplainer,"
+#: ../../user_guide/interpretation.rst:10
+msgid ""
+"По области применения методы интерпретации делятся на локальные и "
+"глобальные."
 msgstr ""
 
 #: ../../user_guide/interpretation.rst:12
-msgid "PGMExplainer,"
+msgid ""
+"**Локальные методы** объясняют конкретное предсказание модели. Например, "
+"они позволяют определить, какие элементы графа оказали наибольшее влияние"
+" на классификацию выбранной вершины."
 msgstr ""
 
 #: ../../user_guide/interpretation.rst:13
-msgid "SubgraphX,"
-msgstr ""
-
-#: ../../user_guide/interpretation.rst:14
-msgid "Zorro,"
+msgid ""
+"**Глобальные методы** формируют общее представление о том, как модель "
+"принимает решения. Они выявляют структурные закономерности или прототипы,"
+" характерные для определенных классов."
 msgstr ""
 
 #: ../../user_guide/interpretation.rst:15
-msgid "GraphMask."
+msgid ""
+"По уровню доступа к внутреннему устройству модели методы интерпретации "
+"делятся на методы черного и белого ящика."
 msgstr ""
 
 #: ../../user_guide/interpretation.rst:17
 msgid ""
-"Эти методы работают с результатами работы GNN модели и могут быть "
-"относительно легко адаптированы из публично доступных реализаций."
+"**Методы черного ящика** работают только с входными данными и "
+"предсказаниями модели и не используют внутреннюю информацию модели. Это "
+"позволяет применять их к моделям любой архитектуры."
 msgstr ""
 
-#: ../../user_guide/interpretation.rst:19
-msgid "Методы встраивания интерпретируемости:"
+#: ../../user_guide/interpretation.rst:18
+msgid ""
+"**Методы белого ящика** используют внутренние характеристики модели, "
+"например градиенты или скрытые представления. Это позволяет получать "
+"более точные объяснения, но требует доступа к модели."
 msgstr ""
 
-#: ../../user_guide/interpretation.rst:21
-msgid "NeuralAnalisis,"
+#: ../../user_guide/interpretation.rst:20
+msgid ""
+"Методы интерпретации могут выделять различные типы элементов графа: "
+"вершины, ребра, признаки вершин, подграфы."
 msgstr ""
 
 #: ../../user_guide/interpretation.rst:22
+msgid ""
+"В текущей версии фреймворка реализованы следующие методы "
+"постфактум-интерпретации:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:24
+#: ../../user_guide/interpretation.rst:50
+#: ../../user_guide/interpretation.rst:92
+msgid "GNNExplainer"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:25
+#: ../../user_guide/interpretation.rst:55
+#: ../../user_guide/interpretation.rst:191
+msgid "PGExplainer"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:26
+#: ../../user_guide/interpretation.rst:60
+#: ../../user_guide/interpretation.rst:283
+msgid "PGMExplainer"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:27
+#: ../../user_guide/interpretation.rst:65
+#: ../../user_guide/interpretation.rst:379
+msgid "SubgraphX"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:28
+#: ../../user_guide/interpretation.rst:70
+#: ../../user_guide/interpretation.rst:479
+msgid "Zorro"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:29
+#: ../../user_guide/interpretation.rst:75
+#: ../../user_guide/interpretation.rst:575
+msgid "GraphMask"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:31
+msgid ""
+"Помимо методов постфактум-интерпретации, фреймворк поддерживает "
+"**самоинтерпретируемые архитектуры**, в которых механизм объяснения "
+"встроен непосредственно в модель."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:33
+msgid "В фреймворке реализованы:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:35
+#: ../../user_guide/interpretation.rst:80
 msgid "ProtGNN"
 msgstr ""
+
+#: ../../user_guide/interpretation.rst:36
+#: ../../user_guide/interpretation.rst:85
+msgid "NeuralAnalysis"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:39
+#, fuzzy
+msgid "Таблица методов интерпретации"
+msgstr "Interpretation methods"
+
+#: ../../user_guide/interpretation.rst:45
+msgid "Метод"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:46
+msgid "Тип объяснения"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:47
+msgid "Доступ к модели"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:48
+msgid "Поддерживаемые задачи"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:49
+#, fuzzy
+msgid "Элементы объяснения"
+msgstr "Post-factum"
+
+#: ../../user_guide/interpretation.rst:51
+#: ../../user_guide/interpretation.rst:56
+#: ../../user_guide/interpretation.rst:61
+#: ../../user_guide/interpretation.rst:66
+#: ../../user_guide/interpretation.rst:71
+#: ../../user_guide/interpretation.rst:76
+#: ../../user_guide/interpretation.rst:86
+msgid "локальный"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:52
+#: ../../user_guide/interpretation.rst:57
+#: ../../user_guide/interpretation.rst:77
+msgid "белый ящик"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:53
+msgid "классификация графов, вершин, предсказание ребер"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:54
+msgid "рёбра, признаки"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:58
+#: ../../user_guide/interpretation.rst:63
+#: ../../user_guide/interpretation.rst:68
+#: ../../user_guide/interpretation.rst:73
+msgid "классификация графов, вершин"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:59
+#: ../../user_guide/interpretation.rst:79
+msgid "рёбра"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:62
+#: ../../user_guide/interpretation.rst:67
+#: ../../user_guide/interpretation.rst:72
+msgid "чёрный ящик"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:64
+msgid "вершины"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:69
+msgid "подграф"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:74
+msgid "вершины, признаки"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:78
+msgid "классификация вершин"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:81
+msgid "глобальный"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:82
+#: ../../user_guide/interpretation.rst:87
+msgid "встроено в модель"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:83
+#: ../../user_guide/interpretation.rst:88
+msgid "классификация графов"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:84
+msgid "прототипы"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:89
+msgid "логические выражения"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:94
+msgid ""
+"GNNExplainer из статьи `\"GNNExplainer: Generating Explanations for Graph"
+" Neural Networks\" "
+"<https://proceedings.neurips.cc/paper_files/paper/2019/file"
+"/d80b7040b773199015de6d3b4293c8ff-Paper.pdf>`_. Определяет подграф, "
+"который максимизирует взаимную информацию между предсказаниями модели и "
+"распределением возможных структур подграфов, путем обучения "
+"дифференцируемой маски по ребрам."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:96
+msgid ""
+"Вы можете задать конфигурацию метода GNNExplainer, указав нужные значения"
+" параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"GNNExplainer имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:98
+#: ../../user_guide/interpretation.rst:197
+msgid "``epochs`` — количество эпох оптимизации маски объяснения."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:99
+#: ../../user_guide/interpretation.rst:198
+msgid "``lr`` — скорость обучения при оптимизации маски."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:100
+msgid "``node_mask_type`` — тип маски, применяемой к узлам графа."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:101
+msgid "``edge_mask_type`` — тип маски, применяемой к рёбрам графа."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:102
+msgid ""
+"``mode`` — тип задачи, для которой строится объяснение (бинарная, "
+"многоклассовая, регрессия)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:103
+#: ../../user_guide/interpretation.rst:297
+msgid ""
+"``return_type`` — формат выхода модели (логарифмы вероятностей, "
+"вероятности или сырые логиты)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:104
+msgid ""
+"``edge_size`` — коэффициент регуляризации, контролирующий разреженность "
+"маски рёбер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:105
+msgid "``edge_reduction`` — способ агрегации регуляризации для маски рёбер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:106
+msgid ""
+"``node_feat_size`` — коэффициент регуляризации размера маски признаков "
+"узлов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:107
+msgid ""
+"``node_feat_reduction`` — способ агрегации регуляризации для маски "
+"признаков узлов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:108
+msgid "``edge_ent`` — коэффициент энтропийной регуляризации маски рёбер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:109
+msgid ""
+"``node_feat_ent`` — коэффициент энтропийной регуляризации маски признаков"
+" узлов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:110
+msgid ""
+"``EPS`` — малое значение для обеспечения численной стабильности "
+"вычислений."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:112
+msgid ""
+"Вы можете задать конфигурацию запуска метода GNNExplainer, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод GNNExplainer имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:114
+msgid ""
+"``element_idx`` — индекс элемента (узла или графа) или ребро, для "
+"которого строится объяснение."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:116
+msgid "Пример кода запуска GNNExplainer:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:188
+msgid ""
+"Метод GNNExplainer в текущей реализации позволяет строить объяснение "
+"предсказания модели для задач классификации узлов, классификации графов и"
+" предсказания ребер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:193
+msgid ""
+"PGExplainer из статьи `\"Parameterized Explainer for Graph Neural "
+"Network\" "
+"<https://proceedings.neurips.cc/paper/2020/file/e37b08dd3015330dcbb5d6663667b8b8-Paper.pdf>`_."
+" Использует параметрическую модель для идентификации влиятельных ребер и "
+"узлов путем изучения вероятностей их вклада в прогнозы. Он применяет "
+"пороговое значение на основе прогнозируемых вероятностей ребер, чтобы "
+"выделить наиболее значимые компоненты графа."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:195
+msgid ""
+"Вы можете задать конфигурацию метода PGExplainer, указав нужные значения "
+"параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"PGExplainer имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:200
+msgid ""
+"Вы можете задать конфигурацию запуска метода PGExplainer, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод PGExplainer имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:202
+#: ../../user_guide/interpretation.rst:301
+msgid ""
+"``element_idx`` — индекс элемента (узла или графа), для которого строится"
+" объяснение."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:204
+msgid "Пример кода запуска PGExplainer:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:280
+msgid ""
+"Метод PGExplainer в текущей реализации позволяет строить объяснение "
+"предсказания модели для задач классификации узлов и классификации графов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:285
+msgid ""
+"PGMExplainer из статьи `\"PGM-Explainer: Probabilistic Graphical Model "
+"Explanations for Graph Neural Networks\" "
+"<https://arxiv.org/pdf/2010.05788>`_. Cтроит вероятностную модель для "
+"определения важных подграфов, влияющих на прогнозы конкретных узлов. "
+"Минимизируя расхождение в прогнозах между полным графом и подграфами, он "
+"оценивает важность узлов и ребер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:287
+msgid ""
+"Вы можете задать конфигурацию метода PGMExplainer, указав нужные значения"
+" параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"PGMExplainer имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:289
+msgid ""
+"``perturbation_mode`` — способ генерации возмущений признаков при оценке "
+"значимости узлов (случайные целые, среднее значение, нули, максимум или "
+"равномерное распределение)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:290
+msgid ""
+"``perturbations_is_positive_only`` — если ``True``, ограничивает "
+"возмущённые значения только положительными числами."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:291
+msgid ""
+"``is_perturbation_scaled`` — если ``True``, нормализует диапазон "
+"возмущённых признаков перед подачей в модель."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:292
+msgid ""
+"``num_samples`` — количество сгенерированных возмущённых выборок, "
+"используемых для статистической проверки влияния узлов на предсказание."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:293
+msgid ""
+"``max_subgraph_size`` — максимальное число соседних узлов, учитываемых "
+"при построении объясняющего подграфа."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:294
+msgid ""
+"``significance_threshold`` — порог статистической значимости (p-value), "
+"при котором узел считается влияющим на предсказание."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:295
+msgid ""
+"``pred_threshold`` — допустимое отклонение выхода модели (в диапазоне "
+"``[0,1]``), при котором результат на возмущённых данных считается "
+"отличным от исходного."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:296
+msgid "``mode`` — тип задачи модели (бинарная или многоклассовая классификация)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:299
+msgid ""
+"Вы можете задать конфигурацию запуска метода PGMExplainer, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод PGMExplainer имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:303
+msgid "Пример кода запуска PGMExplainer:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:376
+msgid ""
+"Метод PGMExplainer в текущей реализации позволяет строить объяснение "
+"предсказания модели для задач классификации узлов и классификации графов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:381
+msgid ""
+"SubgraphX из статьи `\"On Explainability of Graph Neural Networks via "
+"Subgraph Explorations\" "
+"<https://proceedings.mlr.press/v139/yuan21c.html>`_. Использует значение "
+"Шепли и поиск по дереву Монте-Карло (MCTS) для генерации связного "
+"подграфа, который наилучшим образом объясняет предсказания модели. Он "
+"оценивает важность подграфа на основе его вклада в выходные данные "
+"модели."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:383
+msgid ""
+"Вы можете задать конфигурацию метода SubgraphX, указав нужные значения "
+"параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"SubgraphX имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:385
+msgid ""
+"``rollout`` — количество итераций поиска (rollout) в алгоритме Monte "
+"Carlo Tree Search для оценки важности подграфов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:386
+msgid ""
+"``min_atoms`` — минимальное число узлов (атомов) в листовых вершинах "
+"дерева поиска."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:387
+msgid ""
+"``c_puct`` — коэффициент, управляющий балансом между исследованием новых "
+"подграфов и использованием уже найденных перспективных вариантов в MCTS."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:388
+msgid ""
+"``expand_atoms`` — количество узлов, добавляемых при расширении дочерних "
+"вершин в дереве поиска."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:389
+msgid ""
+"``local_radius`` — радиус локальной окрестности, используемый при "
+"формировании подграфов для объяснения."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:390
+msgid ""
+"``sample_num`` — число выборок, используемых в Monte Carlo аппроксимации "
+"Shapley-значений."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:391
+msgid ""
+"``reward_method`` — метод вычисления функции награды, определяющий вклад "
+"подграфа в предсказание модели."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:392
+msgid ""
+"``high2low`` — если ``True``, расширение дерева поиска выполняется "
+"начиная с узлов с наибольшей степенью."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:393
+msgid ""
+"``subgraph_building_method`` — способ построения подграфа при оценке "
+"объяснения (обнуление признаков удалённых узлов или разделение графа)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:395
+msgid ""
+"Вы можете задать конфигурацию запуска метода SubgraphX, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод SubgraphX имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:397
+msgid ""
+"``max_nodes`` — максимальное количество узлов, которое может содержать "
+"объясняющий подграф."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:398
+#: ../../user_guide/interpretation.rst:491
+#: ../../user_guide/interpretation.rst:589
+msgid ""
+"``element_idx`` — индекс узла (или графа), для которого строится "
+"объяснение."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:400
+msgid "Пример кода запуска SubgraphX:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:476
+msgid ""
+"Метод SubgraphX в текущей реализации позволяет строить объяснение "
+"предсказания модели для задач классификации узлов и классификации графов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:481
+msgid ""
+"Алгоритм ZORRO из статьи `\"Hard Masking for Explaining Graph Neural "
+"Networks\" <https://openreview.net/forum?id=uDN8pRAdsoC>`_. Выбирает "
+"важные узлы и признаки из вычислительного подграфа путем маскирования "
+"компонентов и введения шума. Алгоритм жадно перебирает узлы и признаки "
+"исходного вычислительного графа и создает минимальное множество ``S``, "
+"которое соответствовало бы множеству значений метрики точности."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:483
+msgid ""
+"Вы можете задать конфигурацию метода ZORRO, указав нужные значения "
+"параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"ZORRO имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:485
+msgid ""
+"``greedy`` — если ``True``, используется жадная стратегия выбора "
+"элементов при построении объяснения."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:486
+msgid ""
+"``add_noise`` — если ``True``, при построении объяснения к входным данным"
+" добавляется случайный шум."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:487
+msgid ""
+"``samples`` — количество случайных шумовых выборок, используемых для "
+"оценки устойчивости и точности объяснения (fidelity)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:489
+msgid ""
+"Вы можете задать конфигурацию запуска метода ZORRO, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод ZORRO имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:492
+msgid ""
+"``tau`` — параметр τ-метрики, используемый для оценки качества объяснения"
+" согласно метрике, предложенной в статье."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:493
+msgid ""
+"``recursion_depth`` — максимальная глубина рекурсии при поиске "
+"объясняющего подграфа (значение ``Infinity`` означает отсутствие "
+"ограничения)."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:494
+msgid ""
+"``save_initial_improve`` — если ``True``, сохраняет промежуточные "
+"улучшения объяснения, найденные на начальных этапах поиска."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:496
+msgid "Пример кода запуска ZORRO:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:572
+msgid ""
+"Метод ZORRO в текущей реализации позволяет строить объяснение "
+"предсказания модели для задачи классификации узлов."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:577
+msgid ""
+"Метод GraphMask из статьи `\"Interpreting Graph Neural Networks for NLP "
+"With Differentiable Edge Masking\" <https://arxiv.org/abs/2010.00577>`_. "
+"Идентифицирует ребра в графе, которые важны для предсказания модели. "
+"Метод обучается функции управления, которая решает, следует ли сохранять "
+"исходное сообщение, передаваемое по ребру, или заменять его базовым "
+"значением. Это решение принимается на основе скрытых представлений "
+"соединенных узлов и сообщения ребра, что позволяет модели обнаруживать и "
+"удалять избыточные ребра, сохраняя при этом предсказание."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:579
+msgid ""
+"Вы можете задать конфигурацию метода GraphMask, указав нужные значения "
+"параметров в ``ExplainerInitConfig`` в поле ``_config_kwargs``. Метод "
+"GraphMask имеет следующие параметры:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:581
+msgid "``epochs`` — количество эпох обучения модели, оптимизирующей маску рёбер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:582
+msgid ""
+"``lr`` — скорость обучения, используемая при оптимизации параметров "
+"объяснения."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:583
+msgid ""
+"``coff_size`` — коэффициент регуляризации, контролирующий размер и "
+"разреженность маски рёбер."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:584
+msgid ""
+"``coff_ent`` — коэффициент, определяющий вклад энтропийной регуляризации "
+"маски рёбер в функцию потерь."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:585
+msgid ""
+"``allowance`` — параметр, используемый в лагранжевой оптимизации для "
+"регулирования допустимого отклонения при обучении маски."
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:587
+msgid ""
+"Вы можете задать конфигурацию запуска метода GraphMask, указав нужные "
+"значения параметров в ``ExplainerRunConfig`` в поле ``_config_kwargs``. "
+"Метод GraphMask имеет следующие параметры запуска:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:591
+msgid "Пример кода запуска GraphMask:"
+msgstr ""
+
+#: ../../user_guide/interpretation.rst:666
+msgid ""
+"Метод GraphMask в текущей реализации позволяет строить объяснение "
+"предсказания модели для задачи классификации узлов."
+msgstr ""
+
+#~ msgid "GNNExplainer,"
+#~ msgstr ""
+
+#~ msgid "PGExplainer,"
+#~ msgstr ""
+
+#~ msgid "PGMExplainer,"
+#~ msgstr ""
+
+#~ msgid "SubgraphX,"
+#~ msgstr ""
+
+#~ msgid "Zorro,"
+#~ msgstr ""
+
+#~ msgid "GraphMask."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Эти методы работают с результатами "
+#~ "работы GNN модели и могут быть "
+#~ "относительно легко адаптированы из публично"
+#~ " доступных реализаций."
+#~ msgstr ""
+
+#~ msgid "Методы встраивания интерпретируемости:"
+#~ msgstr ""
+
+#~ msgid "NeuralAnalisis,"
+#~ msgstr ""
 

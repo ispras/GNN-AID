@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,7 +17,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../api/attacks.rst:2
 msgid "attacks"
@@ -41,7 +41,23 @@ msgid ""
 "manager."
 msgstr ""
 
-#: ../../api/attacks.rst
+#: attacks.attack_base.Attacker.check_availability
+#: attacks.evasion_attacks.ReWattAttacker.__init__
+#: attacks.evasion_attacks.ReWattAttacker.attack
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling
+#: attacks.evasion_attacks_collection.rewatt.utils.Action
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.__init__
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward
+#: attacks.metattack.meta_gradient_attack.BaseMeta
+#: attacks.metattack.meta_gradient_attack.BaseMeta.check_availability
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox.check_availability
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull.check_availability
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy of
 msgid "Параметры"
 msgstr ""
 
@@ -127,7 +143,14 @@ msgid ""
 " Options: 'mean', 'max'."
 msgstr ""
 
-#: ../../api/attacks.rst
+#: attacks.evasion_attacks.ReWattAttacker.__init__
+#: attacks.evasion_attacks.ReWattAttacker.attack
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy of
 msgid "Результат"
 msgstr ""
 
@@ -135,7 +158,14 @@ msgstr ""
 msgid "None"
 msgstr ""
 
-#: ../../api/attacks.rst
+#: attacks.evasion_attacks.ReWattAttacker.__init__
+#: attacks.evasion_attacks.ReWattAttacker.attack
+#: attacks.evasion_attacks_collection.pgd.utils.random_sampling
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.apply_rewiring
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.calculate_reward
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment.step
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet.forward
+#: attacks.mi_attacks.MIAttacker.compute_single_attack_accuracy of
 msgid "Тип результата"
 msgstr ""
 
@@ -232,6 +262,11 @@ msgstr ""
 msgid "CLGA"
 msgstr ""
 
+#: attacks.clga.CLGA.CLGAAttack:1
+#: attacks.metattack.meta_gradient_attack.BaseMeta:1 of
+msgid "Базовые классы: :py:class:`~gnn_aid.attacks.poison_attacks.PoisonAttacker`"
+msgstr ""
+
 #: attacks.clga.CLGA.CLGAAttack.drop_edge:1 of
 msgid "Perform edge dropout based on the chosen scheme."
 msgstr ""
@@ -323,6 +358,13 @@ msgid ""
 "results."
 msgstr ""
 
+#: attacks.metattack.meta_gradient_attack.MetaAttackApprox:1
+#: attacks.metattack.meta_gradient_attack.MetaAttackFull:1 of
+msgid ""
+"Базовые классы: "
+":py:class:`~attacks.metattack.meta_gradient_attack.BaseMeta`"
+msgstr ""
+
 #: attacks.metattack.meta_gradient_attack.MetaAttackFull:1 of
 msgid "Attack GNNs with meta gradients"
 msgstr ""
@@ -337,6 +379,12 @@ msgstr ""
 
 #: ../../api/attacks.rst:50
 msgid "Nettack"
+msgstr ""
+
+#: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate:1
+#: attacks.evasion_attacks_collection.rewatt.utils.MLP:1
+#: attacks.evasion_attacks_collection.rewatt.utils.ReWattPolicyNet:1 of
+msgid "Базовые классы: :py:class:`~torch.nn.modules.module.Module`"
 msgstr ""
 
 #: attacks.evasion_attacks_collection.nettack.utils.NettackSurrogate.__init__:1
@@ -421,6 +469,12 @@ msgid ""
 "Parameters: - v1_emb: The embedding of v_fir node. - edge_repr: "
 "Representation of an edge in the context of nodes v_fir and v_sec. - "
 "vc_emb: The embedding of v_c node."
+msgstr ""
+
+#: attacks.evasion_attacks_collection.rewatt.utils.Action:1
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphEnvironment:1
+#: attacks.evasion_attacks_collection.rewatt.utils.GraphState:1 of
+msgid "Базовые классы: :py:class:`object`"
 msgstr ""
 
 #: attacks.evasion_attacks_collection.rewatt.utils.GraphState:1 of
