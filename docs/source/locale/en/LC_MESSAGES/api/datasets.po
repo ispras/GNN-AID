@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,7 +17,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../api/datasets.rst:2
 msgid "datasets"
@@ -305,7 +305,19 @@ msgstr ""
 msgid "Initialize structural part of the dataset."
 msgstr ""
 
-#: ../../api/datasets.rst
+#: datasets.dataset_converter.DatasetConverter.format_to_ij
+#: datasets.dataset_converter.DatasetConverter.networkx_to_format
+#: datasets.dataset_converter.extract_attributes
+#: datasets.datasets_manager.DatasetManager.add_labeling
+#: datasets.datasets_manager.DatasetManager.get_by_config
+#: datasets.gen_dataset.GeneralDataset.__init__
+#: datasets.gen_dataset.GeneralDataset.apply_modification
+#: datasets.gen_dataset.LocalDataset.__init__
+#: datasets.known_format_datasets.KnownFormatDataset.__init__
+#: datasets.known_format_datasets.append_features_from_attributes
+#: datasets.ptg_datasets.LibPTGDataset.__init__
+#: datasets.ptg_datasets.LocalPTGDataset.__init__
+#: datasets.ptg_datasets.PTGDataset.__init__ of
 msgid "Параметры"
 msgstr ""
 
@@ -402,7 +414,7 @@ msgid ""
 "returns the modified version."
 msgstr ""
 
-#: datasets.gen_dataset.GeneralDataset.apply_modification:4 of
+#: datasets.gen_dataset.GeneralDataset.apply_modification:9 of
 msgid "This includes:"
 msgstr ""
 
@@ -430,7 +442,7 @@ msgstr ""
 msgid "GraphModificationArtifact containing node and edge changes"
 msgstr ""
 
-#: ../../api/datasets.rst
+#: datasets.gen_dataset.GeneralDataset.apply_modification of
 msgid "Результат"
 msgstr ""
 
@@ -474,6 +486,11 @@ msgstr ""
 msgid "Inherited dataset classes"
 msgstr ""
 
+#: datasets.known_format_datasets.KnownFormatDataset:1
+#: datasets.ptg_datasets.PTGDataset:1 of
+msgid "Базовые классы: :py:class:`~datasets.gen_dataset.GeneralDataset`"
+msgstr ""
+
 #: datasets.ptg_datasets.PTGDataset:1 of
 msgid ""
 "Generalisation and a wrapper over a single ptg Dataset. Features and "
@@ -494,6 +511,11 @@ msgstr ""
 
 #: datasets.ptg_datasets.PTGDataset.induce_dataset_info:1 of
 msgid "Induce metainfo for the PTG dataset."
+msgstr ""
+
+#: datasets.ptg_datasets.LibPTGDataset:1
+#: datasets.ptg_datasets.LocalPTGDataset:1 of
+msgid "Базовые классы: :py:class:`~datasets.ptg_datasets.PTGDataset`"
 msgstr ""
 
 #: datasets.ptg_datasets.LocalPTGDataset:1 of
@@ -657,6 +679,7 @@ msgstr ""
 msgid "Converts graph data from one format to another."
 msgstr ""
 
+#: ../../docstring
 #: datasets.dataset_converter.DatasetConverter.supported_formats:1 of
 msgid "Supported raw graph data formats"
 msgstr ""

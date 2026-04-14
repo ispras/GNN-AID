@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 22:24+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,61 +17,423 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../user_guide/attack.rst:2
 msgid "Методы атак"
 msgstr "Attack methods"
 
-#: ../../user_guide/attack.rst:9
-msgid "Атаки отравления"
-msgstr "Poison attacks"
-
-#: ../../user_guide/attack.rst:11
-msgid "RandomPoison"
+#: ../../user_guide/attack.rst:8
+msgid ""
+"Фреймворк GNN-AID предоставляет набор инструментов для проведения атак на"
+" графовые нейронные сети (GNN), позволяющих оценивать их робастность к "
+"различным возмущениям и попыткам извлечения информации. Все атаки "
+"реализованы в виде классов, реализующих единый интерфейс. Возможно "
+"создание и применение пользовательских атак, реализующих аналогичный "
+"интерфейс."
 msgstr ""
 
-#: ../../user_guide/attack.rst:12
-msgid "CLGA"
-msgstr ""
-
-#: ../../user_guide/attack.rst:13
-msgid "MetaAttack"
-msgstr ""
-
-#: ../../user_guide/attack.rst:15
-msgid "Атаки уклонения"
-msgstr "Evasion attacks"
-
-#: ../../user_guide/attack.rst:17
-msgid "QAttack"
+#: ../../user_guide/attack.rst:16
+msgid "Классификация атак"
 msgstr ""
 
 #: ../../user_guide/attack.rst:18
-msgid "FGSM"
-msgstr ""
-
-#: ../../user_guide/attack.rst:19
-msgid "PGD"
+msgid "По цели и времени воздействия атаки делятся на три основных типа:"
 msgstr ""
 
 #: ../../user_guide/attack.rst:20
-msgid "ReWatt"
+msgid ""
+"**Evasion-атаки (атаки уклонения)** — применяются после обучения модели. "
+"Их цель — исказить входные данные (структуру графа или признаки) для "
+"конкретных объектов так, чтобы модель ошиблась при классификации."
 msgstr ""
 
-#: ../../user_guide/attack.rst:21
+#: ../../user_guide/attack.rst:24
+msgid ""
+"**Poisoning-атаки (атаки отравления данных)** — выполняются до обучения "
+"модели. Злоумышленник внедряет искажения в обучающие данные, чтобы "
+"ухудшить общую производительность модели."
+msgstr ""
+
+#: ../../user_guide/attack.rst:27
+msgid ""
+"**Атаки определения принадлежности (Membership Inference, MI)** — не "
+"изменяют данные, а пытаются определить, использовался ли данный узел, "
+"ребро или граф при обучении модели."
+msgstr ""
+
+#: ../../user_guide/attack.rst:31
+msgid ""
+"По уровню доступа к модели атаки могут требовать знания внутренних "
+"параметров (градиентов, скрытых представлений) — **белый ящик**, либо "
+"работать только с входными данными и выходами модели — **чёрный ящик**. "
+"Конкретные реализации атак могут относиться к любому из этих типов."
+msgstr ""
+
+#: ../../user_guide/attack.rst:37
+msgid "Базовые классы"
+msgstr ""
+
+#: ../../user_guide/attack.rst:39
+msgid ""
+"Все атаки наследуются от абстрактного базового класса ``Attacker`` и "
+"обязаны реализовывать следующие методы:"
+msgstr ""
+
+#: ../../user_guide/attack.rst:42
+msgid ""
+"``attack()`` — основная логика атаки. Принимает объекты модели, датасета "
+"и аргументы, специфичные для задачи."
+msgstr ""
+
+#: ../../user_guide/attack.rst:44
+msgid ""
+"``dataset_diff()`` — возвращает объект ``GraphModificationArtifact``, "
+"описывающий изменения структуры или признаков (для evasion/poisoning "
+"атак)."
+msgstr ""
+
+#: ../../user_guide/attack.rst:47
+msgid ""
+"``check_availability()`` — статический метод, проверяющий, применима ли "
+"атака к данной паре датасет/модель."
+msgstr ""
+
+#: ../../user_guide/attack.rst:50
+msgid ""
+"Атрибут ``name`` содержит человеко-читаемое имя атаки (используется в "
+"логах и интерфейсе)."
+msgstr ""
+
+#: ../../user_guide/attack.rst:54
+msgid "Attacker (базовый класс)"
+msgstr ""
+
+#: ../../user_guide/attack.rst:67
+msgid "Специализированные базовые классы"
+msgstr ""
+
+#: ../../user_guide/attack.rst:69
+msgid ""
+"``EvasionAttacker`` — базовый класс для атак уклонения, применяемых после"
+" обучения."
+msgstr ""
+
+#: ../../user_guide/attack.rst:71
+msgid ""
+"``PoisonAttacker`` — базовый класс для отравляющих атак, применяемых до "
+"обучения."
+msgstr ""
+
+#: ../../user_guide/attack.rst:73
+msgid ""
+"``MIAttacker`` — базовый класс для атак определения принадлежности к "
+"обучающей выборке."
+msgstr ""
+
+#: ../../user_guide/attack.rst:77
+#, fuzzy
+msgid "Результаты атак"
+msgstr "Attack methods"
+
+#: ../../user_guide/attack.rst:79
+msgid ""
+"Все атаки в GNN-AID возвращают структурированные, сериализуемые "
+"результаты, которые точно описывают, что и как было изменено. Формат "
+"представления зависит от типа атаки."
+msgstr ""
+
+#: ../../user_guide/attack.rst:84
+msgid "Evasion и Poisoning атаки"
+msgstr ""
+
+#: ../../user_guide/attack.rst:86
+msgid ""
+"Эти атаки возвращают объект ``GraphModificationArtifact`` — легковесный "
+"контейнер, который фиксирует:"
+msgstr ""
+
+#: ../../user_guide/attack.rst:89
+msgid "добавленные / удалённые узлы (с возможными тензорами признаков);"
+msgstr ""
+
+#: ../../user_guide/attack.rst:90
+msgid "изменённые признаки узлов (поэлементные дельты);"
+msgstr ""
+
+#: ../../user_guide/attack.rst:91
+msgid "добавленные / удалённые рёбра (с возможными атрибутами рёбер)."
+msgstr ""
+
+#: ../../user_guide/attack.rst:94
+msgid "Атаки определения принадлежности (MI)"
+msgstr ""
+
+#: ../../user_guide/attack.rst:96
+msgid ""
+"Результаты сохраняются в ``MIResultsStore`` — объекте, подобном словарю, "
+"который сопоставляет входные маски (например, ``train_mask``, "
+"``test_mask``) с тензорами предсказанной принадлежности (булевы "
+"значения). Каждая запись отвечает на вопрос: «Был ли данный образец "
+"частью обучающей выборки?»."
+msgstr ""
+
+#: ../../user_guide/attack.rst:103
+msgid "Расширяемость"
+msgstr ""
+
+#: ../../user_guide/attack.rst:105
+msgid "Для добавления новой атаки необходимо:"
+msgstr ""
+
+#: ../../user_guide/attack.rst:107
+msgid ""
+"Унаследоваться от соответствующего базового класса (``EvasionAttacker``, "
+"``PoisonAttacker`` или ``MIAttacker``)."
+msgstr ""
+
+#: ../../user_guide/attack.rst:109
+msgid "Реализовать метод ``attack()``."
+msgstr ""
+
+#: ../../user_guide/attack.rst:110
+msgid ""
+"Заполнить либо ``self.attack_diff`` (для атак, изменяющих "
+"структуру/признаки), либо ``self.results`` (для MI-атак)."
+msgstr ""
+
+#: ../../user_guide/attack.rst:112
+msgid "При необходимости переопределить ``check_availability()``."
+msgstr ""
+
+#: ../../user_guide/attack.rst:113
+msgid ""
+"Описать все гиперпараметры атаки в файле метаинформации в следующем "
+"формате:"
+msgstr ""
+
+#: ../../user_guide/attack.rst:125
+msgid "Пример скелета новой атаки"
+msgstr ""
+
+#: ../../user_guide/attack.rst:145
+msgid "Примечание"
+msgstr ""
+
+#: ../../user_guide/attack.rst:147
+msgid ""
+"Все атаки оперируют объектами ``GeneralDataset`` и ``GNNModelManager``, "
+"что гарантирует совместимость в рамках фреймворка. Вам не нужно вызывать "
+"метод ``.attack()`` напрямую — он автоматически запускается через "
+"``GNNModelManager`` при необходимости."
+msgstr ""
+
+#: ../../user_guide/attack.rst:153
+msgid "Реализованные во фреймворке атаки"
+msgstr ""
+
+#: ../../user_guide/attack.rst:155
+msgid "*Примечание*: NC - классификация вершин, GC - классификация графов."
+msgstr ""
+
+#: ../../user_guide/attack.rst:161
+msgid "Название"
+msgstr ""
+
+#: ../../user_guide/attack.rst:162
+msgid "Тип"
+msgstr ""
+
+#: ../../user_guide/attack.rst:163
+msgid "Доступ к модели"
+msgstr ""
+
+#: ../../user_guide/attack.rst:164
+msgid "Поддерживаемые задачи"
+msgstr ""
+
+#: ../../user_guide/attack.rst:165
+msgid "Краткое описание атаки"
+msgstr ""
+
+#: ../../user_guide/attack.rst:166
+msgid "FGSM"
+msgstr ""
+
+#: ../../user_guide/attack.rst:167 ../../user_guide/attack.rst:173
+#: ../../user_guide/attack.rst:179 ../../user_guide/attack.rst:185
+#: ../../user_guide/attack.rst:192 ../../user_guide/attack.rst:198
+msgid "Evasion"
+msgstr ""
+
+#: ../../user_guide/attack.rst:168 ../../user_guide/attack.rst:186
+#: ../../user_guide/attack.rst:225
+msgid "Белый ящик"
+msgstr ""
+
+#: ../../user_guide/attack.rst:169 ../../user_guide/attack.rst:187
+#: ../../user_guide/attack.rst:207 ../../user_guide/attack.rst:213
+#: ../../user_guide/attack.rst:220 ../../user_guide/attack.rst:226
+#: ../../user_guide/attack.rst:234 ../../user_guide/attack.rst:240
+msgid "NC/GC"
+msgstr ""
+
+#: ../../user_guide/attack.rst:170
+msgid ""
+"Подбирает возмущение для входных данных методом скорейшего спуска в "
+"сторону антиградиента функции потерь исходной модели."
+msgstr ""
+
+#: ../../user_guide/attack.rst:172
 msgid "Nettack"
 msgstr ""
 
-#: ../../user_guide/attack.rst:23
-msgid "Атаки с выводом о членстве"
-msgstr "Membership inference attacks"
+#: ../../user_guide/attack.rst:174 ../../user_guide/attack.rst:180
+#: ../../user_guide/attack.rst:193 ../../user_guide/attack.rst:199
+#: ../../user_guide/attack.rst:206 ../../user_guide/attack.rst:212
+#: ../../user_guide/attack.rst:219 ../../user_guide/attack.rst:233
+#: ../../user_guide/attack.rst:239
+msgid "Чёрный ящик"
+msgstr ""
 
-#: ../../user_guide/attack.rst:25
+#: ../../user_guide/attack.rst:175 ../../user_guide/attack.rst:181
+#: ../../user_guide/attack.rst:194 ../../user_guide/attack.rst:200
+msgid "NC"
+msgstr ""
+
+#: ../../user_guide/attack.rst:176
+msgid ""
+"Итеративно модифицирует рёбра целевого графа на основе прогнозов "
+"суррогатной модели."
+msgstr ""
+
+#: ../../user_guide/attack.rst:178
+msgid "QAttack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:182
+msgid ""
+"Основана на генетическом алгоритме и нацелена на ухудшение модулярности "
+"графа."
+msgstr ""
+
+#: ../../user_guide/attack.rst:184
+msgid "PGD"
+msgstr ""
+
+#: ../../user_guide/attack.rst:188
+msgid ""
+"Усовершенствованная версия FGSM, также использующая градиенты исходной "
+"модели для поиска оптимальных возмущений во входных данных."
+msgstr ""
+
+#: ../../user_guide/attack.rst:191
+msgid "RLS2V"
+msgstr ""
+
+#: ../../user_guide/attack.rst:195
+msgid ""
+"Использует парадигму Q-обучения для атаки исходной модели, используя "
+"только информацию о предсказанных метках классов."
+msgstr ""
+
+#: ../../user_guide/attack.rst:197
+msgid "ReWatt"
+msgstr ""
+
+#: ../../user_guide/attack.rst:201
+msgid ""
+"Переподключает рёбра в графе (одновременное удаление и добавление "
+"инцидентных рёбер для одной вершины), основывается на парадигме обучения "
+"с подкреплением."
+msgstr ""
+
+#: ../../user_guide/attack.rst:204
+msgid "RandomPoisonAttack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:205 ../../user_guide/attack.rst:211
+#: ../../user_guide/attack.rst:218 ../../user_guide/attack.rst:224
+msgid "Poison"
+msgstr ""
+
+#: ../../user_guide/attack.rst:208
+msgid ""
+"Простейшая отравляющая атака, которая случайным образом добавляет или "
+"удаляет рёбра в графе."
+msgstr ""
+
+#: ../../user_guide/attack.rst:210
+msgid "MetaAttackFull"
+msgstr ""
+
+#: ../../user_guide/attack.rst:214
+msgid ""
+"Использует парадигму мета-обучения, подбирая итеративно отравленный "
+"датасет таким образом, чтобы минимизировать на нём качество работы "
+"суррогатной модели."
+msgstr ""
+
+#: ../../user_guide/attack.rst:217
+msgid "MetaAttackApprox"
+msgstr ""
+
+#: ../../user_guide/attack.rst:221
+msgid ""
+"Облегчённая версия MetaAttackFull, использующая приближённые формулы для "
+"получения более выгодной временной асимптотики."
+msgstr ""
+
+#: ../../user_guide/attack.rst:223
+msgid "CLGAAttack"
+msgstr ""
+
+#: ../../user_guide/attack.rst:227
+msgid ""
+"Изменяет входной граф на основе контрастивной функции потерь, использует "
+"градиенты используемой модели, однако подходит для задач обучения без "
+"учителя, так как не использует реальные метки классов."
+msgstr ""
+
+#: ../../user_guide/attack.rst:231
 msgid "NaiveMIAttacker"
 msgstr ""
 
-#: ../../user_guide/attack.rst:26
+#: ../../user_guide/attack.rst:232 ../../user_guide/attack.rst:238
+msgid "MI"
+msgstr ""
+
+#: ../../user_guide/attack.rst:235
+msgid ""
+"Делает вывод о членстве объекта в обучающей выборке на основе высокой "
+"уверенности модели при прогнозировании его метки класса."
+msgstr ""
+
+#: ../../user_guide/attack.rst:237
 msgid "ShadowModelMIAttacker"
 msgstr ""
+
+#: ../../user_guide/attack.rst:241
+msgid ""
+"Обучает суррогатную модель, которая учится прогнозировать членство в "
+"обучающей выборке на основе ответов целевой модели."
+msgstr ""
+
+#~ msgid "Атаки отравления"
+#~ msgstr "Poison attacks"
+
+#~ msgid "RandomPoison"
+#~ msgstr ""
+
+#~ msgid "CLGA"
+#~ msgstr ""
+
+#~ msgid "MetaAttack"
+#~ msgstr ""
+
+#~ msgid "Атаки уклонения"
+#~ msgstr "Evasion attacks"
+
+#~ msgid "Атаки с выводом о членстве"
+#~ msgstr "Membership inference attacks"
 

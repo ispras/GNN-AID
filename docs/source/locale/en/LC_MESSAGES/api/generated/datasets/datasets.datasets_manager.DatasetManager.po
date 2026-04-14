@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,10 +17,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../api/generated/datasets/datasets.datasets_manager.DatasetManager.rst:2
-msgid "datasets.datasets\\_manager.DatasetManager"
+msgid "DatasetManager"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager:1 of
+msgid "Базовые классы: :py:class:`object`"
 msgstr ""
 
 #: datasets.datasets_manager.DatasetManager:1 of
@@ -31,35 +35,65 @@ msgid ""
 "datasets from torch_geometric.datasets"
 msgstr ""
 
-#: ../../api/generated/datasets/datasets.datasets_manager.DatasetManager.rst:13
-msgid "Methods"
+#: datasets.datasets_manager.DatasetManager.get_by_config:1 of
+msgid "Get GeneralDataset by dataset config. Convenient to use from the frontend."
 msgstr ""
 
-#: ../../:1:<autosummary>:1
-msgid ""
-":py:obj:`__init__ <datasets.datasets_manager.DatasetManager.__init__>`\\ "
-"\\(\\)"
+#: datasets.datasets_manager.DatasetManager.add_labeling
+#: datasets.datasets_manager.DatasetManager.get_by_config of
+msgid "Параметры"
 msgstr ""
 
-#: ../../:1:<autosummary>:1
-msgid ""
-":py:obj:`add_labeling "
-"<datasets.datasets_manager.DatasetManager.add_labeling>`\\ "
-"\\(dataset\\_config\\, task\\, ...\\[\\, ...\\]\\)"
+#: datasets.datasets_manager.DatasetManager.get_by_config:5 of
+msgid "additional parameters to init dataset class"
 msgstr ""
 
-#: ../../:1:<autosummary>:1
+#: datasets.datasets_manager.DatasetManager.add_labeling:1 of
 msgid "Adds a new labeling to datasets with a specified dataset_config."
 msgstr ""
 
-#: ../../:1:<autosummary>:1
-msgid ""
-":py:obj:`get_by_config "
-"<datasets.datasets_manager.DatasetManager.get_by_config>`\\ "
-"\\(dataset\\_config\\[\\, ...\\]\\)"
+#: datasets.datasets_manager.DatasetManager.add_labeling:7 of
+msgid "name for a new labeling"
 msgstr ""
 
-#: ../../:1:<autosummary>:1
-msgid "Get GeneralDataset by dataset config."
+#: datasets.datasets_manager.DatasetManager.add_labeling:9 of
+#, python-brace-format
+msgid "dictionary with labels {node/edge/graph -> value}"
 msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:11 of
+msgid ""
+"possible value depending on the task: number of classes or regression "
+"value bounds. Will be induced if omitted"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager.add_labeling:14 of
+msgid "if True, will rewrite labeling if exists"
+msgstr ""
+
+#~ msgid "datasets.datasets\\_manager.DatasetManager"
+#~ msgstr ""
+
+#~ msgid "Methods"
+#~ msgstr ""
+
+#~ msgid ""
+#~ ":py:obj:`__init__ "
+#~ "<datasets.datasets_manager.DatasetManager.__init__>`\\ \\(\\)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ ":py:obj:`add_labeling "
+#~ "<datasets.datasets_manager.DatasetManager.add_labeling>`\\ "
+#~ "\\(dataset\\_config\\, task\\, ...\\[\\, ...\\]\\)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ ":py:obj:`get_by_config "
+#~ "<datasets.datasets_manager.DatasetManager.get_by_config>`\\ "
+#~ "\\(dataset\\_config\\[\\, ...\\]\\)"
+#~ msgstr ""
+
+#~ msgid "Get GeneralDataset by dataset config."
+#~ msgstr ""
 

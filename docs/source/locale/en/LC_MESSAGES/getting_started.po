@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 22:09+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: 2026-02-09 22:00+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../getting_started.rst:2
 msgid "Начало работы"
@@ -26,7 +26,7 @@ msgstr "Getting started"
 msgid "Установка"
 msgstr "Installation"
 
-#: ../../getting_started.rst:22
+#: ../../getting_started.rst:23
 msgid ""
 "GNN-AID разрабатывался и тестировался под Ubuntu 20.04 и 22.04, поэтому "
 "они подходят лучше всего."
@@ -36,29 +36,38 @@ msgstr ""
 
 #: ../../getting_started.rst:26
 msgid ""
+"Для работы системе понадобится минимум: 1 Гб RAM, 10 Гб места на диске. "
+"Наличие GPU не обязательно, но ускорит работу с большими датасетами. В "
+"этом случае запускайте только бэкенд."
+msgstr ""
+"Framework requiers, minimal: 1Gb RAM ,10Gb disk space. "
+"GPU is optional, but can speed up on large datasets. In this case use backend only."
+
+#: ../../getting_started.rst:30
+msgid ""
 "Вам понадобится Python версии ``3.11`` или выше. Мы рекомендуем создать "
 "виртуальное окружение с помощью ``pip``."
 msgstr ""
 "You need python of version ``3.11`` or higher. We advice to create "
 "virtual environment with ``pip``."
 
-#: ../../getting_started.rst:33
+#: ../../getting_started.rst:37
 msgid "Сначала установите вспомогательные библиотеки"
 msgstr "First, get auxiliary libraries"
 
-#: ../../getting_started.rst:39
+#: ../../getting_started.rst:43
 msgid "Затем установите все зависимости проекта"
 msgstr "Then install all project dependencies"
 
-#: ../../getting_started.rst:47
+#: ../../getting_started.rst:51
 msgid "Третий набор зависимостей устанавливается примерно 20 минут."
 msgstr "The 3rd pack of requirements will take around 20 minutes."
 
-#: ../../getting_started.rst:50
+#: ../../getting_started.rst:54
 msgid "Возможные проблемы"
 msgstr "Possible problems"
 
-#: ../../getting_started.rst:52
+#: ../../getting_started.rst:56
 msgid ""
 "Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего, "
 "это проблема совместимости. Попробуйте следующее:"
@@ -66,60 +75,62 @@ msgstr ""
 "If you see 139 or 134 error code when run the script, it is likely a "
 "compatibility issue. Try the following:"
 
-#: ../../getting_started.rst:55
+#: ../../getting_started.rst:59
 msgid "Обновите драйверы видеокарты (если вы используете CUDA)."
 msgstr "Update video card drivers (if you have decided to use cuda)."
 
-#: ../../getting_started.rst:56
+#: ../../getting_started.rst:60
 msgid "Обновите gcc до самой новой версии."
 msgstr "Update gcc to the most recent version."
 
-#: ../../getting_started.rst:57
+#: ../../getting_started.rst:61
 msgid "Удалите все модули torch, использующие C++ код."
 msgstr "Remove all torch modules that use C++ code."
 
-#: ../../getting_started.rst:58
+#: ../../getting_started.rst:62
 msgid "Установите все пакеты torch заново."
 msgstr "Install all torch packages again."
 
-#: ../../getting_started.rst:61
+#: ../../getting_started.rst:65
 msgid "Запуск бэкенда"
 msgstr "Run in backend"
 
-#: ../../getting_started.rst:63
+#: ../../getting_started.rst:67
 msgid ""
 "Если установлены все зависимости, можно переходить к :doc:`учебным "
 "примерам <tutorials>`"
 msgstr ""
 
-#: ../../getting_started.rst:67
+#: ../../getting_started.rst:71
 msgid "Запуск фронтенда"
 msgstr "Run in frontend"
 
-#: ../../getting_started.rst:69
+#: ../../getting_started.rst:73
 msgid ""
 "Предполагается, что вы находитесь в корневой директории проекта. "
 "Активируйте виртуальное окружение"
 msgstr "Suppose you are at the project root folder. Activate virtual environment"
 
-#: ../../getting_started.rst:76
-msgid "Добавьте библиотеку ``gnn_aid`` в зависимости Python"
+#: ../../getting_started.rst:80
+#, fuzzy
+msgid "Добавьте текущую директорию ``.`` в зависимости Python"
 msgstr "Add ``gnn_aid`` library to Python dependencies"
 
-#: ../../getting_started.rst:82
+#: ../../getting_started.rst:86
 msgid "Запустите скрипт ``main.py`` из пакета ``web_interface``"
 msgstr "Run ``main.py`` script from ``web_interface`` package"
 
-#: ../../getting_started.rst:88
+#: ../../getting_started.rst:92
 msgid "Подождав около минуты вы увидите примерно следующее"
 msgstr "Over a minute, you will see something like this"
 
-#: ../../getting_started.rst:95
+#: ../../getting_started.rst:99
 msgid ""
 "Затем откройте `127.0.0.1:5000 <http://127.0.0.1:5000>`__ в браузере. Вы "
 "должны увидеть загруженную веб-страницу. Теперь можно переходить к работе"
 " в :doc:`веб-интерфейсе <user_guide/frontend>`"
 msgstr ""
 "Then go to `127.0.0.1:5000 <http://127.0.0.1:5000>`__ in your browser. "
-"You should see web-interface is loaded. Now you can start working in :doc:`web-interface <user_guide/frontend>`"
+"You should see web-interface is loaded. Now you can start working in :doc"
+":`web-interface <user_guide/frontend>`"
 
