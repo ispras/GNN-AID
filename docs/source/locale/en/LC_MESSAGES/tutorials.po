@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-14 15:34+0300\n"
+"POT-Creation-Date: 2026-04-14 17:09+0300\n"
 "PO-Revision-Date: 2026-02-10 15:40+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -62,11 +62,12 @@ msgstr "Assessing the quality of the trained model."
 
 #: ../../tutorials.rst:35
 msgid ""
-"Пример находится в файле `<https://github.com/ispras/GNN-"
+"Код находится в файле `обучение <https://github.com/ispras/GNN-"
 "AID/tree/main/tutorials/00_basics/train_gnn.py>`__"
 msgstr ""
 "Find code in file `training <https://github.com/ispras/GNN-"
 "AID/tree/main/tutorials/00_basics/train_gnn.py>`__"
+
 
 #: ../../tutorials.rst:38
 msgid ""
