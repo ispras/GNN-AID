@@ -12,7 +12,6 @@ This experiment demonstrates the following steps of working with GNN within the 
 ## Folder contents
 - `train_gnn.py` — script for training GNN.
 - `run_example.sh` — script for running the experiment.
-- `imgs/` — folder with images.
 - `README.md` — description of the experiment.
 
 ---
