@@ -27,22 +27,25 @@
 Наличие GPU не обязательно, но ускорит работу с большими датасетами.
 В этом случае запускайте только бэкенд.
 
-Вам понадобится Python версии ``3.11`` или выше. Мы рекомендуем создать
-виртуальное окружение с помощью ``pip``.
-
-::
-
-   python -m pip install --upgrade pip
-
+Вам понадобится Python версии ``3.11``.
 Сначала установите вспомогательные библиотеки
 
-::
+.. code:: bash
 
    sudo apt-get install -y build-essential python3.11-dev libfreetype6-dev pkg-config
 
+Мы рекомендуем создать виртуальное окружение с помощью ``venv`` и активировать его:
+
+.. code:: bash
+
+   sudo apt-пуе install python3.11-venv
+   python3 -m venv venv
+   source venv/bin/activate
+
+
 Затем установите все зависимости проекта
 
-::
+.. code:: bash
 
    pip install -r requirements1.txt
    pip install -r requirements2.txt
@@ -53,7 +56,19 @@
 Возможные проблемы
 ------------------
 
-Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего,
+1\. Если во время установки `torch-*` пакетов из ``requiremets3.txt`` возникла ошибка "Failed to build ... when getting requirements to build wheel. No module named 'torch'",
+попробуйте установить `torch-*` пакеты из бинарников:
+
+.. code:: bash
+
+   pip install torch-scatter==2.1.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-sparse==0.6.17 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-cluster==1.6.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-spline-conv==1.2.2 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+
+где ``${CUDA}`` нужно заменить на ``cpu``, ``cu117`` или ``cu118`` в соответствии с тем как вы установили PyTorch.
+
+2\. Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего,
 это проблема совместимости. Попробуйте следующее:
 
 1. Обновите драйверы видеокарты (если вы используете CUDA).
@@ -71,21 +86,21 @@
 ================
 
 Предполагается, что вы находитесь в корневой директории проекта.
-Активируйте виртуальное окружение
+Активируйте виртуальное окружение, если этого еще не сделано:
 
-.. code:: text
+.. code:: bash
 
    source venv/bin/activate
 
 Добавьте текущую директорию ``.`` в зависимости Python
 
-.. code:: text
+.. code:: bash
 
    export PYTHONPATH=.
 
 Запустите скрипт ``main.py`` из пакета ``web_interface``
 
-.. code:: text
+.. code:: bash
 
    python web_interface/main.py
 

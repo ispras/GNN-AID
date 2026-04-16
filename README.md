@@ -38,7 +38,7 @@ Recommended:
 - RAM: 8 GB or more
 - GPU: optional. For large-scale experiments and backend only
 
-### Run
+### Dependencies
 
 You need python of version `3.11` or higher. We advice to create virtual environment with `pip`.
 ```
@@ -58,7 +58,17 @@ The 3rd pack of requirements will take around 20 minutes.
 
 ### Problems
 
-If you see 139 or 134 error code when run the script, it is likely a compatibility issue. Try the following:
+1\. If during installation of requirements3 you get an error "Failed to build ... when getting requirements to build wheel. No module named 'torch'", try install torch-* packages from binaries:
+```
+pip install torch-scatter==2.1.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-sparse==0.6.17 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-cluster==1.6.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-spline-conv==1.2.2 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+```
+where ${CUDA} should be replaced by either `cpu`, `cu117`, or `cu118` depending on your PyTorch installation.
+
+
+2\. If you see 139 or 134 error code when run the script, it is likely a compatibility issue. Try the following:
 
 1.  Update video card drivers (if you have decided to use cuda).
 2.  Update gcc to the most recent version.

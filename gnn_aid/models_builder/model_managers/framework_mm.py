@@ -217,7 +217,7 @@ class FrameworkGNNModelManager(GNNModelManager):
             self.before_batch(batch)
             loss += self.train_on_batch_full(batch, task_type)
             self.after_batch(batch)
-        print("loss %.8f" % (loss / n))
+        print("loss %.8f" % (loss / (n or 1)))
         self.modification.epochs += 1
         self.gnn.eval()
         return loss.cpu().detach().numpy().tolist()
