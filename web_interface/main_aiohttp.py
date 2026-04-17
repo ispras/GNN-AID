@@ -1,12 +1,13 @@
 import asyncio
 import contextlib
+import ctypes
 import json
 import logging
+import os
 import queue
 import signal
 import traceback
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 from multiprocessing import Process, Queue
 from datetime import datetime
 from typing import Dict, Any
@@ -19,10 +20,23 @@ import aiohttp_jinja2
 from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
-from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR
+from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR, \
+    get_sid_logger
 
-LOG_FILE = LOG_DIR / f"server_{datetime.now()}.log"
+LOG_FILE = LOG_DIR / datetime.now().strftime("server_%Y-%m-%d_%H-%M-%S.log")
 CLIENT_RESTART_DELAY_SEC = 30
+GRACEFUL_WORKER_STOP_SEC = 2.0
+FORCEFUL_WORKER_KILL_SEC = 1.0
+
+shutdown_lock = asyncio.Lock()
+shutdown_started = False
+
+
+class SidFilter(logging.Filter):
+    def filter(self, record):
+        if not hasattr(record, "sid"):
+            record.sid = "-"
+        return True
 
 
 def setup_logging(force: bool = False) -> logging.Logger:
@@ -34,12 +48,12 @@ def setup_logging(force: bool = False) -> logging.Logger:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     formatter = logging.Formatter(
-        fmt="%(asctime)s [%(levelname)s] [pid=%(process)d] %(name)s: %(message)s",
+        fmt="%(asctime)s [%(levelname)s] [pid=%(process)d] [sid=%(sid)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     logger.setLevel(logging.INFO)
-    logger.propagate = False
+    # logger.propagate = False
 
     if logger.handlers:
         for handler in list(logger.handlers):
@@ -47,8 +61,11 @@ def setup_logging(force: bool = False) -> logging.Logger:
             with contextlib.suppress(Exception):
                 handler.close()
 
+    sid_filter = SidFilter()
+
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+    console_handler.addFilter(sid_filter)
 
     file_handler = RotatingFileHandler(
         LOG_FILE,
@@ -57,13 +74,15 @@ def setup_logging(force: bool = False) -> logging.Logger:
         encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
+    file_handler.addFilter(sid_filter)
 
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     return logger
 
 
-logger = setup_logging()
+setup_logging()
+server_logger = get_sid_logger()
 
 
 sio = socketio.AsyncServer(
@@ -106,16 +125,32 @@ def close_worker_state(state: Dict[str, Any]) -> None:
     request_queue = state["request_queue"]
     proc = state["proc"]
 
+    # 1) Пытаемся завершить штатно
     with contextlib.suppress(Exception):
         request_queue.put({"type": "STOP", "args": {}})
 
     if proc is not None:
+        # 2) Немного ждем мягкого выхода
         if proc.is_alive():
-            proc.join(timeout=1)
+            proc.join(timeout=GRACEFUL_WORKER_STOP_SEC)
 
+        # 3) Если не вышел - terminate()
         if proc.is_alive():
-            proc.terminate()
-            proc.join(timeout=1)
+            server_logger.warning("Worker pid=%s did not stop gracefully, terminating", proc.pid)
+            with contextlib.suppress(Exception):
+                proc.terminate()
+            proc.join(timeout=FORCEFUL_WORKER_KILL_SEC)
+
+        # 4) Если все еще жив - kill
+        if proc.is_alive():
+            server_logger.error("Worker pid=%s survived terminate(), killing", proc.pid)
+            with contextlib.suppress(Exception):
+                os.kill(proc.pid, signal.SIGKILL)
+            proc.join(timeout=FORCEFUL_WORKER_KILL_SEC)
+
+        # 5) Последняя проверка
+        if proc.is_alive():
+            server_logger.critical("Worker pid=%s is still alive after SIGKILL", proc.pid)
 
     for q in (response_queue, msg_queue, request_queue):
         with contextlib.suppress(Exception):
@@ -141,7 +176,7 @@ def start_worker_for_sid(sid: str) -> Dict[str, Any]:
     proc.start()
     state["proc"] = proc
 
-    logger.info(
+    server_logger.info(
         "Started worker for sid=%s pid=%s mode=%s",
         sid, proc.pid, state["mode"].value
     )
@@ -152,7 +187,7 @@ def replace_worker_for_sid(sid: str) -> Dict[str, Any]:
     old_state = workers[sid]
     mode = old_state["mode"]
 
-    logger.info("Replacing worker state for sid=%s", sid)
+    server_logger.info("Replacing worker state for sid=%s", sid)
     close_worker_state(old_state)
 
     new_state = make_worker_state(mode)
@@ -172,7 +207,7 @@ async def restart_only_this_client(sid: str, error_text: str, tb: str = "") -> N
 
         state["is_restarting"] = True
 
-        logger.exception("Restarting only sid=%s because of backend error: %s", sid, error_text)
+        server_logger.exception("Restarting only sid=%s because of backend error: %s", sid, error_text)
 
         with contextlib.suppress(Exception):
             await sio.emit(
@@ -219,7 +254,6 @@ async def handle_interpretation(request):
 # Route for home and analysis
 @aiohttp_jinja2.template("analysis.html")
 async def handle_analysis(request):
-    # print("[http] /analysis")
     DataInfo.refresh_all_data_info()
     return {
         "request": request,
@@ -244,7 +278,7 @@ async def handle_ask(request):
     if sid not in clients:
         return web.Response(status=400, text="Unknown SID")
 
-    logger.info("ask request from sid=%s", sid)
+    server_logger.info("ask request from sid=%s", sid)
     ask_cmd = data.get('ask')
 
     if ask_cmd == "parameters":
@@ -258,7 +292,7 @@ async def handle_ask(request):
 
 async def handle_url(request):
     url = request.match_info.get("url")
-    logger.info("url=%s", url)
+    server_logger.info("url=%s", url)
 
     if url not in ['dataset', 'model', 'explainer', 'block']:
         return web.Response(status=404, text="Invalid URL")
@@ -286,7 +320,7 @@ async def handle_url(request):
     if proc is None or not proc.is_alive():
         return web.Response(status=503, text="Worker is not alive")
 
-    logger.info("%s http request from sid=%s args=%s", url, sid, dict(data))
+    server_logger.info("%s http request from sid=%s args=%s", url, sid, dict(data))
     request_queue.put({"type": url, "args": dict(data)})
 
     loop = asyncio.get_running_loop()
@@ -323,7 +357,8 @@ async def connect(sid, environ):
     query = dict(qc.split('=') for qc in query_string.split('&') if '=' in qc)
     mode = ClientMode(query.get('mode', None))
 
-    logger.info("[connect] sid=%s mode=%s", sid, mode.value)
+    sid_logger = get_sid_logger(sid)
+    sid_logger.info("Client connected, mode=%s", mode.value)
 
     workers[sid] = make_worker_state(mode)
     task = asyncio.create_task(client_wrapper(sid))
@@ -332,7 +367,7 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
-    logger.info("[disconnect] sid=%s", sid)
+    get_sid_logger(sid).info("Client disconnected")
 
     task = clients.get(sid)
     if task is not None:
@@ -342,9 +377,11 @@ async def disconnect(sid):
 
 
 async def client_wrapper(sid: str):
+    sid_logger = get_sid_logger(sid)
+
     state = workers.get(sid)
     if state is None:
-        logger.warning("client_wrapper started without worker state sid=%s", sid)
+        sid_logger.info("client_wrapper started")
         return
 
     start_worker_for_sid(sid)
@@ -380,29 +417,35 @@ async def client_wrapper(sid: str):
             if isinstance(msg, dict) and msg.get("__meta__") == "worker_crash":
                 tb = msg.get("traceback", "")
                 err = msg.get("error_text", "Unknown backend error")
-                logger.error("Worker crash for sid=%s: %s\n%s", sid, err, tb)
+                sid_logger.error("Worker crash %s\n%s", err, tb)
                 await restart_only_this_client(sid, err, tb)
                 continue
 
-            logger.info("got msg from queue sid=%s [%s] %s", sid, len(str(msg)), str(msg)[:120])
+            sid_logger.info("got msg from queue [%s] %s", len(str(msg)), str(msg)[:120])
             await sio.emit("message", msg, to=sid)
 
     except asyncio.CancelledError:
-        logger.info("client_wrapper cancelled sid=%s", sid)
+        sid_logger.info("client_wrapper cancelled")
         raise
 
     except Exception:
-        logger.exception("Unhandled exception in client_wrapper sid=%s", sid)
+        sid_logger.exception("Unhandled exception in client_wrapper")
         raise
 
     finally:
-        logger.info("cleanup for sid=%s", sid)
+        sid_logger.info("cleanup")
 
         state = workers.pop(sid, None)
         if state is not None:
             await async_close_worker_state(state)
 
         clients.pop(sid, None)
+
+
+def set_pdeathsig(sig=signal.SIGKILL):
+    libc = ctypes.CDLL("libc.so.6")
+    PR_SET_PDEATHSIG = 1
+    return libc.prctl(PR_SET_PDEATHSIG, sig)
 
 
 def worker_process(
@@ -415,21 +458,25 @@ def worker_process(
     # We ignore SIGINT in worker - it is for server
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    setup_logging(force=True)
-    logger = logging.getLogger("gnn_aid.web")
+    # Additional safety: Чтобы worker не становился сиротой, если главный процесс умер внезапно
+    with contextlib.suppress(Exception):
+        set_pdeathsig(signal.SIGKILL)
 
-    logger.info("Process started sid=%s", sid)
+    setup_logging(force=True)
+    logger = get_sid_logger(sid)
+
+    logger.info("Process started")
 
     try:
-        socket_connect = AiohttpSocketConnect(msg_queue)
-        client = FrontendClient(socket_connect, mode)
-        logger.info("Created FrontendClient sid=%s", sid)
+        socket_connect = AiohttpSocketConnect(msg_queue, sid)
+        client = FrontendClient(socket_connect, mode, sid)
+        logger.info("Created FrontendClient")
 
         client.run_loop(response_queue, msg_queue, request_queue)
 
     except Exception as e:
         tb = traceback.format_exc()
-        logger.exception("Unhandled exception in worker_process sid=%s", sid)
+        logger.exception("Unhandled exception in worker_process")
 
         with contextlib.suppress(Exception):
             msg_queue.put_nowait({
@@ -449,13 +496,14 @@ def worker_process(
 
 
 class AiohttpSocketConnect(SocketConnect):
-    def __init__(self, queue: Queue):
+    def __init__(self, queue: Queue, sid: str):
         super().__init__()
         self.mp_queue = queue
+        self.logger = get_sid_logger(sid)
 
     def _send_data(self, data):
         self.mp_queue.put_nowait(data)
-        logger.info("put msg to mpqueue [%s] %s", len(str(data)), str(data)[:100])
+        self.logger.debug("put msg to mpqueue [len=%s] '%s'", len(str(data)), str(data)[:100])
 
 
 async def async_close_worker_state(state):
@@ -476,39 +524,98 @@ async def emit_fatal_stop_to_all(reason: str, traceback_text: str = ""):
             await sio.emit("message", payload, to=sid)
 
 
+async def graceful_shutdown(reason: str = "Server is shutting down"):
+    global shutdown_started
+
+    async with shutdown_lock:
+        if shutdown_started:
+            return
+        shutdown_started = True
+
+        server_logger.info("Graceful shutdown started: %s", reason)
+
+        # 1. Сообщаем фронту, пока transport еще жив
+        await emit_fatal_stop_to_all(reason)
+
+        # Даем шанс сообщению дойти
+        await asyncio.sleep(0.7)
+
+        # 2. Закрываем socket-соединения
+        for sid in list(clients.keys()):
+            with contextlib.suppress(Exception):
+                await sio.disconnect(sid)
+
+        # 3. Останавливаем worker-процессы
+        loop = asyncio.get_running_loop()
+        states = list(workers.values())
+        for state in states:
+            await loop.run_in_executor(None, close_worker_state, state)
+
+        # 4. Отменяем client_wrapper tasks
+        tasks = []
+        for sid, task in list(clients.items()):
+            if task is not None and not task.done():
+                task.cancel()
+                tasks.append(task)
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+        workers.clear()
+        clients.clear()
+
+        server_logger.info("Graceful shutdown finished")
+
+
 async def on_shutdown(app):
-    logger.info("Server shutdown started")
-
-    reason = "Server is shutting down (Ctrl+C or server stop)"
-    await emit_fatal_stop_to_all(reason)
-
-    # Даем фронту шанс получить сообщение
-    await asyncio.sleep(0.5)
-
-    # Закрываем socket-соединения
-    for sid in list(clients.keys()):
-        with contextlib.suppress(Exception):
-            await sio.disconnect(sid)
-
-    tasks = []
-
-    for sid, task in list(clients.items()):
-        if task is not None and not task.done():
-            task.cancel()
-            tasks.append(task)
-
-    if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
-
-    logger.info("Server shutdown finished")
+    server_logger.info("aiohttp on_shutdown called")
 
 
 app.on_shutdown.append(on_shutdown)
 
 
 def run_aiohttp_server(port=5000):
-    logger.info("Starting aiohttp server on port %s", port)
-    web.run_app(app, port=port)
+    server_logger.info("Starting aiohttp server on port %s", port)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    runner = web.AppRunner(app)
+
+    async def start():
+        await runner.setup()
+        site = web.TCPSite(runner, host="0.0.0.0", port=port)
+        await site.start()
+        server_logger.info("Server started on port %s", port)
+
+    stop_event = asyncio.Event()
+
+    async def shutdown_and_stop():
+        try:
+            await graceful_shutdown("Server is shutting down (Ctrl+C)")
+        finally:
+            with contextlib.suppress(Exception):
+                await runner.cleanup()
+            stop_event.set()
+
+    def handle_signal():
+        server_logger.info("Signal received, scheduling graceful shutdown")
+        loop.create_task(shutdown_and_stop())
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        with contextlib.suppress(NotImplementedError):
+            loop.add_signal_handler(sig, handle_signal)
+
+    try:
+        loop.run_until_complete(start())
+        loop.run_until_complete(stop_event.wait())
+    finally:
+        pending = [t for t in asyncio.all_tasks(loop) if not t.done()]
+        for task in pending:
+            task.cancel()
+        with contextlib.suppress(Exception):
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        loop.close()
 
 
 if __name__ == '__main__':

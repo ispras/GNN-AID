@@ -1,4 +1,5 @@
 import json
+import logging
 from collections import deque
 from pathlib import Path
 from threading import Thread
@@ -266,3 +267,8 @@ def compute_stats_data(
     # Note: we update all stats data at once because it can be requested from frontend during
     # the update
     return stats_data
+
+
+def get_sid_logger(sid: str | None = None) -> logging.LoggerAdapter:
+    base_logger = logging.getLogger("gnn_aid.web")
+    return logging.LoggerAdapter(base_logger, {"sid": sid or "-"})
