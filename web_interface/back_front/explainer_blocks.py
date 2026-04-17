@@ -173,7 +173,7 @@ class ExplainerInitBlock(Block):
             init_config=self.explainer_init_config,
             explainer_name=self.explainer_init_config._class_name
         )
-        self._result = {"config": self.explainer_init_config}
+        self._result = {"config": self.explainer_init_config.to_dict()}
 
 
 class ExplainerRunBlock(Block):

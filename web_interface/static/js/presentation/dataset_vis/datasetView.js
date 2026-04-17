@@ -98,7 +98,9 @@ class DatasetView extends View {
                 // TODO other model vars
                 for (const elem of VisibleGraph.ELEMS) {
                     this.datasetVar[elem]['train-test-mask'] = null
-                    this.visibleGraph.setSatellite(elem, 'train-test-mask', false)
+                    // FIXME remove train-test-mask in visibleGraph
+                    console.error('TODO: remove train-test-mask in visibleGraph')
+                    // this.visibleGraph.setSatellite(elem, 'train-test-mask', false)
                 }
             }
         }
@@ -113,12 +115,13 @@ class DatasetView extends View {
         // super.onReceive(block, args)
         if (block === "mmc" || block === "mt" || block === "at") {
             console.log('onReceive', block, data)
-            let updDatasetVar = false
+            // let updDatasetVar = false
             for (const elem of VisibleGraph.ELEMS) {
                 for (const satellite of VisibleGraph.SATELLITES) {
                     if (elem in data && satellite in data[elem]) {
-                        updDatasetVar = true
+                        // updDatasetVar = true
                         this.datasetVar[elem][satellite] = data[elem][satellite]
+                        this.visibleGraph.needsRedraw = true
                         // this.visibleGraph.setSatellite(elem, satellite)
                     }
                 }
@@ -126,14 +129,14 @@ class DatasetView extends View {
             // fixme can we do simpler than copying? it is in several places.
             //  why we need this.datasetVar?
             this.visibleGraph.datasetVar = this.visibleGraph._convertDatasetVar(this.datasetVar)
-            if (updDatasetVar)
-                for (const elem of VisibleGraph.ELEMS) {
-                    for (const satellite of VisibleGraph.SATELLITES) {
-                        if (elem in data && satellite in data[elem]) {
-                            this.visibleGraph.setSatellite(elem, satellite)
-                        }
-                    }
-                }
+            // if (updDatasetVar)
+            //     for (const elem of VisibleGraph.ELEMS) {
+            //         for (const satellite of VisibleGraph.SATELLITES) {
+            //             if (elem in data && satellite in data[elem]) {
+            //                 this.visibleGraph.setSatellite(elem, satellite)
+            //             }
+            //         }
+            //     }
         }
         else if (block === "er") {
             if ("explanation_data" in data) {

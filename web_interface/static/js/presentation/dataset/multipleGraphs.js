@@ -373,21 +373,47 @@ class MultipleGraphs extends Graph {
 
     }
 
-    // draw(adjust = true) {
-    //     const cb = this.onNodeClick
-    //     if (cb) this.onNodeClick = (kind, node) => cb(kind, node, this._graph)
-    //
-    //     const prevShowClassAsColor = this._showClassAsColor
-    //     if (this._showNodeTypeAsColor) this._showClassAsColor = false
-    //
-    //     super.draw(false)
-    //
-    //     this._showClassAsColor = prevShowClassAsColor
-    //     if (cb) this.onNodeClick = cb
-    //
-    //
-    //
-    // }
+    setNodeExplanationColor(node, n) {
+        if (this.explanation && this._graphIx in this.explanation.nodes && n in this.explanation.nodes[this._graphIx]) {
+            const value = this.explanation.nodes[this._graphIx][n]
+            node.setColor(valueToColor(value, this.explanation.colormap), this.nodeExplainedStrokeWidth)
+        }
+        else
+            node.dropColor()
+    }
+
+    setEdgeExplanationColor(edge, eKey) {
+        if (this.explanation && this._graphIx in this.explanation.edges && eKey in this.explanation.edges[this._graphIx]) {
+            const value = this.explanation.edges[this._graphIx][eKey]
+            if (value >= EXPLANATION_EDGE_IMPORTANCE_THRESHOLD) {
+                let color = valueToColor(value, this.explanation.colormap)
+                edge.setColor(color)
+            }
+        }
+        else
+            edge.dropColor()
+    }
+
+    // Add (new) explanation
+    setExplanation(explanation) {
+        if (!explanation) return
+        this.explanation = explanation
+        this.needsRedraw = true
+
+        // Change keys to sorted(i,j) for undirected graphs
+        if (this.explanation.edges && !this.datasetInfo.directed) {
+            const edges = {}
+            for (const [g, eEdges] of Object.entries(this.explanation.edges)) {
+                edges[g] = {}
+                for (const [key, value] of Object.entries(eEdges)) {
+                    let [i, j] = key.split(',')
+                    let sortedKey = `${Math.min(i, j)},${Math.max(i, j)}`
+                    edges[g][sortedKey] = value
+                }
+            }
+            this.explanation.edges = edges
+        }
+    }
 
     /* ---------------------------------- helpers ---------------------------------- */
 

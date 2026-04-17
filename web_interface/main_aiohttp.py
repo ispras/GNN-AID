@@ -11,6 +11,7 @@ import jinja2
 import aiohttp_jinja2
 
 from gnn_aid.aux.data_info import DataInfo
+from web_interface.back_front import WebInterfaceError, json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR
 
@@ -77,7 +78,7 @@ async def handle_ask(request):
     if ask_cmd == "parameters":
         type_ = data.get('type')
         params = FrontendClient.get_parameters(type_)
-        params = json.dumps(params)
+        params = json_dumps(params)
         return web.Response(text=params)
     else:
         return web.Response(status=400, text=f"Unknown 'ask' command {ask_cmd}")
@@ -176,7 +177,8 @@ async def client_wrapper(sid: str, mode: ClientMode):
     #         proc.terminate()
     #         proc.join(timeout=1)
     except Exception as e:
-        print('exception', e)
+        print('\n'*3, 'exception', e, msg, '\n'*3)
+        # TODO raise
 
 
 # Worker process logic

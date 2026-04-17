@@ -129,7 +129,6 @@ class VisibleGraph {
         this.numClasses = null
         this.coloredNodes = null // {class -> node fill color}
         this.explanation = null
-        this.explanationEdges = null // {edge -> SVG primitive} for current explanation
         this.layout = null
         this.onNodeClick = null // callback when node is clicked
         this.beforeInit = null // callback when reinit() is called
@@ -271,12 +270,21 @@ class VisibleGraph {
         // Читаем размер один раз
         this.svgParentSize = new Vec(parent.clientWidth, parent.clientHeight)
 
-        // Если нужно реагировать на resize окна — вешаем на window:
+        // Если нужно реагировать на resize окна или svg
         window.addEventListener('resize', () => {
+            // console.log('window - resize')
             this.svgParentSize.x = parent.clientWidth
             this.svgParentSize.y = parent.clientHeight
             this.needsRedraw = true
         })
+        let parentResize = () => {
+            // console.log('parent - resize')
+            this.svgParentSize.x = parent.clientWidth
+            this.svgParentSize.y = parent.clientHeight
+            this.needsRedraw = true
+        }
+        parentResize()
+        new ResizeObserver(parentResize).observe(parent)
     }
 
     // Convert node,edge,graph attributes
@@ -521,7 +529,6 @@ class VisibleGraph {
     // Remove all elements associated with dataset var data - to be overridden
     _dropVar() {
         this.explanation = null
-        this.explanationEdges = null
     }
 
     // Drops and builds with other parameters, handling Var part properly, keeping listeners
@@ -606,10 +613,6 @@ class VisibleGraph {
 
     // Create HTML for SVG primitives on the given element
     createPrimitives() {
-        // // Add <g> for explanation edges
-        // this.svgPanel.add("explanation-edges")
-        // // Explanation will be set after the layout
-
         let gEdge = this.svgPanel.add("edge")
         this.edgePrimitives = {0:{}}
         for (let n=0; n<Thresholds.MAX_VISIBLE_EDGES_COUNT; ++n) {
@@ -618,8 +621,6 @@ class VisibleGraph {
             this.edgePrimitives[0][n] = edge
             gEdge.appendChild(edge.g)
         }
-
-        let gEdgeSat = this.svgPanel.add("edge-satellites")
 
         // Add max slots for nodes
         this.nodePrimitives = {}
@@ -851,6 +852,9 @@ class VisibleGraph {
         if (node.text.textContent !== n)
             node.text.textContent = n
 
+        // Set explanation color
+        this.setNodeExplanationColor(node, n)
+
         // Set var
         if (this.datasetVar) {
             // Set color
@@ -891,6 +895,27 @@ class VisibleGraph {
         // node.addTip(JSON_stringify(this.getNodeAttrs(n), 1))
     }
 
+    setNodeExplanationColor(node, n) {
+        if (this.explanation && n in this.explanation.nodes) {
+            const value = this.explanation.nodes[n]
+            node.setColor(valueToColor(value, this.explanation.colormap), this.nodeExplainedStrokeWidth)
+        }
+        else
+            node.dropColor()
+    }
+
+    setEdgeExplanationColor(edge, eKey) {
+        if (this.explanation && eKey in this.explanation.edges) {
+            const value = this.explanation.edges[eKey]
+            if (value >= EXPLANATION_EDGE_IMPORTANCE_THRESHOLD) {
+                let color = valueToColor(value, this.explanation.colormap)
+                edge.setColor(color)
+            }
+        }
+        else
+            edge.dropColor()
+    }
+
     drawEdge(edge, i, j, drawSatellites) {
         const pos = this.layout.pos
         const x1e = pos[i].x * this.scale, y1e = pos[i].y * this.scale
@@ -904,8 +929,12 @@ class VisibleGraph {
         // Set attributes specific to this node
         this.setEdgeAttributes(edge, i, j)
 
-        // Set satellites
         let eKey = `${i},${j}`
+
+        // Set explanation color
+        this.setEdgeExplanationColor(edge, eKey)
+
+        // Set satellites
         if (this.datasetVar)
             for (const satellite of VisibleGraph.SATELLITES) {
                 if (!drawSatellites) {
@@ -1042,46 +1071,28 @@ class VisibleGraph {
     // Add (new) explanation
     setExplanation(explanation) {
         if (!explanation) return
-        this.explanation = explanation
-
         console.log('VisibleGraph.drawExplanation')
-        let $g = this.svgPanel.get("explanation-edges")
-        // $g.empty()
-        this.explanationEdges = {}
-        if (this.explanation.edges)
-            for (const [edge, value] of Object.entries(this.explanation.edges)) {
-                // TODO create threshold from interface
-                let thr = EXPLANATION_EDGE_IMPORTANCE_THRESHOLD
-                if (value < thr) continue
-                let color = valueToColor(value, this.explanation.colormap)
-                // TODO how to determine width by edge ?
-                let svg = new SvgEdge(0, 0, 0, 0, 1, color, this.edgeExplainedStrokeWidth,
-                    this.explanation.isDirected(),true)
-                this.explanationEdges[edge] = svg
-                $g.append(svg.path)
-            }
+        this.explanation = explanation
+        this.needsRedraw = true
 
-        if (this.explanation.nodes)
-            for (const [node, value] of Object.entries(this.explanation.nodes))
-                if (node in this.nodePrimitives)
-                    this.nodePrimitives[node].setColor(
-                        valueToColor(value, this.explanation.colormap), this.nodeExplainedStrokeWidth)
-        this.draw()
+        // Change keys to sorted(i,j) for undirected graphs
+        if (this.explanation.edges && !this.datasetInfo.directed) {
+            const edges = {}
+            for (const [key, value] of Object.entries(this.explanation.edges)) {
+                let [i, j] = key.split(',')
+                let sortedKey = `${Math.min(i,j)},${Math.max(i,j)}`
+                edges[sortedKey] = value
+            }
+            this.explanation.edges = edges
+        }
     }
 
     // Remove all explanation elements
     dropExplanation() {
         if (!this.explanation) return
         console.log('VisibleGraph.dropExplanation')
-        // TODO re-use drawExplanation
-        let $g = this.svgPanel.get("explanation-edges")
-        $g.empty()
-        if (this.explanation.nodes)
-            for (const node of Object.keys(this.explanation.nodes))
-                if (node in this.nodePrimitives)
-                    this.nodePrimitives[node].dropColor()
         this.explanation = null
-        this.explanationEdges = null
+        this.needsRedraw = true
     }
 
     showClassAsColor(show) {

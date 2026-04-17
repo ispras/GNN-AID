@@ -16,6 +16,8 @@ class SvgElement {
         this.y = y
         // Size
         this.r = r
+        // Color
+        this.color = color
         // scale
         this.s = 1
         // Flag whether all is shown or not

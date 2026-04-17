@@ -349,7 +349,7 @@ class SubgraphExplanation extends Explanation {
                     rect.setAttribute('width', size)
                     rect.setAttribute('height', size)
                     let color = "#c4c4c4"
-                    if (ix in features) {
+                    if (features[ix] != null) {
                         color = valueToColor(features[ix], this.colormap)
                         _addTip(rect, ix + ': ' + features[ix])
                     }

@@ -153,7 +153,8 @@ class GNNConstructor:
         # FIXMe architecture and weights can be not accessible
         result = {}
         try:
-            result["architecture"] = self.get_architecture()
+            # TODO use dataclass for ModelConfigStructure to make it serializable
+            result["architecture"] = self.get_architecture().to_dict()
         except (AttributeError, NotImplementedError):
             pass
         try:

@@ -48,6 +48,10 @@ function randomColor(s=0.5, l=0.95) {
  */
 function valueToColor(value, colormap, min=0, max=1, soft=false, p=0.2) {
     value = parseFloat(value) // Just for safety
+    if (isNaN(value)) {
+        console.error(`Value for color is NaN, check the code`)
+        return
+    }
     if (soft) {
         // Use sigmoid function s.t. f(min)=p, f(max)=1-p, f(+inf)=1, f(-inf)=0
         let a = 2*Math.log(p/(1-p))/(max-min)
@@ -417,7 +421,7 @@ function sleep(ms) {
 }
 
 function JSON_parse(string) {
-    return string
+    // return string
     // console.log('parsing JSON from string:', string)
     return JSON.parse(string, function (key, value) {
         if (value === 'NaN')
