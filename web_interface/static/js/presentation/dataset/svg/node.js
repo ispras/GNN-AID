@@ -21,7 +21,6 @@ class SvgNode extends SvgElement {
         }
         else
             console.error("Unknown form")
-        this.g.appendChild(this.body)
 
         this.body.setAttribute('stroke-width', this.width)
         this.body.setAttribute('class', 'graph-node')
@@ -31,7 +30,8 @@ class SvgNode extends SvgElement {
         this.text.setAttribute('text-anchor', 'middle')
         this.text.setAttribute('class', 'graph-node-text')
         this.text.setAttribute('display', show ? "inline" : "none")
-        this.g.appendChild(this.text)
+        this.g.prepend(this.text)
+        this.g.prepend(this.body)
 
         // this.attrBlocks = null
         // this.attrTextBlocks = null

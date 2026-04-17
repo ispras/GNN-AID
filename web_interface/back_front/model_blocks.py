@@ -126,7 +126,7 @@ class ModelLoadBlock(Block):
         """ Load train/test mask associated to the model and send to frontend """
         # FIXME self.manager_config.train_test_split
         self.gen_dataset.train_mask, self.gen_dataset.val_mask, self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
-        dvd = self.visible_part.get_train_test_mask()
+        dvd = self.visible_part.get_train_test_mask().to_dict()
         self.socket.send(block='mload', msg=dvd)
 
 
@@ -299,7 +299,7 @@ class ModelManagerBlock(Block):
         # Create and send train_test_mask
         if create_train_test_mask:
             self.gen_dataset.train_test_split(*self.model_manager_config.train_test_split)
-            dvd = self.visible_part.get_train_test_mask()
+            dvd = self.visible_part.get_train_test_mask().to_dict()
             self.socket.send(block='mmc', msg=dvd)
 
     def get_satellites(
@@ -373,7 +373,7 @@ class ModelTrainerBlock(Block):
         stats_data = {k: self.visible_part.filter(v) for k, v in stats_data.items()}
 
         # Reformat to DatasetVarData
-        dvd = add_into_dvd(self.gen_dataset, stats_data)
+        dvd = add_into_dvd(self.gen_dataset, stats_data).to_dict()
 
         send_epoch_results(
             epochs=self.model_manager.modification.epochs,
@@ -460,7 +460,7 @@ class ModelTrainerBlock(Block):
         self.model_manager.gnn.reset_parameters()
         self.model_manager.modification.epochs = 0
         self.gen_dataset.train_test_split(*self.model_manager.manager_config.train_test_split)
-        dvd = self.visible_part.get_train_test_mask()
+        dvd = self.visible_part.get_train_test_mask().to_dict()
         self.socket.send(block='mt', msg=dvd)
         self._run_model()
 
@@ -480,7 +480,7 @@ class ModelTrainerBlock(Block):
         stats_data = {k: self.visible_part.filter(v)
                       for k, v in stats_data.items()}
         # Reformat to DatasetVarData
-        dvd = add_into_dvd(self.gen_dataset, stats_data)
+        dvd = add_into_dvd(self.gen_dataset, stats_data).to_dict()
 
         send_epoch_results(
             metrics_values=metrics_values, stats_data=dvd, socket=self.socket)
@@ -504,7 +504,7 @@ class ModelTrainerBlock(Block):
             self.model_manager.train_model(
                 gen_dataset=self.gen_dataset, save_model_flag=False,
                 mode=mode, steps=steps, metrics=self.metrics,
-            apply_posisoning_ad=apply_posisoning_ad)
+                apply_posisoning_ad=apply_posisoning_ad)
 
             self.pbar.close()
             self.socket.send("mt", {"status": "OK", "info": "training-finished"})

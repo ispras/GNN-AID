@@ -15,7 +15,7 @@ class MenuExplainerLoadView extends MenuView {
         }
         else {
             this.prefixStorage = PrefixStorage.fromJSON(args[2][0])
-            this.info = JSON_parse(args[2][1])
+            this.info = args[2][1]
 
             // Add refresh button
             let $div = $("<div></div>").css("display", "flex")
@@ -57,7 +57,7 @@ class MenuExplainerLoadView extends MenuView {
         blockDiv(this.$div, true)
         let [ps, info] = await controller.ajaxRequest('/explainer', {do: "index"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
-        this.info = JSON_parse(info)
+        this.info = info
         this._build()
         blockDiv(this.$div, false)
     }

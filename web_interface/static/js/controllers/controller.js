@@ -76,7 +76,7 @@ class Controller {
         this.socket.on('message', async (data) => {
             // Message to block listeners
             // console.log('received msg', data)
-            let msg = JSON_parse(data["msg"])
+            let msg = data["msg"]
             let block = data["block"]
             let func = data["func"]
             if (block in this.presenter.blockListeners) {
@@ -123,19 +123,6 @@ class Controller {
         }
         return await this.ajaxRequest('/block', data)
     }
-
-    // // Setup storage contents
-    // async getStorageContents(type) {
-    //     let url = '/ask'
-    //     let data = {
-    //         ask: "storage",
-    //         type: type,
-    //     }
-    //     let [ps, info] = await this.ajaxRequest(url, data)
-    //     ps = PrefixStorage.fromJSON(ps)
-    //     info = JSON_parse(info)
-    //     return [ps, info]
-    // }
 
     async ajaxRequest(url, data) {
         let result = null
