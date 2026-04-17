@@ -13,6 +13,7 @@ root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source 
 WEB_DIR = root_dir / "web_interface"
 STATIC_DIR = WEB_DIR / "static"  # js, css code
 TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
+LOG_DIR = WEB_DIR / "logs"  # server logs
 
 
 class WebInterfaceError(Exception):

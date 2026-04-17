@@ -180,17 +180,24 @@ class FrontendClient:
         return False
 
     def run_loop(
-        self,
-        response_queue: Queue,
-        msg_queue: Queue,
-        request_queue: Queue,
+            self,
+            response_queue: Queue,
+            msg_queue: Queue,
+            request_queue: Queue,
     ) -> None:
         while True:
             print('Worker is waiting for command...')
             command = request_queue.get()
+
+            if not isinstance(command, dict):
+                raise WebInterfaceError(f"Unknown command format: {command!r}")
+
             type = command.get('type')
-            args = command.get('args')
-            print(f"Worker: received command: {type} with args: {args}")
+            args = command.get('args') or {}
+
+            if type == "STOP":
+                print("Worker received STOP command; it will finish")
+                break
 
             if type == "dataset":
                 get = args.get('get')
@@ -297,8 +304,5 @@ class FrontendClient:
 
                 response_queue.put(result)
 
-            elif type == "STOP":
-                print(f"Process {sid} received STOP command; it will finish")
-                break
             else:
                 raise WebInterfaceError(f"Unknown command type: 'f{type}'")
