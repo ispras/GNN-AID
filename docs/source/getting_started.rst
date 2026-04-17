@@ -1,120 +1,124 @@
-Getting started
-***************
+Начало работы
+*************
 
 .. contents::
     :local:
     :depth: 2
 
 ..
-    гайд по установке и запуску (на не более 30мин), с ощущением достижения для читателя
+    гайд по установке и запуску (не более 30 минут), с ощущением достижения для читателя
 
     установка
-    запуск на бэке
+    запуск на бэкенде
         взять датасет, обучить модель, добавить 2 атаки и посмотреть числа
-    запуск фронта
+    запуск фронтенда
         запуск main и как открыть в браузере
         запуск из докера?
 
 
-Installation
-============
+Установка
+=========
 
-| GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they
-  suit best for it.
-| For another OS consider docker.
+| GNN-AID разрабатывался и тестировался под Ubuntu 20.04 и 22.04, поэтому
+  они подходят лучше всего.
+.. | Для других операционных систем рекомендуется использовать Docker.
 
-You need python of version ``3.11`` or higher. We advice to create
-virtual environment with ``pip``.
+Для работы системе понадобится минимум: 1 Гб RAM, 10 Гб места на диске.
+Наличие GPU не обязательно, но ускорит работу с большими датасетами.
+В этом случае запускайте только бэкенд.
 
-::
+Вам понадобится Python версии ``3.11``.
+Сначала установите вспомогательные библиотеки
 
-   python -m pip install --upgrade pip
+.. code:: bash
 
-First, get auxiliary libraries
+   sudo apt-get install -y build-essential python3.11-dev libfreetype6-dev pkg-config
 
-::
+Мы рекомендуем создать виртуальное окружение с помощью ``venv`` и активировать его:
 
-   sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config
+.. code:: bash
 
-Then install all project dependencies
+   sudo apt-пуе install python3.11-venv
+   python3 -m venv venv
+   source venv/bin/activate
 
-::
+
+Затем установите все зависимости проекта
+
+.. code:: bash
 
    pip install -r requirements1.txt
    pip install -r requirements2.txt
    pip install -r requirements3.txt
 
-The 3rd pack of requirements will take around 20 minutes.
+Третий набор зависимостей устанавливается примерно 20 минут.
 
-Problems
---------
+Возможные проблемы
+------------------
 
-If you see 139 or 134 error code when run the script, it is likely a
-compatibility issue. Try the following:
+1\. Если во время установки `torch-*` пакетов из ``requiremets3.txt`` возникла ошибка "Failed to build ... when getting requirements to build wheel. No module named 'torch'",
+попробуйте установить `torch-*` пакеты из бинарников:
 
-1. Update video card drivers (if you have decided to use cuda).
-2. Update gcc to the most recent version.
-3. Remove all torch modules that use С++ code.
-4. Install all torch packages again.
+.. code:: bash
 
-Run in backend
+   pip install torch-scatter==2.1.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-sparse==0.6.17 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-cluster==1.6.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+   pip install torch-spline-conv==1.2.2 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+
+где ``${CUDA}`` нужно заменить на ``cpu``, ``cu117`` или ``cu118`` в соответствии с тем как вы установили PyTorch.
+
+2\. Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего,
+это проблема совместимости. Попробуйте следующее:
+
+1. Обновите драйверы видеокарты (если вы используете CUDA).
+2. Обновите gcc до самой новой версии.
+3. Удалите все модули torch, использующие C++ код.
+4. Установите все пакеты torch заново.
+
+Запуск бэкенда
 ==============
 
-.. todo::
-
-    TODO
+Если установлены все зависимости, можно переходить к :doc:`учебным примерам <tutorials>`
 
 
-Create dataset
---------------
+Запуск фронтенда
+================
 
-.. todo::
+Предполагается, что вы находитесь в корневой директории проекта.
+Активируйте виртуальное окружение, если этого еще не сделано:
 
-    TODO
-
-
-Build and train model
----------------------
-
-.. todo::
-
-    TODO
-
-Run in frontend
-===============
-
-Suppose you are at the project root folder. Activate virtual environment
-
-.. code:: text
+.. code:: bash
 
    source venv/bin/activate
 
-Go to ``src`` folder and add it to python dependencies
+Добавьте текущую директорию ``.`` в зависимости Python
 
-.. code:: text
+.. code:: bash
 
-   cd src
    export PYTHONPATH=.
 
-Run ``main.py`` script
+Запустите скрипт ``main.py`` из пакета ``web_interface``
 
-.. code:: text
+.. code:: bash
 
    python web_interface/main.py
 
-You will see something like this
+Подождав около минуты вы увидите примерно следующее
 
 .. code:: text
 
    ======== Running on http://0.0.0.0:5000 ========
    (Press CTRL+C to quit)
 
-Then go to `127.0.0.1:5000 <http://127.0.0.1:5000>`__ in your browser.
-You should see web-interface is loaded.
+Затем откройте `127.0.0.1:5000 <http://127.0.0.1:5000>`__ в браузере.
+Вы должны увидеть загруженную веб-страницу.
+Теперь можно переходить к работе в :doc:`веб-интерфейсе <user_guide/frontend>`
 
-Docker version
---------------
+..
+    Версия с Docker
+    ---------------
 
-.. todo::
+    .. todo::
 
-    TODO
+        TODO

@@ -87,7 +87,7 @@ class PrototypeExplanation extends Explanation {
         this.prototypeGraphs.baseGraphs = this.baseGraphs
         await this.prototypeGraphs.init(this.nodes)
 
-        // Ask for model satellites: masks, preds and embeds
+        // Ask for model satellites: masks, preds and logits
         let datasetVar = {}
         let data = await controller.ajaxRequest('/model', {
             get: "satellites", part: JSON_stringify({center: this.baseGraphs})})

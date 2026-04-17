@@ -4,18 +4,27 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
-from data_structures.configs import ConfigPattern, ModelManagerConfig, ModelModificationConfig
-from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
-from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from datasets.datasets_manager import DatasetManager
-from models_builder.models_zoo import model_configs_zoo
+# from data_structures.configs import ConfigPattern, ModelManagerConfig, ModelModificationConfig, \
+#     Task, DatasetConfig
+# from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+# from datasets.ptg_datasets import LibPTGDataset
+# from explainers.explainers_manager import FrameworkExplainersManager
+# from models_builder.gnn_models import FrameworkGNNModelManager, Metric
+# from datasets.datasets_manager import DatasetManager
+# from models_builder.models_zoo import model_configs_zoo
 
 
 # from pytorch_model_summary import summary
 
 
 # from visualization.plotutils import draw_vk, draw_cora, draw
+from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+from gnn_aid.data_structures import DatasetConfig, DatasetVarConfig, Task
+from gnn_aid.data_structures.configs import ConfigPattern, FeatureConfig
+from gnn_aid.datasets import DatasetManager
+from gnn_aid.explainers import FrameworkExplainersManager
+from gnn_aid.models_builder import model_configs_zoo
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 
 
 def test_Zorro(save_nan=True):
@@ -24,9 +33,11 @@ def test_Zorro(save_nan=True):
 
     dataset_ifo = {}
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
-        dataset_ver_ind=0)
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
+    )
+    data = dataset.data
 
     gcn2 = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
@@ -41,7 +52,7 @@ def test_Zorro(save_nan=True):
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn2,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=gnn_model_manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -182,9 +193,68 @@ def test_Zorro(save_nan=True):
 #         print("INCORRECT PREDICTION")
 
 
+def test_zorro():
+    # Single-Graph - Example
+    gen_dataset_sg_example = DatasetManager.get_by_config(
+        DatasetConfig(("example", "example")),
+        DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+                         features=FeatureConfig(node_attr=['a']),
+                         labeling='binary',
+                         dataset_ver_ind=0)
+    )
+    gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
+    dataset_sg_example = gen_dataset_sg_example
+    results_dataset_path_sg_example = gen_dataset_sg_example.prepared_dir
+
+    gcn2_sg_example = model_configs_zoo(dataset=gen_dataset_sg_example, model_name='gcn_gcn')
+
+    gnn_model_manager_sg_example_manager_config = ConfigPattern(
+        _config_class="ModelManagerConfig",
+        _config_kwargs={
+            "batch": 10000,
+            "mask_features": []
+        }
+    )
+    gnn_model_manager_sg_example = FrameworkGNNModelManager(
+        gnn=gcn2_sg_example,
+        dataset_path=results_dataset_path_sg_example,
+        manager_config=gnn_model_manager_sg_example_manager_config
+    )
+
+
+    explainer_init_config = ConfigPattern(
+        _class_name="Zorro",
+        _import_path=EXPLAINERS_INIT_PARAMETERS_PATH,
+        _config_class="ExplainerInitConfig",
+        _config_kwargs={
+            "_test_": (5, 6)
+        }
+    )
+    explainer_run_config = ConfigPattern(
+        _config_class="ExplainerRunConfig",
+        _config_kwargs={
+            "mode": "local",
+            "kwargs": {
+                "_class_name": "Zorro",
+                "_import_path": EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
+                "_config_class": "Config",
+                "_config_kwargs": {
+                },
+            }
+        }
+    )
+    explainer_Zorro = FrameworkExplainersManager(
+        init_config=explainer_init_config,
+        dataset=dataset_sg_example, gnn_manager=gnn_model_manager_sg_example,
+        explainer_name='Zorro',
+    )
+    explainer_Zorro.conduct_experiment(explainer_run_config)
+
+
 if __name__ == '__main__':
     # t0 = time.clock()
-    test_Zorro()
+    # test_Zorro()
+    test_zorro()
 
     # print(time.clock() - t0)
     # test_Vk()

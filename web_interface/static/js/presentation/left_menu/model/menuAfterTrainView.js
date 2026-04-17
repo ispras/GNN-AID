@@ -8,6 +8,7 @@ class MenuAfterTrainView extends MenuView {
 
         // Variables
         this.availableMethods = null
+        this.isEdgeLevel = null
 
         //Elements
         this.paramsBuilders = Object.fromEntries(MenuAfterTrainView.names.map(x => [x, null]))
@@ -15,15 +16,17 @@ class MenuAfterTrainView extends MenuView {
         this.$methodSelects = Object.fromEntries(MenuAfterTrainView.names.map(x => [x, null]))
 
         // Buttons
-        this.$run = null
+        this.$run = null // Run with attacks
+        this.$save = null
         // this.$reset = null
     }
 
-    async init(arg) {
+    async init(args) {
         super.init()
         // this.appendAcceptBreakButtons()
 
-        this.availableMethods = arg
+        this.availableMethods = args[0]
+        this.isEdgeLevel = args[1]
         await this.addConfigMenu()
     }
 
@@ -48,6 +51,16 @@ class MenuAfterTrainView extends MenuView {
         await controller.ajaxRequest('/model',
             {do: "run with attacks", configs: JSON_stringify(configs)})
         this.$run.prop("disabled", false)
+        this.$acceptDiv.find('button').prop("disabled", false)
+    }
+
+    async onsave() {
+        let configs = this._getConfigs()
+        this.$acceptDiv.find('button').prop("disabled", true)
+        this.$save.prop("disabled", true)
+        await controller.ajaxRequest('/model',
+            {do: "save attack configs", configs: JSON_stringify(configs)})
+        this.$save.prop("disabled", false)
         this.$acceptDiv.find('button').prop("disabled", false)
     }
 
@@ -101,12 +114,24 @@ class MenuAfterTrainView extends MenuView {
             this.paramsBuilders[name] = new ParamsBuilder($methodParamsDiv,
                 name, this.idPrefix + "-AD-param-" + name + '-')
 
+            // For params builder, to replace param name "node" with "edge" for edge task
+            let localPostFunction = (algorithm) => {
+                if ("element_idx" in this.paramsBuilders[name].selectors) {
+                    let elemName = "Node"
+                    if (this.multi)
+                        elemName = "Graph"
+                    if (this.isEdgeLevel)
+                        elemName = "Pair"
+                    this.paramsBuilders[name].renameParam("element_idx", elemName)
+                }
+            }
+
             let self = this
             this.$methodSelects[name].change(async function () {
                 self.paramsBuilders[name].drop()
                 // await self.unlock(true) // Clear chosen values
                 self.$acceptDiv.hide()
-                await self.paramsBuilders[name].build(this.value)
+                await self.paramsBuilders[name].build(this.value, localPostFunction, self.isEdgeLevel)
                 self.$acceptDiv.show()
             })
 
@@ -124,6 +149,18 @@ class MenuAfterTrainView extends MenuView {
 
         this.$run.click(async () => {
             this.onrun() // No await
+        })
+
+        $cb = $("<div></div>").attr("class", "control-block")
+        this.$mainDiv.append($cb)
+        this.$save = $("<button></button>")
+            .attr("id", "model-button-save-after").text("Save")
+            .css("margin-right", "5px")
+            .attr("title", "Save the chosen attack configurations")
+        $cb.append(this.$save)
+
+        this.$save.click(async () => {
+            this.onsave() // No await
         })
 
     }

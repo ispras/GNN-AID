@@ -1,0 +1,1090 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-10 16:11+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../user_guide/datasets.rst:2
+msgid "Работа с датасетами"
+msgstr "Working with datasets"
+
+#: ../../user_guide/datasets.rst:9
+msgid "Idea"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:11
+msgid ""
+"Первым шагом работы с фреймворком GNN-AID является выбор датасета. Мы "
+"разделяем его на 2 этапа:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:13
+msgid "выбор графа или набора графов (определяется ``DatasetConfig``)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:14
+msgid ""
+"определение вариативной части датасета: признаки, разметка, задача "
+"(определяется ``DatasetVarConfig``)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:16
+msgid ""
+"Такое разделение обусловлено тем, что на одном и том же графе, как "
+"объекте реального мира, можно решать множество задач, различающихся "
+"способом формирования числовых признаков из исходных атрибутов вершин или"
+" ребер, задания меток классов или сменить постановку задачи с "
+"классификации вершин на предсказание ребер. В этой связи мы различаем "
+"атрибуты и признаки. Атрибуты — это характеристики вершин или ребер, "
+"например: возраст человека, указанный в аккаунте соцсети, для социального"
+" графа, набор ключевых слов статьи для графа цитирования, тип атома и тип"
+" связи в графе, представляющем молекулу. Разметка также является "
+"вариативной величиной. Например, для известного графа ``karate-club`` "
+"существует как минимум 3 вида разметки вершин для классификации: на 2, 3 "
+"и 4 класса. Третья составляющая — тип задачи. Например, на графе "
+"цитирования можно предсказывать какому разделу науки принадлежит статья "
+"(классификация вершин), а также рекомендовать возможные цитирования "
+"(предсказание ребра). После выбора вариативной части датасета в системе "
+"создаются тензоры признаков (объекты pytorch.tensor) для вершин и, при "
+"необходимости, ребер графа, пригодные для подачи на вход графовой "
+"нейросети. При первом выборе параметров датасета тензоры сохраняются в "
+"хранилище датасетов, чтобы при последующих обращениях к такому датасету "
+"не создавать их заново, а загрузить с диска."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:20
+msgid "Основные классы"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:23
+msgid "GeneralDataset и подклассы"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:25
+msgid ""
+"В GNN-AID все датасеты являются объектами абстрактного класса "
+"``GeneralDataset``. Основные поля:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:27
+msgid "``dataset_config`` - конфиг графа (набора графов), ``DatasetConfig``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:28
+msgid ""
+"``dataset_var_config`` - конфиг вариативной части датасета, "
+"``DatasetVarConfig``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:29
+msgid "``info`` - метаинформация ``DatasetInfo``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:30
+msgid "``dataset`` - датасет как тензоры ``torch_geometric.data.Dataset``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:32 ../../user_guide/datasets.rst:108
+msgid "Основные properties:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:34
+msgid ""
+"``root_dir`` - папка с файлами датасета, в ней лежат папка с исходными "
+"файлами и файл ``metainfo``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:35
+msgid "``raw_dir`` - путь к папке с исходными файлами датасета ``raw/``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:36
+msgid "``prepared_dir`` - путь к папке, где лежат тензоры"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:37
+msgid "``metainfo_path`` - путь к файлу ``metainfo``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:38
+msgid "``data`` - весь датасет как ``torch_geometric.data.Data``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:39
+msgid "``edges`` - список ``edge_index`` для каждого графа датасета"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:40
+msgid "``node_attributes`` - атрибуты вершин как словарь"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:41
+msgid "``labels`` - метки (вершин или графов) для классификации"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:42
+msgid "``node_features`` - признаки вершин как тензоры"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:44 ../../user_guide/datasets.rst:64
+msgid "Основные функции:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:46
+msgid ""
+"``__init__(dataset_config)`` - фиксирует ``metainfo``, вызывает "
+"``_compute_dataset_data()``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:47
+msgid ""
+"``build(dataset_var_config)`` - в подклассе строит Dataset на основе "
+"dataset_var_config, вызывает ``_compute_dataset_var_data()``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:48
+msgid ""
+"``set_visible_part(center, depth)`` - задать область видимости датасета "
+"для отрисовки на фронте"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:50
+msgid "Расширяемые функции (переопределяются в подклассах)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:52
+msgid ""
+"``_compute_dataset_data()`` - построить граф (edge_index и мб сразу "
+"тензоры) на основе ``dataset_config``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:53
+msgid ""
+"``_compute_dataset_var_data()``- построить тензоры (``X``, ``Y`` и тд) на"
+" основе ``dataset_var_config``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:54
+msgid "``node_attributes(attrs)`` - возвращает атрибуты вершин"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:55
+msgid "``edge_attributes(attrs)``- возвращает атрибуты ребер"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:57
+msgid ""
+"Имеет два основных подкласса: ``PTGDataset`` - когда есть один вариант "
+"для тензоров в стиле птг, и ``KnownFormatDataset`` - когда есть граф с "
+"атрибутами и несколько вариантов их кодирования в признаки. В большинстве"
+" случаев пользовательские датасеты наследуются от этих двух классов."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:60
+msgid "PTGDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:62
+msgid ""
+"Generalization and a wrapper over a single ptg Dataset. Features and "
+"labels are defined at initialization. Extend this class if you have a "
+"dataset extending ``torch_geometric.data.Dataset``. У датасета "
+"единственный признак с названием PTG_FEATURE_NAME = \"unknown\", одна "
+"разметка с названием \"origin\"."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:66
+msgid ""
+"``_compute_dataset_data()`` - вызывает ``_define_ptg_dataset()``. Если "
+"обращение первый раз, автоматически генерирует метаинфо на основе "
+"тензоров."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:67
+msgid ""
+"``_define_ptg_dataset()`` - инициализирует соответствующий птг датасет. "
+"При первом обращении построит тензоры и сохранит их в папку по умолчанию "
+"(``processed``)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:69
+msgid ""
+"Построенные тензоры сохраняются там же, где создаются PyG по умолчанию "
+"(``<root_dir>/processed``) для того, чтобы не генерировались при каждом "
+"обращении. В директории ``datasets`` (где лежат все тензоры) на эту папку"
+" создается ссылка."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:71
+msgid ""
+"Имеет два реализованных подкласса для упрощения использования. "
+"``LocalPTGDataset`` - на вход принимает готовые тензоры, "
+"``LibPTGDataset`` - обертка для существующих датасетов из PyG библиотеки."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:74 ../../user_guide/datasets.rst:669
+msgid "LocalPTGDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:76
+msgid ""
+"Нужен для случая быстрого создания датасета из тензоров, полученных в "
+"коде. Работает в 2 режимах. Если на вход подаются тензоры - сохраняет "
+"новый граф. Если ``dataset_config`` то загружает граф с данным конфигом."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:78
+msgid "Функция ``__init__`` принимает 3 аргумента:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:80
+msgid "``data_list`` - список объектов ``torch_geometric.data.data.Data``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:81
+msgid ""
+"``name`` - опционально, имя датасета, по умолчанию использует временную "
+"метку"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:82
+msgid ""
+"``dataset_config`` - если задан, то игнорирует тензоры и пытается "
+"загрузить датасет"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:84
+msgid ""
+"Созданный датасет сохранится в папку с датасетами по пути ``locally-"
+"created-graphs/<group>/<name>``, где ``group`` = ``single-graph`` или "
+"``multiple-graphs`` в зависимости от числа графов в датасете."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:87 ../../user_guide/datasets.rst:621
+msgid "LibPTGDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:89
+msgid ""
+"``LibPTGDataset`` - упрощает работу с библиотечными датасетами. Функция "
+"``__init__()`` дополнительно принимает ``**params`` для инициализации "
+"класса птг датасетов, где есть параметры. Датасеты сохраняются в папку по"
+" пути ``ptg-library-graphs/<domain>/<group>/<name>``, где"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:91
+msgid ""
+"``domain`` - ``single-graph`` или ``multiple-graphs`` в зависимости от "
+"числа графов в датасете"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:92
+msgid "``group`` - название группы датасетов в PyG, например ``TUDatasets``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:93
+msgid "``name`` - название графа в группе датасетов, например ``MUTAG``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:95
+msgid ""
+"Основная нагруженная функция ``_define_ptg_dataset()``, которая разбирает"
+" разные случаи инициализации птг датасета."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:97
+msgid ""
+"Не все датасеты из PyG поддерживаются. Список доступных есть в файле "
+"``metainfo/torch_geom_index.json``. Функция "
+"``is_in_torch_geometric_datasets(full_name)`` позволяет проверить наличие"
+" датасета в списке по полному имени (кортеж из 3 частей)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:100
+msgid "KnownFormatDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:102
+msgid ""
+"Класс для датасетов в одном из фиксированных форматов со "
+"стандартизированной обработкой. Датасет может быть задан во внутреннем "
+"формате ``ij`` (подробное описание формата см в [[#Формат датасетов "
+"``ij``]].) или в одном из поддерживаемых: ``gml``, ``adjlist``, ``g6`` и "
+"другие (конвертируются в ``ij``)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:104
+msgid ""
+"Предполагается, что сырые данные датасета содержат список ребер и файлы с"
+" атрибутами и метками. Также необходим готовый файл ``metainfo``. "
+"Построение вариативной части регулируется параметром "
+"``dataset_var_config`` и реализуется в функции "
+"``_compute_dataset_var_data()``. В классе ``KnownFormatDataset`` способы "
+"построения признаков из атрибутов предлагают несколько стандартных "
+"вариантов и описываются в конфиге ``FeatureConfig``. Подробнее см в "
+"[[#Building features from attributes]]. Для более кастомного задания "
+"датасета необходимо наследоваться от класса ``GeneralDataset``."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:106
+msgid ""
+"Функция ``__init__`` дополнительно принимает словари со значениями "
+"атрибутов по умолчанию - используются если в исходных данных есть "
+"пропущенные атрибуты."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:110
+msgid "``node_attributes_dir`` - путь к папке с атрибутами вершин"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:111
+msgid "``labels_dir`` - путь к папке с разметками"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:112
+msgid "``edges_path`` - путь к файлу со списком ребер"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:113
+msgid ""
+"``edge_index_path`` - путь к файлу с индексами ребер по графам (для "
+"датасетов из нескольких графов)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:115
+msgid "Основные функции класса:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:117
+msgid ""
+"``check_validity()`` - проверяет что сырые данные валидны и согласованы с"
+" метаинфо"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:118
+msgid "``_convert_to_ij()`` - конвертирует иные поддерживаемые форматы в ``ij``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:119
+msgid "``_create_ptg()`` - отвечает за формирование тензоров"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:120
+msgid "``_feature_tensor()`` - создание тензоров признаков"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:121
+msgid "``_labeling_tensor()`` - создание тензоров меток"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:122
+msgid "``_read_attributes()`` - чтение атрибутов из сырых данных"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:123
+msgid ""
+"``_read_single()`` - чтение ребер из сырых данных в тензоры, "
+"перенумеровка вершин, случай 1 графа"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:124
+msgid ""
+"``_read_multi()`` - чтение ребер из сырых данных в тензоры, перенумеровка"
+" вершин, случай нескольких графов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:125
+msgid "``_infer_feature_slices_form_attributes()``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:128
+msgid "DatasetInfo - метаинформация о датасете"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:130
+msgid ""
+"Класс ``DatasetInfo`` является описанием всех свойств датасета: формат, "
+"направление ребер, число графов и вершин и т.д. Основные поля:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:132
+msgid "``class_name`` - имя класса для инициализации объекта"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:133
+msgid "``import_from`` - название модуля откуда импортить класс"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:134
+msgid "``name`` - имя датасета (опционально, по умолчанию использует путь)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:135
+msgid "``format`` - формат сырых данных (опционально, по умолчанию ij)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:136
+msgid "``count`` - число графов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:137
+msgid "``directed`` - флаг направленности ребер (опционально, по умолчанию false)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:138
+msgid "``hetero`` - флаг гетерографа (опционально, по умолчанию false)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:139
+msgid "``nodes`` - список числа вершин в графах"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:140
+msgid "``remap`` - флаг перенумерации вершин (опционально, по умолчанию false)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:142
+msgid ""
+"Он также задает типы атрибутов для того, чтобы определить как их можно "
+"конвертировать в признаки (см [[#Building features from attributes]])."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:144
+msgid ""
+"``node_attributes`` - инфо об атрибутах вершин (опционально), словарь с "
+"ключами (или с промежуточными ключами с типами вершин - для гетерографов)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:146
+msgid "``names`` - список названий"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:147
+msgid "``types`` - список типов из 4 вариантов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:149
+msgid "``\"continuous\"`` - непрерывная величина"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:150
+msgid "``\"categorical\"`` - категориальный"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:151
+msgid "``\"vector\"`` - вектор непрерывных значений (как в торче)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:152
+msgid "``\"other\"`` - другой тип, например строка"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:154
+msgid "``values`` - список возможных значений атрибутов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:156 ../../user_guide/datasets.rst:468
+msgid "``continuous`` - мин и макс значения, список"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:157 ../../user_guide/datasets.rst:469
+msgid "``categorical`` - перечисление возможных значений, список"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:158 ../../user_guide/datasets.rst:470
+msgid "``vector`` - мин и макс значения, список"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:159
+msgid ""
+"``other`` - пустой список или какие-то указания на то как обрабатывать "
+"значения"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:161
+msgid "``edge_attributes`` - инфо об атрибутах ребер (опционально), аналогично"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:162
+msgid ""
+"``labelings`` - инфо о разметках, словарь с ключами (или с промежуточными"
+" ключами с типами вершин - для гетерографов)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:164
+msgid "название разметки -> значение"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:166
+msgid "для классификации - число классов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:167
+msgid "для регрессии на вершинах - мин и макс значения или 0"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:169
+msgid ""
+"Пример - граф из 8 вершин с атрибутами: ``a`` (непрерывный) и ``b`` "
+"(категориальный) у вершин, ``weight`` (непрерывный) у ребер."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:198
+msgid "Configs"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:200
+msgid ""
+"При работе с датасетами необходимы 3 конфига - ``DatasetConfig``, "
+"``DatasetVarConfig`` и ``FeatureConfig``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:203
+msgid "DatasetConfig"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:205
+msgid ""
+"Определяет местонахождение датасета (путь к сырым файлам) и параметры "
+"инициализации конструктора при наличии (например, вероятность ребра "
+"генерации синтетического графа)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:207
+msgid "``full_name`` - кортеж из имен подпапок, длины не менее 2"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:208
+msgid "``init_kwargs`` - словарь параметров для конструктора"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:211
+msgid "DatasetVarConfig"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:213
+msgid "Определяет как будут построена вариативная часть датасета."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:215
+msgid "``features`` - объект ``FeatureConfig``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:216
+msgid ""
+"``labeling`` - название разметки или словарь-инструкция для построения "
+"разметки"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:217
+msgid "``task`` - задача на датасете (пока недоступно)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:218
+msgid ""
+"``dataset_ver_ind`` - номер версии датасета. если тензоры с такими "
+"параметрами уже создавали"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:221
+msgid "FeatureConfig"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:223
+msgid ""
+"Определяет как будут построены признаки из атрибутов. ``FeatureConfig`` -"
+" стандартный вариант"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:225
+msgid ""
+"``node_struct`` - структурный признак вершины. Список опций: \"degree\" "
+"(степень вершины), \"clustering\" (коэффициент кластеризации вершины), "
+"\"1-hot\" (вектор длины равной числу вершин), \"10 ones\" (вектор из 10 "
+"единиц)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:226
+msgid "``node_attr`` - атрибутный признак вершины. Список опций из имен атрибутов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:227
+msgid "``edge_attr`` - атрибутный признак ребра. Список опций из имен атрибутов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:228
+msgid ""
+"``graph_attr`` - атрибутный признак графа. Список опций из имен атрибутов"
+" (пока недоступно)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:230
+msgid ""
+"Для максимально кастомных датасетов в конфиге можно задавать более "
+"широкие инструкции по построению признаков, которые должны "
+"интерпретироваться в функции ``_compute_dataset_var_data()`` в "
+"пользовательском классе наследованном от ``GeneralDataset``. Например, "
+"это может быть применение SVD к графу или доп обработка атрибутов. "
+"``FeatureConfig`` - обобщенный вариант (для полностью кастомных "
+"датасетов)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:232
+msgid ""
+"``node_struct`` - строка/список/словарь (ключ - строка, значение - число,"
+" строка, флаг, список, или такой же словарь)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:233
+msgid "``node_attr`` - строка/список/словарь"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:234
+msgid "``edge_attr`` - строка/список/словарь"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:235
+msgid "``graph_attr`` - строка/список/словарь"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:237
+msgid ""
+"Словари могут быть с произвольной разрешенной структурой, которая "
+"обрабатывается соответствующим пользовательским классом датасета. Для "
+"произвольных словарей требования:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:239
+msgid "ключ - строка"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:240
+msgid ""
+"значение - число, строка, флаг, список, или такой же словарь Для задания "
+"таких словарей на фронте нужно подготовить json с описанием вариантов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:243
+msgid "Формат датасетов ``ij``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:245
+msgid ""
+"В GNN-AID предусмотрен внутренний формат ``ij`` для задания произвольных "
+"графовых датасетов. Он основан на списке ребер с добавлением файлов, "
+"содержащих атрибуты вершин (и ребер при наличии) и разметки. Общие "
+"требования:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:247
+msgid ""
+"все файлы располагаются внутри папки ``raw`` в корневой директории "
+"датасета"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:248
+msgid "файл ``edges.ij`` содержит пары имен вершин, разделенных пробелом"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:249
+msgid "файлы с атрибутами и разметкой имеют формат JSON"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:250
+msgid ""
+"обязательные файлы: ``edges.ij``, папки ``node_attibutes`` и ``lables`` "
+"содержат хотя бы по 1 файлу Далее приведем примеры для разных случаев: 1 "
+"граф, несколько графов, гетерограф (только один)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:253
+msgid "Single graph"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:255
+msgid "Граф из 7 вершин, 8 ребер, 2 атрибутов вершин и 2 разметками вершин Папки"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:269 ../../user_guide/datasets.rst:372
+msgid "Файл ``edges.ij``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:282 ../../user_guide/datasets.rst:393
+msgid "Файл ``labels/binary``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:297 ../../user_guide/datasets.rst:399
+msgid "Файл ``labels/threeClasses``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:312
+msgid "Файл ``node_attributes/a``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:327
+msgid "Файл ``node_attributes/b``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:342
+msgid "Файл ``edge_attributes/weight``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:358
+msgid "Multiple graphs"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:360
+msgid ""
+"Датасет из 3 графов. Появляется новый файл ``edge_index``, который "
+"содержит список индексов, с которых начинается каждый следующий граф в "
+"списке ребер. Его длина равна числу графов. Файлы атрибутов теперь "
+"содержат список словарей для каждого графа. Файлы разметок содержат метки"
+" графов а не вершин. Папки"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:387
+msgid "Файл ``edge_index``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:405
+msgid "Файл ``node_attributes/type``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:416
+msgid "Hetero graph"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:418
+msgid ""
+"#todo Расширение только для датасетов из 1 графа. Вершины и ребра могут "
+"иметь различные типы, т.е. свои наборы атрибутов. Тип вершины задается "
+"именем (стока), тип ребра тройкой (тип исходящей вершины, тип ребра, тип "
+"входящей вершины). Метки вершин также разделяются по типам вершин. Пример"
+" - датасет цитирования. Вершины 3 типов: ``author``, ``paper``, "
+"``institution``. Ребра 3 типов: ``author`` -> ``institution``, ``author``"
+" -> ``paper``, ``paper`` -> ``paper``. Метки есть у вершин ``author`` и "
+"``paper`` (2 варианта). Папки"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:452
+msgid ""
+"Содержание файлов аналогично примеру с single graph, меняется только "
+"структура и название папок."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:455
+msgid "Building features from attributes"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:457
+msgid ""
+"Исходно датасет в сырых данных содержит атрибуты вершин, которые не "
+"всегда числовые. Например, в графе цитирования ``Cora`` для каждой "
+"вершины задан мешок слов из абстракта соответствующей статьи. А признаком"
+" вершины является бинарный вектор встречаемости слов по всему словарю. В "
+"PyG в датасетах доступны только тензоры признаков, а информация об "
+"атрибутах утеряна, в то время как это может быть важно с точки зрения "
+"интерпретации. В GNN-AID датасет имеет исходные атрибуты, из которых "
+"строятся тензоры признаков по определенным правилам. Атрибуты могут быть "
+"у вершин, ребер и графов. На данный момент поддерживаются только атрибуты"
+" вершин. Правила конвертации в признаки одинаковые для всех."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:459
+msgid "В GNN-AID выделяется 4 типа для атрибутов"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:461
+msgid "``\"continuous\"`` - непрерывная величина, кодируется как есть"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:462
+msgid ""
+"``\"categorical\"`` - категориальный, используется 1-hot кодирование по "
+"всем возможным значениям"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:463
+msgid ""
+"``\"vector\"`` - вектор непрерывных значений (как в PyG), кодируется как "
+"есть"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:464
+msgid "``\"other\"`` - другой тип, например строка, по умолчанию не кодируется"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:466
+msgid ""
+"Тип атрибута задается в metainfo. Также там для каждого типа задаются "
+"границы возможных значений. Это удобно для нормировки и цветовой "
+"отрисовки на фронтенде."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:471
+msgid ""
+"``other`` - пустой список или какие-то указания на то, как обрабатывать "
+"значения"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:473
+msgid ""
+"При построении датасета в ``DatasetVarConfig`` поле ``features`` (типа "
+"``FeatureConfig``) перечисляет из каких компонентов собирать вектор "
+"признаков. Для вершин это структурные компоненты (``node_struct``) и "
+"атрибутные (``node_attr``). Каждая преобразуется по своим правилам, "
+"итоговый вектор признаков является их конкатенацией. Например"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:479
+#, python-brace-format
+msgid ""
+"и при этом атрибут ``a`` типа ``continuous``, атрибут ``b`` 1-hot с 3 "
+"вариантами значения, то итоговый вектор признака будет содержать "
+"``1+1+3=5`` элементов и может выглядеть так ``[13, 0.728, 0, 0, 1]``. При"
+" анализе важно понимать, какой атрибут соответствует какой части вектора "
+"признаков. Для этого в классе ``KnownFormatDataset`` есть поле "
+"``node_attr_slices``. В данном случае оно будет содержать ``{'a': (1, 2),"
+" 'b': (2, 5)}``."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:482
+msgid "Get existing dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:484
+msgid "Если датасет уже есть в GNN-AID, получить его можно следующими способами"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:486
+msgid ""
+"Задаем конфиги DatasetConfig и DatasetVarConfig и используем функцию "
+"``DatasetManager.get_by_config``. После этого необходимо вызвать "
+"``dataset.build(dataset_var_config)`` для определения тензоров."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:495
+msgid ""
+"Или же можно сразу вызвать ``DatasetManager.get_by_config`` с обоими "
+"конфигами"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:503
+msgid ""
+"Для ``PTGDataset`` доступен также упрощенный способ - задать необходимые "
+"параметры отдельно"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:513
+msgid "Вызвать создание объекта класса через конструктор."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:521
+msgid "Create new dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:523
+msgid "В общем случае для создания нового датасета нужно:"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:525
+msgid ""
+"набор сырых файлов, в папке ``raw`` (ее путь можно узнать как "
+"``Declare.dataset_root_dir(dataset_config)[0]``)"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:526
+msgid ""
+"файл метаинфо (можно создать и сохранить объект DatasetInfo), где "
+"заполнены обязательные поля"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:527
+msgid ""
+"функция построения графа на основе параметров конфига - "
+"``_compute_dataset_data(DatasetConfig)``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:528
+msgid ""
+"функция построения признаков и разметок на основе параметров вар конфига "
+"- ``_compute_dataset_var_data(DatasetVarConfig)``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:530
+msgid ""
+"Для упрощенных вариантов есть подклассы GeneralDataset, которые можно "
+"использовать напрямую или расширять (см далее)."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:533
+msgid "5 ways to define a dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:555
+msgid "случай"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:565
+msgid "класс"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:575
+msgid "что задать"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:585
+msgid "особенности"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:611
+msgid "готовый датасет из птг"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:631
+msgid "доп параметры для птг класса"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:641
+msgid "доступен из коробки. Пока не все датасеты поддерживаются"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:659
+msgid "птг датасет, созданный в коде"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:679
+msgid "тензоры"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:689
+msgid "по умолчанию не сохраняет файлы"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:707
+msgid "файлы в формате ij,gml, g6 и тп"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:717
+msgid "KnownFormatDataset или наследоваться от него"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:727
+msgid "сырые файлы,метаинфо"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:737
+msgid "конвертируется в ij, вар-ты вар конфига управляются с фронта"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:755
+msgid "пользовательский датасет,наследованный от птг Dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:765
+msgid "наследоваться от PTGDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:775
+msgid "определить \\_define_ptg_dataset()"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:785
+msgid ""
+"дергает функции пользовательского птг Dataset. Фиксированный вариант "
+"тензоров"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:803
+msgid "полностью кастомный датасет"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:813
+msgid "наследоваться от GeneralDataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:823
+msgid ""
+"raw файлы,метаинфо,определить- node_attributes()- edge_attributes()- "
+"\\_compute_dataset_data()- \\_compute_dataset_var_data()"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:833
+msgid "вар-ты вар конфига пока не управляются с фронта"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:856
+msgid "Пример 1 - датасет из библиотеки PyG"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:858
+msgid ""
+"Датасет Cora из серии `Planetoid <https://pytorch-"
+"geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.Planetoid.html#torch_geometric.datasets.Planetoid>`__"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:872
+msgid "Пример 2 - датасет, созданный в коде"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:874
+msgid "Датасет из двух одинаковых графов с разными метками."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:889
+msgid "Пример 3 - файлы в формате ij,gml, g6 и тп"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:891
+msgid "Граф из 8 вершин в формате ``ij``."
+msgstr ""
+
+#: ../../user_guide/datasets.rst:958
+msgid "Пример 4 - пользовательский датасет, наследованный от птг Dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:960
+msgid "See example at"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:962
+msgid ""
+"``user_datasets/power_graph/powergrid.py`` - user defined class based on "
+"ptg Dataset"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:963
+msgid ""
+"``user_datasets/power_graph/dataset.py`` - example of wrapper for it "
+"based on ``PTGDataset``"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:966
+msgid "Пример 5 - полностью кастомный датасет"
+msgstr ""
+
+#: ../../user_guide/datasets.rst:968
+msgid "See example at ``user_datasets/fully_custom_example.py``"
+msgstr ""
+
+#~ msgid "Working with datasets"
+#~ msgstr ""
+
+#~ msgid "GeneralDataset and its subclasses"
+#~ msgstr ""
+

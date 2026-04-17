@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataset Visualization Test Stand</title>
+    <script src="../static/js/libs/jquery-3.6.0.js"></script>
+    <script src="../static/js/libs/socket.io-4.6.1.js"></script>
+    <script src="../static/js/libs/chart-3.7.1.min.js"></script>
+    <script src="../static/js/libs/datatables-1.13.2.min.js"></script>
+    <script src="../static/js/libs/js-colormaps.js"></script>
+    <script src="../static/js/libs/popper-2.11.8.js"></script>
+
+  <link rel="shortcut icon" href="../static/icons/logo.png">
+  <link rel="stylesheet" type="text/css" href="../static/css/datatables.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/dropdown-menu.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/styles.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/controls.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/view.css">
+  <link rel="stylesheet" type="text/css" href="../static/css/graph.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Control Panel */
+        #control-panel {
+            width: 300px;
+            background: #f5f5f5;
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+        }
+        #control-panel h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        /* Status */
+        #status {
+            padding: 8px;
+            background: #e8f4e8;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        #status.error {
+            background: #fdecea;
+            color: #c62828;
+        }
+
+        /* Actions section */
+        .actions-section {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .actions-section h4 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+        .actions-section button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            background: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .actions-section button:hover {
+            background: #357abd;
+        }
+
+        /* Disabled state */
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .wait {
+            cursor: wait;
+        }
+        .notAllowed {
+            cursor: not-allowed;
+        }
+
+        /* Main View */
+        #main-view {
+            flex: 1;
+            position: relative;
+            background: #e7e7e7;
+        }
+        #dataset-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        /* Info panels */
+        .info-panel {
+            position: absolute;
+            background: #eeeeeeb0;
+            padding: 5px;
+            pointer-events: none;
+            font-size: 12px;
+            max-width: 400px;
+        }
+        #info-upleft { top: 5px; left: 5px; }
+        #info-upright { top: 5px; right: 5px; }
+        #info-bottomleft { bottom: 5px; left: 5px; }
+        #info-bottomright { bottom: 5px; right: 5px; pointer-events: auto; }
+
+        /* Tooltip */
+        .tooltip-text {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        /* Graph node styles */
+        .graph-node {
+            cursor: pointer;
+        }
+        .graph-node:hover {
+            filter: brightness(0.9);
+        }
+        .graph-node-text {
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* VisualsView control styles */
+        .control-block {
+            margin-bottom: 8px;
+        }
+        .control-block label {
+            display: inline-block;
+            font-size: 13px;
+            color: #333;
+        }
+        .control-block input[type="number"],
+        .control-block select {
+            margin-left: 8px;
+            padding: 3px 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .control-block input[type="checkbox"] {
+            margin-left: 8px;
+        }
+        .control-block button {
+            padding: 2px 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .control-block button:hover {
+            background: #eee;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: #ddd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="control-panel">
+        <h3>Dataset Test Stand</h3>
+
+        <div id="status">Loading...</div>
+
+        <!-- Test stand example selector -->
+        <div class="control-block" style="margin-bottom: 15px; padding: 10px; background: #fff; border-radius: 5px;">
+            <label><b>Example:</b></label>
+            <select id="example-select" style="width: 100%; margin-top: 5px; padding: 5px;"></select>
+        </div>
+
+        <!-- VisualsView creates controls here -->
+        <div id="menu-visuals-view"></div>
+
+        <div class="actions-section">
+            <h4>Actions</h4>
+            <button id="btn-reinit">Reinitialize</button>
+            <button id="btn-download">Download SVG</button>
+        </div>
+    </div>
+
+    <div id="main-view">
+        <div id="dataset-container"></div>
+        <div id="info-upleft" class="info-panel"></div>
+        <div id="info-upright" class="info-panel"></div>
+        <div id="info-bottomleft" class="info-panel"></div>
+        <div id="info-bottomright" class="info-panel"></div>
+    </div>
+
+    <!--
+    REQUIRED FILES in the same directory:
+
+    1. utils.js - framework utilities (Vec, Svg, sleep, blockDiv, etc.)
+    2. presenter.js - Presenter and View base classes
+    3. visualsView.js - VisualsView class
+    4. dataset/ folder - graph visualization code
+
+    Icons for play/pause buttons (or comment out in visualsView.js):
+    - ../static/icons/play-svgrepo-com.svg
+    - ../static/icons/pause-svgrepo-com.svg
+    -->
+
+    <!-- Framework utilities -->
+    <script src="../static/js/utils.js"></script>
+    <script src="../static/js/presentation/presenter.js"></script>
+
+    <!-- Left menu views -->
+    <script src="../static/js/presentation/left_menu/menuView.js"></script>
+    <script src="../static/js/presentation/left_menu/visualsView.js"></script>
+
+    <!-- Dataset visualization scripts -->
+    <script src="../static/js/presentation/dataset/svg/satellite.js"></script>
+    <script src="../static/js/presentation/dataset/svg/element.js"></script>
+    <script src="../static/js/presentation/dataset/svg/node.js"></script>
+    <script src="../static/js/presentation/dataset/svg/edge.js"></script>
+    <script src="../static/js/presentation/dataset/svg/graph.js"></script>
+    <script src="../static/js/presentation/dataset/svg/svgPanel.js"></script>
+    <script src="../static/js/presentation/dataset/layout/layout.js"></script>
+    <script src="../static/js/presentation/dataset/layout/forceLayout.js"></script>
+    <script src="../static/js/presentation/dataset/layout/forceNeighborhoodLayout.js"></script>
+    <script src="../static/js/presentation/dataset/layout/radialNeighborhoodLayout.js"></script>
+    <script src="../static/js/presentation/dataset/visibleGraph.js"></script>
+    <script src="../static/js/presentation/dataset/graph.js"></script>
+    <script src="../static/js/presentation/dataset/neighborhood.js"></script>
+    <script src="../static/js/presentation/dataset/multipleGraphs.js"></script>
+    <script src="../static/js/presentation/dataset/heteroGraph.js"></script>
+    <script src="../static/js/presentation/dataset/arrange.js"></script>
+    <script src="../static/js/presentation/dataset/explanationGraphs.js"></script>
+
+    <!-- Test stand (must be last - uses all above) -->
+    <script src="../static/js/presentation/dataset_testbed.js"></script>
+
+    <!-- Initialize -->
+    <script>
+        $(document).ready(function() {
+            initTestStand();
+        });
+    </script>
+</body>
+</html>

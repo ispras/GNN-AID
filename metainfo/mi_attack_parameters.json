@@ -9,7 +9,15 @@
  "ShadowModelMIAttacker": {
   "shadow_data_ratio": ["Shadow data ratio", "float", 0.25, {"min": 0, "max": 1, "step":  0.01}, "Percentage of original dataset available for intruder"],
   "shadow_epochs": ["Shadow epochs", "int", 100, {"min":  1, "step": 1}, "Number of train epochs for shadow model"],
-  "classifier_type": ["Classifier type", "str", "svc", ["svc"], "Type of classifier for MI"]
- }
+  "classifier_type": ["Classifier type", "string", "svc", ["svc"], "Type of classifier for MI"]
+ },
+
+ "ShadowModelMILinkAttacker": {
+  "shadow_edge_ratio": ["Shadow edge ratio", "float", 0.1, {"min": 0, "max": 1, "step": 0.01}, "Percentage of original edges available for intruder"],
+  "shadow_train_ratio": ["Shadow train ratio", "float", 0.75, {"min": 0, "max": 1, "step": 0.01}, "Percentage of shadow edges used for shadow model training (vs testing)"],
+  "shadow_epochs": ["Shadow epochs", "int", 10, {"min": 1, "step": 1}, "Number of train epochs for shadow model"],
+  "classifier_type": ["Classifier type", "string", "linreg", ["svc", "linreg"], "Type of classifier for MI attack"],
+  "use_embedding_features": ["Use embedding features", "bool", false, {}, "Whether to include node embeddings in attack features (improves accuracy)"]
+}
 }
 

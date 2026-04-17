@@ -9,7 +9,7 @@ from aux.custom_decorators import timing_decorator, retry
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, \
     root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
-from data_structures.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
 from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
@@ -88,10 +88,11 @@ def run_interpretation_test(explainer_name, dataset_full_name, model_name, iter=
     metrics_path = root_dir / "experiments" / "explainers_metrics"
     dataset_metrics_path = metrics_path / f"{model_name}_{dataset_key_name}_{explainer_name}_iter_{iter}_metrics.json"
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=dataset_full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(dataset_full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
+    data = dataset.data
     explainer_kwargs = explainer_kwargs_by_explainer_name[explainer_name]
 
     restart_experiment = False
@@ -190,7 +191,7 @@ def calculate_unprotected_metrics(
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -270,7 +271,7 @@ def calculate_jaccard_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -359,7 +360,7 @@ def calculate_adversial_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -461,7 +462,7 @@ def calculate_gnnguard_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -470,7 +471,7 @@ def calculate_gnnguard_defence_metrics(
     data = data.to(device)
 
     gnnguard_poison_defense_config = ConfigPattern(
-        _class_name="GNNGuard",
+        _class_name="GNNGuardDefender",
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
@@ -553,7 +554,7 @@ def calculate_autoencoder_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -642,7 +643,7 @@ def calculate_gradientregularization_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -731,7 +732,7 @@ def calculate_quantization_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -820,7 +821,7 @@ def calculate_distillation_defence_metrics(
     )
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=iteration, epochs=steps_epochs)
     )
@@ -905,11 +906,11 @@ if __name__ == '__main__':
     ]
 
     datasets = [
-        # ("Homogeneous", "Planetoid", 'Cora'),
-        # ("Homogeneous", "Planetoid", 'CiteSeer'),
-        # ("Homogeneous", "Planetoid", 'PubMed'),
+        # (LibPTGDataset.data_folder, "Homogeneous", , "Planetoid", 'Cora'),
+        # (LibPTGDataset.data_folder, "Homogeneous", , "Planetoid", 'CiteSeer'),
+        # (LibPTGDataset.data_folder, "Homogeneous", , "Planetoid", 'PubMed'),
         (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Computers'),
-        # ("Homogeneous", "Amazon", 'Photo'),
+        # (LibPTGDataset.data_folder, "Homogeneous", , "Amazon", 'Photo'),
     ]
     for dataset_full_name in datasets:
         for i in range(3, 13):
@@ -925,5 +926,5 @@ if __name__ == '__main__':
                     except Exception as e:
                         print(f"ERROR: {e}")
                         continue
-    # dataset_full_name = ("Homogeneous", "Amazon", 'Photo')
+    # dataset_full_name = (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Photo')
     # run_interpretation_test(dataset_full_name)

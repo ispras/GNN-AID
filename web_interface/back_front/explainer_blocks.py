@@ -3,16 +3,16 @@ import os
 from pathlib import Path
 from typing import Union
 
-from data_structures.configs import ExplainerModificationConfig, ConfigPattern
-from aux.data_info import DataInfo
-from aux.declaration import Declare
-from aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
-    EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from datasets.gen_dataset import GeneralDataset
-from explainers.explainers_manager import FrameworkExplainersManager
-from models_builder.gnn_models import GNNModelManager
-from web_interface.back_front.block import Block, WrapperBlock
-from web_interface.back_front.utils import json_loads, get_config_keys
+from gnn_aid.aux.data_info import DataInfo
+from gnn_aid.aux.declaration import Declare
+from gnn_aid.aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
+    EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, ProgressBar
+from gnn_aid.data_structures.configs import ExplainerModificationConfig, ConfigPattern
+from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
+from gnn_aid.models_builder.model_managers import GNNModelManager
+from . import VisiblePart
+from .block import Block, WrapperBlock
+from .utils import json_loads, get_config_keys
 
 
 class ExplainerWBlock(WrapperBlock):
@@ -27,10 +27,10 @@ class ExplainerWBlock(WrapperBlock):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset,
+            visible_part: VisiblePart,
             gmm: GNNModelManager
     ) -> None:
-        self.gen_dataset = gen_dataset
+        self.gen_dataset = visible_part.gen_dataset
         self.gmm = gmm
 
     def _finalize(
@@ -59,14 +59,15 @@ class ExplainerLoadBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset,
+            visible_part: VisiblePart,
             gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
-        self.gen_dataset = gen_dataset
+        self.gen_dataset = visible_part.gen_dataset
         self.gmm, _ = gmm_and_metrics
-        return [gen_dataset.dataset.num_node_features, gen_dataset.is_multi(), self.get_index()]
-        # return self.get_index()
+        return [self.gen_dataset.dataset.num_node_features,
+                self.gen_dataset.is_multi(),
+                self.get_index()]
 
     def _finalize(
             self
@@ -86,7 +87,7 @@ class ExplainerLoadBlock(Block):
             explainer_ver_ind=self.explainer_path["explainer_ver_ind"],
         )
 
-        from explainers.explainers_manager import FrameworkExplainersManager
+        from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
         self._object = FrameworkExplainersManager(
             init_config=init_config,
             modification_config=modification_config,
@@ -146,11 +147,11 @@ class ExplainerInitBlock(Block):
 
     def _init(
             self,
-            gen_dataset: GeneralDataset,
+            visible_part: VisiblePart,
             gmm_and_metrics: list
     ) -> list:
         # Define options for model manager
-        self.gen_dataset = gen_dataset
+        self.gen_dataset = visible_part.gen_dataset
         self.gmm, _ = gmm_and_metrics
         return FrameworkExplainersManager.available_explainers(self.gen_dataset, self.gmm)
 
@@ -184,15 +185,18 @@ class ExplainerRunBlock(Block):
         super().__init__(*args, **kwargs)
 
         self.explainer_run_config = None
-        self.explainer_manager = None
+        self.explainer_manager: FrameworkExplainersManager = None
 
     def _init(
             self,
             explainer_manager: FrameworkExplainersManager
     ) -> list:
         self.explainer_manager = explainer_manager
+        # self.explainer_manager.set_hook(self._after_run, 'after_run')
+
         return [self.explainer_manager.gen_dataset.dataset.num_node_features,
                 self.explainer_manager.gen_dataset.is_multi(),
+                self.explainer_manager.gen_dataset.dataset_var_config.task.is_edge_level(),
                 self.explainer_manager.explainer.name]
 
     def do(
@@ -225,8 +229,44 @@ class ExplainerRunBlock(Block):
     ) -> None:
         self.socket.send("explainer", {
             "status": "STARTED", "mode": self.explainer_run_config.mode})
+        # Create pbar each time, since it is closed after each run
+        self.pbar = ProgressBar("er", desc=f'{self.explainer_manager.explainer.name} explaining')  # progress bar
+        self.pbar.set_hook(self._report, 'on_reset')
+        self.pbar.set_hook(self._report, 'on_update')
+
+        try:
+            result = self.explainer_manager.conduct_experiment(
+                self.explainer_run_config, pbar=self.pbar)
+            self._after_run(result)
+        except Exception as e:
+            self.socket.send("er", {"status": "FAILED"})
+            raise e
         # Saves explanation by default, save_explanation_flag=True
-        self.explainer_manager.conduct_experiment(self.explainer_run_config, socket=self.socket)
+
+    def _report(
+            self
+    ):
+        """ Called when explainer progress changes: update or reset
+        """
+        msg = {}
+        msg.update(self.pbar.kwargs)
+        msg.update({
+            "progress": {
+                "text": f'{self.pbar.n} of {self.pbar.total}',
+                "load": self.pbar.n / self.pbar.total if self.pbar.total > 0 else 1
+            }})
+        self.socket.send(block='er', msg=msg, tag='er' + '_progress', obligate=True)
+
+    def _after_run(
+            self,
+            explanation_result
+    ):
+        """ Called when the explanation is computed
+        """
+        self.socket.send("er", {
+            "status": "OK",
+            "explanation_data": explanation_result
+        })
 
     # def _save_explainer(self):
     #     # self.explainer_manager.save_explanation()

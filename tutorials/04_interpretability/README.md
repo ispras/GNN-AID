@@ -10,7 +10,7 @@ This example uses GNNExplainer. You can easily change the interpreter in the con
 ## Folder contents
 - `gnn_explainer_example.py` — script for training GNN.
 - `run_example.sh` — script for running the experiment.
-- `imgs/` — folder with images.
+- `imgs/` — folder with example of interpretation.
 - `README.md` — description of the experiment.
 
 ---

@@ -11,20 +11,7 @@ from models_builder.models_zoo import model_configs_zoo
 def backend_demo():
     # my_device = device('cuda' if is_available() else 'cpu')
 
-    # Init datasets VK and Cora
-    # dataset_cora, _, results_dataset_path_cora = DatasetManager.get_by_full_name(
-    #     full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
-    #     dataset_ver_ind=0)
-    # dataset_comp, _, results_dataset_path_comp = DatasetManager.get_by_full_name(
-    #     full_name=("Homogeneous", "Amazon", "Computers",),
-    #     dataset_ver_ind=0
-    # )
-    # dataset_mg_example, _, results_dataset_path_mg_example = DatasetManager.get_by_full_name(
-    #     full_name=("Homogeneous", "custom", "example",),
-    #     features=FeatureConfig(node_attr=['type']),
-    #     labeling='binary',
-    #     dataset_ver_ind=0
-    # )
+    # Init datasets
     dataset_cora = DatasetManager.get_by_config(
         DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
     )

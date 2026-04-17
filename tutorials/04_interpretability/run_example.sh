@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROJECT_ROOT="$(dirname "$0")/../.."
-export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT:$PYTHONPATH"
+export PYTHONPATH="$PROJECT_ROOT/gnn_aid:$PROJECT_ROOT:$PYTHONPATH"
 
 MODE="$1"
 

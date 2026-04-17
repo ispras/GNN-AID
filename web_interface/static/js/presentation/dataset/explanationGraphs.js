@@ -103,8 +103,8 @@ class ExplanationGraphs extends MultipleGraphs {
     }
 
     // Turn on/off visibility of labels, features, predictions, etc
-    showSatellite(satellite, show) {
-        super.showSatellite(satellite, show)
+    showSatellite(elem, satellite, show) {
+        super.showSatellite(elem, satellite, show)
         this.draw()
     }
 }

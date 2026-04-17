@@ -1,6 +1,6 @@
 {
  "class_name": "KnownFormatDataset",
- "import_from": "datasets.known_format_datasets",
+ "import_from": "gnn_aid.datasets.known_format_datasets",
  "format": "gml",
  "name": "example of multiple graphs in gml format",
  "count": 3,
@@ -56,7 +56,9 @@
   ]
  },
  "labelings": {
-  "binary": 2
+  "graph-classification": {
+   "binary": 2
+  }
  },
  "node_attr_slices": {
   "a": [

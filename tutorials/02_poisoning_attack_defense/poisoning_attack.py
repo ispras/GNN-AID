@@ -4,8 +4,9 @@ import warnings
 import torch
 from torch import device
 
-from data_structures.configs import ModelModificationConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
 from aux.utils import POISON_ATTACK_PARAMETERS_PATH
@@ -14,11 +15,9 @@ my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.manual_seed(1234)
 
 # Loading Cora dataset
-full_name = ("Homogeneous", "Planetoid", 'Cora')
-
-gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    full_name=full_name,
-    dataset_ver_ind=0
+gen_dataset = DatasetManager.get_by_config(
+    DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+    LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
 )
 
 # Loading GIN_2l model
@@ -39,7 +38,7 @@ manager_config = ConfigPattern(
 steps_epochs = 200
 gnn_model_manager = FrameworkGNNModelManager(
     gnn=gnn,
-    dataset_path=results_dataset_path,
+    dataset_path=gen_dataset.prepared_dir,
     manager_config=manager_config,
     modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
 )
@@ -48,8 +47,8 @@ save_model_flag = False
 
 # data.x = data.x.float()
 gnn_model_manager.gnn.to(my_device)
-data = data.to(my_device)
 gen_dataset.data.to(my_device)
+data = gen_dataset.data
 
 # Set poison attack config
 # You can see the available poison attack types and their default parameters in

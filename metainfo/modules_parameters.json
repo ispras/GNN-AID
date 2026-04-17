@@ -1,4 +1,16 @@
 {
+  "CosineSimilarity": {
+    "_technical_parameter": {
+      "import_info":  ["CosineSimilarity", ["torch.nn"]],
+      "forward_parameters": "x1=src, x2=dst"
+    }
+  },
+  "Concat": {
+    "_technical_parameter": {
+      "import_info":  ["Concat", ["gnn_aid.models_builder.models_utils"]],
+      "forward_parameters": "(src, dst)"
+    }
+  },
  "GCNConv": {
   "out_channels": ["Output size", "int", 16, {"min": 1}, "Size of output sample"],
   "aggr": ["Aggregation", "string", "add", ["add", "mean", "min", "max", "mul", "None"], "The aggregation scheme to use"],
@@ -116,7 +128,7 @@
   "bias": ["Bias", "bool", true, null, "If set to False, the layer will not learn an additive bias"],
   "_technical_parameter":
 		{
-			"import_info":  ["GMM", ["models_builder.custom_layers"]],
+			"import_info":  ["GMM", ["gnn_aid.models_builder.custom_layers"]],
             "need_full_gnn_flag": false,
             "forward_parameters": "x=x, edge_index=edge_index"
 		}
@@ -162,7 +174,7 @@
   "eps": ["Epsilon", "float", 1e-4, {"min": 0, "step": 0.0001}, "Used in the denominator in computing similarity between prototypes: log((dist+1) / (dist+eps))"],
   "_technical_parameter":
 		{
-			"import_info":  ["ProtLayer", ["models_builder.custom_layers"]],
+			"import_info":  ["ProtLayer", ["gnn_aid.models_builder.custom_layers"]],
             "need_full_gnn_flag": true,
             "forward_parameters": "x=x, full_gnn_id=id(self)"
 		}
@@ -172,7 +184,7 @@
     "extractor_dropout_p": ["Dropout rate for GSAT MLP", "float", 0.5, {"min": 0, "max": 1, "step": 0.01}, "Probability for dropout in GSAT MLP"],
     "_technical_parameter":
 		{
-			"import_info":  ["GSATLayer", ["models_builder.custom_layers"]],
+			"import_info":  ["GSATLayer", ["gnn_aid.models_builder.custom_layers"]],
             "need_full_gnn_flag": true,
             "forward_parameters": "x=x, edge_index=edge_index, full_gnn_id=id(self)"
 		}
@@ -180,7 +192,7 @@
   "DummyLayer": {
         "_technical_parameter":
 		{
-			"import_info":  ["DummyLayer", ["models_builder.custom_layers"]],
+			"import_info":  ["DummyLayer", ["gnn_aid.models_builder.custom_layers"]],
             "need_full_gnn_flag": false,
             "forward_parameters": "x=x"
 		}

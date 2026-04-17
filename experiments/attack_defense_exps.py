@@ -3,11 +3,13 @@ import warnings
 import torch
 from torch import device
 
-from data_structures.configs import ModelModificationConfig, ConfigPattern
-from datasets.datasets_manager import DatasetManager
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from models_builder.models_zoo import model_configs_zoo
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
+from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 
@@ -17,43 +19,22 @@ def test_attack_defense():
 
     full_name = None
 
-    # full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("Homogeneous", "Planetoid", 'Cora')
-    # full_name = ("Homogeneous", "Amazon", 'Photo')
-    # full_name = ("Homogeneous", "Planetoid", 'CiteSeer')
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Amazon", 'Photo')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'CiteSeer')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    gen_dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
-
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
-    #     labeling='threeClasses',
-    #     dataset_ver_ind=0
+    # gen_dataset = DatasetManager.get_by_config(
+    #     DatasetConfig(full_name),
+    #     LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     # )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
-    #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
-    #         # "('personal', 'political')": 'one_hot',
-    #         # "('occupation', 'type')": 'one_hot', # Don't work now
-    #         # "('relation',)": 'one_hot',
-    #         # "('age',)": 'one_hot',
-    #         "('sex',)": 'one_hot',
-    #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
-    #     labeling='sex1',
-    #     dataset_ver_ind=0
-    # )
 
-    # print(data.train_mask)
 
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gat_gcn_sage_gcn_gcn')
@@ -92,7 +73,7 @@ def test_attack_defense():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -141,7 +122,7 @@ def test_attack_defense():
     )
 
     gnnguard_poison_defense_config = ConfigPattern(
-        _class_name="GNNGuard",
+        _class_name="GNNGuardDefender",
         _import_path=POISON_DEFENSE_PARAMETERS_PATH,
         _config_class="PoisonDefenseConfig",
         _config_kwargs={
@@ -188,7 +169,7 @@ def test_attack_defense():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "node_idx": 0,  # Node for attack
+            "element_idx": 0,  # Node for attack
             "n_perturbations": 20,
             "perturb_features": True,
             "perturb_structure": True,
@@ -327,11 +308,11 @@ def test_attack_defense():
 def test_meta():
     # my_device = device('cpu')
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     manager_config = ConfigPattern(
@@ -350,7 +331,7 @@ def test_meta():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -399,10 +380,10 @@ def test_nettack_evasion():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     # Train model on original dataset and remember the model metric and node predicted probability
@@ -421,7 +402,7 @@ def test_nettack_evasion():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -434,10 +415,10 @@ def test_nettack_evasion():
                                   save_model_flag=False)
 
     # Node for attack
-    node_idx = 1
+    element_idx = 1
 
     # Evaluate model
-    mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[node_idx])
+    mask_loc = Metric.create_mask_by_target_list(y_true=dataset.labels, target_list=[element_idx])
     acc_test_loc = gnn_model_manager.evaluate_model(gen_dataset=dataset,
                                                     metrics=[Metric("Accuracy", mask=mask_loc)])[mask_loc]['Accuracy']
 
@@ -454,11 +435,11 @@ def test_nettack_evasion():
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_evasion_attack = {"node_idx": node_idx,
+    info_before_evasion_attack = {"element_idx": element_idx,
                                   "predicted_class": predicted_class,
                                   "predicted_probability": predicted_probability,
                                   "real_class": real_class}
@@ -469,7 +450,7 @@ def test_nettack_evasion():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "node_idx": node_idx,
+            "element_idx": element_idx,
             "n_perturbations": 20,
             "perturb_features": True,
             "perturb_structure": True,
@@ -488,11 +469,11 @@ def test_nettack_evasion():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_evasion_attack = {"node_idx": node_idx,
+    info_after_evasion_attack = {"element_idx": element_idx,
                                  "predicted_class": predicted_class,
                                  "predicted_probability": predicted_probability,
                                  "real_class": real_class}
@@ -508,11 +489,11 @@ def test_qattack():
     my_device = device('cpu')
 
     # Load dataset
-    # full_name = ("single-graph", "Planetoid", 'Cora')
-    full_name = ('single-graph', 'pytorch-geometric-other', 'KarateClub')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, 'single-graph', 'pytorch-geometric-other', 'KarateClub')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     # Train model on original dataset and remember the model metric and node predicted probability
@@ -531,7 +512,7 @@ def test_qattack():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -564,18 +545,18 @@ def test_qattack():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    # node_idx = 0
+    # element_idx = 0
     #
     # # Model prediction on a node before an evasion attack on it
     # gnn_model_manager.gnn.eval()
     # with torch.no_grad():
     #     probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
 
-    # info_before_evasion_attack = {"node_idx": node_idx,
+    # info_before_evasion_attack = {"element_idx": element_idx,
     #                               "predicted_class": predicted_class,
     #                               "predicted_probability": predicted_probability,
     #                               "real_class": real_class}
@@ -596,11 +577,11 @@ def test_qattack():
     #     probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
     #                                                     gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
     #
-    # info_after_evasion_attack = {"node_idx": node_idx,
+    # info_after_evasion_attack = {"element_idx": element_idx,
     #                              "predicted_class": predicted_class,
     #                              "predicted_probability": predicted_probability,
     #                              "real_class": real_class}
@@ -615,41 +596,17 @@ def test_jaccard():
 
     full_name = None
 
-    # full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    # full_name = ("single-graph", "custom", 'karate')
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "custom", 'karate')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("single-graph", "custom", "example",),
-    #     features={'attr': {'a': 'as_is', 'b': 'as_is'}},
-    #     labeling='threeClasses',
-    #     dataset_ver_ind=0
-    # )
 
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("single-graph", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("single-graph", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
-    #     # features=('sex',),
-    #     features={'str_f': tuple(), 'str_g': None, 'attr': {
-    #         # "('personal', 'political')": 'one_hot',
-    #         # "('occupation', 'type')": 'one_hot', # Don't work now
-    #         # "('relation',)": 'one_hot',
-    #         # "('age',)": 'one_hot',
-    #         "('sex',)": 'one_hot',
-    #     }},
-    #     # features={'str_f': tuple(), 'str_g': None, 'attr': {'sex': 'one_hot', }},
-    #     labeling='sex1',
-    #     dataset_ver_ind=0
-    # )
-
-    # print(data.train_mask)
 
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
@@ -687,7 +644,7 @@ def test_jaccard():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -762,12 +719,12 @@ def test_jaccard():
 
 def test_adv_training():
     my_device = device('cpu')
-    # full_name = ("single-graph", "Planetoid", 'Cora')
-    full_name = ("single-graph", "Amazon", 'Photo')
+    # full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Amazon", 'Photo')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     manager_config = ConfigPattern(
@@ -786,7 +743,7 @@ def test_adv_training():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -802,8 +759,8 @@ def test_adv_training():
             # "num_nodes": dataset.dataset.x.shape[0]
         }
     )
-    from defenses.evasion_defense import EvasionDefender
-    from aux.utils import all_subclasses
+    from gnn_aid.defenses.evasion_defense import EvasionDefender
+    from gnn_aid.aux.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
 
@@ -839,10 +796,10 @@ def test_pgd():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
@@ -860,7 +817,7 @@ def test_pgd():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -877,18 +834,18 @@ def test_pgd():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 650
+    element_idx = 650
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -900,7 +857,7 @@ def test_pgd():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": True,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "epsilon": 0.1,
             "learning_rate": 0.001,
             "num_iterations": 500,
@@ -919,11 +876,11 @@ def test_pgd():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -931,10 +888,10 @@ def test_pgd():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
@@ -952,7 +909,7 @@ def test_pgd():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1034,10 +991,10 @@ def test_pgd_structure():
     my_device = device('cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
@@ -1055,7 +1012,7 @@ def test_pgd_structure():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1072,18 +1029,18 @@ def test_pgd_structure():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 1700
+    element_idx = 1700
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1095,7 +1052,7 @@ def test_pgd_structure():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": False,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "num_iterations": 30,
         }
     )
@@ -1111,11 +1068,11 @@ def test_pgd_structure():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -1123,10 +1080,10 @@ def test_pgd_structure():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
@@ -1144,7 +1101,7 @@ def test_pgd_structure():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1223,10 +1180,10 @@ def test_fgsm():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1245,7 +1202,7 @@ def test_fgsm():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1262,18 +1219,18 @@ def test_fgsm():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 650
+    element_idx = 650
 
     # Model prediction on a node before PGD attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1285,7 +1242,7 @@ def test_fgsm():
         _config_class="EvasionAttackConfig",
         _config_kwargs={
             "is_feature_attack": False,
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "epsilon": 0.5,
         }
     )
@@ -1301,11 +1258,11 @@ def test_fgsm():
         probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
                                                         gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    info_after_pgd_attack_on_node = {"element_idx": element_idx,
                                      "predicted_class": predicted_class,
                                      "predicted_probability": predicted_probability,
                                      "real_class": real_class}
@@ -1313,10 +1270,10 @@ def test_fgsm():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1335,7 +1292,7 @@ def test_fgsm():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1414,11 +1371,12 @@ def test_rewatt():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load dataset
-    full_name = ("single-graph", "Planetoid", 'Cora')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "single-graph", "Planetoid", 'Cora')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
+    data = dataset.data
     data.to(my_device)
 
     gcn_gcn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
@@ -1436,7 +1394,7 @@ def test_rewatt():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn_gcn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )
@@ -1453,18 +1411,18 @@ def test_rewatt():
     print(f"Accuracy on test: {acc_test}")
 
     # Node for attack
-    node_idx = 44
+    element_idx = 44
 
     # Model prediction on a node before ReWatt attack on it
     gnn_model_manager.gnn.eval()
     with torch.no_grad():
         probabilities = torch.exp(gnn_model_manager.gnn(dataset.data.x, dataset.data.edge_index))
 
-    predicted_class = probabilities[node_idx].argmax().item()
-    predicted_probability = probabilities[node_idx][predicted_class].item()
-    real_class = dataset.data.y[node_idx].item()
+    predicted_class = probabilities[element_idx].argmax().item()
+    predicted_probability = probabilities[element_idx][predicted_class].item()
+    real_class = dataset.data.y[element_idx].item()
 
-    info_before_pgd_attack_on_node = {"node_idx": node_idx,
+    info_before_pgd_attack_on_node = {"element_idx": element_idx,
                                       "predicted_class": predicted_class,
                                       "predicted_probability": predicted_probability,
                                       "real_class": real_class}
@@ -1475,7 +1433,7 @@ def test_rewatt():
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
         _config_class="EvasionAttackConfig",
         _config_kwargs={
-            "element_idx": node_idx,
+            "element_idx": element_idx,
             "eps": 0.001,
             "epochs": 10,
         }
@@ -1492,11 +1450,11 @@ def test_rewatt():
     #     probabilities = torch.exp(gnn_model_manager.gnn(gnn_model_manager.evasion_attacker.attack_diff.data.x,
     #                                                     gnn_model_manager.evasion_attacker.attack_diff.data.edge_index))
     #
-    # predicted_class = probabilities[node_idx].argmax().item()
-    # predicted_probability = probabilities[node_idx][predicted_class].item()
-    # real_class = dataset.data.y[node_idx].item()
+    # predicted_class = probabilities[element_idx].argmax().item()
+    # predicted_probability = probabilities[element_idx][predicted_class].item()
+    # real_class = dataset.data.y[element_idx].item()
     #
-    # info_after_pgd_attack_on_node = {"node_idx": node_idx,
+    # info_after_pgd_attack_on_node = {"element_idx": element_idx,
     #                                  "predicted_class": predicted_class,
     #                                  "predicted_probability": predicted_probability,
     #                                  "real_class": real_class}
@@ -1504,10 +1462,10 @@ def test_rewatt():
 
     # ______________________ Attack on graph _____________________
     # Load dataset
-    full_name = ("Homogeneous", "TUDataset", 'MUTAG')
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'MUTAG')
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     data.to(my_device)
 
@@ -1526,7 +1484,7 @@ def test_rewatt():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=model,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=0)
     )

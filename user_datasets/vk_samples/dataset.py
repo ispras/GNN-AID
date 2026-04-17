@@ -10,7 +10,7 @@ from typing import Union
 import numpy as np
 import torch
 
-from data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig
+from data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig, Task
 from data_structures.configs import DatasetConfig
 from datasets.known_format_datasets import KnownFormatDataset
 
@@ -297,6 +297,7 @@ if __name__ == '__main__':
     print(dd)
 
     dvc = DatasetVarConfig(
+        task=Task.NODE_CLASSIFICATION,
         features=FeatureConfig(node_attr=['sex']),
         labeling='sex1', dataset_ver_ind=0)
     dataset.build(dvc)

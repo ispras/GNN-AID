@@ -9,7 +9,6 @@ Gradient Regularization Defender. We use the Cora dataset and the GNN model.
 - `evasion_attack.py` — script for training GNN + attack.
 - `defense_against_evasion.py` — script for training GNN + defense + attack.
 - `run_example.sh` — script for running the experiment.
-- `imgs/` — folder with images.
 - `README.md` — description of the experiment.
 
 ---

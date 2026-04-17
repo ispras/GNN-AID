@@ -1,56 +1,34 @@
+# Byte-compiled / optimized / DLL / temporary / generated files 
 *~
-*.py[co]
+*__pycache__*
+*$py.class
+*.py[cod]
 *.cpp
 *.so
 *.orig
 
-### Python template
-# Byte-compiled / optimized / DLL files
-*__pycache__*
-*.py[cod]
-*$py.class
-*PTGDataset*
-*experiments/explainers_metrics*
+# Virtual env
+/venv
 
+# IDE files
 .cache
 .idea
 .project
-
-_static
-build
-config
-pics
-results
-sphinx_docs
-*explainers_metrics*
-experiments/explainers_metrics/**/*_metrics.json
-
-data
-explanations
-<base.ptg_datasets.PTGDataset object*
-models
-models_exp
-results
-data_info
-#user_models_obj
-#user_models_managers
-user_datasets
-PGE_gen_models
-
-venv
-venv_new
-
-
 .vscode
-
-gnn
-torch_install
-src/.vscode
-data__DatasetsTest_tmp/
 
 # Mac OS extentions
 *.DS_Store
 
+# Project directories
+/data/ptg-library-graphs/
+/datasets/
+/explanations/
+/models/
+/data_info/
+/user_datasets
+/PGE_gen_models
+
 # Sphinx documentation
-docs/_build/
+/docs/source/_build/
+/docs/**/*.mo
 

@@ -2,7 +2,7 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.datasets_manager import DatasetManager
 
 
 # Example of local user PTG dataset

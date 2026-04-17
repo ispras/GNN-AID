@@ -5,8 +5,10 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
-from data_structures.configs import ModelModificationConfig, ModelManagerConfig, ConfigPattern
+from data_structures.configs import ModelModificationConfig, ModelManagerConfig, ConfigPattern, \
+    Task, DatasetConfig
 from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from datasets.datasets_manager import DatasetManager
@@ -32,9 +34,11 @@ def test_graph_mask(configuration):
     my_device = device('cuda' if is_available() else 'cpu')
     my_device = device('cpu')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
-        dataset_ver_ind=0)
+
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
+    )
 
     gcn2 = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
 
@@ -49,7 +53,7 @@ def test_graph_mask(configuration):
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn2,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=gnn_model_manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )

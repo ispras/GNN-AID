@@ -148,6 +148,18 @@ class PanelModelArchView extends PanelView {
                             offsets[1] += 25 - 2*depth
                         }
                     }
+                    let func = value["function"]
+                    if (func) {
+                        let kwargs = stringifyKwargs(func["function_kwargs"])
+                        if (kwargs.length > 0) kwargs = ' (' + kwargs + ')'
+                        this.svgPanel.$svg.append(Svg.text(
+                            "Function: " + func["function_name"] + kwargs,
+                            marginText + 12*depth, offsets[1] + 8 + 12,
+                            'middle', `${20 - 2*depth}px`,
+                            'normal', "#000000"
+                        ))
+                        offsets[1] += 25 - 2*depth + 12
+                    }
                     // TODO others
                     continue
                 }
@@ -266,13 +278,23 @@ class PanelModelArchView extends PanelView {
         let lastIx = 0
         for (let [key, value] of Object.entries(this.modelWeights)) {
             let ix = parseInt(key.slice(-1))
-            if (ix > lastIx) {
+            while (ix > lastIx) {
                 modelDataAdv['additional' + lastIx] = {
                     'activation': this.modelStructureConfig[lastIx]["activation"],
                     'dropout': this.modelStructureConfig[lastIx]["dropout"],
                     'connections': this.modelStructureConfig[lastIx]["connections"],
                 }
-                lastIx = ix
+                // Add functions from modelStructureConfig if any
+                let layer = this.modelStructureConfig[lastIx]
+                for (let [key, value] of Object.entries(layer)) {
+                    if (key === "function") {
+                        modelDataAdv['additional' + lastIx] = {
+                            'function': value
+                        }
+                    }
+                }
+
+                lastIx++
             }
             if (key.includes('gin')) {
                 // Advance value["nn"]
@@ -295,11 +317,23 @@ class PanelModelArchView extends PanelView {
             }
             modelDataAdv[key] = value
         }
-        // Same for the last layer
-        modelDataAdv['additional' + lastIx] = {
-            'activation': this.modelStructureConfig[lastIx]["activation"],
-            'dropout': this.modelStructureConfig[lastIx]["dropout"],
-            'connections': this.modelStructureConfig[lastIx]["connections"],
+        while (lastIx < this.modelStructureConfig.length) {
+            // Same for the last layer
+            modelDataAdv['additional' + lastIx] = {
+                'activation': this.modelStructureConfig[lastIx]["activation"],
+                'dropout': this.modelStructureConfig[lastIx]["dropout"],
+                'connections': this.modelStructureConfig[lastIx]["connections"],
+            }
+            // Add functions from modelStructureConfig if any
+            let layer = this.modelStructureConfig[lastIx]
+            for (let [key, value] of Object.entries(layer)) {
+                if (key === "function") {
+                    modelDataAdv['additional' + lastIx] = {
+                        'function': value
+                    }
+                }
+            }
+            lastIx++
         }
 
         // Draw

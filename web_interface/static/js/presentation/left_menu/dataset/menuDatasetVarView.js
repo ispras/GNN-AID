@@ -5,11 +5,12 @@ class MenuDatasetVarView extends MenuView {
         this.datasetInfo = null
 
         // Selectors
+        this.task = null // which task is chosen
         this.labeling = null // which labeling is chosen
+        this.$oneHotNodeInput = null
+        this.$tenOnesNodeInput = null
         this.$nodeClusteringInput = null
         this.$nodeDegreeInput = null
-        this.$oneHotNodeInput = null
-//        this.$attackTypeSelect = null
     }
 
     init(datasetInfo) {
@@ -104,15 +105,53 @@ class MenuDatasetVarView extends MenuView {
             if (this.datasetInfo.count === 1) {
                 $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
 
+                // 1-hot over nodes
                 $cb = $("<div></div>").attr("class", "control-block")
                 $cc.append($cb)
                 id = this.idPrefix + "-node-1hot-input"
                 size = this.datasetInfo["nodes"].sum()
-                this.$oneHotNodeInput = $("<input>").attr("type", "checkbox").attr("id", id)
+                this.$oneHotNodeInput = $("<input>")
+                    .attr("type", "checkbox").attr("id", id)
                 $cb.append(this.$oneHotNodeInput)
-                $cb.append($("<label></label>").text(`1-hot input (size=${size})`).attr("for", id))
-            } else
+                $cb.append($("<label></label>")
+                    .text(`1-hot ovre nodes (size=${size})`).attr("for", id))
+
+                // 10 ones
+                $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                id = this.idPrefix + "-node-10ones-input"
+                this.$tenOnesNodeInput = $("<input>")
+                    .attr("type", "checkbox").attr("id", id)
+                $cb.append(this.$tenOnesNodeInput)
+                $cb.append($("<label></label>")
+                    .text("10 ones (size=10)").attr("for", id))
+
+                // Degree
+                $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                id = this.idPrefix + "-node-degree-input"
+                this.$nodeDegreeInput = $("<input>")
+                    .attr("type", "checkbox").attr("id", id)
+                $cb.append(this.$nodeDegreeInput)
+                $cb.append($("<label></label>")
+                    .text("degree (size=1)").attr("for", id))
+
+                // Clustering
+                $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                id = this.idPrefix + "-node-clustering-input"
+                this.$nodeClusteringInput = $("<input>")
+                    .attr("type", "checkbox").attr("id", id)
+                $cb.append(this.$nodeClusteringInput)
+                $cb.append($("<label></label>")
+                    .text("clustering (size=1)").attr("for", id))
+            }
+            else {
                 this.$oneHotNodeInput = null
+                this.$tenOnesNodeInput = null
+                this.$nodeClusteringInput = null
+                this.$nodeDegreeInput = null
+            }
 
             // Node attributes
             $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
@@ -148,32 +187,43 @@ class MenuDatasetVarView extends MenuView {
         // 2. class labels
         $cc.append($("<div></div>").attr("class", "menu-separator"))
 
-        $cc.append($("<label></label>").html("<h3>Class labeling</h3>"))
-        // TODO 2 cases
-        let labelingClasses = this.datasetInfo["labelings"]
-        for (const [labeling, classes] of Object.entries(labelingClasses)) {
-            let $cb = $("<div></div>").attr("class", "control-block")
-            $cc.append($cb)
-            let id = this.idPrefix + "-labelings-" + nameToId(labeling)
-            let $input = $("<input>").attr("type", "radio").attr("name", "dataset-variable-labelings").attr("id", id).attr("value", labeling)
-            $cb.append($input)
-            $cb.append($("<label></label>").text(labeling + ` (${classes} classes)`).attr("for", id))
-            // TODO can do this if graph is small
-            // $input.change(() => this.setLabels(labeling))
-        }
-        this.labeling = Object.keys(labelingClasses)[0]
-        $('#' + this.idPrefix + "-labelings-" + nameToId(this.labeling)).prop("checked", true)
+        $cc.append($("<label></label>").html("<h3>Task & labeling</h3>"))
+        let taskLabelings = this.datasetInfo["labelings"]
+        // Add edge prediciton
+        taskLabelings["edge-prediction"] = {"default": null}
+        let checked = false
+        for (const [task, labelingValue] of Object.entries(taskLabelings)) {
+            $cc.append($("<label></label>").html(`<h4>${task}</h4>`))
+            for (const [labeling, value] of Object.entries(labelingValue)) {
+                let $cb = $("<div></div>").attr("class", "control-block")
+                $cc.append($cb)
+                let id = this.idPrefix + "-labelings-" + nameToId(task + labeling)
+                let $input = $("<input>").attr("type", "radio")
+                    .attr("name", "dataset-variable-labelings")
+                    .attr("id", id).attr("value", labeling)
+                $cb.append($input)
+                let text = labeling
+                if (task.endsWith("classification"))
+                    text += ` (${value} classes)`
 
-//        // 3. Add options for attack type
-//        $cc.append($("<div></div>").attr("class", "menu-separator"))
-//        $cb = $("<div></div>").attr("class", "control-block")
-//        $cc.append($cb)
-//        $cb.append($("<label></label>").text("Attack"))
-//        this.$attackTypeSelect = $("<select></select>").attr("id", this.idPrefix + "-attack")
-//        $cb.append(this.$attackTypeSelect)
-//        // TODO need possible attack types here
-//        let attack = "original"
-//        this.$attackTypeSelect.append($("<option></option>").text(attack))
+                $cb.append($("<label></label>").text(text)
+                    .attr("for", id))
+                $input.change(() => {
+                    this.task = task
+                    this.labeling = labeling
+                })
+
+                // Check the first option
+                if (!checked) {
+                    $input.change()
+                    $input.prop('checked', true)
+                    checked = true
+                }
+            }
+        }
+        // this.task = Object.keys(taskLabelings)[0]
+        // this.labeling = Object.keys(taskLabelings)[0]
+        // $('#' + this.idPrefix + "-labelings-" + nameToId(this.labeling)).prop("checked", true)
 
         this.appendAcceptBreakButtons()
         // this.$acceptDiv.hide()
@@ -188,32 +238,33 @@ class MenuDatasetVarView extends MenuView {
             attrsChecked.push($('#' + id).is(':checked'))
         }
 
-        // If no attributes checked, check oneHotNodeInput
-        if (attrs.length > 0 && !attrsChecked.reduce((a, v) => a || v, false)) {
-            if (this.$oneHotNodeInput == null)
-                console.error("No attributes and no node 1-hot - features will be null!")
-            else
-                this.$oneHotNodeInput.prop('checked', true)
-        }
-
         // Fill features according to format
         let features = {"node_struct": [], "node_attr": []}
-        // if (this.$nodeClusteringInput.is(":checked"))
-        //     features["node_struct"].push("clustering")
-        // if (this.$nodeDegreeInput.is(":checked"))
-        //     features["node_struct"].push("degree")
+        // If no attributes , check oneHotNodeInput
+        if (attrs.length === 0 || (attrs.length > 0 && !attrsChecked.reduce((a, v) => a || v, false))) {
+            if (this.$tenOnesNodeInput == null)
+                console.error("No attributes and no node 1-hot - features will be null!")
+            else
+                this.$tenOnesNodeInput.prop('checked', true)
+        }
+
         if (this.$oneHotNodeInput && this.$oneHotNodeInput.is(":checked"))
             features["node_struct"].push("one_hot")
+        if (this.$tenOnesNodeInput && this.$tenOnesNodeInput.is(":checked"))
+            features["node_struct"].push("10-ones")
+        if (this.$nodeClusteringInput && this.$nodeClusteringInput.is(":checked"))
+            features["node_struct"].push("clustering")
+        if (this.$nodeDegreeInput && this.$nodeDegreeInput.is(":checked"))
+            features["node_struct"].push("degree")
         for (let i = 0; i < attrs.length; i++) {
             if (attrsChecked[i])
                 features["node_attr"].push(attrs[i])
         }
-        this.labeling = $("input[name='dataset-variable-labelings']:checked").val()
 
         let datasetVarConfig = {
-            features: features,
+            task: this.task,
             labeling: this.labeling,
-//            dataset_attack_type: this.$attackTypeSelect.val(),
+            features: features,
             dataset_ver_ind: 0, // TODO check
         }
         await controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)

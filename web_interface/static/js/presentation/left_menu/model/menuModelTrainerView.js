@@ -1,10 +1,23 @@
 class MenuModelTrainerView extends MenuView {
+    static allowedMetrics(task) {
+        if ([Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION].includes(task))
+            return ["Accuracy", "BalancedAccuracy", "Precision", "Recall", "F1", "Jaccard"]
+        if (task === Task.EDGE_PREDICTION)
+            return ["Accuracy", "AUC",
+                "Precision@10", "Precision@50", "Precision@100", "Precision@1000",
+                "Recall@10", "Recall@50", "Recall@100", "Recall@1000",
+            ]
+
+        console.error(`Task ${task} is not supported yet`)
+    }
+
     constructor($div, requestBlock, listenBlocks) {
         super($div, requestBlock, listenBlocks)
 
         // Variables
         this.trainStepFlag = null // Flag whether train_1_step is available
         this.trainFullFlag = null // Flag whether train_full is available
+        this.task = null
 
         // Training params
         this.$epochsInput = null
@@ -26,10 +39,18 @@ class MenuModelTrainerView extends MenuView {
         // fixme outdated
         // this.trainStepFlag = arg["functions"].includes("train_1_step")
         // this.trainFullFlag = arg["functions"].includes("train_full")
+        this.task = arg
 
         this.trainStepFlag = true
 
         await this.updateTrainerMenu()
+    }
+
+    async _accept() {
+        let metrics = this.getMetrics()
+        // We should pass metrics if user presses 'accept' without training
+        await controller.blockRequest(
+            this.requestBlock, 'modify', {'metrics': metrics})
     }
 
     onReceive(block, args) {
@@ -44,6 +65,10 @@ class MenuModelTrainerView extends MenuView {
                 let text = args["progress"]["text"]
                 if (text)
                     this.progressBar.setText(text)
+            }
+            else if ("info" in args) {
+                if (args["info"] === "training-finished")
+                    this.ontrainfinish()
             }
         }
     }
@@ -68,6 +93,20 @@ class MenuModelTrainerView extends MenuView {
         await controller.ajaxRequest('/model',
             {do: "train", mode: mode, steps: steps, metrics: JSON_stringify(metrics)})
         this.$acceptDiv.find('button').prop("disabled", false)
+    }
+
+    ontrainstart() {
+        // Lock panels
+        console.log('ontrainstart')
+        blockDiv($("#menu-dataset"), true, "wait")
+        blockDiv($("#menu-model"), true, "wait")
+    }
+
+    ontrainfinish() {
+        // Unlock panels
+        console.log('ontrainfinish')
+        blockDiv($("#menu-dataset"), false, "wait")
+        blockDiv($("#menu-model"), false, "wait")
     }
 
     async onstop() {
@@ -123,7 +162,8 @@ class MenuModelTrainerView extends MenuView {
         $tr.append($("<th>test</th>").css("writing-mode", "sideways-lr"))
         let $tbody = $("<tbody></tbody>")
         $table.append($tbody)
-        let metrics = ["Accuracy", "BalancedAccuracy", "Precision", "Recall", "F1", "Jaccard"]
+        // let metrics = ["Accuracy", "BalancedAccuracy", "Precision", "Recall", "F1", "Jaccard"]
+        let metrics = MenuModelTrainerView.allowedMetrics(this.task)
         for (const metric of metrics) {
             let $tr = $("<tr></tr>")
             $tbody.append($tr)
@@ -221,6 +261,7 @@ class MenuModelTrainerView extends MenuView {
                 blockLeftMenu(true)
                 await this.ontrain(mode, parseInt(this.$epochsInput.val()), this.getMetrics())
                 blockLeftMenu(false)
+                this.ontrainstart()
                 $button.prop("disabled", false)
                 this.$save.prop("disabled", false)
                 this.$reset.prop("disabled", false)

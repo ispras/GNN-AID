@@ -1,4 +1,4 @@
-Working with datasets
+Работа с датасетами
 *********************
 
 .. contents::
@@ -19,7 +19,7 @@ Idea
 Основные классы
 ===============
 
-GeneralDataset and its subclasses
+GeneralDataset и подклассы
 ---------------------------------
 
 В GNN-AID все датасеты являются объектами абстрактного класса ``GeneralDataset``. Основные поля:

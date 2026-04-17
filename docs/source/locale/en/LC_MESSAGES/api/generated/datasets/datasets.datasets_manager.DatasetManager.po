@@ -1,0 +1,65 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../api/generated/datasets/datasets.datasets_manager.DatasetManager.rst:2
+msgid "datasets.datasets\\_manager.DatasetManager"
+msgstr ""
+
+#: datasets.datasets_manager.DatasetManager:1 of
+msgid ""
+"Class for working with datasets. Methods: get - loads dataset in "
+"torch_geometric format for gnn along the path specified in full_name as "
+"tuple. Currently also supports automatic loading and processing of all "
+"datasets from torch_geometric.datasets"
+msgstr ""
+
+#: ../../api/generated/datasets/datasets.datasets_manager.DatasetManager.rst:13
+msgid "Methods"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`__init__ <datasets.datasets_manager.DatasetManager.__init__>`\\ "
+"\\(\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`add_labeling "
+"<datasets.datasets_manager.DatasetManager.add_labeling>`\\ "
+"\\(dataset\\_config\\, task\\, ...\\[\\, ...\\]\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Adds a new labeling to datasets with a specified dataset_config."
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid ""
+":py:obj:`get_by_config "
+"<datasets.datasets_manager.DatasetManager.get_by_config>`\\ "
+"\\(dataset\\_config\\[\\, ...\\]\\)"
+msgstr ""
+
+#: ../../:1:<autosummary>:1
+msgid "Get GeneralDataset by dataset config."
+msgstr ""
+

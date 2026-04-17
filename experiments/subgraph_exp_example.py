@@ -4,9 +4,10 @@ import warnings
 
 from torch import device
 
+from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
-from base.datasets_processing import DatasetManager
+from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
 from models_builder.models_zoo import model_configs_zoo
 
 
@@ -17,40 +18,14 @@ def test_SubgraphX():
     full_name = None
 
     # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", "MUTAG")
-    # full_name = ("single-graph", "custom", 'karate')
     full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")
-    # full_name = ("Homogeneous", "TUDataset", 'PROTEINS')
+    # full_name = (LibPTGDataset.data_folder, "Homogeneous", "TUDataset", 'PROTEINS')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
-
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     full_name=("example", "single-graph", "example",),
-    #     features=FeatureConfig(node_attr=['a', 'b']),
-    #     labeling='threeClasses',
-    #     dataset_ver_ind=0
-    # )
-
-    # dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    #     # full_name=("example", "custom", "vk_samples", "vk2-ff40-N100000-A.1612175945",),
-    #     full_name=("example", "custom", "vk_samples", "vk2-ff20-N10000-A.1611943634",),
-    #     # full_name=("example", "custom", "vk_samples", "vk2-ff20-N1000-U.1612273925",),
-    #     # features=('sex',),
-    #     features={'attr': {
-    #         # "('personal', 'political')": 'one_hot',
-    #         # "('occupation', 'type')": 'one_hot', # Don't work now
-    #         # "('relation',)": 'one_hot',
-    #         # "('age',)": 'one_hot',
-    #         "('sex',)": 'one_hot',
-    #     }},
-    #     # features=FeatureConfig(node_attr=['sex']),
-    #     labeling='sex1',
-    #     dataset_ver_ind=0
-    # )
-
-    # print(data.train_mask)
+    data = dataset.data
 
     gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn')
     # gnn = model_configs_zoo(dataset=dataset, model_name='gcn_gcn_lin')
@@ -89,7 +64,7 @@ def test_SubgraphX():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )

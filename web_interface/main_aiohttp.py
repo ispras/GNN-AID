@@ -1,29 +1,44 @@
 import asyncio
+import contextlib
 import json
 import logging
+import queue
 # import multiprocessing as mp
 # mp.set_start_method("spawn", force=True)
 
 from multiprocessing import Process, Queue
-from typing import Dict
+from typing import Dict, Tuple
 from aiohttp import web
 import socketio
 import jinja2
 import aiohttp_jinja2
 
-from aux.data_info import DataInfo
+from gnn_aid.aux.data_info import DataInfo
+from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
-from web_interface.back_front.utils import WebInterfaceError, json_loads, json_dumps, SocketConnect
+from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR
 
 # Socket.IO server (ASGI not used here)
-sio = socketio.AsyncServer(async_mode="aiohttp")
+sio = socketio.AsyncServer(
+    async_mode="aiohttp",
+    ping_timeout=600,  # wait pong from client
+    ping_interval=25,
+    cors_allowed_origins='*'
+)
 app = web.Application()
 sio.attach(app)
 
-aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader("templates"))
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
 
 clients = {}  # client_id (sid) -> asyncio.Task
-queues: Dict[str, Queue] = {}
+queues: Dict[str, Tuple[Queue, Queue, Queue, Process]] = {}
+
+
+def queue_get_with_timeout(q, timeout=0.5):
+    try:
+        return q.get(timeout=timeout)
+    except queue.Empty:
+        return None
 
 
 # Route for interpretation
@@ -92,13 +107,17 @@ async def handle_url(request):
         if sid not in clients:
             return web.Response(status=404, text="Unknown SID")
 
-        response_queue, _, request_queue = queues[sid]
+        response_queue, _, request_queue, _ = queues[sid]
 
         print(url, 'http request from', sid, 'args', dict(data))
         request_queue.put({"type": url, "args": dict(data)})
 
-        # Wait for response from worker
-        result = response_queue.get()
+        # Wait for response from worker, but do not block forever
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, queue_get_with_timeout, response_queue, 10.0)
+        if result is None:
+            return web.Response(status=504, text="Timeout waiting for worker response")
+
         return web.Response(text=json.dumps(result), content_type='application/json')
 
     return web.Response(status=405, text="Method Not Allowed")
@@ -112,7 +131,7 @@ app.router.add_get("/interpretation", handle_interpretation)
 app.router.add_post("/ask", handle_ask)
 app.router.add_post("/{url}", handle_url)
 
-app.router.add_static('/static/', path='static', name='static')
+app.router.add_static('/static/', path=str(STATIC_DIR), name='static')
 
 
 # Socket.IO connection
@@ -132,14 +151,18 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print(f"[disconnect] {sid}")
-    clients.pop(sid, None)
+    task = clients.get(sid)
+    if task is not None:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 async def client_wrapper(sid: str, mode: ClientMode):
     response_queue = Queue()
     msg_queue = Queue()
     request_queue = Queue()
-    queues[sid] = response_queue, msg_queue, request_queue
+    proc = None
 
     print("creating process")
     proc = Process(
@@ -148,28 +171,54 @@ async def client_wrapper(sid: str, mode: ClientMode):
     proc.start()
     print("Process created")
 
-    loop = asyncio.get_event_loop()
+    queues[sid] = (response_queue, msg_queue, request_queue, proc)
+
+    loop = asyncio.get_running_loop()
     try:
         while True:
             if not proc.is_alive() and msg_queue.empty():
                 print('proc is not alive anymore and queue is empty')
                 break
 
-            msg = await loop.run_in_executor(None, msg_queue.get)
+            msg = await loop.run_in_executor(None, queue_get_with_timeout, msg_queue, 0.5)
+            if msg is None:
+                continue
+
             print(f"got msg from queue [{len(msg)}] {str(msg)[:80]}")
             await sio.emit("message", msg, to=sid)
 
         print("end while")
 
-    # except asyncio.CancelledError:
-    #     print('asyncio.CancelledError')
-    #     stop_event.set()
-    #     proc.join(timeout=1)
-    #     if proc.is_alive():
-    #         proc.terminate()
-    #         proc.join(timeout=1)
+    except asyncio.CancelledError:
+        print('asyncio.CancelledError')
+        raise
+
     except Exception as e:
         print('exception', e)
+
+    finally:
+        print(f"cleanup for {sid}")
+
+        # Tell worker to stop if its loop supports a shutdown command
+        with contextlib.suppress(Exception):
+            request_queue.put("__shutdown__")
+
+        if proc is not None:
+            if proc.is_alive():
+                proc.join(timeout=1)
+
+            if proc.is_alive():
+                proc.terminate()
+                proc.join(timeout=1)
+
+        for q in (response_queue, msg_queue, request_queue):
+            with contextlib.suppress(Exception):
+                q.close()
+            with contextlib.suppress(Exception):
+                q.join_thread()
+
+        queues.pop(sid, None)
+        clients.pop(sid, None)
 
 
 # Worker process logic
@@ -187,120 +236,7 @@ def worker_process(
     client = FrontendClient(socket_connect, mode)
     print(f"Created FrontendClient with sid {sid}")
 
-    while True:
-        print('Worker is waiting for command...')
-        command = request_queue.get()
-        type = command.get('type')
-        args = command.get('args')
-        print(f"Worker: received command: {type} with args: {args}")
-
-        if type == "dataset":
-            get = args.get('get')
-            set = args.get('set')
-            part = args.get('part')
-            if part:
-                part = json_loads(part)
-
-            if set == "visible_part":
-                result = client.dcBlock.set_visible_part(part=part)
-
-            elif get == "data":
-                dataset_data = client.dcBlock.get_dataset_data(part=part)
-                data = dataset_data.to_json()
-                logging.info(f"Length of dataset_data: {len(data)}")
-                result = data
-
-            elif get == "var_data":
-                if not client.dvcBlock.is_set():
-                    result = ''
-                else:
-                    dataset_var_data = client.dvcBlock.get_dataset_var_data(part=part)
-                    data = dataset_var_data.to_json()
-                    logging.info(f"Length of dataset_var_data: {len(data)}")
-                    result = data
-
-            elif get == "stat":
-                stat = args.get('stat')
-                result = json_dumps(client.dcBlock.get_stat(stat))
-
-            elif get == "index":
-                result = client.dcBlock.get_index()
-
-            else:
-                raise WebInterfaceError(f"Unknown 'part' command {get} for dataset")
-
-            response_queue.put(result)
-            print("Worker puts result to response_queue")
-
-        elif type == "block":
-            print("block section")
-            block = args.get('block')
-            func = args.get('func')
-            params = args.get('params')
-            if params:
-                params = json_loads(params)
-            print(f"request_block: block={block}, func={func}, params={params}")
-            # TODO what if raise exception? process will stop
-            client.request_block(block, func, params)
-            response_queue.put('')
-            print("Worker puts result to response_queue")
-
-        elif type == "model":
-            do = args.get('do')
-            get = args.get('get')
-
-            if do:
-                print(f"model.do: do={do}, params={args}")
-                if do == 'index':
-                    type = args.get('type')
-                    if type == "saved":
-                        result = json_dumps(client.mloadBlock.get_index())
-                    elif type == "custom":
-                        result = json_dumps(client.mcustomBlock.get_index())
-                elif do in ['train', 'reset', 'run', 'save']:
-                    result = client.mtBlock.do(do, args)
-                elif do in ['run with attacks']:
-                    result = client.atBlock.do(do, args)
-                else:
-                    raise WebInterfaceError(f"Unknown do command: '{do}'")
-
-            if get:
-                if get == "satellites":
-                    if client.mmcBlock.is_set():
-                        part = args.get('part')
-                        if part:
-                            part = json_loads(part)
-                        result = client.mmcBlock.get_satellites(part=part)
-                    else:
-                        result = ''
-
-            assert result is not None
-            response_queue.put(result)
-
-        elif type == "explainer":
-            do = args.get('do')
-
-            print(f"explainer.do: do={do}, params={args}")
-
-            if do in ["run", "stop"]:
-                result = client.erBlock.do(do, args)
-
-            elif do == 'index':
-                result = client.elBlock.get_index()
-
-            # elif do == "save":
-            #     return client.save_explanation()
-
-            else:
-                raise WebInterfaceError(f"Unknown 'do' command {do} for explainer")
-
-            response_queue.put(result)
-
-        elif type == "STOP":
-            print(f"Process {sid} received STOP command; it will finish")
-            break
-        else:
-            raise WebInterfaceError(f"Unknown command type: 'f{type}'")
+    client.run_loop(response_queue, msg_queue, request_queue)
 
 
 class AiohttpSocketConnect(SocketConnect):
@@ -314,6 +250,21 @@ class AiohttpSocketConnect(SocketConnect):
     def _send_data(self, data):
         self.mp_queue.put_nowait(data)
         print(f"put msg to mpqueue [{len(str(data))}] {str(data)[:40]}")
+
+
+async def on_shutdown(app):
+    tasks = []
+
+    for sid, task in list(clients.items()):
+        if task is not None and not task.done():
+            task.cancel()
+            tasks.append(task)
+
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+app.on_shutdown.append(on_shutdown)
 
 
 def run_aiohttp_server(port=5000):

@@ -2,10 +2,13 @@ const EDGE_ARROW_SIZE = 10
 
 // An edge with an SVG primitive to draw it
 class SvgEdge extends SvgElement{
-    constructor(x1, x2, y1, y2, color, width, directed, show) {
-        super(x1, y1, 1, color, show, null)
+    constructor(x1, x2, y1, y2, r, color, width, directed, show, $tip) {
+        super(x1, y1, r, color, show, $tip)
+        this.x2 = x2
+        this.y2 = y2
         this.width = width
         this.directed = directed
+        this.maxFeaturesShown = 1
 
         this.path = document.createElementNS("http://www.w3.org/2000/svg", "path")
         this.path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`)
@@ -13,20 +16,63 @@ class SvgEdge extends SvgElement{
         this.path.setAttribute('stroke', color)
         this.path.setAttribute('display', show ? "inline" : "none")
         this.path.setAttribute('stroke-width', width)
+
+        // Initialize satellites for edges
+        let features = this.satellites['features'] = new Satellite("rect", this.r)
+        features.placeX = (ix, r, count) => (this.x + this.x2) / 2 - r
+        features.placeY = (ix, r, count) => (this.y + this.y2) / 2 - r + ix * 0.8 * r
+
+        let labels = this.satellites['labels'] = new Satellite("circle", this.r)
+        labels.placeX = (ix, r, count) => (this.x + this.x2) / 2 + 0.8 * r*(-count/2 + 1/2 + ix)
+        labels.placeY = (ix, r, count) => (this.y + this.y2) / 2 - 1.6 * r
+
+        let predictions = this.satellites['predictions'] = new Satellite("circle", this.r)
+        predictions.placeX = (ix, r, count) => (this.x + this.x2) / 2 + 0.8 * r*(-count/2 + 1/2 + ix)
+        predictions.placeY = (ix, r, count) => (this.y + this.y2) / 2 + 1.1 * r
+
+        let logits = this.satellites['logits'] = new Satellite("rect", this.r)
+        logits.placeX = (ix, r, count) => (this.x + this.x2) / 2
+        logits.placeY = (ix, r, count) => (this.y + this.y2) / 2 - r + ix * 0.8 * r
+
+        let trainmask = this.satellites['train-test-mask'] = new Satellite("text", this.r)
+        trainmask.placeX = (ix, r, count) => (this.x + this.x2) / 2
+        trainmask.placeY = (ix, r, count) => (this.y + this.y2) / 2 + 0.3 * r
+
+        let scores = this.satellites['scores'] = new Satellite("rect", this.r)
+        scores.placeX = (ix, r, count) => (this.x + this.x2) / 2 + 0.8 * r * ix
+        scores.placeY = (ix, r, count) => (this.y + this.y2) / 2 + 2 * r
     }
 
     moveTo(x1, y1, x2, y2) {
+        this.x = x1
+        this.y = y1
+        this.x2 = x2
+        this.y2 = y2
+
         let d
         if (this.directed)
             d = svgEdge(new Vec(x1, y1), new Vec(x2, y2), this.directed)
         else
             d = `M${x1},${y1} L${x2},${y2}`
         this.path.setAttribute('d', d)
+
+        // Update satellite positions
+        for (const satellite of Object.values(this.satellites))
+            satellite.moveTo()
+    }
+
+    scale(s) {
+        this.s = s
+        for (const satellite of Object.values(this.satellites))
+            satellite.scale(s)
     }
 
     visible(show) {
         this.show = show
         this.path.setAttribute('display', show ? "inline" : "none")
+
+        for (const satellite of Object.values(this.satellites))
+            satellite.visible(!this.lightMode && show)
     }
 
     // Set stroke color

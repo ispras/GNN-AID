@@ -2,10 +2,43 @@
 
 ![Image alt](https://github.com/ispras/GNN-AID/blob/develop/GNN-AID%20logo.png)
 
+GNN-AID is an open framework for Analysis, Interpretation, and Defensing Graph Neural Networks. It is built on PyTorch-Geometric and:
+- includes preloaded datasets from PyG
+- extendable API for custom architectures: datasets, models, explainers, attacks and defense methods
+- MLOps features for experiments reproducibility
+
+GNN-AID has a web interface which supports:
+- graph visualization and analysis tools
+- no-code model building
+- visualization of models explanations
+- visualization of attacks results
+
+List of GNN-AID application areas incudes:
+* as an educational tool for machine learning practitioners with a low entry barrier. It covers the architecture of graph neural networks, the process of training them on different types of tasks, methods for their interpretation, and attack and defense methods for graph neural networks.
+* as a graph data analysis tool with an emphasis on visualization
+* as a tool for interpreting a graph neural network in an applied task
+* as a tool for analyzing the robustness and security of a graph neural network in an applied task
+
 ## Installation
   
 GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit best for it.  
 For another OS consider docker.  
+
+### System requirements
+
+Minimum:
+
+- OS: Linux
+- Disk space: 10 GB
+- RAM (for framework): 1 GB
+
+Recommended:
+
+- OS: Ubuntu 20.04/22.04
+- RAM: 8 GB or more
+- GPU: optional. For large-scale experiments and backend only
+
+### Dependencies
 
 You need python of version `3.11` or higher. We advice to create virtual environment with `pip`.
 ```
@@ -25,7 +58,17 @@ The 3rd pack of requirements will take around 20 minutes.
 
 ### Problems
 
-If you see 139 or 134 error code when run the script, it is likely a compatibility issue. Try the following:
+1\. If during installation of requirements3 you get an error "Failed to build ... when getting requirements to build wheel. No module named 'torch'", try install torch-* packages from binaries:
+```
+pip install torch-scatter==2.1.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-sparse==0.6.17 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-cluster==1.6.1 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+pip install torch-spline-conv==1.2.2 -f https://data.pyg.org/whl/torch-2.0.0+${CUDA}.html
+```
+where ${CUDA} should be replaced by either `cpu`, `cu117`, or `cu118` depending on your PyTorch installation.
+
+
+2\. If you see 139 or 134 error code when run the script, it is likely a compatibility issue. Try the following:
 
 1.  Update video card drivers (if you have decided to use cuda).
 2.  Update gcc to the most recent version.
@@ -40,14 +83,13 @@ Suppose you are at the project root folder. Activate virtual environment
 source venv/bin/activate
 ```
 
-Go to `src` folder and add it to python dependencies
+Add the current directory to python dependencies
 
 ```text
-cd src
 export PYTHONPATH=.
 ```
 
-Run `main.py` script
+Run `main.py` script from `web_interface` package
 
 ```text
 python web_interface/main.py
@@ -76,4 +118,45 @@ We suggest a series of tutorials to learn how to use GNN-AID:
 You can also check out a short YouTube [video](https://youtu.be/uHxaxLSQ9JM) with demonstration how to operate via GUI.
 
 
+## Directory structure
+```
+├── data - storage for datasets raw data
+│   ├── example - out-of-the-box example datasets
+├── data_info - storages index, updated automatically
+├── datasets - storage for preprocessed datasets
+├── docs - documentation
+├── experiments - section containing experimental scripts
+├── explanations - storage for interpretation results
+├── gnn_aid - core library
+│   ├── attacks - attack methods
+│   ├── aux - auxiliary module
+│   ├── datasets - dataset handling
+│   ├── data_structures - data structures used in the project
+│   ├── defenses - defense methods
+│   ├── explainers - interpretation methods
+│   ├── models_builder - model handling
+├── GNN-AID logo.png - logo
+├── metainfo - descriptions of function, convolution, and method parameters
+├── models - storage for trained models
+├── PGE_gen_models - storage for model artifacts used by PGEExplainer
+├── pyproject.toml - configuration file for Read the Docs
+├── README.md - project description file
+├── requirements1.txt - main dependencies
+├── requirements2.txt - dependencies required for the documentation
+├── requirements3.txt - additional dependencies
+├── tests - unit tests
+├── tutorials - tutorial examples
+├── user_datasets - user-defined datasets
+├── user_models_managers - user-defined model managers
+├── user_models_obj - user-defined models
+├── VERSION - version file
+└── web_interface - web interface implementation
+    ├── back_front - frontend-backend interaction
+    ├── main.py - entry point
+    ├── static - frontend code
+    │   ├── css - stylesheet files
+    │   ├── icons - image assets used in the interface
+    │   └── js - JavaScript code
+    ├── templates - HTML templates
+```
 

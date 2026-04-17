@@ -1,4 +1,7 @@
 class MenuModelConstructorView extends MenuView {
+    // Decoder functions that must be final they do not allow adding decoder layers after them
+    static finalDecoderFunctions = ["CosineSimilarity", "DotProduct"]
+
     constructor($div, requestBlock, listenBlocks) {
         super($div, requestBlock, listenBlocks)
 
@@ -9,13 +12,15 @@ class MenuModelConstructorView extends MenuView {
     }
 
     async init(args) {
-        super.init(args)
+        super.init()
 
         this.state = MVState.ACTIVE
 
         this.num_feats = args[0]
         this.num_classes = args[1]
         this.multi = args[2]
+        this.task = args[3]
+        console.log(args)
 
         this.$configConstructorDiv = $("<div></div>")
         this.$mainDiv.append(this.$configConstructorDiv)
@@ -27,7 +32,7 @@ class MenuModelConstructorView extends MenuView {
     }
 
     async _accept() {
-        let mc = this.constructModelConfig()
+        let mc = await this.constructModelConfig()
         if (mc == null)
             return -1
 
@@ -63,6 +68,7 @@ class MenuModelConstructorView extends MenuView {
         this.absLayersCounter = 0
         this.nodeLayerBlocks = new BiList()
         this.graphLayerBlocks = new BiList()
+        this.decoderLayerBlocks = new BiList()
         this.customGraphLayerBlock = null // TODO can we have a lot of them ?
 
         // First node layer block is obligate
@@ -74,7 +80,7 @@ class MenuModelConstructorView extends MenuView {
         // Add node layer button
         let $cb = $("<div></div>").attr("class", "control-block")
         $cc.append($cb)
-        let $addNodeLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+        let $addNodeLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-node-layer")
             .text("+ node layer").css("margin-right", "12px")
         $cb.append($addNodeLayerButton)
 
@@ -90,7 +96,7 @@ class MenuModelConstructorView extends MenuView {
 
         // Graph layer block if needed
         let $graphLayerBlocksDiv
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             $graphLayerBlocksDiv = $("<div></div>")
             $cc.append($graphLayerBlocksDiv)
 
@@ -103,7 +109,7 @@ class MenuModelConstructorView extends MenuView {
 
             let $cb = $("<div></div>").attr("class", "control-block")
             $cc.append($cb)
-            let $addGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+            let $addGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-graph-layer")
                 .text("+ graph layer").css("margin-right", "12px")
             $cb.append($addGraphLayerButton)
 
@@ -120,13 +126,13 @@ class MenuModelConstructorView extends MenuView {
         // Custom layer block - for now Prot, only 1
         let $customGraphLayerBlockDiv
         let $customGraphLayerButtonDiv
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             $customGraphLayerBlockDiv = $("<div></div>")
             $cc.append($customGraphLayerBlockDiv)
 
             $customGraphLayerButtonDiv = $("<div></div>").attr("class", "control-block")
             $cc.append($customGraphLayerButtonDiv)
-            let $addCustomGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-layer")
+            let $addCustomGraphLayerButton = $("<button></button>").attr("id", "model-button-constructor-add-custom-layer")
                 .text("+ custom graph layer").css("margin-right", "12px")
             $customGraphLayerButtonDiv.append($addCustomGraphLayerButton)
 
@@ -141,6 +147,44 @@ class MenuModelConstructorView extends MenuView {
             })
         }
 
+        // Decoder layers if task is edge prediction
+        let $decoderLayerBlocksDiv
+        if (this.task === 'edge-prediction') {
+            $decoderLayerBlocksDiv = $("<div></div>")
+            $cc.append($decoderLayerBlocksDiv)
+
+            // First decoder layer block is obligate
+            let layerBlock = new LayerBlock('d', this.absLayersCounter, 0)
+            this.decoderLayerBlocks.append(layerBlock)
+            $decoderLayerBlocksDiv.append(layerBlock.$div)
+            await layerBlock.build(this.decoderLayerBlocks.length, 0)
+            // this.nodeLayerBlocks.first().update(null, this.nodeLayerBlocks.length, 0)
+
+            let $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            let $addDecoderLayerButton = $("<button></button>")
+                .attr("id", "model-button-constructor-add-decoder-layer")
+                .text("+ decoder layer").css("margin-right", "12px")
+            $cb.append($addDecoderLayerButton)
+
+            $addDecoderLayerButton.click(() => {
+                // Check if last decoder layer is Linear, otherwise we cannot add layers
+                let fn = this.decoderLayerBlocks.last().getFunctionName()
+                if (MenuModelConstructorView.finalDecoderFunctions.includes(fn)) {
+                    alert(`Cannot add decoder layer after the functions: ${
+                        MenuModelConstructorView.finalDecoderFunctions}`)
+                    return
+                }
+
+                this.absLayersCounter++
+                let layerBlock = new LayerBlock('d', this.absLayersCounter, this.decoderLayerBlocks.length)
+                $decoderLayerBlocksDiv.append(layerBlock.$div)
+                layerBlock.build(this.nodeLayerBlocks.length, this.decoderLayerBlocks.length)
+                this.decoderLayerBlocks.append(layerBlock)
+                // this.updConnections()
+            })
+        }
+
         // LayerBlock control buttons listeners
         let self = this
         LayerBlock.prototype.close = function () {
@@ -150,7 +194,11 @@ class MenuModelConstructorView extends MenuView {
                 $customGraphLayerButtonDiv.show()
             }
             else {
-                let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
+                let layerBlocks = {
+                    'n': self.nodeLayerBlocks,
+                    'g': self.graphLayerBlocks,
+                    'd': self.decoderLayerBlocks,
+                }[this.type]
                 if (layerBlocks.length === 1) return
                 let ix = this.ix
                 this.$div.remove()
@@ -165,8 +213,16 @@ class MenuModelConstructorView extends MenuView {
             }
         }
         LayerBlock.prototype.up = function () {
-            let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
-            let $layerBlocksDiv = this.type === 'n' ? $nodeLayerBlocksDiv : $graphLayerBlocksDiv
+            let layerBlocks = {
+                'n': self.nodeLayerBlocks,
+                'g': self.graphLayerBlocks,
+                'd': self.decoderLayerBlocks,
+            }[this.type]
+            let $layerBlocksDiv = {
+                'n': $nodeLayerBlocksDiv,
+                'g': $graphLayerBlocksDiv,
+                'd': $decoderLayerBlocksDiv,
+            }[this.type]
             let ix = this.ix
             if (ix > 0) {
                 $layerBlocksDiv.children().eq(ix).after($layerBlocksDiv.children().eq(ix - 1))
@@ -177,8 +233,16 @@ class MenuModelConstructorView extends MenuView {
             self.updConnections()
         }
         LayerBlock.prototype.down = function () {
-            let layerBlocks = this.type === 'n' ? self.nodeLayerBlocks : self.graphLayerBlocks
-            let $layerBlocksDiv = this.type === 'n' ? $nodeLayerBlocksDiv : $graphLayerBlocksDiv
+            let layerBlocks = {
+                'n': self.nodeLayerBlocks,
+                'g': self.graphLayerBlocks,
+                'd': self.decoderLayerBlocks,
+            }[this.type]
+            let $layerBlocksDiv = {
+                'n': $nodeLayerBlocksDiv,
+                'g': $graphLayerBlocksDiv,
+                'd': $decoderLayerBlocksDiv,
+            }[this.type]
             let ix = this.ix
             if (ix < layerBlocks.length - 1) {
                 $layerBlocksDiv.children().eq(ix).before($layerBlocksDiv.children().eq(ix + 1))
@@ -205,14 +269,14 @@ class MenuModelConstructorView extends MenuView {
     }
 
     // Form model config from selectors values
-    constructModelConfig() {
+    async constructModelConfig() {
         // Change layers output size to num_classes, and all its precedents if needed
-        let setOutputSize = (layerBlocks) => {
+        let setOutputSize = (layerBlocks, outputSize) => {
             let iter = layerBlocks.reverseIterator()
             let result = iter.next()
             let done
             while (!result.done) {
-                done = result.value.setOutputSize(this.num_classes)
+                done = result.value.setOutputSize(outputSize)
                 if (done)
                     break
                 result = iter.next()
@@ -224,8 +288,9 @@ class MenuModelConstructorView extends MenuView {
             }
         }
 
-        // Last layer must have Activation=LogSoftmax and outsize=number of classes
-        if (this.multi) {
+        // Handle the last layer - adjust output dim and activation
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
+            // Last layer must have Activation=LogSoftmax and outsize=number of classes
             if (this.customGraphLayerBlock) {
                 this.customGraphLayerBlock.setAsLast()
                 let done = this.customGraphLayerBlock.setOutputSize(this.num_classes)
@@ -242,11 +307,31 @@ class MenuModelConstructorView extends MenuView {
             }
             this.nodeLayerBlocks.last().setAsLast()
         }
-        else {
-            setOutputSize(this.nodeLayerBlocks)
+        else if (this.task === Task.NODE_CLASSIFICATION) {
+            setOutputSize(this.nodeLayerBlocks, this.num_classes)
             this.nodeLayerBlocks.last().setAsLast()
         }
+        else if (this.task === Task.EDGE_PREDICTION) {
+            // todo Activation=LogSoftmax?
+            setOutputSize(this.decoderLayerBlocks, 1)
+            this.decoderLayerBlocks.last().setAsLast()
 
+            // Recommend to remove activation for last 'n' layer if present
+            let last = this.nodeLayerBlocks.last()
+            if (last.$activationSelect.val() !== "None") {
+                const userAccepted = await showRecommendationDialog(
+                    `For edge prediction task, it is recommended that last node layer has no activation.
+                     Remove the activation or leave as is (${last.$activationSelect.val()})?`
+                )
+                if (userAccepted) {
+                    last.$activationSelect.val("None")
+                }
+            }
+        }
+        else
+            console.error("Not implemented for task", this.task)
+
+        // Assemble the whole model architecture
         let architecture = []
         let additionalNodeIxes = []
         let additionalGraphIxes = []
@@ -277,7 +362,7 @@ class MenuModelConstructorView extends MenuView {
         }
 
         // Add graph layers
-        if (this.multi) {
+        if (this.task === Task.GRAPH_CLASSIFICATION) {
             inputSize = 0
             ix = 0 // layer index
             iter = this.graphLayerBlocks.iterator()
@@ -301,7 +386,112 @@ class MenuModelConstructorView extends MenuView {
                 architecture.push(cfg)
             }
         }
+
+        // Add decoder layers
+        if (this.task === Task.EDGE_PREDICTION) {
+            ix = 0 // layer index
+            iter = this.decoderLayerBlocks.iterator()
+            result = iter.next()
+            while (!result.done) {
+                [cfg, inputSize, additionalNodeIxes, additionalGraphIxes]
+                    = result.value.constructConfig(inputSize)
+                // for (const i of additionalGraphIxes)
+                //     additionalGraphSize[i] += inputSize
+                architecture.push(cfg)
+                result = iter.next()
+                ix++
+            }
+        }
         return architecture
     }
 }
 
+function showRecommendationDialog(message) {
+    return new Promise((resolve) => {
+        // Создаём overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        `;
+
+        // Создаём диалоговое окно
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+        `;
+
+        // Текст сообщения
+        const messageEl = document.createElement('p');
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            margin: 0 0 20px 0;
+            color: #333;
+        `;
+
+        // Контейнер для кнопок
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        `;
+
+        // Кнопка Accept
+        const acceptButton = document.createElement('button');
+        acceptButton.textContent = 'Accept';
+        acceptButton.style.cssText = `
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        `;
+        acceptButton.onmouseover = () => acceptButton.style.background = '#0056b3';
+        acceptButton.onmouseout = () => acceptButton.style.background = '#007bff';
+        acceptButton.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(true);
+        };
+
+        // Кнопка Cancel
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.cssText = `
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        `;
+        cancelButton.onmouseover = () => cancelButton.style.background = '#545b62';
+        cancelButton.onmouseout = () => cancelButton.style.background = '#6c757d';
+        cancelButton.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        };
+
+        // Собираем всё вместе
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(acceptButton);
+        dialog.appendChild(messageEl);
+        dialog.appendChild(buttonContainer);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+    });
+}

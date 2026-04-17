@@ -3,22 +3,21 @@ from torch import device
 
 from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
-from data_structures.configs import ConfigPattern, ModelModificationConfig
+from data_structures.configs import ConfigPattern, ModelModificationConfig, DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
 from models_builder.models_zoo import model_configs_zoo
 
 # Here we perform all actions same way as in multi_attack_pipeline.py
 my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-full_name = ("Homogeneous", "Planetoid", 'Cora')
-
-dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-    full_name=full_name,
-    dataset_ver_ind=0
+gen_dataset = DatasetManager.get_by_config(
+    DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+    LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
 )
 
-gnn = model_configs_zoo(dataset=dataset, model_name='gin_gin')
+gnn = model_configs_zoo(dataset=gen_dataset, model_name='gin_gin')
 
 manager_config = ConfigPattern(
     _config_class="ModelManagerConfig",
@@ -34,7 +33,7 @@ manager_config = ConfigPattern(
 steps_epochs = 200
 gnn_model_manager = FrameworkGNNModelManager(
     gnn=gnn,
-    dataset_path=results_dataset_path,
+    dataset_path=gen_dataset.prepared_dir,
     manager_config=manager_config,
     modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
 )
@@ -61,16 +60,16 @@ fgsm_evasion_attack_config = ConfigPattern(
 gnn_model_manager.set_poison_attacker(poison_attack_config=poison_attack_config)
 gnn_model_manager.set_evasion_attacker(evasion_attack_config=fgsm_evasion_attack_config)
 
-dataset.train_test_split()
+gen_dataset.train_test_split()
 
 gnn_model_manager.epochs = gnn_model_manager.modification.epochs = 0
-train_test_split_path = gnn_model_manager.train_model(gen_dataset=dataset, steps=200,
+train_test_split_path = gnn_model_manager.train_model(gen_dataset=gen_dataset, steps=200,
                                                       save_model_flag=False,
                                                       metrics=[Metric("F1", mask='train', average=None)])
 # gnn_model_manager.train_model(gen_dataset=dataset, steps=200)
 
 metric_loc = gnn_model_manager.evaluate_model(
-    gen_dataset=dataset, metrics=[Metric("F1", mask='test', average='macro')])
+    gen_dataset=gen_dataset, metrics=[Metric("F1", mask='test', average='macro')])
 print(metric_loc)
 
 # Now after attack performed we can explain our model as it was done in 04 tutorial
@@ -87,7 +86,7 @@ explainer_init_config = ConfigPattern(
 # Define an explainer manager class
 explainer_GNNExpl = FrameworkExplainersManager(
     init_config=explainer_init_config,
-    dataset=dataset, gnn_manager=gnn_model_manager,
+    dataset=gen_dataset, gnn_manager=gnn_model_manager,
     explainer_name='GNNExplainer(torch-geom)',
 )
 # Here we can specify the run parameters of the explainer, such as the number of the element from the dataset

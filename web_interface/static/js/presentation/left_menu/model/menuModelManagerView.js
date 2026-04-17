@@ -1,14 +1,25 @@
 class MenuModelManagerView extends MenuView {
+    static allowedLosses(task) {
+        if ([Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION].includes(task))
+            return [["CrossEntropyLoss", "CrossEntropy"], ["NLLLoss", "NLL"]]
+        if (task === Task.EDGE_PREDICTION)
+            return [["BCEWithLogitsLoss", "BCE with logits"]]
+
+        console.error(`Task ${task} is not supported yet`)
+    }
+
     constructor($div, requestBlock, listenBlocks) {
         super($div, requestBlock, listenBlocks)
 
         // Variables
+        this.task = null
         this.mm_info = null // Dict of appropriate managers, {manager -> info}
 
         // Training params
         this.managerParamsBuilder = null
         this.$optimizerSelect = null
         this.optimizerParamsBuilder = null
+        this.$negSamplesRatio = null
         this.$lossSelect = null
         this.lossParamsBuilder = null
         this.$trainRatioInput = null
@@ -17,12 +28,13 @@ class MenuModelManagerView extends MenuView {
         this.$trainMaskFlag = null
     }
 
-    async init(arg) {
+    async init(args) {
         super.init()
         this.appendAcceptBreakButtons()
         // this.$acceptDiv.hide()
 
-        this.mm_info = arg
+        this.task = args[0]
+        this.mm_info = args[1]
 
         await this.buildManager()
     }
@@ -62,11 +74,24 @@ class MenuModelManagerView extends MenuView {
         $cc.append($cb)
         $cc.append($optimizerParamsDiv)
 
+        // Negative Samples Ratio - for edge prediction
+        if (this.task === Task.EDGE_PREDICTION) {
+            $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            let id = "menu-model-constructor-negsamplesratio"
+            $cb.append($("<label></label>").text("Neg.samples ratio").attr("for", id))
+            this.$negSamplesRatio = $("<input>").attr("type", "number")
+                .attr("min", "0").attr("step", "1")
+                .attr("value", "1").attr("id", id)
+            // addValueChecker(this.$negSamplesRatio, "float", 1, 0, null, "change")
+            $cb.append(this.$negSamplesRatio)
+        }
+
         // Loss function
         let $lossParamsDiv
         [$cb, this.$lossSelect, $lossParamsDiv, this.lossParamsBuilder]
             = await addOptionsWithParams("menu-model-constructor-loss",
-            "Loss function", [["NLLLoss", "NLL"], ["CrossEntropyLoss", "CE"]], "F")
+            "Loss function", MenuModelManagerView.allowedLosses(this.task), "F")
         $cc.append($cb)
         $cc.append($lossParamsDiv)
 
@@ -180,6 +205,8 @@ class MenuModelManagerView extends MenuView {
                 // parseFloat(this.$valRatioInput.val()),
                 parseFloat(this.$testRatioInput.val())],
         }
+        if (this.$negSamplesRatio)
+            managerConfig['neg_samples_ratio'] = parseFloat(this.$negSamplesRatio.val())
 
         Object.assign(managerConfig, this.managerParamsBuilder.kwArgs)
         return managerConfig

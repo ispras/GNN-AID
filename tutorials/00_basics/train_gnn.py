@@ -2,10 +2,12 @@ import torch
 from pathlib import Path
 from torch import device
 
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ConfigPattern
-from datasets.datasets_manager import DatasetManager
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.data_structures.configs import ConfigPattern, DatasetConfig, Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.models_builder import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 
 def train_gnn():
@@ -15,17 +17,16 @@ def train_gnn():
     # Here you can upload your own dataset, specified in the basic input data format.
     # It is also possible to use most of the existing datasets in the PyG.
     # You can see all supported datasets in the ./metainfo/torch_geom_index_all.json
-    full_name = ("Homogeneous", "Planetoid", 'Cora')
-    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    gen_dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
     gen_dataset.data.to(my_device)
 
     # --- Construct model ---
     # Here you can use your own model, or quickly construct a gnn using the GNN-AID functionality for constructing
-    # models. Examples of model configurations can be found in ./src/models_builder/models_zoo
+    # models. Examples of model configurations can be found in ./gnn_aid/models_builder/models_zoo
     # As an example we will use a simple two-layer GNN.
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
@@ -47,7 +48,7 @@ def train_gnn():
     # Create a class object that allows us to train our model.
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
     )
     gnn_model_manager.gnn.to(my_device)

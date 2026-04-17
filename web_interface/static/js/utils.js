@@ -55,6 +55,15 @@ function valueToColor(value, colormap, min=0, max=1, soft=false, p=0.2) {
         value = 1/(1+Math.exp(a*value+b))
     }
     else {
+        if (!value < min) {
+            console.error(`Value ${value} is less than minimal ${min}, color cannot be defined. Consider using soft=true.`)
+            return 'rgb(0,0,0)'
+        }
+        if (value > max) {
+            console.error(`Value ${value} is greater than maximal ${max}, color cannot be defined. Consider using soft=true.`)
+            return 'rgb(0,0,0)'
+        }
+
         value = (value - min) / (max-min)
     }
     let [r, g, b] = evaluate_cmap(value, colormap, false)
@@ -546,3 +555,15 @@ function findMaxIndex(arr, x) {
     }
     return -1
 }
+
+/// Enumeration of Tasks on dataset.
+// Mirrors `gnn_aid.data_structures.configs.Task` from backend.
+const Task = Object.freeze({
+    NODE_CLASSIFICATION: "node-classification",
+    NODE_REGRESSION: "node-regression",
+    GRAPH_CLASSIFICATION: "graph-classification",
+    GRAPH_REGRESSION: "graph-regression",
+    EDGE_PREDICTION: "edge-prediction",
+    EDGE_CLASSIFICATION: "edge-classification",
+    EDGE_REGRESSION: "edge-regression",
+})

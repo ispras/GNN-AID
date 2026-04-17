@@ -3,7 +3,8 @@ const PREDICTION_COLORMAP = 'binary'
 const EMBEDDING_COLORMAP = 'bwr'
 const CORRELATION_COLORMAP = 'bwr'
 const EDGE_MINIBATCH_SIZE = 10000 // Not necessary
-const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 50 // When Scale < THR, light mode is on to improve visibility (for single graph)
+// todo make customizable
+const LIGHT_MODE_SCALE_THRESHOLD_SINGLE = 5 // When Scale < THR, light mode is on to improve visibility (for single graph)
 const LIGHT_MODE_SCALE_THRESHOLD_MULTI = 20 // When Scale < THR, light mode is on to improve visibility (for multiple graph)
 const EXPLANATION_EDGE_IMPORTANCE_THRESHOLD = 0.5 // When edge importance < THR, it is not drawn
 
@@ -61,7 +62,8 @@ function createSetOfColors(numColors, $svg) {
 // Representation of a visible part of dataset - whole graph or a neighborhood.
 // Responsible for drawing and interaction with user.
 class VisibleGraph {
-    static SATELLITES = ["node_features", "labels", "predictions", "embeddings", "train-test-mask"]
+    static SATELLITES = ["features", "labels", "predictions", "logits", "train-test-mask"]
+    static ELEMS = ["node", "edge", "graph"]
 
     constructor(datasetInfo, svgPanel) {
         this.datasetInfo = datasetInfo
@@ -74,6 +76,7 @@ class VisibleGraph {
 
         // Constants
         this.nodeRadius = 15
+        this.edgeRadius = 12
         this.nodeStrokeWidth = 2
         this.nodeExplainedStrokeWidth = 4
         this.edgeStrokeWidth = 1
@@ -89,13 +92,29 @@ class VisibleGraph {
         this.edgeColor = '#000'
         this.backgroundColor = "#e7e7e7"
 
-        // Variables
-        this.datasetData = null // Nodes, edges, attributes, don't edit - it is changed from outside
+        // ----- Variables
+
+        // Nodes, edges, attributes, don't edit - it is changed from outside
+        this.datasetData = null
         this.visibleConfig = {center: null, depth: null}
-        this.datasetVar = null // Satellites, is set later, don't edit - it is changed from outside
-        this.nodePrimitives = null // {node -> primitive} on HTML element
-        this.edgePrimitivesBatches = null // {key -> list of SVGs} - path for a batch of edges on HTML element
-        // External parameters - TODO must be assigned when switch view neighborhood/graph
+
+        // Satellites, is set later, don't edit - it is changed from outside
+        this.datasetVar = null
+
+        // {node -> primitive} on HTML element
+        this.nodePrimitives = null
+
+        // {key -> list of SVGs} - path for a batch of edges on HTML element.
+        // Key is: depth for neighborhood, 0 for graph, graph ix for multi graph
+        this.edgePrimitivesBatches = null
+
+        // {key -> {edgeKey -> SvgEdge}} for individual edges.
+        // Key is: depth for neighborhood, 0 for graph, graph ix for multi graph
+        this.edgePrimitives = null
+
+        // ----- External parameters - TODO must be assigned when switch view neighborhood/graph
+
+        this.task = null // which labeling is chosen
         this.labeling = null // which labeling is chosen
         this.oneHotableFeature = null // whether feature is be 1-hot encoded
         this.coloredNodes = null // {class -> node fill color}
@@ -134,12 +153,13 @@ class VisibleGraph {
 
     // Register user control elements listeners associated to dataset var
     createVarListeners() {
-        for (const satellite of VisibleGraph.SATELLITES)
-            this.visView.addListener(this.visView.satellitesIds[satellite],
-                (_, v) => {
-                    this.showSatellite(satellite, v)
-                    this.draw()
-                }, this._tagVar)
+        for (const elem of VisibleGraph.ELEMS)
+            for (const satellite of VisibleGraph.SATELLITES)
+                this.visView.addListener(this.visView.satellitesIds[satellite],
+                    (_, v) => {
+                        this.showSatellite(elem, satellite, v)
+                        this.draw()
+                    }, this._tagVar)
     }
 
     // Handle nodes and whole SVG drag&drop
@@ -163,8 +183,9 @@ class VisibleGraph {
             }
         }
         this.svgElement.onmousemove = (e) => {
-            this.mousePos.x = e.layerX
-            this.mousePos.y = e.layerY
+            let rect = this.svgElement.getBoundingClientRect();
+            this.mousePos.x = e.clientX - rect.left;
+            this.mousePos.y = e.clientY - rect.top;
             if (this.svgGrabbed) {
                 this.screenPos.x = this.svgGrabbedScreenPos.x - e.screenX + this.svgGrabbedMousePos.x
                 this.screenPos.y = this.svgGrabbedScreenPos.y - e.screenY + this.svgGrabbedMousePos.y
@@ -222,6 +243,7 @@ class VisibleGraph {
     drop() {
         // this.dropVar()
         this.visView.removeListeners(this._tag)
+        this.task = null
         this.labeling = null
         this.coloredNodes = null
         this.onNodeClick = null
@@ -257,6 +279,7 @@ class VisibleGraph {
     // Variable part of drop - to be overridden
     _drop() {
         this.nodePrimitives = null
+        this.edgePrimitives = null
         this.edgePrimitivesBatches = null
         if (this.layout)
             this.layout.stopMoving()
@@ -265,8 +288,125 @@ class VisibleGraph {
         this.svgElement.innerHTML = ''
     }
 
-    initVar(datasetVar, labeling, oneHotableFeature) {
-        this.datasetVar = datasetVar
+    // Convert new datasetVar format (arrays) to old format (dicts) for compatibility
+    _convertDatasetVar(datasetVar) {
+        if (!datasetVar) return null;
+        const converted = {};
+
+        // Get node keys from datasetData
+        const nodeKeys = this.getNodes()
+
+        // Check if nodeKeys is a dict (multiple graphs) or simple list (single graph)
+        const isMultiGraph = !Array.isArray(nodeKeys);
+
+        // Get edge keys from datasetData
+        let edgeKeys;
+        if (isMultiGraph) {
+            // Multiple graphs: edges is a dict {graphId -> list of edges}
+            const edges = this.getEdges()
+            edgeKeys = {}
+            for (const [graphId, edgeList] of Object.entries(edges)) {
+                edgeKeys[graphId] = edgeList.map(([i, j]) => `${i},${j}`)
+            }
+        } else {
+            // Single graph: edges is a simple list
+            const edges = this.getEdges()
+            edgeKeys = edges ? edges.map(([i, j]) => `${i},${j}`) : []
+        }
+
+        // Convert variables, omit nulls
+        for (const elem of VisibleGraph.ELEMS) {
+            if (datasetVar[elem]) {
+                converted[elem] = {}
+                for (const [field, dataArray] of Object.entries(datasetVar[elem])) {
+                    if (dataArray && Array.isArray(dataArray)) {
+                        if (elem === 'graph') {
+                            // For graph-level variables
+                            if (isMultiGraph) {
+                                // Multiple graphs: create dict (graphId -> value)
+                                const varDict = {};
+                                const graphIds = Object.keys(nodeKeys);
+                                graphIds.forEach((graphId, arrayIdx) => {
+                                    if (arrayIdx < dataArray.length && dataArray[arrayIdx] !== null) {
+                                        varDict[graphId] = dataArray[arrayIdx];
+                                    }
+                                });
+                                converted[elem][field] = varDict;
+                            } else {
+                                // Single graph: just keep as array
+                                converted[elem][field] = dataArray;
+                            }
+                        } else if (elem === 'edge') {
+                            // For edge-level variables
+                            if (isMultiGraph) {
+                                // Multiple graphs: create dict of dicts (graphId -> edgeKey -> value)
+                                const varDictDict = {};
+                                const graphIds = Object.keys(nodeKeys);
+                                graphIds.forEach((graphId, arrayIdx) => {
+                                    const varDict = {};
+                                    const graphEdgeKeys = edgeKeys[graphId] || [];
+                                    if (arrayIdx < dataArray.length && Array.isArray(dataArray[arrayIdx])) {
+                                        graphEdgeKeys.forEach((key, edgeIdx) => {
+                                            if (edgeIdx < dataArray[arrayIdx].length &&
+                                                dataArray[arrayIdx][edgeIdx] !== null) {
+                                                varDict[key] = dataArray[arrayIdx][edgeIdx];
+                                            }
+                                        });
+                                    }
+                                    varDictDict[graphId] = varDict;
+                                });
+                                converted[elem][field] = varDictDict;
+                            } else {
+                                // Single graph: create simple dict (edgeKey -> value)
+                                const actualArray = (dataArray.length === 1 && Array.isArray(dataArray[0])) ? dataArray[0] : dataArray;
+                                const varDict = {};
+                                edgeKeys.forEach((key, index) => {
+                                    if (index < actualArray.length && actualArray[index] !== null) {
+                                        varDict[key] = actualArray[index];
+                                    }
+                                });
+                                converted[elem][field] = varDict;
+                            }
+                        } else if (isMultiGraph) {
+                            // Multiple graphs: create dict of dicts (graphId -> nodeId -> value)
+                            const varDictDict = {};
+                            const graphIds = Object.keys(nodeKeys);
+                            graphIds.forEach((graphId, arrayIdx) => {
+                                const graphKeys = nodeKeys[graphId];
+                                const varDict = {};
+                                if (arrayIdx < dataArray.length && Array.isArray(dataArray[arrayIdx])) {
+                                    graphKeys.forEach((key, nodeIdx) => {
+                                        if (nodeIdx < dataArray[arrayIdx].length &&
+                                            dataArray[arrayIdx][nodeIdx] !== null) {
+                                            varDict[key] = dataArray[arrayIdx][nodeIdx];
+                                        }
+                                    });
+                                }
+                                varDictDict[graphId] = varDict;
+                            });
+                            converted[elem][field] = varDictDict;
+                        } else {
+                            // Single graph: dataArray might be nested [[[...]]] or flat [[...]]
+                            const actualArray = (dataArray.length === 1 && Array.isArray(dataArray[0])) ? dataArray[0] : dataArray;
+                            const varDict = {};
+                            nodeKeys.forEach((key, index) => {
+                                if (index < actualArray.length && actualArray[index] !== null) {
+                                    varDict[key] = actualArray[index];
+                                }
+                            });
+                            converted[elem][field] = varDict;
+                        }
+                    }
+                }
+            }
+        }
+
+        return converted;
+    }
+
+    initVar(datasetVar, task, labeling, oneHotableFeature) {
+        this.datasetVar = this._convertDatasetVar(datasetVar)
+        this.task = task
         this.labeling = labeling
         this.oneHotableFeature = oneHotableFeature
         this.createVarListeners()
@@ -284,8 +424,9 @@ class VisibleGraph {
     // Variable part of initVar - to be overridden
     _buildVar() {
         this.ready = true
-        for (const satellite of VisibleGraph.SATELLITES)
-            this.setSatellite(satellite)
+        for (const elem of VisibleGraph.ELEMS)
+            for (const satellite of VisibleGraph.SATELLITES)
+                this.setSatellite(elem, satellite)
 
         this.visView.fireEventsByTag(this._tagVar)
     }
@@ -293,11 +434,12 @@ class VisibleGraph {
     // Remove all elements associated with dataset var data - to be overridden
     _dropVar() {
         if (this.datasetVar)
-            for (const satellite of VisibleGraph.SATELLITES) {
-                this.setSatellite(satellite, false)
-                if (satellite in this.datasetVar)
-                    delete this.datasetVar[satellite]
-            }
+            for (const elem of VisibleGraph.ELEMS)
+                for (const satellite of VisibleGraph.SATELLITES) {
+                    this.setSatellite(elem, satellite, false)
+                    if (satellite in this.datasetVar[elem])
+                        delete this.datasetVar[elem][satellite]
+                }
         this.explanation = null
         this.explanationEdges = null
     }
@@ -328,16 +470,17 @@ class VisibleGraph {
         if (visible == null)
             this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_MULTI
         if (this.nodesVisible) {
-            this.svgPanel.get("nodes").show()
+            this.svgPanel.get("node").show()
             for (const satellite of VisibleGraph.SATELLITES) {
-                this.svgPanel.get("nodes-" + satellite).show()
-                this.showSatellite(satellite, this.visView.getValue(this.visView.satellitesIds[satellite]))
+                this.svgPanel.get("node-" + satellite).show()
+                this.showSatellite("node", satellite,
+                    this.visView.getValue(this.visView.satellitesIds[satellite]))
             }
         }
         else {
-            this.svgPanel.get("nodes").hide()
+            this.svgPanel.get("node").hide()
             for (const satellite of VisibleGraph.SATELLITES)
-                this.svgPanel.get("nodes-" + satellite).hide()
+                this.svgPanel.get("node-" + satellite).hide()
         }
     }
 
@@ -416,60 +559,97 @@ class VisibleGraph {
         this.svgPanel.add("explanation-edges")
         // Explanation will be set after the layout
 
+        // Add edge primitives
+        if (this.edgePrimitives) {
+            let gEdge = this.svgPanel.add("edge")
+            for (const es of Object.values(this.edgePrimitives))
+                for (const edge of Object.values(es))
+                    gEdge.appendChild(edge.path)
+        }
+
         // Add node primitives
-        let g = this.svgPanel.add("nodes")
+        let g = this.svgPanel.add("node")
         for (const node of Object.values(this.nodePrimitives)) {
             g.appendChild(node.body)
             g.appendChild(node.text)
         }
 
-        // Add satellite elements
-        for (const satellite of VisibleGraph.SATELLITES)
-            this.svgPanel.add("nodes-" + satellite)
+        // Add satellite elements for nodes and edges
+        for (const satellite of VisibleGraph.SATELLITES) {
+            this.svgPanel.add("node-" + satellite)
+            this.svgPanel.add("edge-" + satellite)
+        }
     }
 
     // Create/remove SVG primitives for node satellites: labels, features, predictions, etc
-    setSatellite(satellite, on=true) {
+    setSatellite(elem, satellite, on=true) {
         if (!this.ready)
             // Could happen when we reinit graph while satellites data is being received
             return
-        if (this.nodePrimitives == null) // E.g. we rebuild graph during training
-            return
 
         // Replace satellite elements
-        let $g = this.svgPanel.get("nodes-" + satellite)
+        let $g = this.svgPanel.get(elem + "-" + satellite)
         if (!on) {
             $g.empty()
-            for (const node of Object.values(this.nodePrimitives))
-                node.satellites[satellite].blocks = null
-            if (satellite === 'labels')
-                this.showClassAsColor(false)
-        }
-        else if (satellite in this.datasetVar) {
-            let values = this.datasetVar[satellite]
-            if (satellite === 'labels') {
-                let numClasses = this.datasetInfo["labelings"][this.labeling]
-                for (const [i, node] of Object.entries(this.nodePrimitives)) {
-                    node.setLabels(values[i], numClasses)
-                    for (const e of node.satellites[satellite].blocks)
-                        $g.append(e)
-                }
-
-                if (numClasses <= 12) {
-                    this.coloredNodes = createSetOfColors(numClasses, this.svgPanel.$svg)
-                    this.visView.setEnabled(this.visView.singleClassAsColorId, true)
-                    // this.showClassAsColor()
-                }
-                else {
-                    this.visView.setValue(this.visView.singleClassAsColorId, false)
-                    this.visView.setEnabled(this.visView.singleClassAsColorId, false)
-                }
+            if (elem === "node" && this.nodePrimitives) {
+                for (const node of Object.values(this.nodePrimitives))
+                    node.satellites[satellite].blocks = null
+                if (satellite === 'labels')
+                    this.showClassAsColor(false)
             }
-            else {
-                for (const [i, node] of Object.entries(this.nodePrimitives)) {
-                    if (node.setSatellite(satellite, values[i]))
+            else if (elem === "edge" && this.edgePrimitives) {
+                for (const es of Object.values(this.edgePrimitives))
+                    for (const edge of Object.values(es))
+                        edge.satellites[satellite].blocks = null
+            }
+        }
+        else if (satellite in this.datasetVar[elem]) {
+            let values = this.datasetVar[elem][satellite]
+            if (elem === "node") {
+                if (!this.nodePrimitives) return
+
+                if (satellite === 'labels') {
+                    // FIXME tmp
+                    let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
+                    for (const [i, node] of Object.entries(this.nodePrimitives)) {
+                        node.setLabels(values[i], numClasses)
                         for (const e of node.satellites[satellite].blocks)
                             $g.append(e)
+                    }
+
+                    if (numClasses <= 12) {
+                        this.coloredNodes = createSetOfColors(numClasses, this.svgPanel.$svg)
+                        this.visView.setEnabled(this.visView.singleClassAsColorId, true)
+                        // this.showClassAsColor()
+                    } else {
+                        this.visView.setValue(this.visView.singleClassAsColorId, false)
+                        this.visView.setEnabled(this.visView.singleClassAsColorId, false)
+                    }
+                } else {
+                    for (const [i, node] of Object.entries(this.nodePrimitives)) {
+                        if (node.setSatellite(satellite, values[i]))
+                            for (const e of node.satellites[satellite].blocks)
+                                $g.append(e)
+                    }
+                }
+            }
+            else if (elem === "edge") {
+                if (!this.edgePrimitives) return
+                if (satellite === 'labels') {
+                    // FIXME tmp
+                    let numClasses = this.datasetInfo["labelings"][this.task][this.labeling]
+                    for (const es of Object.values(this.edgePrimitives))
+                        for (const [edgeKey, edge] of Object.entries(es))
+                            if (edge.setLabels(values[edgeKey], numClasses))
+                                for (const e of edge.satellites[satellite].blocks)
+                                    $g.append(e)
+                }
+                else {
+                    for (const es of Object.values(this.edgePrimitives))
+                        for (const [edgeKey, edge] of Object.entries(es))
+                            if (edge.setSatellite(satellite, values[edgeKey]))
+                                for (const e of edge.satellites[satellite].blocks)
+                                    $g.append(e)
                 }
             }
         }
@@ -490,6 +670,21 @@ class VisibleGraph {
         }
     }
 
+    // Create a single edge SVG primitive
+    createEdgePrimitive(key, edgeKey, i, j, radius, color, width, directed, show) {
+        if (!this.edgePrimitives)
+            this.edgePrimitives = {}
+        if (!this.edgePrimitives[key])
+            this.edgePrimitives[key] = {}
+
+        let edge = new SvgEdge(0, 0, 0, 0, radius, color, width, directed, show, this.svgPanel.$tip)
+        edge.sourceNode = i
+        edge.targetNode = j
+        this.edgePrimitives[key][edgeKey] = edge
+
+        return edge
+    }
+
     // Create a node SVG (will be added later together)
     createNodePrimitive(element, i, radius, form, width, color, show) {
         let node = new SvgNode(0, 0, radius, form, width, color, i.toString(), show, this.svgPanel.$tip)
@@ -507,16 +702,16 @@ class VisibleGraph {
     debugInfo() {
         let html = ""
         html += `scale: ${this.scale.toPrecision(3)}`
-        // html += `<br> svg pos: ${this.svgPos.str(5)}`
-        // html += `<br> screen pos: ${this.screenPos.str(5)}`
-        // html += `<br> mouse pos: ${this.mousePos.str()}`
-        // html += `<br> layout pos: ${Vec.add(this.mousePos, this.svgPos).mul(1/this.scale).str(5)}`
+        html += `<br> svg pos: ${this.svgPos.str(5)}`
+        html += `<br> screen pos: ${this.screenPos.str(5)}`
+        html += `<br> mouse pos: ${this.mousePos.str()}`
+        html += `<br> layout pos: ${Vec.add(this.mousePos, this.svgPos).mul(1/this.scale).str(5)}`
         // html += `<br> viewBoxShift: ${this.svgPos.str(4)}`
         // html += `<br> viewBox: ${this.element.getAttribute("viewBox")}`
         // html += `<br> scroll: ${new Vec(this.element.parentElement.scrollLeft, this.element.parentElement.scrollTop).str(4)}`
         // $("#dataset-info-bottomleft").html(html)
         // $("#dataset-info-upright").html(html)
-        controller.presenter.datasetView.$upRightInfoDiv.html(html)
+        // controller.presenter.datasetView.$upRightInfoDiv.html(html)
     }
 
     // Compute approximate bounding box using nodes positions
@@ -592,11 +787,28 @@ class VisibleGraph {
         for (const [n, vec] of Object.entries(pos)) {
             scaledPos[n] = Vec.mul(vec, this.scale)
         }
-        for (const batch of Object.values(this.edgePrimitivesBatches))
-            for (const svg of batch) {
-                svg.setScale(this.scale)
-                svg.moveTo(scaledPos)
-            }
+
+        // Update individual edge primitives
+        if (this.edgePrimitives) {
+            for (const es of Object.values(this.edgePrimitives))
+                for (const edge of Object.values(es)) {
+                    let i = edge.sourceNode
+                    let j = edge.targetNode
+                    if (i in scaledPos && j in scaledPos) {
+                        edge.moveTo(scaledPos[i].x, scaledPos[i].y, scaledPos[j].x, scaledPos[j].y)
+                        edge.scale(this.scale)
+                    }
+                }
+        }
+
+        // Update edge batches
+        if (this.edgePrimitivesBatches) {
+            for (const batch of Object.values(this.edgePrimitivesBatches))
+                for (const svg of batch) {
+                    svg.setScale(this.scale)
+                    svg.moveTo(scaledPos)
+                }
+        }
         // console.log(`Time of node+edge moving: ${performance.now() - t}ms`)
 
         // Explanation edges
@@ -632,7 +844,7 @@ class VisibleGraph {
                 if (value < thr) continue
                 let color = valueToColor(value, this.explanation.colormap)
                 // TODO how to determine width by edge ?
-                let svg = new SvgEdge(0, 0, 0, 0, color, this.edgeExplainedStrokeWidth,
+                let svg = new SvgEdge(0, 0, 0, 0, 1, color, this.edgeExplainedStrokeWidth,
                     this.explanation.isDirected(),true)
                 this.explanationEdges[edge] = svg
                 $g.append(svg.path)
@@ -664,9 +876,9 @@ class VisibleGraph {
     showClassAsColor(show) {// TODO unite in subclasses     dropClassAsColor()
         // console.log('showClassAsColor', show)
         if (show) {
-            if (this.coloredNodes && this.datasetVar['labels'])
+            if (this.coloredNodes && this.datasetVar['node']['labels'])
                 for (const [n, node] of Object.entries(this.nodePrimitives))
-                    node.setFillColorIdx(this.datasetVar['labels'][n])
+                    node.setFillColorIdx(this.datasetVar['node']['labels'][n])
         }
         else // drop
             for (const node of Object.values(this.nodePrimitives))
@@ -674,12 +886,25 @@ class VisibleGraph {
     }
 
     // Turn on/off visibility of labels, features, predictions, etc
-    showSatellite(satellite, show) {
+    showSatellite(elem, satellite, show) {
         // console.log('showSatellite', satellite, show)
-        this.svgPanel.get("nodes-" + satellite).css("display", show ? 'inline' : 'none')
-        for (const node of Object.values(this.nodePrimitives)) {
-            node.satellites[satellite].show = show
-            node.visible(node.show)
+        this.svgPanel.get(elem + "-" + satellite).css("display", show ? 'inline' : 'none')
+
+        if (elem === "node" && this.nodePrimitives) {
+            for (const node of Object.values(this.nodePrimitives)) {
+                node.satellites[satellite].show = show
+                node.visible(node.show)
+            }
+        }
+        else if (elem === "edge" && this.edgePrimitives) {
+            for (const es of Object.values(this.edgePrimitives))
+                for (const edge of Object.values(es)) {
+                    edge.satellites[satellite].show = show
+                    edge.visible(edge.show)
+                }
+        }
+        else {
+            console.log('not implemented')
         }
     }
 }

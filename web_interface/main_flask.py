@@ -1,16 +1,15 @@
 from gevent import monkey; monkey.patch_all()  # Must go before other imports
 
-import json
 import logging
 import gevent.queue
 from gevent import Greenlet
-from multiprocessing import Pipe, Queue
+from multiprocessing import Queue
 
 from flask import Flask, render_template, request, session
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import uuid
 
-from aux.data_info import DataInfo
+from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front.frontend_client import FrontendClient, ClientMode
 from web_interface.back_front.utils import WebInterfaceError, json_dumps, json_loads, SocketConnect
 
@@ -39,113 +38,7 @@ def worker_process(
     client = FrontendClient(socket_connect, mode)
     print(f"Created FrontendClient with sid {sid}")
 
-    while True:
-        command = parent_queue.get()  # This blocks until a command is received
-        type = command.get('type')
-        args = command.get('args')
-        print(f"Received command: {type} with args: {args}")
-
-        if type == "dataset":
-            get = args.get('get')
-            set = args.get('set')
-            part = args.get('part')
-            if part:
-                part = json_loads(part)
-
-            if set == "visible_part":
-                result = client.dcBlock.set_visible_part(part=part)
-
-            elif get == "data":
-                dataset_data = client.dcBlock.get_dataset_data(part=part)
-                data = dataset_data.to_json()
-                logging.info(f"Length of dataset_data: {len(data)}")
-                result = data
-
-            elif get == "var_data":
-                if not client.dvcBlock.is_set():
-                    result = ''
-                else:
-                    dataset_var_data = client.dvcBlock.get_dataset_var_data(part=part)
-                    data = dataset_var_data.to_json()
-                    logging.info(f"Length of dataset_var_data: {len(data)}")
-                    result = data
-
-            elif get == "stat":
-                stat = args.get('stat')
-                result = json_dumps(client.dcBlock.get_stat(stat))
-
-            elif get == "index":
-                result = client.dcBlock.get_index()
-
-            else:
-                raise WebInterfaceError(f"Unknown 'part' command {get} for dataset")
-
-            child_queue.put(result)
-
-        elif type == "block":
-            block = args.get('block')
-            func = args.get('func')
-            params = args.get('params')
-            if params:
-                params = json_loads(params)
-            print(f"request_block: block={block}, func={func}, params={params}")
-            # TODO what if raise exception? process will stop
-            client.request_block(block, func, params)
-
-        elif type == "model":
-            do = args.get('do')
-            get = args.get('get')
-
-            if do:
-                print(f"model.do: do={do}, params={args}")
-                if do == 'index':
-                    type = args.get('type')
-                    if type == "saved":
-                        result = client.mloadBlock.get_index()
-                    elif type == "custom":
-                        result = client.mcustomBlock.get_index()
-                elif do in ['train', 'reset', 'run', 'save']:
-                    result = client.mtBlock.do(do, args)
-                elif do in ['run with attacks']:
-                    result = client.atBlock.do(do, args)
-                else:
-                    raise WebInterfaceError(f"Unknown do command: '{do}'")
-
-            if get:
-                if get == "satellites":
-                    if client.mmcBlock.is_set():
-                        part = args.get('part')
-                        if part:
-                            part = json_loads(part)
-                        result = client.mmcBlock.get_satellites(part=part)
-                    else:
-                        result = ''
-
-            assert result is not None
-            child_queue.put(result)
-
-        elif type == "explainer":
-            do = args.get('do')
-
-            print(f"explainer.do: do={do}, params={args}")
-
-            if do in ["run", "stop"]:
-                result = client.erBlock.do(do, args)
-
-            elif do == 'index':
-                result = client.elBlock.get_index()
-
-            # elif do == "save":
-            #     return client.save_explanation()
-
-            else:
-                raise WebInterfaceError(f"Unknown 'do' command {do} for explainer")
-
-            child_queue.put(result)
-
-        elif type == "STOP":
-            print(f"Process {process_id} received STOP command; it will finish")
-            break
+    client.run_loop(child_queue, None, parent_queue)
 
 
 @socketio.on('connect')

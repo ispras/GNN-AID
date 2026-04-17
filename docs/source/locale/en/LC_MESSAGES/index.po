@@ -1,0 +1,96 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-09 21:15+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../index.rst:26
+msgid "Начало"
+msgstr "Getting started"
+
+#: ../../index.rst:32
+msgid "Примеры"
+msgstr "Tutorials"
+
+#: ../../index.rst:38
+msgid "Руководство пользователя"
+msgstr "User guide"
+
+#: ../../index.rst:50
+msgid "Руководство разработчика"
+msgstr "Developer guide"
+
+#: ../../index.rst:59
+msgid "Обзор пакетов"
+msgstr "Package reference"
+
+#: ../../index.rst:2
+msgid "Добро пожаловать в документацию GNN-AID!"
+msgstr "Welcome to GNN-AID documentation!"
+
+#: ../../index.rst:4
+msgid ""
+"**GNN-AID** — это открытый фреймворк для визуализации, анализа, "
+"интерпретации графовых нейронных сетей с возможность применять атаки и "
+"защиты. Фреймворк построен на базе `PyTorch-Geometric <https://pytorch-"
+"geometric.readthedocs.io>`_ и:"
+msgstr ""
+"GNN-AID is an open framework for **A**\\ nalysis, **I**\\ nterpretation, "
+"and **D**\\ efensing Graph Neural Networks. It is built on `PyTorch-"
+"Geometric <https://pytorch-geometric.readthedocs.io>`_ and:"
+
+#: ../../index.rst:7
+msgid ""
+"включает готовые `датасеты из PyG <https://pytorch-"
+"geometric.readthedocs.io/en/latest/cheatsheet/data_cheatsheet.html>`_"
+msgstr ""
+"includes preloaded `datasets from PyG <https://pytorch-"
+"geometric.readthedocs.io/en/latest/cheatsheet/data_cheatsheet.html>`_"
+
+#: ../../index.rst:8
+msgid ""
+"расширяемый API для пользовательских архитектур на уровне датасетов, "
+"моделей, методов интерпретации, атак и защит"
+msgstr ""
+"extendable API for custom architectures: datasets, models, explainers, "
+"attacks and defense methods"
+
+#: ../../index.rst:9
+msgid "MLOps техники для воспроизводимых экспериментов"
+msgstr "MLOps features for experiments reproducibility"
+
+#: ../../index.rst:11
+msgid "GNN-AID имеет веб-интерфейс, который поддерживает:"
+msgstr "GNN-AID has a web interface which supports:"
+
+#: ../../index.rst:13
+msgid "интерактивную визуализацию графов"
+msgstr "graph visualization and analysis tools"
+
+#: ../../index.rst:14
+msgid "конструктор модели \"без кода\""
+msgstr "no-code model building"
+
+#: ../../index.rst:15
+msgid "визуализация объяснений решения модели"
+msgstr "visualization of models explanations"
+
+#: ../../index.rst:16
+msgid "визуализация результатов атак на модель"
+msgstr "visualization of attacks results"
+

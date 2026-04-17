@@ -4,7 +4,9 @@ import torch
 from torch import device
 from torch.cuda import is_available
 
+from data_structures.configs import DatasetConfig, Task
 from datasets.datasets_manager import DatasetManager
+from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.gnn_constructor import GNNStructure
 from explainers.gradcam.GradCAM import GradCAM, GradCAMOut
@@ -15,9 +17,11 @@ import matplotlib.pyplot as plt
 def GradCAM_test():
     my_device = device('cuda' if is_available() else 'cpu')
 
-    dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=(LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora"),
-        dataset_ver_ind=0)
+
+    dataset = DatasetManager.get_by_config(
+        DatasetConfig((LibPTGDataset.data_folder, "Homogeneous", "Planetoid", "Cora")),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
+    )
 
     # print(dataset)
     # print(data)
@@ -35,7 +39,7 @@ def GradCAM_test():
 
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gcn2,
-        dataset_path=results_dataset_path,
+        dataset_path=dataset.prepared_dir,
         epochs=50,
         batch=10000,
         model_ver_ind=1,

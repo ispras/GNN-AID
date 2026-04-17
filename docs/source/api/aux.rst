@@ -15,3 +15,6 @@ aux
 .. automodule:: aux.declaration
    :members:
 
+.. automodule:: aux.prefix_storage
+   :members:
+

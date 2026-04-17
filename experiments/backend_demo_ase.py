@@ -5,20 +5,22 @@ import warnings
 
 from torch import device
 
-from aux.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern
-from datasets.datasets_manager import DatasetManager
-from models_builder.models_zoo import model_configs_zoo
+from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.models_builder.models_utils import Metric
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 
 def test_attack_defense_small():
     my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
-    full_name = ("Homogeneous", "Planetoid", 'Cora')
+    full_name = (LibPTGDataset.data_folder, "Homogeneous", "Planetoid", 'Cora')
 
-    gen_dataset, data, results_dataset_path = DatasetManager.get_by_full_name(
-        full_name=full_name,
-        dataset_ver_ind=0
+    gen_dataset = DatasetManager.get_by_config(
+        DatasetConfig(full_name),
+        LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 
@@ -36,7 +38,7 @@ def test_attack_defense_small():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -84,7 +86,7 @@ def test_attack_defense_small():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
@@ -139,7 +141,7 @@ def test_attack_defense_small():
     steps_epochs = 200
     gnn_model_manager = FrameworkGNNModelManager(
         gnn=gnn,
-        dataset_path=results_dataset_path,
+        dataset_path=gen_dataset.prepared_dir,
         manager_config=manager_config,
         modification=ModelModificationConfig(model_ver_ind=0, epochs=steps_epochs)
     )
