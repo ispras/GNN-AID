@@ -19,7 +19,7 @@ from .explainer_blocks import (
 from .model_blocks import (
     ModelWBlock, ModelManagerBlock, ModelLoadBlock, ModelConstructorBlock, ModelCustomBlock,
     ModelTrainerBlock)
-from .utils import WebInterfaceError, SocketConnect
+from .utils import WebInterfaceError, SocketConnect, get_sid_logger
 
 
 class ClientMode(Enum):
@@ -74,9 +74,11 @@ class FrontendClient:
             self,
             socket_connect: SocketConnect,
             mode: ClientMode,
+            sid: str,
     ):
         self.mode = mode  # mode: analysis, interpretation, defense
         self.socket = socket_connect
+        self.logger = get_sid_logger(sid)
 
         # Build the diagram
         self.diagram = Diagram()
@@ -176,21 +178,28 @@ class FrontendClient:
         if view_point != self.view_point:
             self.view_point = view_point
             return True
-        print('setting the same viewpoint')
+        self.logger.info('setting the same viewpoint')
         return False
 
     def run_loop(
-        self,
-        response_queue: Queue,
-        msg_queue: Queue,
-        request_queue: Queue,
+            self,
+            response_queue: Queue,
+            msg_queue: Queue,
+            request_queue: Queue,
     ) -> None:
         while True:
-            print('Worker is waiting for command...')
+            self.logger.info('Worker is waiting for command...')
             command = request_queue.get()
+
+            if not isinstance(command, dict):
+                raise WebInterfaceError(f"Unknown command format: {command!r}")
+
             type = command.get('type')
-            args = command.get('args')
-            print(f"Worker: received command: {type} with args: {args}")
+            args = command.get('args') or {}
+
+            if type == "STOP":
+                self.logger.info("Worker received STOP command; it will finish")
+                break
 
             if type == "dataset":
                 get = args.get('get')
@@ -236,18 +245,18 @@ class FrontendClient:
                 params = args.get('params')
                 if params:
                     params = json_loads(params)
-                print(f"request_block: block={block}, func={func}, params={params}")
+                self.logger.info(f"request_block: block={block}, func={func}, params={params}")
                 # TODO what if raise exception? process will stop
                 self.request_block(block, func, params)
                 response_queue.put('')
-                print("Worker puts result to response_queue")
+                self.logger.info("Worker puts result to response_queue")
 
             elif type == "model":
                 do = args.get('do')
                 get = args.get('get')
 
                 if do:
-                    print(f"model.do: do={do}, params={args}")
+                    self.logger.info(f"model.do: do={do}, params={args}")
                     if do == 'index':
                         type = args.get('type')
                         if type == "saved":
@@ -281,7 +290,7 @@ class FrontendClient:
             elif type == "explainer":
                 do = args.get('do')
 
-                print(f"explainer.do: do={do}, params={args}")
+                self.logger.info(f"explainer.do: do={do}, params={args}")
 
                 if do in ["run", "stop"]:
                     result = self.erBlock.do(do, args)
@@ -297,8 +306,5 @@ class FrontendClient:
 
                 response_queue.put(result)
 
-            elif type == "STOP":
-                print(f"Process {sid} received STOP command; it will finish")
-                break
             else:
                 raise WebInterfaceError(f"Unknown command type: 'f{type}'")

@@ -567,3 +567,13 @@ const Task = Object.freeze({
     EDGE_CLASSIFICATION: "edge-classification",
     EDGE_REGRESSION: "edge-regression",
 })
+
+function escapeHtml(text) {
+    if (text == null) return ''
+    return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+}

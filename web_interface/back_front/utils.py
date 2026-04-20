@@ -1,4 +1,5 @@
 import json
+import logging
 from collections import deque
 from pathlib import Path
 from threading import Thread
@@ -13,6 +14,7 @@ root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source 
 WEB_DIR = root_dir / "web_interface"
 STATIC_DIR = WEB_DIR / "static"  # js, css code
 TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
+LOG_DIR = WEB_DIR / "logs"  # server logs
 
 
 class WebInterfaceError(Exception):
@@ -265,3 +267,8 @@ def compute_stats_data(
     # Note: we update all stats data at once because it can be requested from frontend during
     # the update
     return stats_data
+
+
+def get_sid_logger(sid: str | None = None) -> logging.LoggerAdapter:
+    base_logger = logging.getLogger("gnn_aid.web")
+    return logging.LoggerAdapter(base_logger, {"sid": sid or "-"})
