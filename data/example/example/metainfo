@@ -3,7 +3,7 @@
  "import_from": "gnn_aid.datasets.known_format_datasets",
  "name": "example",
  "count": 1,
- "directed": true,
+ "directed": false,
  "hetero": false,
  "nodes": [
   8
