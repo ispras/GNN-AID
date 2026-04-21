@@ -575,6 +575,16 @@ const Task = Object.freeze({
     EDGE_REGRESSION: "edge-regression",
 })
 
+function escapeHtml(text) {
+    if (text == null) return ''
+    return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+}
+
 // Debug variables
 class Debug {
     static LAYOUT_STEP_TIME = -1

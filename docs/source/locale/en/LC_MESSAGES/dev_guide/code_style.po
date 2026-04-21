@@ -1,0 +1,131 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024, GNN-AID team
+# This file is distributed under the same license as the GNN-AID package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GNN-AID 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-10 23:18+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../dev_guide/code_style.rst:2
+msgid "Принципы разработки"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:11
+msgid "Стиль кода"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:13
+msgid "За основу взят стандарт PEP-8"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:16
+msgid "Линтер"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:18
+msgid ""
+"Для автоматической проверки стиля мы используем linter, конфигурация "
+"находится в файле `.github/workflows/linter.yaml`."
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:21
+msgid "Работа с репозиторием"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:23
+msgid ""
+"Разработка ведется в открытом репозитории https://github.com/ispras/GNN-"
+"AID В ветку main попадают стабильные версии системы. В ветке develop и "
+"остальных ведется разработка. Порядок такой: разработчик ответвляется от "
+"develop и вносит свои изменения в код. По окончании он создает "
+"пулл-реквест на слияние с веткой develop."
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:29
+msgid ""
+"Чтобы обеспечить надежность при изменении кода, отправляемых в "
+"гит-репозиторий, используются принципы CI/CD. В папке `.github/workflows`"
+" находятся yaml файлы конфигураций:"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:32
+msgid "сборка документации (`docs.yaml`)"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:33
+msgid "запуск линтера (`linter.yaml`)"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:34
+msgid "запус юнит-тестов (`test_on_push.yaml`)"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:36
+msgid ""
+"Эти три проверки запускаются каждый раз при создании запроса на "
+"добавление кода в ветку develop."
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:39
+msgid "Комментирование"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:41
+msgid ""
+"Предпочтительный стиль комментирования классов и функций в коде. "
+"Документирующие строки - предпочитаем Google Style"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:64
+msgid "Тестирование"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:66
+msgid ""
+"Все тесты складываем в папку `tests`. Для юнит-тестов используем класс "
+"``unittest.TestCase``. При работе система использует рабочие директории "
+"`data`, `datasets`, `models`, `explanations` которые заданы константами в"
+" utils. При тестировании мы подменяем реальные пути временными с помощью "
+"функции ``monkey_patch_dirs()`` из ``tests/utils``."
+msgstr ""
+
+#~ msgid "Code style"
+#~ msgstr ""
+
+#~ msgid "План"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "детали и тонкости для разработчика, как"
+#~ " помочь внести вклад или расширить "
+#~ "библиотеку"
+#~ msgstr ""
+
+#~ msgid "Архитектура кода: модули, классы, потоки данных"
+#~ msgstr ""
+
+#~ msgid "бэк фронт"
+#~ msgstr ""
+
+#~ msgid "инструкция по добавлению нового метода (интерпр, атака, защита)"
+#~ msgstr ""
+
+#~ msgid "в рамках текущего апи с расширением апи (гетерограф, предск ребер и тп)"
+#~ msgstr ""
+
+#~ msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
+#~ msgstr ""
+

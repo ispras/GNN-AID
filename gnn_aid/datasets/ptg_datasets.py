@@ -91,6 +91,7 @@ class PTGDataset(GeneralDataset):
         # Only different task is allowed
         # assert self.dataset_var_config.features == PTGDataset.default_dataset_var_config.features
         assert self.dataset_var_config.task in [
+            # If you want Task.GRAPH_REGRESSION -- need to overwrite data.y after dataset is loaded
             Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION, Task.EDGE_PREDICTION]
 
     def _define_ptg_dataset(
