@@ -6,6 +6,7 @@
     <title>Dataset Visualization Test Stand</title>
     <script src="../static/js/libs/jquery-3.6.0.js"></script>
     <script src="../static/js/libs/socket.io-4.6.1.js"></script>
+    <script src="../static/js/libs/socket.io-4.6.1.msgpack.min.js"></script>
     <script src="../static/js/libs/chart-3.7.1.min.js"></script>
     <script src="../static/js/libs/datatables-1.13.2.min.js"></script>
     <script src="../static/js/libs/js-colormaps.js"></script>
@@ -137,6 +138,7 @@
             display: none;
             z-index: 1000;
             max-width: 300px;
+            white-space: pre-wrap;
         }
 
         /* Graph node styles */
@@ -247,8 +249,15 @@
     <script src="../static/js/presentation/dataset/svg/edge.js"></script>
     <script src="../static/js/presentation/dataset/svg/graph.js"></script>
     <script src="../static/js/presentation/dataset/svg/svgPanel.js"></script>
+<!--    <script src="../static/js/presentation/dataset/layout/worker/create_layout.js"></script>-->
+<!--    <script src="../static/js/presentation/dataset/layout/worker/worker_layout.js"></script>-->
+<!--    <script src="../static/js/presentation/dataset/layout/worker/base_layout.js"></script>-->
+<!--    <script src="../static/js/presentation/dataset/layout/worker/force_layout.js"></script>-->
+<!--    <script src="../static/js/presentation/dataset/layout/worker/force_neighborhood_layout.js"></script>-->
+<!--    <script src="../static/js/presentation/dataset/layout/layout.worker.js"></script>-->
     <script src="../static/js/presentation/dataset/layout/layout.js"></script>
     <script src="../static/js/presentation/dataset/layout/forceLayout.js"></script>
+    <script src="../static/js/presentation/dataset/layout/forceAtlas2Layout.js"></script>
     <script src="../static/js/presentation/dataset/layout/forceNeighborhoodLayout.js"></script>
     <script src="../static/js/presentation/dataset/layout/radialNeighborhoodLayout.js"></script>
     <script src="../static/js/presentation/dataset/visibleGraph.js"></script>

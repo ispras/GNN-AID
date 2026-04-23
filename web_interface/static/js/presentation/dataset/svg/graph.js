@@ -1,20 +1,21 @@
 // SVG primitives for a graph frame + labels
 class SvgGraph extends SvgElement {
     constructor(x, y, width, height, color, text, show, $tip) {
-        super(x, y, 30, color, show, $tip)
+        super(x, y, 32, color, show, $tip)
         this.width = width
         this.height = height
         this.color = color // default color
 
-        this.frame = document.createElementNS("http://www.w3.org/2000/svg", "rect")
-        this.frame.setAttribute('x', x)
-        this.frame.setAttribute('y', y)
-        this.frame.setAttribute('width', width)
-        this.frame.setAttribute('height', height)
-        this.frame.setAttribute('stroke', color)
-        this.frame.setAttribute('fill', 'rgba(255,255,255,0)')
-        this.frame.setAttribute('stroke-width', 1)
-        this.frame.setAttribute('display', this.show)
+        this.frame = document.createElementNS("http://www.w3.org/2000/svg", "path")
+        this.frame.setAttribute("stroke", color)
+        // важно: нет заливки => нет "площади" для событий
+        this.frame.setAttribute("fill", "none")
+        this.frame.setAttribute("stroke-width", 2)
+        this.frame.setAttribute("display", this.show)
+        // чтобы события проходили сквозь внутреннюю область,
+        // а обводка при этом могла оставаться интерактивной:
+        this.frame.setAttribute("pointer-events", "stroke")
+        this.g.appendChild(this.frame)
 
         this.text = document.createElementNS("http://www.w3.org/2000/svg", "text")
         this.text.textContent = text
@@ -26,6 +27,7 @@ class SvgGraph extends SvgElement {
         this.text.setAttribute('font-size', '10pt')
         this.text.setAttribute('pointer-events', 'none')
         this.text.setAttribute('display', this.show)
+        this.g.appendChild(this.text)
 
         let labels = this.satellites['labels'] = new Satellite("circle", this.r)
         labels.placeX = (ix, r, count) => this.x + this.width + 0.8 * r*(-count + 1/2 + ix)
@@ -57,19 +59,19 @@ class SvgGraph extends SvgElement {
     }
 
     moveTo(x, y, width, height) {
-        this.x = x
-        this.y = y
-        this.width = width
-        this.height = height
-        this.frame.setAttribute('x', this.x)
-        this.frame.setAttribute('y', this.y)
-        this.frame.setAttribute('width', this.width)
-        this.frame.setAttribute('height', this.height)
-        this.text.setAttribute('x', this.x)
-        this.text.setAttribute('y', this.y)
+        const r = SvgElement.scaledRadius(this.r, this.s)
 
-        // for (const satellite of Object.values(this.satellites))
-        //     satellite.moveTo(x, y)
+        this.x = x - r
+        this.y = y - 1.5*r
+        this.width = width + 2 * r
+        this.height = height + 2.5 * r
+
+        // прямоугольник path: M x y h w v h h -w Z
+        const d = `M ${this.x} ${this.y} h ${this.width} v ${this.height} h ${-this.width} Z`
+        this.frame.setAttribute("d", d)
+
+        this.text.setAttribute("x", this.x)
+        this.text.setAttribute("y", this.y)
     }
 
     scale(s) {

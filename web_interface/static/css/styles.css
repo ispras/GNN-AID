@@ -148,6 +148,7 @@ body {
     padding: 3px;
     margin-left: -10px;
     pointer-events: none;
+    white-space: pre-wrap;
 }
 /*.tooltip-text:hover {*/
 /*    background-color: yellow;*/

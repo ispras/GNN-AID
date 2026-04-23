@@ -16,10 +16,23 @@ class SvgElement {
         this.y = y
         // Size
         this.r = r
+        // Color
+        this.color = color
         // scale
         this.s = 1
         // Flag whether all is shown or not
         this.show = show
+
+        // Graphics container element
+        this.g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        this.g.setAttribute('display', show ? "inline" : "none")
+        this.gSat = {}
+        for (const satellite of VisibleGraph.SATELLITES) {
+            let g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+            g.setAttribute("id", satellite)
+            this.gSat[satellite] = g
+            this.g.appendChild(g)
+        }
 
         this.maxFeaturesShown = MAX_FEATURES_SHOWN
 
@@ -84,6 +97,8 @@ class SvgElement {
     }
 
     setFeatures(feats) {
+        if (feats == null)
+            console.error('null')
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
         let features = this.satellites['features']
@@ -125,6 +140,11 @@ class SvgElement {
         }
         this._addTip(features.blocks, "feature")
         this.tipText["feature"] = tipText
+
+        this.gSat['features'].innerHTML = ''
+        for (const e of features.blocks)
+            this.gSat['features'].appendChild(e)
+
         return true
     }
 
@@ -193,6 +213,11 @@ class SvgElement {
         }
         this._addTip(labels.blocks, "label")
         this.tipText["label"] = "class: " + classIndex
+
+        this.gSat['labels'].innerHTML = ''
+        for (const e of labels.blocks)
+            this.gSat['labels'].appendChild(e)
+
         return true
     }
 
@@ -226,6 +251,12 @@ class SvgElement {
         // Update tip if shown
         if (this.tipShown === "prediction")
             this.$tip.html(tipText)
+
+        this.gSat['predictions'].innerHTML = ''
+        for (const e of predictions.blocks)
+            this.gSat['predictions'].appendChild(e)
+        predictions.blocks = null
+
         return createNew
     }
 
@@ -264,7 +295,13 @@ class SvgElement {
         // Update tip if shown
         if (this.tipShown === "logit")
             this.$tip.html(tipText)
-        return createNew
+
+        this.gSat['logits'].innerHTML = ''
+        for (const e of logits.blocks)
+            this.gSat['logits'].appendChild(e)
+        logits.blocks = null
+
+       return createNew
     }
 
     // Add node trainMask
@@ -287,7 +324,18 @@ class SvgElement {
         let text = trainmask.blocks[0]
         text.textContent = {0: '', 1: "train", 2: "test", 3: "val"}[trainMask]
         text.setAttribute('fill', {0: '#000', 1: "#120", 2: "#f00", 3: "#00f"}[trainMask])
+
+        this.gSat['train-test-mask'].innerHTML = ''
+        for (const e of trainmask.blocks)
+            this.gSat['train-test-mask'].appendChild(e)
+        trainmask.blocks = null
+
         return createNew
+    }
+
+    // Apply translation to (x, y) transform to graphics container
+    translate(x, y) {
+        this.g.setAttribute('transform', 'translate(' + x + ',' + y + ')')
     }
 
     moveTo(x, y) {
@@ -304,6 +352,14 @@ class SvgElement {
 
     // Set visibility for all elements
     visible(show) {
+        if (show === this.show)
+            return
         this.show = show
+        this.g.setAttribute('display', show ? "inline" : "none")
+    }
+
+    removeSatellites() {
+        for (const g of Object.values(this.gSat))
+            g.innerHTML = ''
     }
 }

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, List
 
 
 class TuplePrefixStorage:
@@ -226,6 +226,13 @@ class TuplePrefixStorage:
         `dump_kwargs` are passed to json.dumps to encode objects.
         """
         return json.dumps(self.content, **dump_kwargs)
+
+    def to_dict(
+            self
+    ) -> str:
+        """ Return contents
+        """
+        return self.content
 
     def fill_from_folder(
             self,
@@ -508,6 +515,13 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         ps = FixedKeysPrefixStorage(data["keys"])
         ps.content = data["content"]
         return ps
+
+    def to_dict(
+            self
+    ) -> List:
+        """ Return contents.
+        """
+        return [self._keys, self.content]
 
     def to_json(
             self,

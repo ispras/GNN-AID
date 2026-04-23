@@ -12,6 +12,7 @@ class Controller {
 
         // Setup socket connection
         this.socket = io({
+            parser: window["msgpack"],
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
@@ -94,12 +95,7 @@ class Controller {
                 return
             }
 
-            // if (!('msg' in data) || !('block' in data) || !('func' in data)) {
-            //     console.log('received non-block socket payload', data)
-            //     return
-            // }
-
-            let msg = JSON_parse(data["msg"])
+            let msg = data["msg"]
             let block = data["block"]
             let func = data["func"]
 
@@ -323,19 +319,6 @@ class Controller {
         }
         return await this.ajaxRequest('/block', data)
     }
-
-    // // Setup storage contents
-    // async getStorageContents(type) {
-    //     let url = '/ask'
-    //     let data = {
-    //         ask: "storage",
-    //         type: type,
-    //     }
-    //     let [ps, info] = await this.ajaxRequest(url, data)
-    //     ps = PrefixStorage.fromJSON(ps)
-    //     info = JSON_parse(info)
-    //     return [ps, info]
-    // }
 
     async ajaxRequest(url, data) {
         let result = null

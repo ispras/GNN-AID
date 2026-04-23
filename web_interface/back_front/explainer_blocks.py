@@ -117,7 +117,7 @@ class ExplainerLoadBlock(Block):
 
         ps = index.filter(values_info)
         # return [ps.to_json(), json_dumps(self.info)] FIXME misha parsing error on front
-        return [ps.to_json(), '{}']
+        return [ps.to_dict(), {}]
 
     def _explainer_kwargs(
             self,
@@ -173,7 +173,7 @@ class ExplainerInitBlock(Block):
             init_config=self.explainer_init_config,
             explainer_name=self.explainer_init_config._class_name
         )
-        self._result = {"config": self.explainer_init_config}
+        self._result = {"config": self.explainer_init_config.to_dict()}
 
 
 class ExplainerRunBlock(Block):
@@ -216,7 +216,7 @@ class ExplainerRunBlock(Block):
                 _config_class="ExplainerRunConfig"
             )
 
-            print(f"explainer_run_config: {self.explainer_run_config.to_json()}")
+            print(f"explainer_run_config: {self.explainer_run_config.to_dict()}")
             from threading import Thread
             Thread(target=self._run_explainer, args=()).start()
             return ''

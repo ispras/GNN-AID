@@ -114,7 +114,7 @@ class MenuDatasetVarView extends MenuView {
                     .attr("type", "checkbox").attr("id", id)
                 $cb.append(this.$oneHotNodeInput)
                 $cb.append($("<label></label>")
-                    .text(`1-hot ovre nodes (size=${size})`).attr("for", id))
+                    .text(`1-hot over nodes (size=${size})`).attr("for", id))
 
                 // 10 ones
                 $cb = $("<div></div>").attr("class", "control-block")
@@ -157,10 +157,14 @@ class MenuDatasetVarView extends MenuView {
             $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
             let attrs = this.datasetInfo["node_attributes"]["names"]
             let values = this.datasetInfo["node_attributes"]["values"]
-            if (this.$oneHotNodeInput && attrs.length === 0) {
-                this.$oneHotNodeInput.prop("checked", true)
-                this.$oneHotNodeInput.click((e) => e.preventDefault())
-            } else {
+            if (attrs.length === 0) {
+                this.$tenOnesNodeInput.prop("checked", true)
+            }
+            // if (this.$oneHotNodeInput && attrs.length === 0) {
+            //     this.$oneHotNodeInput.prop("checked", true)
+            //     // this.$oneHotNodeInput.click((e) => e.preventDefault())
+            // }
+            else {
                 let i = 0
                 for (const attr of attrs) {
                     let $cb = $("<div></div>").attr("class", "control-block")

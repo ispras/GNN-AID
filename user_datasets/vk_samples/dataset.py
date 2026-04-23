@@ -10,9 +10,9 @@ from typing import Union
 import numpy as np
 import torch
 
-from data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig, Task
-from data_structures.configs import DatasetConfig
-from datasets.known_format_datasets import KnownFormatDataset
+from gnn_aid.data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.data_structures.configs import DatasetConfig
+from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
 
 AGE_GROUPS = [15, 20, 25, 30, 35, 40, 50, 60]
 

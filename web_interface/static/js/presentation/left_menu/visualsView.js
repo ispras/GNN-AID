@@ -75,21 +75,23 @@ class VisualsView extends View {
     }
 
     _addShowMulti() {
-        let $cb = $("<div></div>").attr("class", "control-block")
-        this.$multiDiv.append($cb)
-        let $label = $("<label></label>").text("Show")
-        $cb.append($label)
-        let $countSelect = $("<select></select>").attr("id", this.idPrefix + '-' + this.multiCountId)
-        $cb.append($countSelect)
-        $countSelect.append($("<option></option>").val("several").text("several graphs"))
-        $countSelect.append($("<option></option>").val("all").text("all graphs"))
-        $countSelect.change((e) => {
-            let val = $countSelect.val()
-            // this.setEnabled(this.multiArrangeId, val === "all graphs")
-            this.setEnabled(this.multiGraphId, val !== "all")
-            this.setEnabled(this.multiDepthId, val !== "all")
-            this._update(this.multiCountId, val, true, $countSelect)
-        })
+        let $cb
+        let $label
+        // $cb = $("<div></div>").attr("class", "control-block")
+        // this.$multiDiv.append($cb)
+        // let $label = $("<label></label>").text("Show")
+        // $cb.append($label)
+        // let $countSelect = $("<select></select>").attr("id", this.idPrefix + '-' + this.multiCountId)
+        // $cb.append($countSelect)
+        // $countSelect.append($("<option></option>").val("several").text("several graphs"))
+        // $countSelect.append($("<option></option>").val("all").text("all graphs"))
+        // $countSelect.change((e) => {
+        //     let val = $countSelect.val()
+        //     // this.setEnabled(this.multiArrangeId, val === "all graphs")
+        //     this.setEnabled(this.multiGraphId, val !== "all")
+        //     this.setEnabled(this.multiDepthId, val !== "all")
+        //     this._update(this.multiCountId, val, true, $countSelect)
+        // })
 
         $cb = $("<div></div>").attr("class", "control-block")
         this.$multiDiv.append($cb)
@@ -104,32 +106,32 @@ class VisualsView extends View {
             this.multiGraphId, $graphInput.val(), true, $graphInput))
 
         $cb = $("<div></div>").attr("class", "control-block")
-        this.$multiDiv.append($cb)
-        $label = $("<label></label>").text("Nearby graphs")
-        $cb.append($label)
-        let $depthInput = $("<input>").attr("type", "number")
-            .attr("min", "0").attr("max", MultipleGraphs.MAX_DEPTH)
-            .attr("step", "1")
-            .attr("id", this.idPrefix + '-' + this.multiDepthId)
-        $cb.append($depthInput)
-        $depthInput.change((e) => {
-            let val = $depthInput.val()
-            this.setEnabled(this.multiArrangeId, val > 0)
-            this._update(this.multiDepthId, val, true, $depthInput)
-        })
-        addValueChecker($depthInput, "int", 0, 0, null, "change")
+        // this.$multiDiv.append($cb)
+        // $label = $("<label></label>").text("Nearby graphs")
+        // $cb.append($label)
+        // let $depthInput = $("<input>").attr("type", "number")
+        //     .attr("min", "0").attr("max", MultipleGraphs.MAX_DEPTH)
+        //     .attr("step", "1")
+        //     .attr("id", this.idPrefix + '-' + this.multiDepthId)
+        // $cb.append($depthInput)
+        // $depthInput.change((e) => {
+        //     let val = $depthInput.val()
+        //     this.setEnabled(this.multiArrangeId, val > 0)
+        //     this._update(this.multiDepthId, val, true, $depthInput)
+        // })
+        // addValueChecker($depthInput, "int", 0, 0, null, "change")
 
-        $cb = $("<div></div>").attr("class", "control-block")
-        this.$multiDiv.append($cb)
-        $label = $("<label></label>").text("Arrange")
-        $cb.append($label)
-        let $arrangeSelect = $("<select></select>").attr(
-            "id", this.idPrefix + '-' + this.multiArrangeId)
-        $cb.append($arrangeSelect)
-        $arrangeSelect.append($("<option></option>").val("grid").text("grid"))
-        $arrangeSelect.append($("<option></option>").val("vertical").text("vertical"))
-        $arrangeSelect.append($("<option></option>").val("free").text("free"))
-        $arrangeSelect.change((e) => this._update(this.multiArrangeId, $arrangeSelect.val()))
+        // $cb = $("<div></div>").attr("class", "control-block")
+        // this.$multiDiv.append($cb)
+        // $label = $("<label></label>").text("Arrange")
+        // $cb.append($label)
+        // let $arrangeSelect = $("<select></select>").attr(
+        //     "id", this.idPrefix + '-' + this.multiArrangeId)
+        // $cb.append($arrangeSelect)
+        // $arrangeSelect.append($("<option></option>").val("grid").text("grid"))
+        // $arrangeSelect.append($("<option></option>").val("vertical").text("vertical"))
+        // $arrangeSelect.append($("<option></option>").val("free").text("free"))
+        // $arrangeSelect.change((e) => this._update(this.multiArrangeId, $arrangeSelect.val()))
 
         $cb = $("<div></div>").attr("class", "control-block")
         this.$multiDiv.append($cb)
@@ -173,28 +175,48 @@ class VisualsView extends View {
 
         let $cb = $("<div></div>").attr("class", "control-block")
         this.$neighborhoodDiv.append($cb)
-        let $label = $("<label></label>").text("Node")
+        let $label = $("<label></label>").text("Node(s)")
+            .attr("title", "Central node - one or several comma separated integers")
         $cb.append($label)
-        let $nodeInput = $("<input>").attr("type", "number")
-            .attr("min", "0").attr("step", "1")
+        let $nodeInput = $("<input>")
+            // .attr("type", "number")
+            // .attr("min", "0").attr("step", "1")
+            .attr("type", "text")
             .attr("id", this.idPrefix + '-' + this.singleNeighNodeId)
         $cb.append($nodeInput)
         $nodeInput.change(async (e) => await this._update(
             this.singleNeighNodeId, $nodeInput.val(), true, $nodeInput))
-        addValueChecker($nodeInput, "int", 0, 0, null, "change")
+        // addValueChecker($nodeInput, "int-list", 0, 0, null, "change")
 
         $cb = $("<div></div>").attr("class", "control-block")
         this.$neighborhoodDiv.append($cb)
         $label = $("<label></label>").text("Neighborhood depth")
+            .attr("title", "0 - only specified node(s)\n" +
+                "0.5 - specified nodes and connections between them (subgraph)\n" +
+                "1 - add neighbors\n" +
+                "1.5 - add neighbors and connections between them\n" +
+                "2 - add neighbors and their neighbors\n" +
+                "3,4 - add all neighbors to this depth")
         $cb.append($label)
-        let $depthInput = $("<input>").attr("type", "number")
-            .attr("min", "0").attr("max", Neighborhood.MAX_DEPTH)
-            .attr("step", "1")
+        let $depthInput = $("<select></select>")
             .attr("id", this.idPrefix + '-' + this.singleNeighDepthId)
+        $depthInput.append($("<option></option>").val(0).text("0"))
+        $depthInput.append($("<option></option>").val(0.5).text("0.5"))
+        $depthInput.append($("<option></option>").val(1).text("1"))
+        $depthInput.append($("<option></option>").val(1.5).text("1.5"))
+        $depthInput.append($("<option></option>").val(2).text("2"))
+        $depthInput.append($("<option></option>").val(3).text("3"))
+
+        // let $depthInput = $("<input>")
+        //     .attr("type", "")
+        //     .attr("type", "number")
+        //     .attr("min", "0").attr("max", Neighborhood.MAX_DEPTH)
+        //     .attr("step", "1")
+        //     .attr("id", this.idPrefix + '-' + this.singleNeighDepthId)
         $cb.append($depthInput)
         $depthInput.change((e) => this._update(
             this.singleNeighDepthId, $depthInput.val(), true, $depthInput))
-        addValueChecker($depthInput, "int", 0, 0, null, "change")
+        // addValueChecker($depthInput, "int", 0, 0, null, "change")
 
         $cb = $("<div></div>").attr("class", "control-block")
         this.$neighborhoodDiv.append($cb)
@@ -239,6 +261,7 @@ class VisualsView extends View {
         $cb.append($select)
         $select.append($("<option></option>").val("random").text("random"))
         $select.append($("<option></option>").val("force").text("force"))
+        $select.append($("<option></option>").val("forceAtlas2").text("forceAtlas2"))
         $select.change((e) => this._update(this.singleGraphLayoutId, $select.val()))
         $cb.append(this._createLayoutStopButton(this.singleGraphLayoutFreezeId))
 
@@ -435,13 +458,16 @@ class VisualsView extends View {
             let initConfig = [
                 // [this.showModeId, 'whole-graph'],
                 [this.showModeId, 'neighborhood'],
-                [this.singleGraphLayoutId, 'random'],
+                // [this.singleGraphLayoutId, 'forceAtlas2'],
+                [this.singleGraphLayoutId, 'force'],
+                // [this.singleGraphLayoutId, 'random'],
                 [this.singleNeighLayoutId, 'force'],
                 [this.singleNeighNodeId, 0],
                 [this.singleNeighDepthId, 1],
                 [this.singleClassAsColorId, true],
                 [this.multiNodeTypeAsColorId, true],
                 [this.multiLayoutId, 'random'],
+                // [this.multiGraphId, 1],
                 [this.multiGraphId, 0],
                 [this.multiDepthId, 0],
                 [this.multiCountId, "several"],

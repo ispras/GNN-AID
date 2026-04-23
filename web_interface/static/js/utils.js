@@ -48,6 +48,10 @@ function randomColor(s=0.5, l=0.95) {
  */
 function valueToColor(value, colormap, min=0, max=1, soft=false, p=0.2) {
     value = parseFloat(value) // Just for safety
+    if (isNaN(value)) {
+        console.error(`Value for color is NaN, check the code`)
+        return
+    }
     if (soft) {
         // Use sigmoid function s.t. f(min)=p, f(max)=1-p, f(+inf)=1, f(-inf)=0
         let a = 2*Math.log(p/(1-p))/(max-min)
@@ -417,6 +421,7 @@ function sleep(ms) {
 }
 
 function JSON_parse(string) {
+    // return string
     // console.log('parsing JSON from string:', string)
     return JSON.parse(string, function (key, value) {
         if (value === 'NaN')
@@ -514,6 +519,8 @@ function addValueChecker($elem, type, defaultValue, min=null, max=null, on="chan
             typeCheck = false
         else if (type === "int")
             typeCheck = /^-?\d+$/.test(this.value)
+        else if (type === "int-list")
+            typeCheck = /^\d+(,\d+)*$/.test(value)
         else if (type === "natural")
             typeCheck = /^\d+$/.test(this.value)
         else if (type === "float")
@@ -576,4 +583,14 @@ function escapeHtml(text) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;')
+}
+
+// Debug variables
+class Debug {
+    static LAYOUT_STEP_TIME = -1
+    static DRAW_NODES_TIME = -1
+    static DRAW_EDGES_TIME = -1
+    static ADJUST_VIS_AREA_TIME = -1
+    static DRAW_TOTAL_TIME = -1
+    static DRAW_MINIMAP_TIME = -1
 }

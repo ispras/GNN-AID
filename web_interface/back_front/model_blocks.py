@@ -2,7 +2,7 @@ import json
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import Union
+from typing import Union, List, Any
 
 import torch
 
@@ -22,7 +22,7 @@ from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart, ViewPoint, DatasetVarData
 from .block import Block, WrapperBlock
-from .utils import WebInterfaceError, json_dumps, get_config_keys, send_epoch_results, \
+from .utils import WebInterfaceError, get_config_keys, send_epoch_results, \
     compute_stats_data
 from .visible_part import add_into_dvd
 
@@ -100,7 +100,7 @@ class ModelLoadBlock(Block):
 
     def get_index(
             self
-    ) -> list[str]:
+    ) -> List[str]:
         """ Get all available models with respect to current dataset
         """
         DataInfo.refresh_models_dir_structure()
@@ -117,7 +117,7 @@ class ModelLoadBlock(Block):
             path=path, full_keys_list=full_keys_list, dir_structure=dir_structure)
         ps = index.filter(values_info)
         # ps = index.filter(dict(zip(keys_list, values_info)))
-        return [ps.to_json(), json_dumps(info)]
+        return [ps.to_dict(), info]
 
     def _load_train_test_mask(
             self,
@@ -126,7 +126,7 @@ class ModelLoadBlock(Block):
         """ Load train/test mask associated to the model and send to frontend """
         # FIXME self.manager_config.train_test_split
         self.gen_dataset.train_mask, self.gen_dataset.val_mask, self.gen_dataset.test_mask, train_test_split = torch.load(path)[:]
-        dvd = self.visible_part.get_train_test_mask()
+        dvd = self.visible_part.get_train_test_mask().to_dict()
         self.socket.send(block='mload', msg=dvd)
 
 
@@ -179,7 +179,7 @@ class ModelCustomBlock(Block):
     def _init(
             self,
             visible_part: VisiblePart
-    ) -> list[str]:
+    ) -> List[str]:
         self.gen_dataset = visible_part.gen_dataset
         return self.get_index()
 
@@ -212,7 +212,7 @@ class ModelCustomBlock(Block):
 
     def get_index(
             self
-    ) -> list[str]:
+    ) -> List[Any]:
         """ Get all available models with respect to current dataset
         """
         user_models_obj_dict_info = UserCodeInfo.user_models_list_ref()
@@ -226,7 +226,7 @@ class ModelCustomBlock(Block):
         # cfg = self.gen_dataset.dataset_config.to_saveable_dict()
         # cfg.update(self.gen_dataset.dataset_var_config.to_saveable_dict())
         # ps = index.filter(cfg)
-        return [ps.to_json(), json_dumps(None)]
+        return [ps.to_dict(), None]
 
 
 class ModelManagerBlock(Block):
@@ -299,7 +299,7 @@ class ModelManagerBlock(Block):
         # Create and send train_test_mask
         if create_train_test_mask:
             self.gen_dataset.train_test_split(*self.model_manager_config.train_test_split)
-            dvd = self.visible_part.get_train_test_mask()
+            dvd = self.visible_part.get_train_test_mask().to_dict()
             self.socket.send(block='mmc', msg=dvd)
 
     def get_satellites(
@@ -373,7 +373,7 @@ class ModelTrainerBlock(Block):
         stats_data = {k: self.visible_part.filter(v) for k, v in stats_data.items()}
 
         # Reformat to DatasetVarData
-        dvd = add_into_dvd(self.gen_dataset, stats_data)
+        dvd = add_into_dvd(self.gen_dataset, stats_data).to_dict()
 
         send_epoch_results(
             epochs=self.model_manager.modification.epochs,
@@ -460,7 +460,7 @@ class ModelTrainerBlock(Block):
         self.model_manager.gnn.reset_parameters()
         self.model_manager.modification.epochs = 0
         self.gen_dataset.train_test_split(*self.model_manager.manager_config.train_test_split)
-        dvd = self.visible_part.get_train_test_mask()
+        dvd = self.visible_part.get_train_test_mask().to_dict()
         self.socket.send(block='mt', msg=dvd)
         self._run_model()
 
@@ -480,7 +480,7 @@ class ModelTrainerBlock(Block):
         stats_data = {k: self.visible_part.filter(v)
                       for k, v in stats_data.items()}
         # Reformat to DatasetVarData
-        dvd = add_into_dvd(self.gen_dataset, stats_data)
+        dvd = add_into_dvd(self.gen_dataset, stats_data).to_dict()
 
         send_epoch_results(
             metrics_values=metrics_values, stats_data=dvd, socket=self.socket)
@@ -504,7 +504,7 @@ class ModelTrainerBlock(Block):
             self.model_manager.train_model(
                 gen_dataset=self.gen_dataset, save_model_flag=False,
                 mode=mode, steps=steps, metrics=self.metrics,
-            apply_posisoning_ad=apply_posisoning_ad)
+                apply_posisoning_ad=apply_posisoning_ad)
 
             self.pbar.close()
             self.socket.send("mt", {"status": "OK", "info": "training-finished"})

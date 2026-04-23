@@ -7,15 +7,16 @@ import os
 import queue
 import signal
 import traceback
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process, Queue
-from datetime import datetime
-from typing import Dict, Any
+from typing import Any
+from typing import Dict
 
-from aiohttp import web
-import socketio
-import jinja2
 import aiohttp_jinja2
+import jinja2
+import socketio
+from aiohttp import web
 
 from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front import json_dumps
@@ -87,9 +88,10 @@ server_logger = get_sid_logger()
 
 sio = socketio.AsyncServer(
     async_mode="aiohttp",
-    ping_timeout=600,
+    ping_timeout=600,  # wait pong from client
     ping_interval=25,
-    cors_allowed_origins='*'
+    cors_allowed_origins='*',
+    serializer='msgpack'
 )
 app = web.Application()
 sio.attach(app)
@@ -352,7 +354,8 @@ app.router.add_static('/static/', path=str(STATIC_DIR), name='static')
 
 
 @sio.event
-async def connect(sid, environ):
+async def connect(sid, environ, auth=None):
+    # Parse mode from query
     query_string = environ.get('QUERY_STRING', '')
     query = dict(qc.split('=') for qc in query_string.split('&') if '=' in qc)
     mode = ClientMode(query.get('mode', None))

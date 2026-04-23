@@ -8,14 +8,15 @@ class DatasetView extends View {
         // main SVG
         let $svgDiv = $("<div></div>").attr("id", "dataset-svg")
             .attr("style", "top: 0; bottom: 0; left: 0; right: 0")
+            .css("height", "100%")
             .css("position", "absolute")
-            .css("overflow", "scroll")
+            // .css("overflow", "scroll")
         this.$div.append($svgDiv)
         this.svgPanel = new SvgPanel($svgDiv[0])
 
         // Info panels
         this.$upLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-upleft")
-            .attr("style", "position: fixed; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
+            .attr("style", "position: fixed; background: #eeeeeeb0; padding: 5px; pointer-events: none; top: 0;")
         this.$div.append(this.$upLeftInfoDiv)
         this.$bottomLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-bottomleft")
             .attr("style", "position: absolute; bottom: 1px; left: 2px; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
@@ -97,7 +98,9 @@ class DatasetView extends View {
                 // TODO other model vars
                 for (const elem of VisibleGraph.ELEMS) {
                     this.datasetVar[elem]['train-test-mask'] = null
-                    this.visibleGraph.setSatellite(elem, 'train-test-mask', false)
+                    // FIXME remove train-test-mask in visibleGraph
+                    console.error('TODO: remove train-test-mask in visibleGraph')
+                    // this.visibleGraph.setSatellite(elem, 'train-test-mask', false)
                 }
             }
         }
@@ -112,12 +115,13 @@ class DatasetView extends View {
         // super.onReceive(block, args)
         if (block === "mmc" || block === "mt" || block === "at") {
             console.log('onReceive', block, data)
-            let updDatasetVar = false
+            // let updDatasetVar = false
             for (const elem of VisibleGraph.ELEMS) {
                 for (const satellite of VisibleGraph.SATELLITES) {
                     if (elem in data && satellite in data[elem]) {
-                        updDatasetVar = true
+                        // updDatasetVar = true
                         this.datasetVar[elem][satellite] = data[elem][satellite]
+                        this.visibleGraph.needsRedraw = true
                         // this.visibleGraph.setSatellite(elem, satellite)
                     }
                 }
@@ -125,14 +129,14 @@ class DatasetView extends View {
             // fixme can we do simpler than copying? it is in several places.
             //  why we need this.datasetVar?
             this.visibleGraph.datasetVar = this.visibleGraph._convertDatasetVar(this.datasetVar)
-            if (updDatasetVar)
-                for (const elem of VisibleGraph.ELEMS) {
-                    for (const satellite of VisibleGraph.SATELLITES) {
-                        if (elem in data && satellite in data[elem]) {
-                            this.visibleGraph.setSatellite(elem, satellite)
-                        }
-                    }
-                }
+            // if (updDatasetVar)
+            //     for (const elem of VisibleGraph.ELEMS) {
+            //         for (const satellite of VisibleGraph.SATELLITES) {
+            //             if (elem in data && satellite in data[elem]) {
+            //                 this.visibleGraph.setSatellite(elem, satellite)
+            //             }
+            //         }
+            //     }
         }
         else if (block === "er") {
             if ("explanation_data" in data) {
@@ -260,8 +264,7 @@ class DatasetView extends View {
             {set: "visible_part", part: JSON_stringify(this.visibleGraph.visibleConfig)})
 
         let data = await controller.ajaxRequest('/dataset', {get: "data"})
-        console.log('datasetData')
-        console.log(data)
+        console.log('datasetView.beforeInit()', data)
         this.visibleGraph.datasetData = data
     }
 
@@ -296,7 +299,6 @@ class DatasetView extends View {
         if (this.explanation)
             this.visibleGraph.setExplanation(this.explanation)
 
-        this.visibleGraph.checkLightMode()
         this.visibleGraph.draw()
         this.setNodeInfo()
     }
