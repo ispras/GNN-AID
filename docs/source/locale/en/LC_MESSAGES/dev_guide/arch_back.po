@@ -60,7 +60,7 @@ msgstr ""
 
 #: ../../dev_guide/arch_back.rst:34
 msgid "Базовый класс Attacker"
-msgstr "The Base `Attacker` Class"
+msgstr "The Base Class `Attacker`"
 
 #: ../../dev_guide/arch_back.rst:36
 msgid ""
