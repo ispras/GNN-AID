@@ -16,7 +16,10 @@ class Controller {
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
-            query: {mode: mode},
+            query: {
+                mode: mode,
+                client_id: getClientId()
+            },
 
             // Longer timeout for backend debug - 10 mins
             timeout: 600*1000,
@@ -352,3 +355,11 @@ class Controller {
     }
 }
 
+function getClientId() {
+  let clientId = localStorage.getItem('gnn_aid_client_id')
+  if (!clientId) {
+    clientId = crypto.randomUUID()
+    localStorage.setItem('gnn_aid_client_id', clientId)
+  }
+  return clientId
+}

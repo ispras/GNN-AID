@@ -15,6 +15,14 @@ WEB_DIR = root_dir / "web_interface"
 STATIC_DIR = WEB_DIR / "static"  # js, css code
 TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
 LOG_DIR = WEB_DIR / "logs"  # server logs
+CLIENTS_DATA_ROOT = LOG_DIR.parent / "client_storage"
+DIR_PATCH_MODULES = [
+    'gnn_aid.aux.utils',
+    'gnn_aid.aux.data_info',
+    'gnn_aid.aux.declaration',
+    'web_interface.back_front.model_blocks',
+    'web_interface.back_front.explainer_blocks',
+]
 
 
 class WebInterfaceError(Exception):

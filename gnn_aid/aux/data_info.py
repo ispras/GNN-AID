@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import List, Tuple, Union, Dict, Mapping
 
 from .prefix_storage import FixedKeysPrefixStorage, TuplePrefixStorage
-from gnn_aid.aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, root_dir_len, DATA_INFO_DIR, \
-    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
+from gnn_aid.aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR, \
+    USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR, root_dir
 
 
 # from pydantic.utils import deep_update
@@ -65,7 +65,7 @@ class DataInfo:
         DATA_INFO_DIR_models = DATA_INFO_DIR / 'models_dir_structure'
         with open(DATA_INFO_DIR_models, 'w', encoding='utf-8') as f:
             for path in Path(MODELS_DIR).glob('**/model'):
-                path = path.parts[root_dir_len + 1:-1]
+                path = path.parts[len(root_dir.parts) + 1:-1]
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
@@ -77,7 +77,7 @@ class DataInfo:
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'explanations_dir_structure'
         with open(DATA_INFO_DIR_results, 'w', encoding='utf-8') as f:
             for path in Path(EXPLANATIONS_DIR).glob('**/explanation.json'):
-                path = path.parts[root_dir_len + 1:-1]
+                path = path.parts[len(root_dir.parts) + 1:-1]
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
@@ -89,7 +89,7 @@ class DataInfo:
         DATA_INFO_DIR_results = DATA_INFO_DIR / 'data_var_dir_structure'
         with open(DATA_INFO_DIR_results, 'w', encoding='utf-8') as f:
             for path in Path(DATASETS_DIR).glob('**/data.pt'):
-                path = path.parts[root_dir_len + 1:-1]
+                path = path.parts[len(root_dir.parts) + 1:-1]
                 f.write(str(Path(*path)) + '\n')
 
     @staticmethod
