@@ -21,11 +21,11 @@ msgstr ""
 
 #: ../../dev_guide/arch_back.rst:2
 msgid "Архитектура бэкенда"
-msgstr ""
+msgstr "Backend Architecture"
 
 #: ../../dev_guide/arch_back.rst:27
 msgid "Атаки"
-msgstr ""
+msgstr "Attacks"
 
 #: ../../dev_guide/arch_back.rst:29
 msgid ""
@@ -39,6 +39,14 @@ msgid ""
 " постановка MI не ставят перед собой целью восстановления разбиения на "
 "все три группы (обучение, валидация и тест)."
 msgstr ""
+"The framework supports three types of attacks: evasion attacks, poisoning "
+"attacks, and MI attacks. Poisoning attacks modify the dataset so that the "
+"model is trained incorrectly. Evasion attacks aim to make an already "
+"trained model produce an incorrect answer on specific data. MI attacks are "
+"privacy attacks against a trained model and are intended to label data as "
+"either used during model training or not used during model training. Note "
+"that in the general case, the MI setting is not intended to recover the "
+"full split into all three groups: training, validation, and test."
 
 #: ../../dev_guide/arch_back.rst:31
 msgid ""
@@ -46,10 +54,13 @@ msgid ""
 "атак должны применяться до обучения (для атак отравления) или на этапе "
 "оценки (для MI атак и атак уклонения)."
 msgstr ""
+"All attack methods are located at the model manager level, since all attack "
+"methods must be applied either before training (for poisoning attacks) or "
+"during the evaluation stage (for MI attacks and evasion attacks)."
 
 #: ../../dev_guide/arch_back.rst:34
 msgid "Базовый класс Attacker"
-msgstr ""
+msgstr "The Base `Attacker` Class"
 
 #: ../../dev_guide/arch_back.rst:36
 msgid ""
@@ -59,6 +70,11 @@ msgid ""
 "``attack``, ``dataset_diff``, статический метод ``check_availability`` и "
 "магический метод ``__init__``."
 msgstr ""
+"To implement attack methods and perform auxiliary functions related to this "
+"process, the `Attacker` class was implemented (file "
+"``src/attacks/attack_base.py``). By default, it contains the methods "
+"``attack``, ``dataset_diff``, the static method ``check_availability``, "
+"and the magic method ``__init__``."
 
 #: ../../dev_guide/arch_back.rst:38
 msgid ""
@@ -71,10 +87,17 @@ msgid ""
 "применить метод атаки на переданную конфигурацию (данных и/или "
 "менеджера)."
 msgstr ""
+"The ``attack`` method is the main method that actually implements the "
+"attack on the provided data. This method must be overridden when "
+"implementing a new attack. The ``dataset_diff`` method is responsible for "
+"information about changes in the data; if the method does not modify the "
+"data, it does not need to be overridden. The ``check_availability`` method "
+"is used to determine whether the attack method can be applied to the given "
+"configuration (data and/or manager)."
 
 #: ../../dev_guide/arch_back.rst:41
 msgid "Типы атак"
-msgstr ""
+msgstr "Attack Types"
 
 #: ../../dev_guide/arch_back.rst:43
 msgid ""
@@ -85,6 +108,13 @@ msgid ""
 "которых наследуются уже конкретные методы самих атак, которые будут более"
 " детально описаны в разделах 3-5 данного отчета."
 msgstr ""
+"The **Attacker** class is inherited by classes implementing the three "
+"corresponding types of attacks: `PoisonAttacker` "
+"(``src/attacks/poison_attacks.py``), `EvasionAttacker` "
+"(``src/attacks/evasion_attacks.py``), and `MIAttacker` "
+"(``src/attacks/mi_attacks.py``). These are base classes from which the "
+"specific attack methods themselves are inherited; they will be described in "
+"more detail in Sections 3–5 of this report."
 
 #: ../../dev_guide/arch_back.rst:45
 msgid ""
@@ -98,10 +128,20 @@ msgid ""
 "абсолютно произвольное подмножество данных. Кроме тех случаев, если иная "
 "логика не предусмотрена конкретными атаками)."
 msgstr ""
+"It should be noted separately that MI attacks and evasion attacks do not "
+"necessarily operate on the entire dataset (by default, they run on the "
+"entire test split, but an attack can also be run on a subset of the "
+"dataset using a boolean mask tensor. In this case, the mask has a meaning "
+"equivalent to the masks that split the dataset into training, validation, "
+"and test parts. A subset here also means a vertex with its i-hop "
+"neighborhood for node classification tasks, or the i-th graph for graph "
+"classification tasks, rather than an absolutely arbitrary subset of the "
+"data, except in cases where different logic is provided by specific "
+"attacks)."
 
 #: ../../dev_guide/arch_back.rst:48
 msgid "Конфигурации атак"
-msgstr ""
+msgstr "Attack Configurations"
 
 #: ../../dev_guide/arch_back.rst:50
 msgid ""
@@ -118,10 +158,22 @@ msgid ""
 "всего, что сохраняется фреймворком в случае если пути сохранения "
 "назначаются по умолчанию)."
 msgstr ""
+"For each attack class, a separate configuration class was created: "
+"`PoisonAttackConfig`, `EvasionAttackConfig`, and `MIAttackConfig` (file "
+"``src/data_structures/configs.py``). It is worth noting that for the "
+"specialized data structures created within the framework, a new "
+"``data_structures`` folder was introduced at the project root "
+"(``src/data_structures``) so that all data structures would be located in "
+"one place. In particular, the following files were moved there: "
+"``configs.py`` (structures for creating class objects), ``explanation.py`` "
+"(a structure for storing the results of interpretation methods), and "
+"``prefix_storage.py`` (a prefix-tree structure used to analyze saved data, "
+"models, interpretations, and everything else saved by the framework when "
+"default save paths are used)."
 
 #: ../../dev_guide/arch_back.rst:53
 msgid "Пустые атаки"
-msgstr ""
+msgstr "Empty Attacks"
 
 #: ../../dev_guide/arch_back.rst:55
 msgid ""
@@ -132,10 +184,16 @@ msgid ""
 "значения ``None``. Более подробно его назначение будет описано далее в "
 "этом разделе."
 msgstr ""
+"It is also worth mentioning such attack classes as "
+"`EmptyPoisonAttacker`, `EmptyEvasionAttacker`, and `EmptyMIAttacker`. "
+"These classes are specialized implementations indicating that the "
+"corresponding attack is not defined. In a sense, this is analogous to the "
+"``None`` value. Its purpose will be described in more detail later in this "
+"section."
 
 #: ../../dev_guide/arch_back.rst:58
 msgid "Хранение модификаций графа"
-msgstr ""
+msgstr "Storing Graph Modifications"
 
 #: ../../dev_guide/arch_back.rst:60
 msgid ""
@@ -144,24 +202,30 @@ msgid ""
 "``src/data_structures/graph_modification_artifacts.py``), который "
 "является специализированной структурой данных."
 msgstr ""
+"To store the results of dataset modifications caused by attacks and "
+"defenses, the `GraphModificationArtifact` class was implemented (file "
+"``src/data_structures/graph_modification_artifacts.py``), which is a "
+"specialized data structure."
 
 #: ../../dev_guide/arch_back.rst:63
 msgid "Структура данных"
-msgstr ""
+msgstr "Data Structure"
 
 #: ../../dev_guide/arch_back.rst:65
 msgid ""
 "Класс имеет два основных поля ``self.nodes`` и ``self.edges``, которые "
 "являются словарями."
 msgstr ""
+"The class has two main fields, ``self.nodes`` and ``self.edges``, both of "
+"which are dictionaries."
 
 #: ../../dev_guide/arch_back.rst:67
 msgid "Поле ``self.nodes`` содержит три ключа:"
-msgstr ""
+msgstr "The ``self.nodes`` field contains three keys:"
 
 #: ../../dev_guide/arch_back.rst:69
 msgid "``\"remove\"`` содержит список вершин, которые удаляются"
-msgstr ""
+msgstr "``\"remove\"`` contains a list of vertices to be removed"
 
 #: ../../dev_guide/arch_back.rst:70
 msgid ""
@@ -169,6 +233,9 @@ msgid ""
 " так как при добавлении вершины необходимо не только добавить номер, но и"
 " указать значения признаков для новой вершины)"
 msgstr ""
+"``\"add\"`` contains a dictionary of vertices to be added (specifically a "
+"dictionary, because when adding a vertex it is necessary not only to add "
+"its index, but also to specify the feature values for the new vertex)"
 
 #: ../../dev_guide/arch_back.rst:71
 msgid ""
@@ -177,18 +244,23 @@ msgid ""
 "словаря, так как необходимо указать не только у какой вершины и какой "
 "признак надо поменять, но и на что он меняется"
 msgstr ""
+"``\"change_f\"`` contains information about changes to vertex features (if "
+"only the features are changed); this information is also represented as a "
+"dictionary, since it is necessary to specify not only which vertex and "
+"which feature should be changed, but also what value it should be changed "
+"to"
 
 #: ../../dev_guide/arch_back.rst:73
 msgid "Поле ``self.edges`` содержит два ключа:"
-msgstr ""
+msgstr "The ``self.edges`` field contains two keys:"
 
 #: ../../dev_guide/arch_back.rst:75
 msgid "``\"remove\"`` – информация об удалении ребер"
-msgstr ""
+msgstr "``\"remove\"`` contains information about edge removal"
 
 #: ../../dev_guide/arch_back.rst:76
 msgid "``\"add\"`` – информация о добавлении новых ребер"
-msgstr ""
+msgstr "``\"add\"`` contains information about adding new edges"
 
 #: ../../dev_guide/arch_back.rst:79
 msgid ""
@@ -198,20 +270,26 @@ msgid ""
 "какой вершины ребро выходит, второй на то в какую вершину ребро "
 "направлено."
 msgstr ""
+"Edges in torch_geometric are always considered directed, so if an edge "
+"needs to be added or removed, the lists must contain information for two "
+"directed edges. The first index indicates the vertex from which the edge "
+"starts, and the second indicates the vertex to which the edge is directed."
 
 #: ../../dev_guide/arch_back.rst:82
 msgid "Методы класса GraphModificationArtifact"
-msgstr ""
+msgstr "Methods of the `GraphModificationArtifact` Class"
 
 #: ../../dev_guide/arch_back.rst:84
 msgid ""
 "Структура данных содержит множество функций, рассмотрим подробнее "
 "назначения функций и их групп."
 msgstr ""
+"The data structure contains many functions; let us consider the purpose of "
+"these functions and their groups in more detail."
 
 #: ../../dev_guide/arch_back.rst:86
 msgid "**Методы заполнения:**"
-msgstr ""
+msgstr "**Population Methods:**"
 
 #: ../../dev_guide/arch_back.rst:88
 msgid ""
@@ -224,34 +302,44 @@ msgid ""
 "метода: ``set_edges`` и ``set_nodes``, которые позволяют заполнить сразу "
 "все ключи соответствующего поля."
 msgstr ""
+"The functions ``add_node``, ``remove_node``, ``change_node_feature``, "
+"``add_edge``, and ``remove_edge`` are responsible for filling the "
+"corresponding fields and keys in the data structure. These methods also "
+"have batch variants that make it possible to fill in information not for a "
+"single edge or vertex, but for an entire group at once: ``add_nodes``, "
+"``remove_nodes``, ``change_node_features``, ``add_edges``, and "
+"``remove_edges``. There are also two additional methods, ``set_edges`` and "
+"``set_nodes``, which allow all keys of the corresponding field to be "
+"filled at once."
 
 #: ../../dev_guide/arch_back.rst:90
 msgid "**Технические методы:**"
-msgstr ""
+msgstr "**Technical Methods:**"
 
 #: ../../dev_guide/arch_back.rst:92
 msgid "Структура содержит также три технические статичных метода:"
-msgstr ""
+msgstr "The structure also contains three technical static methods:"
 
 #: ../../dev_guide/arch_back.rst:94
 msgid "``_tensor_to_list`` – конвертация torch тензоров в список"
-msgstr ""
+msgstr "``_tensor_to_list`` converts torch tensors into a list"
 
 #: ../../dev_guide/arch_back.rst:95
 msgid "``_list_to_tensor`` – из списка формируется torch тензор"
-msgstr ""
+msgstr "``_list_to_tensor`` constructs a torch tensor from a list"
 
 #: ../../dev_guide/arch_back.rst:96
 msgid "``to_scalar_str`` – конвертирует индексы разных форматов в строковый тип"
-msgstr ""
+msgstr "``to_scalar_str`` converts indices of different formats into strings"
 
 #: ../../dev_guide/arch_back.rst:98
 msgid "**Методы работы с данными:**"
-msgstr ""
+msgstr "**Data Handling Methods:**"
 
 #: ../../dev_guide/arch_back.rst:100
 msgid "``to_json`` – преобразует поля класса в json (требуется для сохранения)"
 msgstr ""
+"``to_json`` converts the class fields into JSON (required for saving)"
 
 #: ../../dev_guide/arch_back.rst:101
 msgid ""
@@ -259,20 +347,24 @@ msgid ""
 "структуру и возвращает заполненный объект класса "
 "`GraphModificationArtifact`"
 msgstr ""
+"``from_json`` (static) populates the structure from a JSON file and returns "
+"a filled `GraphModificationArtifact` object"
 
 #: ../../dev_guide/arch_back.rst:102
 msgid "``clear`` – полностью очищает всю структуру"
-msgstr ""
+msgstr "``clear`` completely clears the entire structure"
 
 #: ../../dev_guide/arch_back.rst:103
 msgid ""
 "``summary`` – возвращает словарь с указанием количества изменений каждого"
 " типа"
 msgstr ""
+"``summary`` returns a dictionary indicating the number of changes of each "
+"type"
 
 #: ../../dev_guide/arch_back.rst:106
 msgid "Интеграция с GeneralDataset"
-msgstr ""
+msgstr "Integration with `GeneralDataset`"
 
 #: ../../dev_guide/arch_back.rst:108
 msgid ""
@@ -283,31 +375,10 @@ msgid ""
 "`GraphModificationArtifact` и применяет описанные в структуре "
 "модификации."
 msgstr ""
-
-#~ msgid "Backend architecture"
-#~ msgstr ""
-
-#~ msgid "План"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "детали и тонкости для разработчика, как"
-#~ " помочь внести вклад или расширить "
-#~ "библиотеку"
-#~ msgstr ""
-
-#~ msgid "Архитектура кода: модули, классы, потоки данных"
-#~ msgstr ""
-
-#~ msgid "бэк фронт"
-#~ msgstr ""
-
-#~ msgid "инструкция по добавлению нового метода (интерпр, атака, защита)"
-#~ msgstr ""
-
-#~ msgid "в рамках текущего апи с расширением апи (гетерограф, предск ребер и тп)"
-#~ msgstr ""
-
-#~ msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
-#~ msgstr ""
+"In order for objects of the `GeneralDataset` class to interact with the "
+"`GraphModificationArtifact` data structure, the ``apply_modification`` "
+"method was added to the `GeneralDataset` class (file "
+"``src/base/datasets_processing.py``). This method accepts a "
+"`GraphModificationArtifact` object and applies the modifications described "
+"in the structure."
 

@@ -21,11 +21,11 @@ msgstr ""
 
 #: ../../dev_guide/arch_front.rst:2
 msgid "Архитектура фронтенда"
-msgstr ""
+msgstr "Frontend Architecture"
 
 #: ../../dev_guide/arch_front.rst:21
 msgid "Архитектура веб-интерфейса"
-msgstr ""
+msgstr "Web Interface Architecture"
 
 #: ../../dev_guide/arch_front.rst:23
 msgid ""
@@ -36,10 +36,15 @@ msgid ""
 "браузере и ее взаимодействие с пользователем управляется средствами HTML,"
 " CSS и JavScript."
 msgstr ""
+"The web interface is implemented as a single-page application using the "
+"Flask web framework. Interaction with the backend is performed using Ajax, "
+"a technology for asynchronous requests to the server that do not interrupt "
+"the operation of the web page. The rendering of the page in the browser and "
+"its interaction with the user are managed using HTML, CSS, and JavaScript."
 
 #: ../../dev_guide/arch_front.rst:28
 msgid "Модель MVC"
-msgstr ""
+msgstr "MVC Model"
 
 #: ../../dev_guide/arch_front.rst:30
 msgid ""
@@ -50,34 +55,45 @@ msgid ""
 "обрабатывает действия пользователя, давая модели команды на изменение "
 "данных."
 msgstr ""
+"Architecturally, the web interface is based on the MVC model "
+"(Model-View-Controller). In this scheme, the Model represents the data and "
+"the methods for working with them, the View is responsible for how the data "
+"is presented to the user on the web page, and the Controller processes user "
+"actions by issuing commands to the model to modify the data."
 
 #: ../../dev_guide/arch_front.rst:36
 msgid "Модель"
-msgstr ""
+msgstr "Model"
 
 #: ../../dev_guide/arch_front.rst:38
 msgid "В случае GNN-AID данными являются:"
-msgstr ""
+msgstr "In the case of GNN-AID, the data includes:"
 
 #: ../../dev_guide/arch_front.rst:40
 msgid "часть датасета, которая будет отображаться на экране"
-msgstr ""
+msgstr "the part of the dataset that will be displayed on the screen"
 
 #: ../../dev_guide/arch_front.rst:41
 msgid ""
 "архитектура и параметры GNN модели, загруженной или создаваемой "
 "пользователем"
 msgstr ""
+"the architecture and parameters of the GNN model loaded or created by the "
+"user"
 
 #: ../../dev_guide/arch_front.rst:42
 msgid "параметры метода интерпретации (а затем и методов атаки и защиты)"
 msgstr ""
+"the parameters of the interpretation method (and later also the attack and "
+"defense methods)"
 
 #: ../../dev_guide/arch_front.rst:43
 msgid ""
 "реестр датасетов, моделей и готовых результатов объяснений, доступных в "
 "хранилище"
 msgstr ""
+"the registry of datasets, models, and ready-made explanation results "
+"available in storage"
 
 #: ../../dev_guide/arch_front.rst:45
 msgid ""
@@ -85,10 +101,13 @@ msgid ""
 "окрестности заданной вершины, добавление сверточного слоя в архитектуру "
 "графовой нейросети."
 msgstr ""
+"The model implements the necessary operations on the data, for example, "
+"extracting the neighborhood of a given vertex or adding a convolutional "
+"layer to the graph neural network architecture."
 
 #: ../../dev_guide/arch_front.rst:48
 msgid "Представление"
-msgstr ""
+msgstr "View"
 
 #: ../../dev_guide/arch_front.rst:50
 msgid ""
@@ -98,6 +117,11 @@ msgid ""
 "поменять, переписав классы представления, при этом не затрагивая логику "
 "работы с данными."
 msgstr ""
+"The view includes a set of classes that describe the rendering of specific "
+"interface elements such as the menu, the dataset graph, the information "
+"panel, and so on. If necessary, the styles and appearance of the interface "
+"can be changed by rewriting the view classes without affecting the logic of "
+"working with the data."
 
 #: ../../dev_guide/arch_front.rst:53
 msgid ""
@@ -107,10 +131,14 @@ msgid ""
 "графа, и модель пересчитывает координаты вершин на экране в реальном "
 "времени."
 msgstr ""
+"In our case, the view is also responsible for interaction with the user "
+"when this does not involve requests to the server. For example, the user "
+"selects a different layout algorithm for the displayed graph, and the model "
+"recalculates the vertex coordinates on the screen in real time."
 
 #: ../../dev_guide/arch_front.rst:57
 msgid "Контроллер"
-msgstr ""
+msgstr "Controller"
 
 #: ../../dev_guide/arch_front.rst:59
 msgid ""
@@ -119,10 +147,14 @@ msgid ""
 "запрос к серверу, а представление датасета приостанавливает отображение "
 "пока не будут получены и обработаны новые данные."
 msgstr ""
+"The controller is responsible for communication with the backend. For "
+"example, when the user selects a new dataset to load, the controller "
+"creates the corresponding request to the server, while the dataset view "
+"pauses rendering until the new data has been received and processed."
 
 #: ../../dev_guide/arch_front.rst:64
 msgid "Технологии обмена данными"
-msgstr ""
+msgstr "Data Exchange Technologies"
 
 #: ../../dev_guide/arch_front.rst:66
 msgid ""
@@ -130,20 +162,25 @@ msgid ""
 "также веб-сокеты — двусторонние коммуникационные каналы клиент-сервер "
 "поверх TCP-соединения."
 msgstr ""
+"As already mentioned, data exchange uses Ajax requests as well as "
+"WebSockets, which are bidirectional client-server communication channels "
+"built on top of a TCP connection."
 
 #: ../../dev_guide/arch_front.rst:69
 msgid "Ajax"
-msgstr ""
+msgstr "Ajax"
 
 #: ../../dev_guide/arch_front.rst:71
 msgid ""
 "Ajax средства в GNN-AID применяются для разовых запросов типа загрузки "
 "датасета, модели или результатов объяснения."
 msgstr ""
+"In GNN-AID, Ajax is used for one-time requests such as loading a dataset, a "
+"model, or explanation results."
 
 #: ../../dev_guide/arch_front.rst:74
 msgid "Веб-сокеты"
-msgstr ""
+msgstr "WebSockets"
 
 #: ../../dev_guide/arch_front.rst:76
 msgid ""
@@ -153,31 +190,8 @@ msgid ""
 "новые значения весов модели, вектора (эмбеддинги) вершин и значения "
 "метрик качества, которые сразу отрисовываются на экране."
 msgstr ""
-
-#~ msgid "Frontend architecture"
-#~ msgstr ""
-
-#~ msgid "План"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "детали и тонкости для разработчика, как"
-#~ " помочь внести вклад или расширить "
-#~ "библиотеку"
-#~ msgstr ""
-
-#~ msgid "Архитектура кода: модули, классы, потоки данных"
-#~ msgstr ""
-
-#~ msgid "бэк фронт"
-#~ msgstr ""
-
-#~ msgid "инструкция по добавлению нового метода (интерпр, атака, защита)"
-#~ msgstr ""
-
-#~ msgid "в рамках текущего апи с расширением апи (гетерограф, предск ребер и тп)"
-#~ msgstr ""
-
-#~ msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
-#~ msgstr ""
-
+"WebSockets are better suited for interactive communication and are used, "
+"for example, to update information during model training: after each epoch "
+"of GNN training, the backend sends new model weight values, vertex vectors "
+"(embeddings), and quality metric values through a WebSocket, and these are "
+"immediately rendered on the screen."
