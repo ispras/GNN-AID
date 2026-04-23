@@ -460,6 +460,8 @@ def worker_process(
 ) -> None:
     # We ignore SIGINT in worker - it is for server
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    with contextlib.suppress(Exception):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
     # Additional safety: Чтобы worker не становился сиротой, если главный процесс умер внезапно
     with contextlib.suppress(Exception):
@@ -578,6 +580,9 @@ app.on_shutdown.append(on_shutdown)
 
 
 def run_aiohttp_server(port=5000):
+    with contextlib.suppress(Exception):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
     server_logger.info("Starting aiohttp server on port %s", port)
 
     loop = asyncio.new_event_loop()
