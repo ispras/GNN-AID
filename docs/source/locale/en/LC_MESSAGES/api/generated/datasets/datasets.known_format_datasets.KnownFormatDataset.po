@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-14 14:34+0300\n"
+"POT-Creation-Date: 2026-04-23 22:15+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -97,6 +97,11 @@ msgstr ""
 #: datasets.known_format_datasets.KnownFormatDataset.edge_attributes:1 of
 #, python-brace-format
 msgid "Get edge attributes as a dict {name -> list}"
+msgstr ""
+
+#: datasets.known_format_datasets.KnownFormatDataset.node_info:1 of
+#, python-brace-format
+msgid "Get node info as a dict {node -> obj}"
 msgstr ""
 
 #: datasets.known_format_datasets.KnownFormatDataset.check_validity:1 of

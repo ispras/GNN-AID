@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-14 14:34+0300\n"
+"POT-Creation-Date: 2026-04-23 22:15+0300\n"
 "PO-Revision-Date: 2026-02-09 22:00+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -40,91 +40,118 @@ msgid ""
 "Наличие GPU не обязательно, но ускорит работу с большими датасетами. В "
 "этом случае запускайте только бэкенд."
 msgstr ""
-"Framework requiers, minimal: 1Gb RAM ,10Gb disk space. "
-"GPU is optional, but can speed up on large datasets. In this case use backend only."
+"Framework requiers, minimal: 1Gb RAM ,10Gb disk space. GPU is optional, "
+"but can speed up on large datasets. In this case use backend only."
 
 #: ../../getting_started.rst:30
+#, fuzzy
 msgid ""
-"Вам понадобится Python версии ``3.11`` или выше. Мы рекомендуем создать "
-"виртуальное окружение с помощью ``pip``."
+"Вам понадобится Python версии ``3.11``. Сначала установите "
+"вспомогательные библиотеки"
+msgstr "First, get auxiliary libraries"
+
+#: ../../getting_started.rst:37
+#, fuzzy
+msgid ""
+"Мы рекомендуем создать виртуальное окружение с помощью ``venv`` и "
+"активировать его:"
 msgstr ""
 "You need python of version ``3.11`` or higher. We advice to create "
 "virtual environment with ``pip``."
 
-#: ../../getting_started.rst:37
-msgid "Сначала установите вспомогательные библиотеки"
-msgstr "First, get auxiliary libraries"
-
-#: ../../getting_started.rst:43
+#: ../../getting_started.rst:46
 msgid "Затем установите все зависимости проекта"
 msgstr "Then install all project dependencies"
 
-#: ../../getting_started.rst:51
+#: ../../getting_started.rst:54
 msgid "Третий набор зависимостей устанавливается примерно 20 минут."
 msgstr "The 3rd pack of requirements will take around 20 minutes."
 
-#: ../../getting_started.rst:54
+#: ../../getting_started.rst:57
 msgid "Возможные проблемы"
 msgstr "Possible problems"
 
-#: ../../getting_started.rst:56
+#: ../../getting_started.rst:59
 msgid ""
-"Если при запуске скрипта вы видите код ошибки 139 или 134, скорее всего, "
-"это проблема совместимости. Попробуйте следующее:"
+"1\\. Если во время установки `torch-*` пакетов из ``requirements3.txt`` "
+"возникла ошибка \"Failed to build ... when getting requirements to build "
+"wheel. No module named 'torch'\", попробуйте установить `torch-*` пакеты "
+"из бинарников:"
+msgstr ""
+"1\\. If you encounter the error \"Failed to build ... when getting "
+"requirements to build wheel. No module named 'torch'\" while installing "
+"`torch-*` packages from ``requirements3.txt``, try installing the `torch-*` "
+"packages from binary distributions:"
+
+#: ../../getting_started.rst:69
+#, python-brace-format
+msgid ""
+"где ``${CUDA}`` нужно заменить на ``cpu``, ``cu117`` или ``cu118`` в "
+"соответствии с тем как вы установили PyTorch."
+msgstr ""
+"where ``${CUDA}`` should be replaced with ``cpu``, ``cu117``, or ``cu118`` "
+"depending on how you installed PyTorch."
+
+#: ../../getting_started.rst:71
+#, fuzzy
+msgid ""
+"2\\. Если при запуске скрипта вы видите код ошибки 139 или 134, скорее "
+"всего, это проблема совместимости. Попробуйте следующее:"
 msgstr ""
 "If you see 139 or 134 error code when run the script, it is likely a "
 "compatibility issue. Try the following:"
 
-#: ../../getting_started.rst:59
+#: ../../getting_started.rst:74
 msgid "Обновите драйверы видеокарты (если вы используете CUDA)."
 msgstr "Update video card drivers (if you have decided to use cuda)."
 
-#: ../../getting_started.rst:60
+#: ../../getting_started.rst:75
 msgid "Обновите gcc до самой новой версии."
 msgstr "Update gcc to the most recent version."
 
-#: ../../getting_started.rst:61
+#: ../../getting_started.rst:76
 msgid "Удалите все модули torch, использующие C++ код."
 msgstr "Remove all torch modules that use C++ code."
 
-#: ../../getting_started.rst:62
+#: ../../getting_started.rst:77
 msgid "Установите все пакеты torch заново."
 msgstr "Install all torch packages again."
 
-#: ../../getting_started.rst:65
+#: ../../getting_started.rst:80
 msgid "Запуск бэкенда"
 msgstr "Run in backend"
 
-#: ../../getting_started.rst:67
+#: ../../getting_started.rst:82
 msgid ""
 "Если установлены все зависимости, можно переходить к :doc:`учебным "
 "примерам <tutorials>`"
 msgstr ""
 
-#: ../../getting_started.rst:71
+#: ../../getting_started.rst:86
 msgid "Запуск фронтенда"
 msgstr "Run in frontend"
 
-#: ../../getting_started.rst:73
+#: ../../getting_started.rst:88
+#, fuzzy
 msgid ""
 "Предполагается, что вы находитесь в корневой директории проекта. "
-"Активируйте виртуальное окружение"
+"Активируйте виртуальное окружение, если этого еще не сделано:"
 msgstr "Suppose you are at the project root folder. Activate virtual environment"
 
-#: ../../getting_started.rst:80
+#: ../../getting_started.rst:95
 #, fuzzy
 msgid "Добавьте текущую директорию ``.`` в зависимости Python"
 msgstr "Add ``gnn_aid`` library to Python dependencies"
 
-#: ../../getting_started.rst:86
+#: ../../getting_started.rst:101
 msgid "Запустите скрипт ``main.py`` из пакета ``web_interface``"
 msgstr "Run ``main.py`` script from ``web_interface`` package"
 
-#: ../../getting_started.rst:92
+#: ../../getting_started.rst:107
 msgid "Подождав около минуты вы увидите примерно следующее"
 msgstr "Over a minute, you will see something like this"
 
-#: ../../getting_started.rst:99
+#: ../../getting_started.rst:114
 msgid ""
 "Затем откройте `127.0.0.1:5000 <http://127.0.0.1:5000>`__ в браузере. Вы "
 "должны увидеть загруженную веб-страницу. Теперь можно переходить к работе"

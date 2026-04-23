@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 23:18+0300\n"
+"POT-Creation-Date: 2026-04-23 22:15+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,7 +17,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../dev_guide/code_style.rst:2
 msgid "Принципы разработки"
@@ -85,15 +85,24 @@ msgstr ""
 
 #: ../../dev_guide/code_style.rst:41
 msgid ""
+"Добавляем комментарии ко всем классам и функциям длиннее 3 строк. "
 "Предпочтительный стиль комментирования классов и функций в коде. "
 "Документирующие строки - предпочитаем Google Style"
 msgstr ""
 
-#: ../../dev_guide/code_style.rst:64
+#: ../../dev_guide/code_style.rst:45
+msgid "короткий вариант (если функция getter, setter или делает что-то простое):"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:59
+msgid "длинный вариант (для сложных функций и всех классов)"
+msgstr ""
+
+#: ../../dev_guide/code_style.rst:83
 msgid "Тестирование"
 msgstr ""
 
-#: ../../dev_guide/code_style.rst:66
+#: ../../dev_guide/code_style.rst:85
 msgid ""
 "Все тесты складываем в папку `tests`. Для юнит-тестов используем класс "
 "``unittest.TestCase``. При работе система использует рабочие директории "
@@ -127,5 +136,11 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Предпочтительный стиль комментирования классов "
+#~ "и функций в коде. Документирующие строки"
+#~ " - предпочитаем Google Style"
 #~ msgstr ""
 

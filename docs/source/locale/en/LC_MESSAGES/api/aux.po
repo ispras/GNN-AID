@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-04-23 22:15+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,7 +17,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../api/aux.rst:2
 msgid "aux"
@@ -49,8 +49,22 @@ msgstr ""
 msgid "Calling a file update with information about saved prepared datasets"
 msgstr ""
 
-#: ../../api/aux.rst aux.declaration.Declare.explanation_file_path
-#: aux.declaration.Declare.models_path of
+#: aux.data_info.DataInfo.all_obj_ver_by_obj_path
+#: aux.data_info.DataInfo.del_all_empty_folders
+#: aux.data_info.DataInfo.fill_prefix_storage
+#: aux.data_info.DataInfo.take_keys_etc_by_prefix
+#: aux.data_info.DataInfo.values_list_and_technical_files_by_path_and_prefix
+#: aux.data_info.DataInfo.values_list_by_path_and_keys
+#: aux.declaration.Declare.dataset_info_path
+#: aux.declaration.Declare.dataset_prepared_dir
+#: aux.declaration.Declare.dataset_root_dir
+#: aux.declaration.Declare.declare_model_by_config
+#: aux.declaration.Declare.explainer_kwargs_path_full
+#: aux.declaration.Declare.explanation_file_path
+#: aux.declaration.Declare.models_path aux.declaration.Declare.obj_info_to_path
+#: aux.utils.ProgressBar.reset aux.utils.ProgressBar.update
+#: aux.utils.model_managers_info_by_names_list
+#: aux.utils.setting_class_default_parameters of
 msgid "Параметры"
 msgstr ""
 
@@ -63,7 +77,19 @@ msgid ""
 "object Example: modes=(\"datasets\", \"models\", \"explanations\")"
 msgstr ""
 
-#: ../../api/aux.rst aux.declaration.Declare.models_path of
+#: aux.data_info.DataInfo.all_obj_ver_by_obj_path
+#: aux.data_info.DataInfo.fill_prefix_storage
+#: aux.data_info.DataInfo.take_keys_etc_by_prefix
+#: aux.data_info.DataInfo.values_list_and_technical_files_by_path_and_prefix
+#: aux.data_info.DataInfo.values_list_by_path_and_keys
+#: aux.declaration.Declare.dataset_info_path
+#: aux.declaration.Declare.dataset_prepared_dir
+#: aux.declaration.Declare.dataset_root_dir
+#: aux.declaration.Declare.declare_model_by_config
+#: aux.declaration.Declare.explainer_kwargs_path_full
+#: aux.declaration.Declare.models_path aux.declaration.Declare.obj_info_to_path
+#: aux.utils.ProgressBar.update aux.utils.model_managers_info_by_names_list
+#: aux.utils.setting_class_default_parameters of
 msgid "Результат"
 msgstr ""
 
@@ -233,7 +259,7 @@ msgstr ""
 msgid "**out** -- True if a `display()` was triggered."
 msgstr ""
 
-#: ../../api/aux.rst
+#: aux.utils.ProgressBar.update of
 msgid "Тип результата"
 msgstr ""
 
@@ -449,6 +475,10 @@ msgid ""
 "objects."
 msgstr ""
 
+#: aux.prefix_storage.TuplePrefixStorage.to_dict:1 of
+msgid "Return contents"
+msgstr ""
+
 #: aux.prefix_storage.TuplePrefixStorage.fill_from_folder:1 of
 msgid ""
 "Recursively walk over the given folder and repeat its structure. The "
@@ -463,6 +493,10 @@ msgstr ""
 
 #: aux.prefix_storage.FixedKeysPrefixStorage.from_json:1 of
 msgid "Construct PrefixStorage object from a json string."
+msgstr ""
+
+#: aux.prefix_storage.FixedKeysPrefixStorage.to_dict:1 of
+msgid "Return contents."
 msgstr ""
 
 #: aux.prefix_storage.FixedKeysPrefixStorage.filter:1 of
