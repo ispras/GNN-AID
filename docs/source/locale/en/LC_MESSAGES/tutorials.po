@@ -62,7 +62,7 @@ msgstr "Assessing the quality of the trained model."
 
 #: ../../tutorials.rst:35
 msgid ""
-"Пример находится в файле `<https://github.com/ispras/GNN-"
+"Код находится в файле `обучение <https://github.com/ispras/GNN-"
 "AID/tree/main/tutorials/00_basics/train_gnn.py>`__"
 msgstr ""
 "Find code in file `training <https://github.com/ispras/GNN-"

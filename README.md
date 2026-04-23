@@ -21,6 +21,7 @@ List of GNN-AID application areas incudes:
 
 A demo server is available at https://gnn-aid.at.ispras.ru/
 
+
 ## Installation
   
 GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit best for it.  
@@ -40,7 +41,7 @@ Recommended:
 - RAM: 8 GB or more
 - GPU: optional. For large-scale experiments and backend only
 
-### Dependencies
+### Run
 
 You need python of version `3.11` or higher. We advice to create virtual environment with `pip`.
 ```
