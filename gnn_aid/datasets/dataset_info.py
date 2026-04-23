@@ -82,6 +82,8 @@ class DatasetInfo:
     def __init__(
             self
     ):
+        """ Initialize all fields to None (or False for flags with defined defaults).
+        """
         self.class_name: str = None
         self.import_from: str = None
 
@@ -116,9 +118,6 @@ class DatasetInfo:
                     ntv_triples.extend(list(zip(entity_attrs["names"],
                                                 entity_attrs["types"],
                                                 entity_attrs["values"])))
-                # ntv_triples.extend(list(zip(sum(attributes["names"].values(), []),
-                #                             sum(attributes["types"].values(), []),
-                #                             sum(attributes["values"].values(), []))))
         else:
             assert set(self.node_attributes.keys()) == {"names", "types", "values"}
             for attributes in [self.node_attributes, self.edge_attributes]:
@@ -130,7 +129,7 @@ class DatasetInfo:
             assert type in {"continuous", "categorical", "vector", "other"}
             if type == "continuous":
                 assert isinstance(value, list) and len(value) == 2 and value[0] < value[1]
-            elif type == "continuous":
+            elif type == "categorical":
                 assert isinstance(value, list)
             elif type == "vector":
                 assert isinstance(value, int) and value > 0, "Node feature size must be positive"
@@ -145,7 +144,6 @@ class DatasetInfo:
             labelings = list(self.labelings.items())
         for t, lab in labelings:
             assert t in Task, f"Task '{t}' is not a valid Task"
-            # assert Task.has_member(t)
             for name, info in lab.items():
                 assert isinstance(name, str)
                 if t.endswith("regression"):
@@ -196,7 +194,8 @@ class DatasetInfo:
             self,
             dataset: Dataset
     ) -> None:
-        """ Check if metainfo fields are consistent with PTG dataset. """
+        """ Check if metainfo fields are consistent with PTG dataset.
+        """
         assert self.count == len(dataset)
         assert self.directed == is_graph_directed(dataset[0])
         assert self.remap is False
@@ -213,7 +212,8 @@ class DatasetInfo:
     def check(
             self
     ) -> None:
-        """ Check metainfo is sufficient, consistent, and valid. """
+        """ Check metainfo is sufficient, consistent, and valid.
+        """
         self.check_sufficiency()
         self.check_consistency()
         self.check_validity()
@@ -221,14 +221,16 @@ class DatasetInfo:
     def to_dict(
             self
     ) -> dict:
-        """ Return info as a dictionary. """
+        """ Return info as a dictionary.
+        """
         return dict(self.__dict__)
 
     def save(
             self,
             path: Union[str, Path]
     ) -> None:
-        """ Save into file non-null info. """
+        """ Save non-null fields to a JSON file.
+        """
         not_nones = {k: v for k, v in self.__dict__.items() if v is not None}
         path.parent.mkdir(exist_ok=True, parents=True)
         with path.open('w') as f:
@@ -238,7 +240,8 @@ class DatasetInfo:
     def read(
             path: Union[str, Path]
     ) -> 'DatasetInfo':
-        """ Read info from a file. """
+        """ Read info from a JSON file, validate, and return a DatasetInfo instance.
+        """
         with path.open('r') as f:
             a_dict = json.load(f, object_pairs_hook=OrderedDict)
         res = DatasetInfo()
@@ -252,11 +255,17 @@ def is_graph_directed(
         data: Data
 ) -> bool:
     """
-    Detect whether graph is directed or not (for each edge i->j, exists j->i).
-    NOTE: torch func data.is_undirected() does not work correctly,
-    e.g. for TUDataset/MUTAG it incorrectly says directed.
-    """
+    Detect whether a graph is directed by checking if every edge i→j has a reverse edge j→i.
 
+    NOTE: torch func ``data.is_undirected()`` does not work correctly,
+    e.g. for TUDataset/MUTAG it incorrectly says directed.
+
+    Args:
+        data (Data): PyTorch Geometric Data object.
+
+    Returns:
+        True if the graph is directed, False if undirected.
+    """
     edges = data.edge_index.tolist()
     edges_set = set()
     directed_flag = True

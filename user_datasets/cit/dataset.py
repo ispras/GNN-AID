@@ -9,7 +9,8 @@ from typing import Union, List, Dict, Any
 from tqdm import tqdm
 
 from gnn_aid.aux import Declare
-from gnn_aid.data_structures.configs import DatasetConfig, ConfigPattern
+from gnn_aid.data_structures.configs import DatasetConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets import KnownFormatDataset
 from gnn_aid.datasets.dataset_info import DatasetInfo
 

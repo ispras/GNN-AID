@@ -8,8 +8,9 @@ from torch import device
 
 from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, \
     Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager

@@ -11,7 +11,8 @@ from torch_geometric.nn import MessagePassing
 
 from gnn_aid.aux.utils import import_by_name, CUSTOM_LAYERS_INFO_PATH, MODULES_PARAMETERS_PATH, hash_data_sha256, \
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY
-from gnn_aid.data_structures.configs import ModelConfig, CONFIG_CLASS_NAME, ModelStructureConfig, ConfigPattern
+from gnn_aid.data_structures.configs import ModelConfig, ModelStructureConfig
+from gnn_aid.data_structures.gen_config import CONFIG_CLASS_NAME, ConfigPattern
 from .models_utils import GNNConstructorError
 
 

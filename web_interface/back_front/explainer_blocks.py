@@ -7,7 +7,8 @@ from gnn_aid.aux.data_info import DataInfo
 from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, ProgressBar
-from gnn_aid.data_structures.configs import ExplainerModificationConfig, ConfigPattern
+from gnn_aid.data_structures.configs import ExplainerModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart

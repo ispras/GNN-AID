@@ -9,7 +9,8 @@ import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
 
-from gnn_aid.data_structures.configs import DatasetConfig, ConfigPattern, FeatureConfig, Task
+from gnn_aid.data_structures.configs import DatasetConfig, FeatureConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo
 from .dataset_converter import DatasetConverter
 from .gen_dataset import LocalDataset, GeneralDataset
@@ -236,6 +237,8 @@ class KnownFormatDataset(
     def _convert_to_ij(
             self
     ) -> None:
+        """ Convert raw graph files to 'ij' format if not already done.
+        """
         # Check if ij files exist
         if self.edges_path.exists():
             return
@@ -304,10 +307,8 @@ class KnownFormatDataset(
                     if node not in node_map:
                         node_map[node] = node_index
                         node_index += 1
-            # assert node_index == self.info.nodes[0]
             # Original ids in the order of appearance
             self.node_map = list(node_map.keys())
-            # self.info.node_info = {"id": self.node_map}
 
         assert node_index == self.info.nodes[0], f"Number of nodes in file {node_index} != {self.info.nodes[0]} - number of nodes in metainfo"
         assert len(self._ptg_edge_index) == self.info.count
@@ -359,7 +360,6 @@ class KnownFormatDataset(
             self.node_map = []
             for node_map in node_maps:
                 self.node_map.append(list(node_map.keys()))
-            # self.info.node_info = {"id": self.node_map}
 
         assert sum(len(_) for _ in node_maps) == sum(self.info.nodes)
         assert len(self._ptg_edge_index) == self.info.count
@@ -371,6 +371,18 @@ class KnownFormatDataset(
             node_map: dict,
             ptg_edge_index: list
     ) -> int:
+        """
+        Parse one edge line and append it to the edge index, remapping node ids if needed.
+
+        Args:
+            line (str): A whitespace-separated pair of node ids.
+            node_index (int): Current counter for assigning new mapped node ids.
+            node_map (dict): Mapping from original node id to remapped id.
+            ptg_edge_index (list): Two-element list [src_list, dst_list] to append to.
+
+        Returns:
+            Updated node_index after processing this edge.
+        """
         i, j = map(int, line.split())
         if i not in node_map:
             node_map[i] = node_index
@@ -515,8 +527,7 @@ class KnownFormatDataset(
         for i, j in zip(ptg_edge_index[0].tolist(), ptg_edge_index[1].tolist()):
             if exclude_rev_for_undirected and undirected and i > j:
                 continue
-            yield ix, (str(node_map(i)),str(node_map(j)))
-            # yield ix, f"{node_map(i)},{node_map(j)}"
+            yield ix, (str(node_map(i)), str(node_map(j)))
             ix += 1
 
     def _labeling_tensor(
@@ -546,13 +557,8 @@ class KnownFormatDataset(
                     y.append(-1)
         elif task in [Task.EDGE_CLASSIFICATION, Task.EDGE_REGRESSION]:
             for _, (orig_i, orig_j) in self._iter_edges(g_ix, exclude_rev_for_undirected=True):
-                orig = f"{orig_i},{orig_j}"
                 _y = labeling_dict.get(f"{orig_i},{orig_j}",
                                        labeling_dict.get(f"{orig_j},{orig_i}", -1))
-                # if labeling_dict[orig] is not None:
-                #     y.append(labeling_dict[orig])
-                # else:
-                #     y.append(-1)
         else:
             raise NotImplementedError(f"Task {task} is not supported")
 
@@ -587,10 +593,6 @@ class KnownFormatDataset(
             num_nodes = self.info.nodes[0]
             num_edges = shape(self.edges[0])[1]
             # num_edges = self.stats.get('num_edges')
-        # if not self.is_directed():
-        #     assert num_edges % 2 == 0
-        #     num_edges = num_edges // 2
-
         node_features = [[] for _ in range(num_nodes)]  # List of vectors
 
         # Transform structure to node features

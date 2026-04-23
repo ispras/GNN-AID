@@ -17,8 +17,7 @@ from .known_format_datasets import KnownFormatDataset
 
 class DatasetStats:
     """
-    Stores statistics for a dataset.
-
+    Stores and computes statistics for a dataset.
     """
     stats = [
         'num_nodes',
@@ -114,8 +113,7 @@ class DatasetStats:
             self,
             stat: str
     ) -> Union[int, float, dict, str]:
-        """ Get the specified statistics.
-        It will be read from file or computed and saved.
+        """ Get the specified statistic, reading from file or computing and saving if needed.
         """
         assert stat in DatasetStats.all_stats
         if stat in self._store:
@@ -149,7 +147,7 @@ class DatasetStats:
             stat: str,
             value: Union[int, float, dict, str]
     ) -> None:
-        """ Set statistics to a specified value and save to file.
+        """ Set a statistic to a specified value and save to file.
         """
         assert stat in DatasetStats.all_stats
         self._store[stat] = value
@@ -157,50 +155,14 @@ class DatasetStats:
         with path.open('w') as f:
             json.dump(value, f, ensure_ascii=False, indent=1)
 
-    # def __delitem__(
-    #         self,
-    #         key
-    # ) -> None:
-    #     self.remove(key)
-    #
-    # def remove(
-    #         self,
-    #         stat: str
-    # ) -> None:
-    #     """ Remove statistics from dict and file.
-    #     """
-    #     if stat in self._stats:
-    #         del self._stats[stat]
-    #     try:
-    #         os.remove(self._save_path(stat))
-    #     except FileNotFoundError: pass
-    #
-    # def clear_all_stats(
-    #         self
-    # ) -> None:
-    #     """ Remove all stats. E.g. the graph has changed.
-    #     """
-    #     for s in DatasetStats.all_stats:
-    #         self.remove(s)
-    #
-    # def update_var_config(
-    #         self
-    # ) -> None:
-    #     """ Remove var stats from dict since dataset config has changed.
-    #     """
-    #     for s in DatasetStats.var_stats:
-    #         if s in self._stats:
-    #             del self._stats[s]
-
     def _compute(
             self,
             stat: str
     ) -> None:
-        """ Compute statistics for a single graph.
-        Result could be: a number, a string, a distribution, a dict of ones.
+        """ Compute a statistic for a single graph and store it.
+
+        Result can be a number, a string, a distribution dict, or a dict of values.
         """
-        # assert self.info.count == 1
-        # data: Data = self.dataset[0]
         edges = edge_index_to_edge_list(self.gen_dataset.edges[0], self.gen_dataset.is_directed())
         num_nodes = self.gen_dataset.info.nodes[0]
 
@@ -354,8 +316,9 @@ class DatasetStats:
             self,
             stat: str
     ) -> None:
-        """ Compute statistics for a multiple-graphs dataset.
-        Result could be: a number, a string, a distribution, a dict of ones.
+        """
+        Compute a statistic for a multiple-graphs dataset and store it.
+        Result can be a number, a string, a distribution dict, or a dict of values.
         """
         edges = self.gen_dataset.edges
 
@@ -363,7 +326,6 @@ class DatasetStats:
         if stat == "label_distr":
             labels = self.gen_dataset.labels
             self.set("label_distr", list_to_hist([int(y) for y in labels]))
-            # self.set("label_distr", list_to_hist([x for xs in labels for x in xs]))
             return
 
         # Simple stats
@@ -379,13 +341,11 @@ class DatasetStats:
 
         else:
             raise NotImplementedError
-        # except (NetworkXError, NetworkXNotImplemented) as e:
-        #     value = str(e)
 
 
 def list_to_hist(
         a_list: list
 ) -> dict:
-    """ Convert a list of integers/floats to a frequency histogram, return it as a dict
+    """ Convert a list of values to a frequency histogram dict sorted by count.
     """
     return {k: v for k, v in Counter(a_list).most_common()}

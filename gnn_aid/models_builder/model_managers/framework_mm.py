@@ -13,7 +13,7 @@ from gnn_aid.aux import Declare
 from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     FRAMEWORK_PARAMETERS_PATH, move_to_same_device
 from gnn_aid.data_structures import Task, GraphModificationArtifact
-from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
+from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern
 from gnn_aid.datasets import GeneralDataset
 from gnn_aid.models_builder.models_utils import Metric, predict_top_k_edges, mask_to_tensor
 from . import GNNModelManager
@@ -60,17 +60,14 @@ class FrameworkGNNModelManager(GNNModelManager):
     def __init__(
             self,
             gnn: torch.nn.Module = None,  # QUE kirill, do we want GNNConstructor here?
-            # gnn: GNNConstructor = None,
             dataset_path: Union[str, Path] = None,
             **kwargs
     ):
         """
-        :param gnn: graph neural network model based on the GNNConstructor class
-        :param manager_config:
-        :param modification:
-        :param dataset_path: int, the number of epochs the model actually was trained
-        :param epochs: int, the number of epochs the model actually was trained
-        :param kwargs: kwargs for GNNModelManager
+        Args:
+            gnn (torch.nn.Module): GNN model based on GNNConstructor. Default value: `None`.
+            dataset_path (Union[str, Path]): Path to the dataset used for training. Default value: `None`.
+            **kwargs: Additional kwargs forwarded to GNNModelManager (e.g. manager_config, modification).
         """
 
         # TODO Kirill, add train_test_split in default parameters gnnMM
@@ -119,7 +116,6 @@ class FrameworkGNNModelManager(GNNModelManager):
         # QUE Kirill, can we make this better
         if "optimizer" in getattr(self.manager_config, CONFIG_OBJ):
             self.optimizer = getattr(self.manager_config, CONFIG_OBJ).optimizer.create_obj(params=self.gnn.parameters())
-            # self.optimizer = getattr(self.manager_config, CONFIG_OBJ).optimizer.create_obj()
 
         if "loss_function" in getattr(self.manager_config, CONFIG_OBJ):
             self.loss_function = getattr(self.manager_config, CONFIG_OBJ).loss_function.create_obj()
@@ -131,6 +127,15 @@ class FrameworkGNNModelManager(GNNModelManager):
             metrics: Union[List[Metric], Metric] = None,
             **kwargs
     ) -> None:
+        """
+        Run a full training loop for the given number of steps.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset to train on.
+            steps (int): Number of training epochs. Default value: `None`.
+            metrics (Union[List[Metric], Metric]): Metrics to evaluate at each step. Default value: `None`.
+            **kwargs: Additional arguments.
+        """
         for _ in range(steps):
             self.before_epoch(gen_dataset)
             print("epoch", self.modification.epochs)
@@ -154,6 +159,15 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> List[Union[float, int]]:
+        """
+        Perform one training epoch over the dataset and return the batch losses.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset to train on.
+
+        Returns:
+            List of loss values from the training batches.
+        """
         task_type = gen_dataset.dataset_var_config.task
         if task_type.is_node_level():
             # FIXME Kirill, add data_x_copy mask
@@ -227,6 +241,16 @@ class FrameworkGNNModelManager(GNNModelManager):
             batch,
             task_type: Task
     ) -> torch.Tensor:
+        """
+        Run one batch through defenses, training step, and optimizer update.
+
+        Args:
+            batch: PyG batch object.
+            task_type (Task): The current task type.
+
+        Returns:
+            Loss tensor after the optimizer step.
+        """
         # Apply defenses before training on a batch
         if self.mi_defender and self.mi_defense_flag:
             self.mi_defender.pre_batch()
@@ -268,6 +292,16 @@ class FrameworkGNNModelManager(GNNModelManager):
             batch,
             task_type: Task
     ) -> torch.Tensor:
+        """
+        Compute the loss for one batch without stepping the optimizer.
+
+        Args:
+            batch: PyG batch object.
+            task_type (Task): The current task type.
+
+        Returns:
+            Loss tensor.
+        """
         loss = None
         if hasattr(batch, "edge_weight"):
             weight = batch.edge_weight
@@ -320,17 +354,18 @@ class FrameworkGNNModelManager(GNNModelManager):
             **kwargs
     ) -> torch.nn.Module:
         """
-        Load model from torch save format
+        Load model weights from a torch checkpoint file.
 
-        :param path: path to load the model. By default, the path is compiled based on the global
-         class variables
+        Args:
+            path (Union[str, Path, None]): Path to the checkpoint. Default value: `None`.
+
+        Returns:
+            The GNN module with loaded weights.
         """
         if not is_available():
-            self.gnn.load_state_dict(torch.load(path, map_location=torch.device('cpu'), ))
-            # self.gnn = torch.load(path, map_location=torch.device('cpu'))
+            self.gnn.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
         else:
-            self.gnn.load_state_dict(torch.load(path, ))
-            # self.gnn = torch.load(path)
+            self.gnn.load_state_dict(torch.load(path))
         if self.optimizer is None:
             self.init()
         return self.gnn
@@ -748,5 +783,3 @@ class FrameworkGNNModelManager(GNNModelManager):
         path = path / 'train_test_split'
         gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask, _ = torch.load(path)[:]
         return gen_dataset
-
-

@@ -10,8 +10,8 @@ from torch_geometric.data.collate import collate
 
 from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.utils import root_dir
-from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, \
-    Task
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo
 
 
@@ -171,6 +171,8 @@ class GeneralDataset(ABC):
     def labels(
             self
     ) -> torch.Tensor:
+        """ Return labels tensor for the current task type.
+        """
         task = self.dataset_var_config.task
         if task.is_node_level():
             return self.data.y
@@ -208,7 +210,6 @@ class GeneralDataset(ABC):
             return [data.x for data in self.dataset]
         else:
             return self.dataset[0].x
-        # return self.data.x
 
     @property
     def edge_features(
@@ -220,10 +221,6 @@ class GeneralDataset(ABC):
             raise RuntimeError(f"Cannot get edge features: dataset {self} is not built."
                                f" Define {DatasetVarConfig.__name__} and call build() method")
 
-        # if self.is_multi():
-        #     return [data.edge_attr for data in self.dataset]
-        # else:
-        #     return self.dataset[0].edge_attr
         # TODO misha implement
         return self.data.edge_attr
 
@@ -407,18 +404,17 @@ class GeneralDataset(ABC):
             artifact: 'GraphModificationArtifact'
     ) -> 'GeneralDataset':
         """
-        Applies graph structure and feature modifications described in a GraphModificationArtifact
-        to the current GeneralDataset object and returns the modified version.
+        Apply graph structure and feature modifications from a GraphModificationArtifact.
 
-        This includes:
-          - Removing and adding edges
-          - Adding new nodes and their features
-          - Removing nodes and updating the feature matrix with index remapping
-          - Modifying individual node features
-          - Reindexing nodes to maintain consistent connectivity
+        This includes removing and adding edges, adding new nodes with their features,
+        removing nodes with index remapping, modifying individual node features, and
+        reindexing nodes for consistent connectivity.
 
-        :param artifact: GraphModificationArtifact containing node and edge changes
-        :return: self (GeneralDataset)
+        Args:
+            artifact (GraphModificationArtifact): Modification spec with node and edge changes.
+
+        Returns:
+            Self with the dataset updated in-place.
         """
         data: Data = self.data
         device = data.x.device if hasattr(data, 'x') else 'cpu'
@@ -573,8 +569,6 @@ class GeneralDataset(ABC):
         # === Update GeneralDataset properties ===
         self.dataset.data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
         self._data = None  # to be recomputed
-        # self.dataset.num_classes = int(data.y.max().item()) + 1 if hasattr(data, 'y') and data.y is not None else 0
-        # self.dataset.num_node_features = data.x.size(1)
         self._labels = data.y if hasattr(data, 'y') else None
 
         return self
@@ -583,7 +577,8 @@ class GeneralDataset(ABC):
 class LocalDataset(
     InMemoryDataset
 ):
-    """ Locally saved PTG Dataset. Does not write anything to data/ folder
+    """
+    Locally saved PTG Dataset. Does not write anything to the data/ folder.
     """
 
     def __init__(
@@ -595,10 +590,14 @@ class LocalDataset(
             **in_memory_dataset_kwargs
     ):
         """
-        :param data_list: optionally, list of ready torch_geometric.data.Data objects
-        :param prepared_dir: directory where tensors are stored
-        :param process_func: optionally, custom process() function, which converts raw files into tensors
-        :param in_memory_dataset_kwargs: optionally, kwargs to InMemoryDataset constructor, e.g. transform
+        Args:
+            data_list (Union[List[Data], None]): Optionally, list of ready Data objects.
+            prepared_dir (Union[str, Path]): Directory where tensors are stored.
+            process_func (Union[Callable, None]): Optionally, custom process() that converts raw
+                files into tensors. Default value: `None`.
+            processed_file_names (Union[Callable, None]): Optionally, callable returning the
+                processed filename. Default value: `None`.
+            **in_memory_dataset_kwargs: Additional kwargs forwarded to InMemoryDataset, e.g. transform.
         """
         self.data_list = data_list
         self._prepared_dir = prepared_dir
@@ -623,6 +622,8 @@ class LocalDataset(
     def processed_file_names(
             self
     ) -> str:
+        """ Return the processed file name, defaulting to 'data.pt'.
+        """
         try:
             return self._processed_file_names()
         except (NotImplementedError, AttributeError):

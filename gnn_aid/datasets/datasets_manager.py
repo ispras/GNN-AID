@@ -10,9 +10,10 @@ from .ptg_datasets import LibPTGDataset
 
 class DatasetManager:
     """
-    Class for working with datasets. Methods: get - loads dataset in torch_geometric format for gnn
-    along the path specified in full_name as tuple. Currently also supports automatic loading and
-    processing of all datasets from torch_geometric.datasets
+    Provides methods for loading and managing datasets in torch_geometric format.
+
+    Supports automatic loading of datasets by config, including all datasets from
+    torch_geometric.datasets via LibPTGDataset.
     """
 
     @staticmethod
@@ -22,11 +23,15 @@ class DatasetManager:
             **params
     ) -> GeneralDataset:
         """
-        Get GeneralDataset by dataset config. Convenient to use from the frontend.
+        Load a GeneralDataset by its config. Convenient to use from the frontend.
 
-        :param dataset_config:
-        :param dataset_var_config:
-        :param params: additional parameters to init dataset class
+        Args:
+            dataset_config (DatasetConfig): Config identifying the dataset location and type.
+            dataset_var_config (DatasetVarConfig): Optional config for building features and labels.
+            **params: Additional parameters forwarded to the dataset class constructor.
+
+        Returns:
+            Loaded GeneralDataset, built with dataset_var_config if provided.
         """
         path = Declare.dataset_info_path(dataset_config)
 
@@ -63,19 +68,19 @@ class DatasetManager:
             labeling_name: str,
             labeling_dict: dict,
             value: int | list | None = None,
-            force_rewrite = False
+            force_rewrite=False
     ) -> None:
         """
-        Adds a new labeling to datasets with a specified dataset_config.
+        Add a new labeling to the dataset identified by dataset_config.
 
         Args:
-            dataset_config (DatasetConfig):
-            task (Task):
-            labeling_name (str): name for a new labeling
-            labeling_dict (dict): dictionary with labels {node/edge/graph -> value}
-            value (int | list | None, optional): possible value depending on the task:
-             number of classes or regression value bounds. Will be induced if omitted
-            force_rewrite (bool): if True, will rewrite labeling if exists
+            dataset_config (DatasetConfig): Config identifying the target dataset.
+            task (Task): Task type for the new labeling.
+            labeling_name (str): Name for the new labeling.
+            labeling_dict (dict): Labels as {node/edge/graph_id → value}.
+            value (int | list | None): Possible values depending on the task: number of classes
+                for classification, or [min, max] bounds for regression. Induced if omitted.
+            force_rewrite (bool): If True, overwrite an existing labeling with the same name.
         """
         info = DatasetInfo.read(Declare.dataset_info_path(dataset_config))
 

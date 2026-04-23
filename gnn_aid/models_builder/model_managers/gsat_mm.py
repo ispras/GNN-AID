@@ -7,7 +7,7 @@ from torch.nn.utils import clip_grad_norm
 from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     move_to_same_device
 from gnn_aid.data_structures import Task
-from gnn_aid.data_structures.configs import ConfigPattern
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from . import FrameworkGNNModelManager
 
 

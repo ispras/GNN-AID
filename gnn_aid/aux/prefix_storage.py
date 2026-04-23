@@ -32,18 +32,6 @@ class TuplePrefixStorage:
         # {key -> value}, key is str, value is a tuple with final obj or a dict with same structure
         self.content: Dict[str, Union[str, tuple]] = {}
 
-    # @property
-    # def depth(
-    #         self
-    # ) -> int:
-    #     return len(self._keys)
-    #
-    # @property
-    # def keys(
-    #         self
-    # ) -> tuple:
-    #     return tuple(self._keys)
-
     def __len__(self):
         return self.size()
 
@@ -262,43 +250,6 @@ class TuplePrefixStorage:
             self.add(e, None)
         print(f"Added {self.size()} items of {len(res)} files found.")
 
-    # def remap(
-    #         self,
-    #         mapping,
-    #         only_values: bool = False
-    # ):
-    #     """
-    #     Change keys order and combination.
-    #     """
-    #     # Check consistency
-    #     ms = set()
-    #     for m in mapping:
-    #         if isinstance(m, (list, tuple)):
-    #             ms.update(m)
-    #         else:
-    #             ms.add(m)
-    #     assert ms == set(range(len(self.keys))),\
-    #         f"mapping should contain key indices from 0 to {len(self.keys)-1}"
-    #
-    #     keys = [",".join(self.keys[i] for i in m) if isinstance(m, (list, tuple)) else self.keys[m]
-    #             for m in mapping]
-    #     ps = PrefixStorage(keys)
-    #
-    #     for item in self:
-    #         values = []
-    #         for m in mapping:
-    #             if isinstance(m, (list, tuple)):
-    #                 if only_values:
-    #                     v = ",".join(str(item[i]) for i in m)
-    #                 else:
-    #                     v = ",".join(f"{self.keys[i]}={item[i]}" for i in m)
-    #             else:
-    #                 v = item[m]
-    #             values.append(v)
-    #         ps.add(values)
-    #
-    #     return ps
-
     def __str__(
             self
     ) -> str:
@@ -349,159 +300,6 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
             self
     ) -> tuple:
         return tuple(self._keys)
-
-    # def add(
-    #         self,
-    #         values: Union[dict, tuple, list]
-    # ) -> None:
-    #     """
-    #     Add one list of values.
-    #     """
-    #     if isinstance(values, dict):
-    #         assert set(values.keys()) == set(self._keys)
-    #         self.add([values[k] for k in self._keys])
-    #
-    #     elif isinstance(values, (list, tuple)):
-    #         assert len(values) == len(self._keys)
-    #
-    #         def add(obj, depth):
-    #             v = values[depth]
-    #             if depth < self.depth - 1:
-    #                 if v not in obj:
-    #                     obj[v] = {} if depth < self.depth-2 else set()
-    #                 add(obj[v], depth + 1)
-    #             else:  # set
-    #                 if v in obj:
-    #                     raise ValueError(f"Element '{values}' already present")
-    #                 obj.add(v)
-    #
-    #         add(self.content, 0)
-    #
-    #     else:
-    #         raise TypeError("dict, tuple, or list were expected")
-
-    # def merge(
-    #         self,
-    #         ps,
-    #         ignore_conflicts: bool = False
-    # ) -> None:
-    #     """
-    #     Extend this with another PrefixStorage with same keys.
-    #     if ignore_conflicts=True, do not raise Exception when values sets intersect.
-    #     While merging objects are not copied.
-    #     """
-    #     assert isinstance(ps, PrefixStorage)
-    #     assert self._keys == ps.keys
-    #
-    #     def merge(content1, content2):
-    #         if isinstance(content1, set):  # set
-    #             for item in content2:
-    #                 if not ignore_conflicts and item in content1:
-    #                     raise ValueError(f"Item '{item}' occurs in both PrefixStorages")
-    #                 content1.add(item)
-    #         else:
-    #             for key, value in content2.items():
-    #                 if key in content1:
-    #                     merge(content1[key], content2[key])
-    #                 else:
-    #                     content1[key] = content2[key]
-    #
-    #     merge(self.content, ps.content)
-
-    # def remove(
-    #         self,
-    #         values: Union[dict, tuple, list]
-    # ) -> None:
-    #     """
-    #     Remove one tuple of values if it is present.
-    #     """
-    #     assert len(values) == len(self._keys)
-    #     if isinstance(values, dict):
-    #         assert set(values.keys()) == set(self._keys)
-    #         self.remove([values[k] for k in self._keys])
-    #
-    #     elif isinstance(values, (list, tuple)):
-    #         def rm(obj, depth):
-    #             v = values[depth]
-    #             if v in obj:
-    #                 rm(obj[v], depth+1) if isinstance(obj, dict) else obj.remove(v)
-    #
-    #         rm(self.content, 0)
-
-    # def filter(
-    #         self,
-    #         key_values: dict
-    # ):
-    #     """
-    #     Find all items satisfying specified key values. Returns a new PrefixStorage.
-    #     """
-    #     assert all(k in self._keys for k in key_values.keys())
-    #
-    #     def filter(obj, depth):
-    #         key = self._keys[depth]
-    #         if isinstance(obj, dict):
-    #
-    #             if key in key_values:  # take the value for 1 key
-    #                 value = key_values[key]
-    #                 if isinstance(value, dict):  # value could be a dict
-    #                     value = json.dumps(value)
-    #                 if value in obj:
-    #                     return filter(obj[value], depth + 1)
-    #                 else:  # all the rest is empty
-    #                     return set()
-    #
-    #             else:  # filter all
-    #                 return {k: filter(v, depth+1) for k, v in obj.items()}
-    #         else:  # set
-    #             if key in key_values:  # 0 or 1 element
-    #                 if key_values[key] in obj:
-    #                     return {key_values[key]}
-    #                 else:
-    #                     return set()
-    #             else:  # copy of full set
-    #                 return set(obj)
-    #
-    #     # Remove filtered keys
-    #     ps = PrefixStorage([k for k in self.keys if k not in key_values])
-    #     ps.content = filter(self.content, 0)
-    #     return ps
-
-    # def check(
-    #         self,
-    #         values: Union[dict, tuple, list]
-    # ) -> bool:
-    #     """
-    #     Check if a tuple of values is present.
-    #     """
-    #     assert len(values) == len(self._keys)
-    #     if isinstance(values, dict):
-    #         assert set(values.keys()) == set(self._keys)
-    #         return self.check([values[k] for k in self._keys])
-    #
-    #     elif isinstance(values, (list, tuple)):
-    #         data = self.content
-    #         for i, v in enumerate(values):
-    #             if v in data:
-    #                 if i == self.depth-1:
-    #                     return True
-    #                 data = data[v]
-    #             else:
-    #                 return False
-
-    # def __iter__(
-    #         self
-    # ):
-    #     def enum(obj, elems):
-    #         if isinstance(obj, (set, list)):
-    #             for e in obj:
-    #                 yield elems + [e]
-    #         else:
-    #             for k, v in obj.items():
-    #                 for _ in enum(v, elems + [k]):
-    #                     yield _
-    #
-    #     for _ in enum(self.content, []):
-    #         yield _
 
     @staticmethod
     def from_json(
@@ -556,34 +354,6 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
         Change keys order and combination.
         """
         raise NotImplementedError
-        # # Check consistency
-        # ms = set()
-        # for m in mapping:
-        #     if isinstance(m, (list, tuple)):
-        #         ms.update(m)
-        #     else:
-        #         ms.add(m)
-        # assert ms == set(range(len(self.keys))),\
-        #     f"mapping should contain key indices from 0 to {len(self.keys)-1}"
-        #
-        # keys = [",".join(self.keys[i] for i in m) if isinstance(m, (list, tuple)) else self.keys[m]
-        #         for m in mapping]
-        # ps = FixedKeysPrefixStorage(keys)
-        #
-        # for item in self:
-        #     values = []
-        #     for m in mapping:
-        #         if isinstance(m, (list, tuple)):
-        #             if only_values:
-        #                 v = ",".join(str(item[i]) for i in m)
-        #             else:
-        #                 v = ",".join(f"{self.keys[i]}={item[i]}" for i in m)
-        #         else:
-        #             v = item[m]
-        #         values.append(v)
-        #     ps.add(values)
-        #
-        # return ps
 
     def __str__(
             self
