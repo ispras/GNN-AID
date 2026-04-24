@@ -10,7 +10,8 @@ from typing import Union
 import numpy as np
 import torch
 
-from gnn_aid.data_structures.configs import ConfigPattern, DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.data_structures.configs import DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.data_structures.configs import DatasetConfig
 from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
 

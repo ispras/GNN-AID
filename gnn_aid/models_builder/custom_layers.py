@@ -12,11 +12,26 @@ from .models_utils import apply_attention_to_messages
 
 
 class GMM(GMMConv):
+    """
+    GMMConv wrapper that supplies a default edge attribute tensor of ones when none is provided.
+    """
     def __init__(self, in_channels, out_channels: int, dim: int, kernel_size: int,
                  **kwargs):
         super().__init__(in_channels, out_channels, dim, kernel_size, **kwargs)
 
     def forward(self, x, edge_index, edge_attr=None, size=None):
+        """
+        Run the GMM convolution, filling in ones for edge_attr if not provided.
+
+        Args:
+            x: Node feature matrix.
+            edge_index: Edge index tensor.
+            edge_attr: Edge attributes. Defaults to ones tensor. Default value: `None`.
+            size: Optional output size. Default value: `None`.
+
+        Returns:
+            Updated node feature matrix.
+        """
         if edge_attr is None:
             edge_attr = torch.ones(edge_index.size(dim=1), self.dim)
         out = super().forward(x=x, edge_index=edge_index, edge_attr=edge_attr, size=size)
@@ -24,6 +39,9 @@ class GMM(GMMConv):
 
 
 class PrototypeGraph:
+    """
+    Stores the graph index and node coalition associated with a prototype vector.
+    """
     def __init__(self, base_graph: int = 0, coalition=None):
         if coalition is None:
             coalition = []
@@ -32,8 +50,22 @@ class PrototypeGraph:
 
 
 class ProtLayer(torch.nn.Module):
+    """
+    ProtGNN prototype layer that learns class-specific prototype vectors and computes
+    cluster/separation losses via distance to prototypes.
+    """
     def __init__(self, full_gnn_id, layer_name_in_gnn, in_features, num_classes,
                  num_prototypes_per_class=3, eps=1e-4):
+        """
+        Args:
+            full_gnn_id: id() of the parent GNN module (used to register the layer name).
+            layer_name_in_gnn (str): Attribute name under which this layer is stored in the GNN.
+            in_features (int): Dimensionality of input node embeddings.
+            num_classes (int): Number of output classes.
+            num_prototypes_per_class (int): Number of prototype vectors per class. Default value: `3`.
+            eps (float): Small constant for numerical stability in similarity computation.
+                Default value: `1e-4`.
+        """
         super().__init__()
         full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
         full_gnn.prot_layer_name = layer_name_in_gnn
@@ -59,6 +91,16 @@ class ProtLayer(torch.nn.Module):
         self.prototype_vectors = torch.nn.Parameter(torch.rand(self.prototype_shape), requires_grad=True)
 
     def forward(self, x, full_gnn_id):
+        """
+        Compute prototype activations and logits, storing min_distances on the parent GNN.
+
+        Args:
+            x: Node/graph embedding tensor.
+            full_gnn_id: id() of the parent GNN module.
+
+        Returns:
+            Class logits tensor.
+        """
         prototype_activations, min_distances = self.prototype_distances(x=x, )
         logits = self.last_layer(prototype_activations)
         full_gnn = ctypes.cast(full_gnn_id, ctypes.py_object).value
@@ -79,6 +121,15 @@ class ProtLayer(torch.nn.Module):
             + incorrect_class_connection * negative_one_weights_locations)
 
     def prototype_distances(self, x):
+        """
+        Compute log-similarity and L2-distance of embeddings to all prototype vectors.
+
+        Args:
+            x: Embedding matrix of shape (N, in_features).
+
+        Returns:
+            Tuple of (similarity, distance) tensors of shape (N, num_prototypes).
+        """
         xp = torch.mm(x, torch.t(self.prototype_vectors))
         distance = -2 * xp + torch.sum(x ** 2, dim=1, keepdim=True) + torch.t(
             torch.sum(self.prototype_vectors ** 2, dim=1, keepdim=True))
@@ -86,11 +137,32 @@ class ProtLayer(torch.nn.Module):
         return similarity, distance
 
     def prototype_subgraph_distances(self, x, prototype):
+        """
+        Compute log-similarity and squared L2-distance of embeddings to a single prototype.
+
+        Args:
+            x: Embedding matrix of shape (N, in_features).
+            prototype: Single prototype vector of shape (in_features,).
+
+        Returns:
+            Tuple of (similarity, distance) tensors of shape (N, 1).
+        """
         distance = torch.norm(x - prototype, p=2, dim=1, keepdim=True) ** 2
         similarity = torch.log((distance + 1) / (distance + self.eps))
         return similarity, distance
 
     def projection(self, gnn, dataset, data_indices, data, thrsh=10):
+        """
+        Project each prototype vector onto the nearest subgraph embedding found via MCTS.
+
+        Args:
+            gnn: The parent GNN model (used to compute embeddings).
+            dataset: PyG dataset object providing per-graph Data objects.
+            data_indices (list): Indices of training graphs to search over.
+            data: Full graph data (unused, kept for API compatibility).
+            thrsh (int): Maximum number of same-class graphs to inspect per prototype.
+                Default value: `10`.
+        """
         from gnn_aid.explainers.protgnn.MCTS import mcts
 
         best_graph = None
@@ -130,7 +202,15 @@ class ProtLayer(torch.nn.Module):
 
     def result_prototypes(self, best_prots: [Optional] = None, best: bool = False, ):
         """
-        saving projected prototypes
+        Return prototype metadata for explanation output.
+
+        Args:
+            best_prots: Best prototype graphs saved during training. Default value: `None`.
+            best (bool): If True, return best_prots; otherwise return current prototype_graphs.
+                Default value: `False`.
+
+        Returns:
+            Tuple of (num_classes, num_prototypes_per_class, last_layer_weights, prototype_graphs).
         """
         # we need weights of last layer in explanation, so we get tensor data without grad and memory pointer
         return self.output_dim, self.num_prototypes_per_class, self.last_layer.weight.data.tolist(), best_prots \
@@ -138,6 +218,10 @@ class ProtLayer(torch.nn.Module):
 
 
 class GSATLayer(torch.nn.Module):
+    """
+    GSAT (Graph Stochastic Attention) layer that computes a stochastic edge attention mask
+    and applies it to all downstream MessagePassing layers via registered hooks.
+    """
     def __init__(
             self,
             full_gnn_id,
@@ -146,6 +230,15 @@ class GSATLayer(torch.nn.Module):
             learn_edge_features: bool = False,
             extractor_dropout_p: float = 0.5,
     ):
+        """
+        Args:
+            full_gnn_id: id() of the parent GNN module.
+            layer_name_in_gnn (str): Attribute name under which this layer is stored in the GNN.
+            in_features (int): Dimensionality of node (or edge) embeddings. Default value: `16`.
+            learn_edge_features (bool): If True, concatenate both endpoint embeddings for attention.
+                Default value: `False`.
+            extractor_dropout_p (float): Dropout probability in the attention MLP. Default value: `0.5`.
+        """
         super().__init__()
 
         self.is_inside = False
@@ -163,6 +256,9 @@ class GSATLayer(torch.nn.Module):
             args,
             kwargs
     ):
+        """
+        Pre-forward hook that clones the node embedding 'x' for use after the inner call returns.
+        """
         x = kwargs['x']
         if isinstance(x, dict):
             for k, v in x.items():
@@ -178,6 +274,17 @@ class GSATLayer(torch.nn.Module):
             edge_index: torch.Tensor,
             full_gnn_id
     ) -> torch.Tensor:
+        """
+        Compute stochastic edge attention and delegate the full GNN forward call with attention applied.
+
+        Args:
+            x (torch.Tensor): Node embedding tensor.
+            edge_index (torch.Tensor): Graph connectivity in COO format.
+            full_gnn_id: id() of the parent GNN (used to trigger its full forward pass).
+
+        Returns:
+            Node embeddings as they were before this layer (passed through from the saved hook value).
+        """
         skip_x = None
         if isinstance(x, dict):
             for k, v in x.items():
@@ -250,6 +357,17 @@ class GSATLayer(torch.nn.Module):
             temp: float,
             training: bool
     ) -> torch.Tensor:
+        """
+        Draw a concrete (hard) Bernoulli sample from logits using the concrete relaxation.
+
+        Args:
+            att_log_logit (torch.Tensor): Log-logit attention scores.
+            temp (float): Temperature for the concrete relaxation.
+            training (bool): If True, adds Gumbel noise for sampling; otherwise uses sigmoid.
+
+        Returns:
+            Attention weights in [0, 1].
+        """
         if training:
             random_noise = torch.empty_like(att_log_logit).uniform_(1e-10, 1 - 1e-10)
             random_noise = torch.log(random_noise) - torch.log(1.0 - random_noise)
@@ -264,6 +382,17 @@ class GSATLayer(torch.nn.Module):
             to_edge_index: torch.Tensor,
             values: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Reorder values so that they align with to_edge_index edge ordering.
+
+        Args:
+            from_edge_index (torch.Tensor): Source edge ordering (will be sorted).
+            to_edge_index (torch.Tensor): Target edge ordering to match.
+            values (torch.Tensor): Values to reorder, aligned with from_edge_index.
+
+        Returns:
+            Values reordered to match to_edge_index.
+        """
         from_edge_index, values = sort_edge_index(from_edge_index, values)
         ranking_score = to_edge_index[0] * (to_edge_index.max() + 1) + to_edge_index[1]
         ranking = ranking_score.argsort().argsort()
@@ -276,6 +405,16 @@ class GSATLayer(torch.nn.Module):
             node_att,
             edge_index
     ):
+        """
+        Convert node-level attention scores to edge-level by multiplying endpoint scores.
+
+        Args:
+            node_att: Node attention tensor of shape (N,).
+            edge_index: Edge index tensor of shape (2, E).
+
+        Returns:
+            Edge attention tensor of shape (E + N,) including self-loop attention appended at the end.
+        """
         src_lifted_att = node_att[edge_index[0]]
         dst_lifted_att = node_att[edge_index[1]]
         edge_att = src_lifted_att * dst_lifted_att
@@ -290,13 +429,22 @@ class GSATLayer(torch.nn.Module):
 
 
 class ExtractorMLP(nn.Module):
-
+    """
+    MLP that extracts log-logit attention scores from node (or edge) embeddings for GSAT.
+    """
     def __init__(
             self,
             hidden_size,
             learn_edge_features: bool = False,
             extractor_dropout_p: float = 0.5,
     ):
+        """
+        Args:
+            hidden_size: Dimensionality of input node embeddings.
+            learn_edge_features (bool): If True, concatenate both endpoint embeddings as input.
+                Default value: `False`.
+            extractor_dropout_p (float): Dropout probability. Default value: `0.5`.
+        """
         super().__init__()
         self.learn_edge_att = learn_edge_features
         dropout_p = extractor_dropout_p
@@ -311,6 +459,16 @@ class ExtractorMLP(nn.Module):
             emb,
             edge_index
     ):
+        """
+        Compute log-logit attention scores for nodes or edges.
+
+        Args:
+            emb: Node embedding tensor of shape (N, hidden_size).
+            edge_index: Edge index tensor of shape (2, E).
+
+        Returns:
+            Log-logit attention tensor of shape (N, 1) or (E, 1) depending on learn_edge_features.
+        """
         if self.learn_edge_att:
             col, row = edge_index
             f1, f2 = emb[col], emb[row]
@@ -322,6 +480,9 @@ class ExtractorMLP(nn.Module):
 
 
 class GSATMLP(nn.Sequential):
+    """
+    Multi-layer perceptron with InstanceNorm and Dropout used inside GSAT's ExtractorMLP.
+    """
     # TODO check if specific MLP needed
     def __init__(
             self,
@@ -329,6 +490,12 @@ class GSATMLP(nn.Sequential):
             dropout: float,
             bias: bool = True
     ):
+        """
+        Args:
+            channels (List): List of layer widths, e.g. [64, 128, 64, 1].
+            dropout (float): Dropout probability applied between hidden layers.
+            bias (bool): Whether to use bias in Linear layers. Default value: `True`.
+        """
         m = []
         for i in range(1, len(channels)):
             m.append(nn.Linear(channels[i - 1], channels[i], bias))
@@ -344,6 +511,15 @@ class GSATMLP(nn.Sequential):
             self,
             inputs
     ):
+        """
+        Run the MLP, skipping InstanceNorm for single-sample batches.
+
+        Args:
+            inputs: Input tensor.
+
+        Returns:
+            Output tensor after all layers.
+        """
         for module in self._modules.values():
             if isinstance(module, (InstanceNorm)):
                 if inputs.shape[0] == 1:  # TODO sort of monkey-patch
@@ -355,6 +531,9 @@ class GSATMLP(nn.Sequential):
 
 
 class DummyLayer(nn.Module):
+    """
+    Identity layer that passes its input through unchanged. Used as a structural placeholder.
+    """
     def __init__(
             self,
             **kwargs

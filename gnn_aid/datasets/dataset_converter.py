@@ -22,21 +22,23 @@ class DatasetConverter:
             original_raw_dir: Path,
             output_dir: Path,
             default_node_attr_value: dict = None,
-            default_edge_attr_value: dict = None,
+            default_edge_attr_value: dict = None
     ) -> None:
         """
-        Convert a dataset in popular format to our 'ij' format.
-        It looks for files with extension '.<format>'.
-        It reads data to networkx.(Di)Graph, then writes to files.
-        Uses `default_node_attr_value` and `default_edge_attr_value` to fill missing values.
-        
-        :param info: metainfo for the dataset
-        :param original_raw_dir: directory with original dataset
-        :param output_dir: new raw directory where to write all data
-        :param default_node_attr_value: dict of {attr name -> default value} to use when node
-         attribute is missing
-        :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
-         attribute is missing
+        Convert a dataset in a popular format to the internal 'ij' format.
+
+        Looks for files with extension ``.<format>``, reads them into networkx
+        (Di)Graph objects, and writes to ij files. Uses default values to fill
+        missing node/edge attributes.
+
+        Args:
+            info (DatasetInfo): Metainfo for the dataset.
+            original_raw_dir (Path): Directory containing the original dataset files.
+            output_dir (Path): New raw directory to write converted data into.
+            default_node_attr_value (dict): Mapping of {attr_name → default_value} for
+                missing node attributes. Default value: `None`.
+            default_edge_attr_value (dict): Mapping of {attr_name → default_value} for
+                missing edge attributes. Default value: `None`.
         """
         _format = info.format
         assert _format in DatasetConverter.supported_formats
@@ -71,12 +73,6 @@ class DatasetConverter:
             graphs.append(graph)
 
         assert len(graphs) == info.count
-
-        # # Move or copy original contents to a temporary dir
-        # merge_directories(path, self.raw_dir, True)
-        #
-        # # Rename the newly created dir to the original one
-        # tmp.rename(self.raw_dir)
 
         # Copy attributes and labels files to output dir
         for name in ['labels', 'node_attributes', 'edge_attributes']:
@@ -145,17 +141,20 @@ class DatasetConverter:
             name: str = 'networkx_graph'
     ) -> None:
         """
-        Write a networkx graph to files according to a specified format.
-        Attribute files will be created if necessary.
+        Write a networkx graph to files in the specified format.
+        Attribute files are created separately if the format does not store them natively.
 
-        :param graph: networkx Graph
-        :param format: one of supported formats: "adjlist", "edgelist", "gml", "g6", "s6"
-        :param output_dir: new raw directory where to write all data
-        :param default_node_attr_value: dict of {attr name -> default value} to use when node
-         attribute is missing
-        :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
-         attribute is missing
-        :param name: output graph file will be named as <name>.<format>
+        Args:
+            graph (nx.Graph): NetworkX graph to write.
+            format (str): One of the supported formats: ``"adjlist"``, ``"edgelist"``,
+                ``"gml"``, ``"g6"``, ``"s6"``.
+            output_dir (Path): Directory to write all output files into.
+            default_node_attr_value (dict): Mapping of {attr_name → default_value} for
+                missing node attributes. Default value: `None`.
+            default_edge_attr_value (dict): Mapping of {attr_name → default_value} for
+                missing edge attributes. Default value: `None`.
+            name (str): Base name for the output graph file; saved as ``<name>.<format>``.
+                Default value: `"networkx_graph"`.
         """
         node_attributes, edge_attributes = extract_attributes(
             graph, default_node_attr_value, default_edge_attr_value)
@@ -181,13 +180,7 @@ class DatasetConverter:
             nx.write_sparse6(graph, graph_file)
 
         # FORMATS THAT ARE NOT SUPPORTED:
-        # gexf, multiline_adjlist, weighted_edgelist
-        # # GRAPHML DOESN'T WORK WITH from_networkx()
-        # elif data_format == "graphml":
-        # # LEDA format is not supported as it stores edge attributes as strings
-        # elif data_format == "leda":
-        # # PAJEK format is not supported as it stores node attributes as strings
-        # elif data_format == "pajek": # Only works with graphs that have node labels
+        # gexf, multiline_adjlist, weighted_edgelist, graphml, leda, pajek
 
         else:
             raise NotImplementedError
@@ -210,17 +203,25 @@ class DatasetConverter:
 def extract_attributes(
         graph: nx.Graph,
         default_node_attr_value: dict = None,
-        default_edge_attr_value: dict = None,
+        default_edge_attr_value: dict = None
 ) -> Tuple[dict, dict]:
     """
-    Extract nodes and edges attributes from a networkx graph.
-    Uses `default_node_attr_value` and `default_edge_attr_value` to fill missing values.
+    Extract node and edge attributes from a networkx graph.
 
-    :param graph: networkx Graph
-    :param default_node_attr_value: dict of {attr name -> default value} to use when node
-     attribute is missing
-    :param default_edge_attr_value: dict of {attr name -> default value} to use when edge
-     attribute is missing
+    Uses default values to fill attributes that are missing on individual nodes or edges.
+
+    Args:
+        graph (nx.Graph): NetworkX graph to extract attributes from.
+        default_node_attr_value (dict): Mapping of {attr_name → default_value} for
+            missing node attributes. Default value: `None`.
+        default_edge_attr_value (dict): Mapping of {attr_name → default_value} for
+            missing edge attributes. Default value: `None`.
+
+    Returns:
+        Tuple of (node_attributes, edge_attributes), each a dict of {attr_name → {node/edge_id → value}}.
+
+    Raises:
+        KeyError: If an attribute is missing and no default is provided.
     """
     all_node_attributes_names = set()
     all_edge_attributes_names = set()
@@ -230,10 +231,6 @@ def extract_attributes(
         all_edge_attributes_names.update(edge[2].keys())
     node_attributes = {attr: {} for attr in all_node_attributes_names}
     edge_attributes = {attr: {} for attr in all_edge_attributes_names}
-    # for attr in all_node_attributes_names:
-    #     node_attributes[attr] = nx.get_node_attributes(graph, attr, default_node_attr_value[attr])
-    # for attr in all_edge_attributes_names:
-    #     edge_attributes[attr] = nx.get_edge_attributes(graph, attr, default_edge_attr_value[attr])
     for n, data in graph.nodes(data=True):
         for attr in all_node_attributes_names:
             if attr in data:
@@ -260,27 +257,34 @@ def read_nx_graph(
         path: Union[Path, str],
         **kwargs
 ) -> nx.Graph:
+    """
+    Read a networkx graph from a file in the given format.
+
+    Args:
+        data_format (str): One of the supported formats: ``"adjlist"``, ``"edgelist"``,
+            ``"gml"``, ``"g6"``, ``"s6"``.
+        path (Union[Path, str]): Path to the graph file.
+        **kwargs: Additional keyword arguments forwarded to the networkx reader.
+
+    Returns:
+        Loaded networkx graph.
+
+    Raises:
+        RuntimeError: If the format is not supported.
+    """
     # FORMATS THAT ARE NOT SUPPORTED:
-    # gexf, multiline_adjlist, weighted_edgelist
+    # gexf, multiline_adjlist, weighted_edgelist, graphml (doesn't work with from_networkx()),
+    # leda (stores edge attributes as strings), pajek (stores node attributes as strings)
     if data_format == "adjlist":  # This format does not store graph or node attributes.
         return nx.read_adjlist(path, **kwargs)
     elif data_format == "edgelist":
         return nx.read_edgelist(path, **kwargs)
     elif data_format == "gml":  # Only works with graphs that have node, edge attributes
         return nx.read_gml(path)
-    # # GRAPHML DOESN'T WORK WITH from_networkx()
-    # elif data_format == "graphml":
-    #     return nx.read_graphml(path, **kwargs)
-    # # LEDA format is not supported as it stores edge attributes as strings
-    # elif data_format == "leda":
-    #     return nx.read_leda(path, **kwargs)
     elif data_format == "g6":
         return nx.read_graph6(path)
     elif data_format == "s6":
         return nx.read_sparse6(path)
-    # # PAJEK format is not supported as it stores node attributes as strings
-    # elif data_format == "pajek": # Only works with graphs that have node labels
-    #     return nx.read_pajek(path, **kwargs)
     else:
         raise RuntimeError("the READING format is NOT SUPPORTED!!!")
 
@@ -289,8 +293,14 @@ def networkx_to_ptg(
         nx_graph: nx.Graph
 ) -> Data:
     """
-    Convert networkx graph to a PTG Data.
-    Nodes and edges attributes, that numeric, are concatenated.
+    Convert a networkx graph to a PyTorch Geometric Data object.
+    Numeric node and edge attributes are concatenated into feature tensors.
+
+    Args:
+        nx_graph (nx.Graph): NetworkX graph to convert.
+
+    Returns:
+        PyTorch Geometric Data object with node and edge features.
     """
     node_attribute_names = set()
     edge_attribute_names = set()
@@ -329,6 +339,8 @@ def networkx_to_ptg(
 
 
 def example_single():
+    """ Create and register a single-graph custom GML dataset as a usage example.
+    """
     g = nx.Graph()
     g.add_node(11, a=0.4, b=100)
     g.add_node(12, a=0.3, b=50)
@@ -397,7 +409,8 @@ def example_single():
 
 
 def example_multi():
-    # Multi
+    """ Create and register a multi-graph custom GML dataset as a usage example.
+    """
     g1 = nx.Graph()
     g1.add_node(1, a=10, b='alpha')
     g1.add_node(2, a=20, b='beta')
@@ -451,7 +464,7 @@ def example_multi():
             "format": "gml",
             "count": 3,
             "directed": False,
-            "nodes": [g.number_of_nodes() for g in [g1,g2,g3]],
+            "nodes": [g.number_of_nodes() for g in [g1, g2, g3]],
             "remap": True,
             "node_attributes": {
                 "names": ["a", "b"],
@@ -468,7 +481,7 @@ def example_multi():
 
     (raw / 'labels').mkdir(exist_ok=True)
     with open(raw / 'labels' / 'binary', 'w') as f:
-        json.dump({"0":1,"1":0,"2":0}, f)
+        json.dump({"0": 1, "1": 0, "2": 0}, f)
 
     from .known_format_datasets import KnownFormatDataset
     custom_dataset = KnownFormatDataset(

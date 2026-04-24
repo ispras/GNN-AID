@@ -7,6 +7,16 @@ def model_configs_zoo(
         dataset: GeneralDataset,
         model_name: str
 ):
+    """
+    Return a pre-configured FrameworkGNNConstructor by name from the model zoo.
+
+    Args:
+        dataset (GeneralDataset): Dataset used to set input/output channel sizes.
+        model_name (str): Name of the model to retrieve (must match a local variable name).
+
+    Returns:
+        Configured FrameworkGNNConstructor instance.
+    """
     sage_cossim = FrameworkGNNConstructor(
             model_config=ModelConfig(
                 structure=ModelStructureConfig(

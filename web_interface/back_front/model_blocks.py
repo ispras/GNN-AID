@@ -504,7 +504,7 @@ class ModelTrainerBlock(Block):
             self.model_manager.train_model(
                 gen_dataset=self.gen_dataset, save_model_flag=False,
                 mode=mode, steps=steps, metrics=self.metrics,
-                apply_posisoning_ad=apply_posisoning_ad)
+                apply_positoning_ad=apply_posisoning_ad)
 
             self.pbar.close()
             self.socket.send("mt", {"status": "OK", "info": "training-finished"})

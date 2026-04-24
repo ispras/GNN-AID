@@ -11,7 +11,8 @@ from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
 from gnn_aid.data_structures.configs import FeatureConfig, Task
 from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager, ProtGNNModelManager, GSATModelManager
-from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 

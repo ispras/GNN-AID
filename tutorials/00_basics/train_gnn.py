@@ -3,7 +3,8 @@ from pathlib import Path
 from torch import device
 
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
-from gnn_aid.data_structures.configs import ConfigPattern, DatasetConfig, Task
+from gnn_aid.data_structures.configs import DatasetConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager

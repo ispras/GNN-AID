@@ -7,7 +7,8 @@ from gnn_aid.attacks import Attacker
 from gnn_aid.aux.utils import FUNCTIONS_PARAMETERS_PATH, all_subclasses
 from gnn_aid.data_structures import ModelStructureConfig, ModelConfig
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task, \
-    ConfigPattern, ModelModificationConfig
+    ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor

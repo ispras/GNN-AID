@@ -1,14 +1,16 @@
 import hashlib
 import json
+import shutil
 import warnings
 from enum import EnumMeta
 from pathlib import Path
 from pydoc import locate
+from time import time
 from typing import Union, Type, Any, Tuple, Callable
 
 import numpy as np
 import torch
-from torch import tensor, Tensor
+from torch import Tensor
 from torch_sparse import SparseTensor
 from tqdm import tqdm
 
@@ -48,7 +50,7 @@ TECHNICAL_PARAMETER_KEY = "_technical_parameter"
 
 
 def hash_data_sha256(
-        data
+        data: bytes
 ) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -57,13 +59,18 @@ def import_by_name(
         name: str,
         packs: list = None
 ) -> Type[Any]:
+    """Import a class by name, searching in the given packages.
+
+    Args:
+        name (str): Class name, fully qualified or relative.
+        packs (list): List of package paths to search in. Default value: `None`.
+
+    Returns:
+        Type[Any]: The imported class.
+
+    Raises:
+        ImportError: If the class cannot be found in any of the given packages.
     """
-    Import name from packages, return class
-    :param name: class name, full or relative
-    :param packs: list of packages to search in
-    :return: <class>
-    """
-    from pydoc import locate
     if packs is None:
         return locate(name)
     else:
@@ -76,11 +83,21 @@ def import_by_name(
 
 
 def model_managers_info_by_names_list(
-        model_managers_names: set
+        model_managers_names: set,
 ) -> dict:
-    """
-    :param model_managers_names: set with model managers class names (user and framework)
-    :return: dict with info about model managers 
+    """Return info dicts for the given model manager class names.
+
+    Looks up each name in the framework parameters file first, then in the
+    user model managers info file.
+
+    Args:
+        model_managers_names (set): Set of model manager class names (user and framework).
+
+    Returns:
+        dict: Mapping from model manager name to its parameter info dict.
+
+    Raises:
+        Exception: If a name is not found in either source.
     """
     model_managers_info = {}
     with open(FRAMEWORK_PARAMETERS_PATH) as f:
@@ -105,11 +122,23 @@ def setting_class_default_parameters(
         class_kwargs: dict,
         default_parameters_file_path: Union[str, Path]
 ) -> Tuple[dict, dict]:
-    """
-    :param class_name: class name, should be same in default_parameters_file
-    :param class_kwargs: dict with parameters, which needs to be supplemented with default parameters
-    :param default_parameters_file_path: path to the file with default parameters of the class_name object
-    :return: new dict with all class kwargs
+    """Fill missing class kwargs with defaults from a JSON parameter file.
+
+    Args:
+        class_name (str): Class name; must match a key in the parameter file.
+        class_kwargs (dict): Parameters to supplement with defaults.
+        default_parameters_file_path (Union[str, Path]): Path to the JSON file
+            containing default parameters for class_name.
+
+    Returns:
+        Tuple[dict, dict]: A pair ``(class_kwargs_for_save, class_kwargs_for_init)``
+            where values are cast to the appropriate types. ``class_kwargs_for_save``
+            preserves the flat parameter layout; ``class_kwargs_for_init`` applies
+            any parameter grouping defined in the file.
+
+    Raises:
+        Exception: If class_name is not in the parameter file, or an unsupported
+            grouping format is encountered.
     """
     with open(default_parameters_file_path) as f:
         class_kwargs_default = json.load(f)
@@ -118,8 +147,6 @@ def setting_class_default_parameters(
         class_kwargs_default = class_kwargs_default[class_name]
     for key, val in class_kwargs.items():
         if key == TECHNICAL_PARAMETER_KEY or key not in class_kwargs_default.keys():
-            # raise Exception(
-            #     f"Parameter {key} cannot be set for {class_name}")
             warnings.warn(f"WARNING: Parameter {key} cannot be set for {class_name} "
                           f"in def setting_class_default_parameters")
             continue
@@ -182,9 +209,16 @@ def deep_update(
         target: dict,
         overrides: dict
 ) -> dict:
-    """
-    Recursively update a dictionary with values from overrides.
+    """Recursively update a dictionary with values from overrides.
+
     Nested dictionaries are merged instead of overwritten.
+
+    Args:
+        target (dict): Dictionary to update in place.
+        overrides (dict): Values to merge into target.
+
+    Returns:
+        dict: The updated target dictionary.
     """
     for key, value in overrides.items():
         if (
@@ -201,14 +235,27 @@ def deep_update(
 def all_subclasses(
         cls: Type[Any]
 ) -> set:
+    """ Return all subclasses of cls recursively.
+    """
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
 def move_to_same_device(
         *tensors,
-        device: torch.device = None
-):
+        device: torch.device = None,
+) -> tuple:
+    """
+    Move all tensor arguments to the same device.
+    Non-tensor arguments are passed through unchanged.
+
+    Args:
+        *tensors: Arbitrary objects; torch.Tensor instances are moved to device.
+        device (torch.device): Target device. Defaults to CUDA if available, else CPU.
+
+    Returns:
+        tuple: Arguments with tensors moved to the target device.
+    """
     def is_movable_tensor(x):
         return isinstance(x, torch.Tensor) and hasattr(x, 'to')
     if device is None:
@@ -223,20 +270,25 @@ def move_to_same_device(
 
 class tmp_dir():
     """
-    Temporary create a directory near the given path. Remove it on exit.
+    Context manager that creates a temporary directory and removes it on exit.
     """
 
     def __init__(
             self,
-            path: Path
+            path: Path,
     ):
+        """
+        Args:
+            path (Path): Base path; the temporary directory is created alongside it.
+        """
         self.path = path
-        from time import time
         self.tmp_dir = self.path.parent / (self.path.name + str(time()))
 
     def __enter__(
             self
     ) -> Path:
+        """ Create the temporary directory and return its path.
+        """
         self.tmp_dir.mkdir(parents=True)
         return self.tmp_dir
 
@@ -244,16 +296,30 @@ class tmp_dir():
             self,
             exception_type,
             exception_value,
-            exception_traceback
+            exception_traceback,
     ) -> None:
-        import shutil
+        """ Remove the temporary directory.
+        """
         try:
             shutil.rmtree(self.tmp_dir)
         except FileNotFoundError:
             pass
 
 
-def short_str(obj, max_len=120):
+def short_str(
+        obj: Any,
+        max_len: int = 120,
+) -> str:
+    """
+    Return a string representation of obj truncated to max_len characters.
+
+    Args:
+        obj (Any): Object to represent as a string.
+        max_len (int): Maximum length of the result. Default value: `120`.
+
+    Returns:
+        str: Truncated string representation.
+    """
     res = str(obj)
     if len(res) > max_len:
         res = res[:max_len - 5] + "..." + res[-2:]
@@ -261,9 +327,19 @@ def short_str(obj, max_len=120):
 
 
 def edge_index_to_edge_list(
-        edge_index: Union[list, tensor],
+        edge_index: Union[list, Tensor],
         directed: bool = True
 ) -> list:
+    """
+    Convert a COO edge index to a list of (src, dst) pairs.
+
+    Args:
+        edge_index (Union[list, tensor]): A [2, E] tensor or a list of such tensors.
+        directed (bool): If False, only edges where src <= dst are kept. Default value: `True`.
+
+    Returns:
+        list: List of (src, dst) integer pairs, or a list of such lists.
+    """
     if isinstance(edge_index, list):
         return [edge_index_to_edge_list(x) for x in edge_index]
 
@@ -279,16 +355,22 @@ def edge_index_to_edge_list(
             result.append([i, j])
         return result
 
-        # # Удалим дубликаты: (i, j) и (j, i) → оставить только (min(i, j), max(i, j))
-        # edge_set = set()
-        # for i, j in edges:
-        #     edge_set.add(tuple(sorted((i, j))))
-        # return list(edge_set)
-
 
 def shape(
         x: Union[Tensor, SparseTensor]
 ) -> list:
+    """
+    Return the shape of a dense or sparse tensor as a list.
+
+    Args:
+        x (Union[Tensor, SparseTensor]): Input tensor.
+
+    Returns:
+        list: Shape as a list of integers.
+
+    Raises:
+        NotImplementedError: If x is neither a Tensor nor a SparseTensor.
+    """
     if isinstance(x, Tensor):
         _shape = list(x.shape)
     elif isinstance(x, SparseTensor):
@@ -301,9 +383,12 @@ def shape(
 
 class MetaEnum(EnumMeta):
     """
-    A helper class which allows us to do "x in XEnum" if XEnum extends this class
+    EnumMeta subclass that supports the ``in`` operator for value membership tests.
     """
+
     def __contains__(cls, item):
+        """ Return True if item is a valid value of the enum.
+        """
         try:
             cls(item)
         except ValueError:
@@ -312,6 +397,10 @@ class MetaEnum(EnumMeta):
 
 
 class ProgressBar(tqdm):
+    """
+    tqdm progress bar with optional frontend hooks for init, reset, and update events.
+    """
+
     def __init__(
             self,
             *args,
@@ -330,6 +419,16 @@ class ProgressBar(tqdm):
             hook: Callable,
             where: str
     ) -> None:
+        """
+        Register a callback for a progress bar event.
+
+        Args:
+            hook (Callable): Callback to invoke on the event.
+            where (str): Event name; one of ``'on_init'``, ``'on_reset'``, ``'on_update'``.
+
+        Raises:
+            ValueError: If where is not a recognized event name.
+        """
         if where == 'on_init':
             self._on_init_hook = hook
         elif where == 'on_reset':
@@ -339,8 +438,12 @@ class ProgressBar(tqdm):
         else:
             raise ValueError(f"Hook {where} is not supported")
 
-    def init(self,
-             **kwargs):
+    def init(
+            self,
+            **kwargs
+    ):
+        """ Initialize the progress bar state and fire the on_init hook.
+        """
         # TODO do we save kwargs?
         self.kwargs.update(**kwargs)
 
@@ -352,6 +455,13 @@ class ProgressBar(tqdm):
             total: Union[float, None] = None,
             **kwargs
     ):
+        """
+        Reset the progress bar and fire the on_reset hook.
+
+        Args:
+            total (Union[float, None]): New total for the progress bar. Default value: `None`.
+            **kwargs: Additional keyword arguments stored in self.kwargs.
+        """
         super().reset(total=total)
         self.kwargs = kwargs
         if self._on_reset_hook:
@@ -361,6 +471,8 @@ class ProgressBar(tqdm):
             self,
             n: int = 1
     ):
+        """ Advance the progress bar by n steps and fire the on_update hook.
+        """
         res = super().update(n=n)
         if self._on_update_hook:
             self._on_update_hook()
