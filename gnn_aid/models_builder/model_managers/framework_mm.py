@@ -21,7 +21,16 @@ from . import GNNModelManager
 
 class FrameworkGNNModelManager(GNNModelManager):
     """
-    GNN model control class. Have methods: train_model, save_model, load_model
+    GNN model manager with a full training loop: train, evaluate, save, and load.
+
+    The ``additional_config`` class attribute defines parameters not listed in meta-info
+    (not shown in the frontend) that are added at initialization:
+
+    - optimizer: optimizer class name and params (see optimizers_parameters.json).
+    - loss_function: loss function class name and params (see functions_parameters.json).
+    - batch (int): batch size for training.
+    - clip (float): gradient clipping value; calls clip_grad_norm if not None.
+    - mask_features (list): feature names to mask to prevent leakage during training.
     """
     gnn: torch.nn.Module  # FIXME kirill, what is it for?
     additional_config = ConfigPattern(
@@ -45,17 +54,6 @@ class FrameworkGNNModelManager(GNNModelManager):
             },
         }
     )
-    """
-    Args not listed in meta-info (thus not shown at frontend) to be added at initialization.
-    
-    optimizer: optimizer class name and params, all supported classes are described in optimizers_parameters.json file
-    batch: int, batch to train
-    loss_function: loss_function class name and params, all supported classes are described 
-    in functions_parameters.json file
-    clip: float, clip to train. If not None call clip_grad_norm
-    mask_features: list of the names of the features to be masked. For example, 
-    to prevent leakage of the response during training.
-    """
 
     def __init__(
             self,
@@ -283,6 +281,8 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             loss: torch.Tensor
     ) -> torch.Tensor:
+        """ Backpropagate loss and step the optimizer.
+        """
         loss.backward()
         self.optimizer.step()
         return loss
@@ -374,12 +374,6 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             path: Union[str, Path] = None
     ) -> None:
-        """
-        Save the model in torch format
-
-        :param path: path to save the model. By default,
-         the path is compiled based on the global class variables
-        """
         torch.save(self.gnn.state_dict(), path)
 
     def train_model(
@@ -389,19 +383,24 @@ class FrameworkGNNModelManager(GNNModelManager):
             mode: Union[str, None] = None,
             steps=None,
             metrics: List[Metric] = None,
-            apply_posisoning_ad: bool = True
+            apply_positoning_ad: bool = True
     ) -> Path | None:
         """
-        Convenient train method.
+        Train the model and optionally save it.
 
-        :param gen_dataset: dataset in torch_geometric data format for train
-        :param save_model_flag: if need save model after train. Default save_model_flag=True
-        :param mode: '1 step' or 'full' or None (choose automatically)
-        :param steps: train specific number of epochs, if None - all of them
-        :param metrics: list of metrics to measure at each step or at the end of training
-        :param apply_posisoning_ad: if True, apply posisoning attack and defense before the training
+        Args:
+            gen_dataset (GeneralDataset): Dataset to train on.
+            save_model_flag (bool): If True, save the model after training. Default value: `True`.
+            mode (Union[str, None]): '1_step', 'full', or None (auto-select). Default value: `None`.
+            steps: Number of epochs to train; if None, use all. Default value: `None`.
+            metrics (List[Metric]): Metrics to evaluate at each step or at the end. Default value: `None`.
+            apply_positoning_ad (bool): If True, apply poisoning attack and defense before training.
+                Default value: `True`.
+
+        Returns:
+            Path to the saved model directory, or None if save_model_flag is False.
         """
-        if apply_posisoning_ad:
+        if apply_positoning_ad:
             gen_dataset = self.load_or_execute_poisoning_attack(
                 gen_dataset=gen_dataset
             )
@@ -430,15 +429,18 @@ class FrameworkGNNModelManager(GNNModelManager):
             out: str = 'answers'
     ) -> torch.Tensor:
         """
-        Run the model on a part of dataset specified with a mask.
+        Run the model on a part of the dataset specified by a mask.
 
-        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information
-         about the dataset
-        :param mask: part of the dataset on which the output will be obtained.
-         'train', 'val', 'test', 'all', or Tensor of specific nodes/edges
-        :param out: 'answers', 'predictions', 'logits' -- what output format will be calculated,
-         availability depends on which methods have been overridden in the parent class
-        :return: tensor of outputs
+        Args:
+            gen_dataset (GeneralDataset): Wrapper over the dataset with meta-information.
+            mask (Union[str, List[bool], torch.Tensor]): Part of the dataset to run on.
+                'train', 'val', 'test', 'all', or a Tensor of specific node/edge indices.
+                Default value: `'test'`.
+            out (str): Output format — 'answers', 'predictions', or 'logits'.
+                Availability depends on which methods are overridden. Default value: `'answers'`.
+
+        Returns:
+            Tensor of model outputs for the selected part of the dataset.
         """
         mask_tensor = mask_to_tensor(gen_dataset, mask)
 
@@ -561,7 +563,7 @@ class FrameworkGNNModelManager(GNNModelManager):
 
                 elif out == 'answers':
                     if task_type == Task.EDGE_PREDICTION:
-                        # TODO misha threshold - параметр
+                        # TODO misha threshold - parameter
                         full_out = self.gnn.get_answer(edge_out=edge_out, threshold=0.5)
                     elif task_type == Task.EDGE_CLASSIFICATION:
                         raise NotImplementedError
@@ -579,20 +581,17 @@ class FrameworkGNNModelManager(GNNModelManager):
             poison_attack_diff_file_path: Union[str, Path] = None,
     ) -> GeneralDataset:
         """
-        Loads and applies poisoning attack artifacts to the dataset if available; otherwise, executes the attack
-        and generates the necessary artifacts.
+        Load precomputed poisoning attack artifacts and apply them to the dataset, or execute
+        the attack and generate artifacts if none are found.
 
-        Parameters
-        ----------
-        gen_dataset : GeneralDataset
-            Object containing dataset data and configuration metadata.
-        poison_attack_diff_file_path : str, optional
-            Path to precomputed poisoning artifacts. If None, the default path from the dataset configuration is used.
+        Args:
+            gen_dataset (GeneralDataset): Dataset to modify.
+            poison_attack_diff_file_path (Union[str, Path]): Path to precomputed artifacts.
+                If None, the default path from the dataset configuration is used.
+                Default value: `None`.
 
-        Returns
-        -------
-        GeneralDataset
-            A modified dataset with the poisoning attack applied.
+        Returns:
+            Dataset with the poisoning attack applied.
         """
         if poison_attack_diff_file_path is None:
             _, files_paths = Declare.models_path(self)
@@ -615,20 +614,17 @@ class FrameworkGNNModelManager(GNNModelManager):
             poison_defense_diff_file_path: Union[str, Path] = None,
     ) -> GeneralDataset:
         """
-        Loads and applies defense artifacts against poisoning attacks if available; otherwise, executes the defense
-        method and generates the necessary artifacts.
+        Load precomputed poisoning defense artifacts and apply them to the dataset, or execute
+        the defense and generate artifacts if none are found.
 
-        Parameters
-        ----------
-        gen_dataset : GeneralDataset
-            Object containing dataset data and configuration metadata.
-        poison_defense_diff_file_path : str, optional
-            Path to precomputed defense artifacts. If None, the default path from the dataset configuration is used.
+        Args:
+            gen_dataset (GeneralDataset): Dataset to modify.
+            poison_defense_diff_file_path (Union[str, Path]): Path to precomputed artifacts.
+                If None, the default path from the dataset configuration is used.
+                Default value: `None`.
 
-        Returns
-        -------
-        GeneralDataset
-            A modified dataset with the poisoning defense applied.
+        Returns:
+            Dataset with the poisoning defense applied.
         """
         if poison_defense_diff_file_path is None:
             _, files_paths = Declare.models_path(self)
@@ -652,12 +648,16 @@ class FrameworkGNNModelManager(GNNModelManager):
             omit_attacks: bool = False
     ) -> dict:
         """
-        Compute metrics for a model result on a part of dataset specified by the metric mask.
+        Compute metrics for model outputs on the parts of the dataset specified by each metric's mask.
 
-        :param gen_dataset: wrapper over the dataset, stores the dataset and all meta-information about the dataset
-        :param metrics: list of metrics to compute. metric based on class Metric
-        :param omit_attacks: if True, do not apply MI and evasion attacks even if they are set
-        :return: dict {metric -> value}
+        Args:
+            gen_dataset (GeneralDataset): Wrapper over the dataset with meta-information.
+            metrics (Union[List[Metric], Metric, torch.Tensor]): Metrics to compute.
+            omit_attacks (bool): If True, skip MI and evasion attacks even if configured.
+                Default value: `False`.
+
+        Returns:
+            Nested dict mapping mask → metric name → value.
         """
         if metrics is None:
             return {}
@@ -758,6 +758,14 @@ class FrameworkGNNModelManager(GNNModelManager):
             gen_dataset: GeneralDataset,
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ):
+        """
+        Apply the evasion attacker to the dataset if one is configured.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset to attack.
+            mask (Union[str, List[bool], torch.Tensor]): Part of the dataset to attack.
+                Default value: `'test'`.
+        """
         if self.evasion_attacker:
             mask_tensor = mask_to_tensor(gen_dataset, mask)
             self.evasion_attacker.attack(
@@ -779,6 +787,15 @@ class FrameworkGNNModelManager(GNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ) -> GeneralDataset:
+        """
+        Load train/val/test split masks from a saved file into the dataset.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset whose split masks will be overwritten.
+
+        Returns:
+            Dataset with updated train_mask, val_mask, and test_mask.
+        """
         path = self.model_path_info()
         path = path / 'train_test_split'
         gen_dataset.train_mask, gen_dataset.val_mask, gen_dataset.test_mask, _ = torch.load(path)[:]

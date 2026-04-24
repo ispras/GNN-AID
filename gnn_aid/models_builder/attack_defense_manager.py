@@ -15,6 +15,10 @@ from gnn_aid.models_builder.model_managers import GNNModelManager
 
 class FrameworkAttackDefenseManager:
     """
+    Orchestrates attack and defense pipelines over a trained GNN model manager.
+
+    Provides methods to run evasion, poison, and membership inference attack/defense
+    experiments and persist their metric results to disk.
     """
 
     def __init__(
@@ -23,6 +27,12 @@ class FrameworkAttackDefenseManager:
             gnn_manager,
             device: str = None
     ):
+        """
+        Args:
+            gen_dataset (GeneralDataset): Dataset used in the attack/defense experiments.
+            gnn_manager: Trained GNN model manager instance.
+            device (str): Compute device ('cpu', 'cuda', etc.). Default value: `'cpu'`.
+        """
         if device is None:
             device = "cpu"
         self.device = device
@@ -53,6 +63,8 @@ class FrameworkAttackDefenseManager:
     def set_clear_model(
             self
     ) -> None:
+        """ Disable all attack and defense flags on the model manager.
+        """
         self.gnn_manager.poison_attack_flag = False
         self.gnn_manager.evasion_attack_flag = False
         self.gnn_manager.mi_attack_flag = False
@@ -63,6 +75,8 @@ class FrameworkAttackDefenseManager:
     def return_attack_defense_flags(
             self
     ) -> None:
+        """ Restore all attack/defense flags to the state recorded at construction.
+        """
         self.gnn_manager.poison_attack_flag = self.start_attack_defense_flag_state["poison_attack"]
         self.gnn_manager.evasion_attack_flag = self.start_attack_defense_flag_state["evasion_attack"]
         self.gnn_manager.mi_attack_flag = self.start_attack_defense_flag_state["mi_attack"]
@@ -77,6 +91,18 @@ class FrameworkAttackDefenseManager:
             save_model_flag: bool = True,
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ) -> dict:
+        """
+        Train the model with and without evasion attack and compute attack metrics.
+
+        Args:
+            metrics_attack (List): Attack metrics to evaluate.
+            steps (int): Number of training epochs.
+            save_model_flag (bool): If True, save model and metrics after training. Default value: `True`.
+            mask (Union[str, List[bool], torch.Tensor]): Dataset split to evaluate on. Default value: `'test'`.
+
+        Returns:
+            Dict with computed metric values.
+        """
         metrics_values = {}
         if self.available_attacks["evasion"]:
             self.set_clear_model()
@@ -142,6 +168,19 @@ class FrameworkAttackDefenseManager:
             save_model_flag: bool = True,
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ) -> dict:
+        """
+        Run the full evasion attack+defense experiment and compute both attack and defense metrics.
+
+        Args:
+            metrics_attack (List): Attack metrics to evaluate.
+            metrics_defense (List): Defense metrics to evaluate.
+            steps (int): Number of training epochs per run.
+            save_model_flag (bool): If True, save model and metrics. Default value: `True`.
+            mask (Union[str, List[bool], torch.Tensor]): Dataset split to evaluate on. Default value: `'test'`.
+
+        Returns:
+            Dict with computed metric values.
+        """
         metrics_values = {}
         if self.available_attacks["evasion"] and self.available_defense["evasion"]:
             from .models_utils import Metric
@@ -236,6 +275,18 @@ class FrameworkAttackDefenseManager:
             save_model_flag: bool = True,
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ) -> dict:
+        """
+        Train the model with and without poisoning attack and compute attack metrics.
+
+        Args:
+            metrics_attack (List): Attack metrics to evaluate.
+            steps (int): Number of training epochs.
+            save_model_flag (bool): If True, save model and metrics. Default value: `True`.
+            mask (Union[str, List[bool], torch.Tensor]): Dataset split to evaluate on. Default value: `'test'`.
+
+        Returns:
+            Dict with computed metric values.
+        """
         metrics_values = {}
         if self.available_attacks["poison"]:
             self.set_clear_model()
@@ -296,6 +347,19 @@ class FrameworkAttackDefenseManager:
             save_model_flag: bool = True,
             mask: Union[str, List[bool], torch.Tensor] = 'test',
     ) -> dict:
+        """
+        Run the full poison attack+defense experiment and compute both attack and defense metrics.
+
+        Args:
+            metrics_attack (List): Attack metrics to evaluate.
+            metrics_defense (List): Defense metrics to evaluate.
+            steps (int): Number of training epochs per run.
+            save_model_flag (bool): If True, save model and metrics. Default value: `True`.
+            mask (Union[str, List[bool], torch.Tensor]): Dataset split to evaluate on. Default value: `'test'`.
+
+        Returns:
+            Dict with computed metric values.
+        """
         metrics_values = {}
         if self.available_attacks["poison"] and self.available_defense["poison"]:
             from .models_utils import Metric
@@ -388,6 +452,13 @@ class FrameworkAttackDefenseManager:
             metrics_attack_values: Union[dict, None] = None,
             metrics_defense_values: Union[dict, None] = None,
     ):
+        """
+        Persist attack and/or defense metric dicts to files under the model path.
+
+        Args:
+            metrics_attack_values (Union[dict, None]): Attack metrics to save. Default value: `None`.
+            metrics_defense_values (Union[dict, None]): Defense metrics to save. Default value: `None`.
+        """
         attack_metrics_file_name = 'attack_metrics.txt'
         defense_metrics_file_name = 'defense_metrics.txt'
         model_path_info = self.gnn_manager.model_path_info()
@@ -414,7 +485,24 @@ class FrameworkAttackDefenseManager:
             metrics_attack: Union[List, None] = None,
             metrics_defense: Union[List, None] = None,
     ):
+        """
+        Compute attack and defense metric values from model prediction arrays.
 
+        Args:
+            y_predict_clean (Union[List, torch.Tensor, np.array]): Predictions without attack or defense.
+            mask (Union[str, torch.Tensor]): Dataset split used for evaluation.
+            y_predict_after_attack_only (Union[List, torch.Tensor, np.array, None]): Predictions under attack only.
+                Default value: `None`.
+            y_predict_after_defense_only (Union[List, torch.Tensor, np.array, None]): Predictions with defense only.
+                Default value: `None`.
+            y_predict_after_attack_and_defense (Union[List, torch.Tensor, np.array, None]): Predictions under attack + defense.
+                Default value: `None`.
+            metrics_attack (Union[List, None]): Attack metrics to compute. Default value: `None`.
+            metrics_defense (Union[List, None]): Defense metrics to compute. Default value: `None`.
+
+        Returns:
+            Tuple of (attack_metrics_dict, defense_metrics_dict).
+        """
         try:
             mask_tensor = {
                 'train': self.gen_dataset.train_mask.tolist(),
@@ -455,6 +543,15 @@ class FrameworkAttackDefenseManager:
             file_path: Union[str, Path],
             new_dict: dict
     ) -> None:
+        """
+        Merge new_dict into a JSON file, creating the file if it does not exist.
+
+        Tensor keys are serialized to lists for JSON compatibility.
+
+        Args:
+            file_path (Union[str, Path]): Path to the JSON file.
+            new_dict (dict): Dict of mask → {metric: value} entries to merge in.
+        """
         def tensor_to_str(key):
             if isinstance(key, torch.Tensor):
                 return key.tolist()
@@ -492,7 +589,15 @@ class FrameworkAttackDefenseManager:
             gen_dataset: GeneralDataset,
             model_manager: GNNModelManager
     ) -> dict:
-        """ Get a list of attack and defense methods applicable for current model and dataset.
+        """
+        Get a list of attack and defense methods applicable for the given model and dataset.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset to check availability against.
+            model_manager (GNNModelManager): Model manager to check availability against.
+
+        Returns:
+            Dict mapping category keys (e.g. 'AD-pa', 'AD-ea') to lists of available method names.
         """
         from gnn_aid.attacks.evasion_attacks import EvasionAttacker
         from gnn_aid.attacks.mi_attacks import MIAttacker

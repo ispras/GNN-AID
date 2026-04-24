@@ -1,5 +1,4 @@
 from typing import Any, Optional, List, Callable, Union, Tuple
-from typing import Callable
 
 import sklearn.metrics
 import torch
@@ -16,10 +15,14 @@ def apply_message_gradient_capture(
         name: str
 ) -> None:
     """
-    # Example how get Tensors
-    # for name, layer in self.gnn.named_children():
-    #     if isinstance(layer, MessagePassing):
-    #         print(f"{name}: {layer.get_message_gradients()}")
+    Monkey-patch a MessagePassing layer to capture gradients of incoming messages.
+
+    After calling this, the layer gains a ``get_message_gradients()`` method that
+    returns a dict mapping layer name to the last captured message gradient tensor.
+
+    Args:
+        layer (Any): A MessagePassing layer to patch.
+        name (str): Key under which gradients are stored in the layer's dict.
     """
     original_message = layer.message
     layer.message_gradients = {}
@@ -50,32 +53,19 @@ def apply_message_gradient_capture(
     layer.get_message_gradients = get_message_gradients
 
 
-# def apply_attention(
-#         layer: Any,
-#         name: str
-# ) -> None:
-#     """Modifies the forward method of the given layer to include edge_atten handling."""
-#     original_forward = layer.forward
-#
-#     def modified_forward(self: Any, *args, edge_atten: Optional[Tensor] = None, **kwargs) -> Tensor:
-#         # Inject edge_atten into kwargs if it's provided
-#         if edge_atten is not None:
-#             kwargs['edge_atten'] = edge_atten
-#
-#         return original_forward(*args, **kwargs)
-#
-#     layer.forward = modified_forward.__get__(layer)
-
-
 def apply_decorator_to_graph_layers(
         model: Any,
         dec_f: Callable = apply_message_gradient_capture
 ) -> None:
+    """
+    Recursively apply a decorator function to all MessagePassing layers in a model.
+
+    Args:
+        model (Any): PyTorch model whose layers will be visited.
+        dec_f (Callable): Decorator function to apply to each MessagePassing layer.
+            Default value: `apply_message_gradient_capture`.
+    """
     # TODO Kirill add more options
-    """
-    Example how use this def
-    apply_decorator_to_graph_layers(gnn)
-    """
     for name, layer in model.named_children():
         if isinstance(layer, MessagePassing):
             dec_f(layer, name)
@@ -87,6 +77,16 @@ def apply_attention_to_messages(
         model: Any,
         att: torch.Tensor
 ) -> List[RemovableHandle]:
+    """
+    Register message-forward hooks on all MessagePassing layers to scale messages by attention.
+
+    Args:
+        model (Any): PyTorch model to traverse.
+        att (torch.Tensor): Attention weights to apply to each message.
+
+    Returns:
+        List of hook handles that can be removed after use.
+    """
     handlers = []
     for _, layer in model.named_children():
         if isinstance(layer, MessagePassing):
@@ -101,6 +101,16 @@ def attention_message_hook(
         att: Optional[torch.Tensor],
         layer: torch.nn.Module
 ):
+    """
+    Return a message-forward hook that scales messages by the given attention tensor.
+
+    Args:
+        att (Optional[torch.Tensor]): Attention weights. If None, returns an identity hook.
+        layer (torch.nn.Module): The layer the hook will be attached to (used to check heads/loops).
+
+    Returns:
+        Callable hook for use with register_message_forward_hook.
+    """
     if att is None:
         return lambda module, input, out: out
     else:
@@ -114,7 +124,17 @@ def attention_message_hook(
 
 
 class EdgeMaskingWrapper(nn.Module):
+    """
+    Wraps a GNN model and applies a learnable per-edge mask to all message-passing operations.
+
+    Each edge's contribution to message passing is scaled by a trainable scalar mask parameter.
+    """
     def __init__(self, model: nn.Module, num_edges: int):
+        """
+        Args:
+            model (nn.Module): The GNN model to wrap.
+            num_edges (int): Number of edges; determines the size of the edge mask parameter.
+        """
         super().__init__()
         self.model = model
         self.edge_mask = nn.Parameter(torch.ones(num_edges))  # [E], requires_grad=True
@@ -126,6 +146,9 @@ class EdgeMaskingWrapper(nn.Module):
                 module.register_message_forward_hook(self._make_mask_hook())
 
     def _make_mask_hook(self):
+        """
+        Create a message-forward hook that scales each message by the corresponding edge mask value.
+        """
         def hook(module, inputs, message_output):
             # message_output: [E, F]
             return message_output * self.edge_mask.to(message_output.device).view(-1, 1)
@@ -154,7 +177,7 @@ def top_k_metric(true_edges, pred_edges, k, metric='precision') -> float:
         metric: str - metric to calculate: 'precision', 'recall', or 'f1'
 
     Returns:
-        score: float - metric value in range [0, 1]
+        Metric value in range [0, 1].
     """
     if pred_edges.size(1) == 0 or k == 0 or true_edges.size(1) == 0:
         return 0.0
@@ -196,6 +219,13 @@ def top_k_metric(true_edges, pred_edges, k, metric='precision') -> float:
 
 
 class Metric:
+    """
+    Wrapper around a named metric function for model evaluation.
+
+    Supports standard sklearn metrics (Accuracy, F1, AUC, etc.) and
+    edge-prediction ranking metrics (Precision@k, Recall@k, F1@k).
+    Custom metrics can be registered via add_custom.
+    """
     available_metrics = {
         'Accuracy': sklearn.metrics.accuracy_score,
         'F1': sklearn.metrics.f1_score,
@@ -218,15 +248,11 @@ class Metric:
             compute_function: Callable
     ) -> None:
         """
-        Register a custom metric.
-        Example for accuracy:
+        Register a custom metric function under the given name.
 
-        >>> Metric.add_custom('accuracy', lambda y_true, y_pred, normalize=False:
-        >>>     int((y_true == y_pred).sum()) / (len(y_true) if normalize else 1))
-
-        :param name: name to refer to this metric
-        :param compute_function: function which computes metric result:
-         f(y_true, y_pred, **kwargs) -> value
+        Args:
+            name (str): Name to refer to the metric. Must not conflict with existing names.
+            compute_function (Callable): Function with signature ``f(y_true, y_pred, **kwargs) -> value``.
         """
         if name in Metric.available_metrics:
             raise NameError(f"Metric '{name}' already registered, use another name")
@@ -239,9 +265,10 @@ class Metric:
             **kwargs
     ):
         """
-        :param name: name to refer to this metric
-        :param mask: 'train', 'val', 'test', or a bool valued list
-        :param kwargs: params used in compute function
+        Args:
+            name (str): Registered metric name (e.g. 'Accuracy', 'F1', 'Precision@k').
+            mask (Union[str, List[bool], torch.Tensor]): Dataset split — 'train', 'val', 'test', or a bool mask.
+            **kwargs: Extra arguments forwarded to the compute function (e.g. average='macro', k=10).
         """
         self._name = name
         self.mask = mask
@@ -250,7 +277,12 @@ class Metric:
     def name(
             self
     ) -> str:
-        """ Name including kwargs """
+        """
+        Return the metric name with kwargs appended in brace notation.
+
+        Returns:
+            String like 'F1{average=macro}' or plain 'Accuracy'.
+        """
         res = self._name
         kwargs = ",".join(f"{k}={v}" for k, v in self.kwargs.items())
         if len(kwargs) > 0:
@@ -267,6 +299,16 @@ class Metric:
             y_true,
             y_pred
     ):
+        """
+        Compute the metric value.
+
+        Args:
+            y_true: Ground-truth labels or edges.
+            y_pred: Model predictions.
+
+        Returns:
+            Scalar metric value.
+        """
         if y_true.device != "cpu":
             y_true = y_true.cpu()
         if y_pred.device != "cpu":
@@ -284,7 +326,12 @@ class Metric:
     def needs_logits(
             self
     ) -> bool:
-        """ Whether the metric accepts logits as predictions not labels. """
+        """
+        Return whether this metric requires raw logits instead of class labels.
+
+        Returns:
+            True if the metric operates on logits (e.g. AUC).
+        """
         if self._name in ['AUC']:
             return True
         else:
@@ -293,7 +340,12 @@ class Metric:
     def needs_all_node_pairs(
             self
     ) -> bool:
-        """  """
+        """
+        Return whether this metric requires top-k predictions over all node pairs.
+
+        Returns:
+            True for edge-prediction ranking metrics (Precision@k, Recall@k, F1@k).
+        """
         if self._name in self.edge_prediction_metrics:
             return True
         else:
@@ -304,6 +356,17 @@ class Metric:
             y_true,
             target_list: List = None
     ) -> torch.Tensor:
+        """
+        Build a boolean mask tensor with True at each index in target_list.
+
+        Args:
+            y_true: Reference sequence whose length determines the mask size.
+            target_list (List): Indices to mark as True. If None, all indices are True.
+                Default value: `None`.
+
+        Returns:
+            Boolean tensor of the same length as y_true.
+        """
         if target_list is None:
             mask = [True] * len(y_true)
         else:
@@ -315,6 +378,9 @@ class Metric:
 
 
 class GNNConstructorError(Exception):
+    """
+    Exception raised when the GNN model structure is invalid or unsupported.
+    """
     def __init__(
             self,
             *args
@@ -324,6 +390,12 @@ class GNNConstructorError(Exception):
     def __str__(
             self
     ):
+        """
+        Return a human-readable error message.
+
+        Returns:
+            Formatted error string including the message if present.
+        """
         if self.message:
             return f"GNNConstructorError: {self.message}"
         else:
@@ -336,7 +408,8 @@ class GNNConstructorError(Exception):
 
 
 class Concat(nn.Module):
-    """ Concatenation of tensors as a torch function. Convenient to use as a model layer.
+    """
+    Concatenation of tensors as a torch Module. Convenient to use as a model layer.
     """
     def __init__(self, dimension=1):
         super(Concat, self).__init__()
@@ -348,7 +421,8 @@ class Concat(nn.Module):
 
 
 class DotProduct(nn.Module):
-    """ Dot-product of 2 tensors as a torch function. Convenient to use as a model layer.
+    """
+    Element-wise dot-product of two tensors as a torch Module. Convenient to use as a model layer.
     """
     def __init__(self, dimension=-1):
         super(DotProduct, self).__init__()
@@ -380,8 +454,7 @@ def predict_top_k_edges(model, data, exclude_edges, k=100, use_faiss=True,
         remove_loops: if True, exclude self-loops (i,i) from predictions
 
     Returns:
-        top_edges: torch.Tensor shape (2, k) - indices of top-k node pairs
-        top_scores: torch.Tensor shape (k,) - scores for these pairs
+        Tuple of (top_edges tensor of shape (2, k), top_scores tensor of shape (k,)).
     """
     model.eval()
 
@@ -444,7 +517,7 @@ def _normalize_edges(edges):
         edges: torch.Tensor shape (2, num_edges)
 
     Returns:
-        normalized_edges: torch.Tensor shape (2, num_edges) with i < j
+        Edge tensor of the same shape with src <= dst for each edge.
     """
     src, dst = edges[0], edges[1]
 
@@ -465,8 +538,7 @@ def _deduplicate_edges(edges, scores):
         scores: torch.Tensor shape (num_edges,)
 
     Returns:
-        unique_edges: torch.Tensor shape (2, num_unique)
-        unique_scores: torch.Tensor shape (num_unique,)
+        Tuple of (unique_edges tensor, unique_scores tensor) sorted by descending score.
     """
     if edges.size(1) == 0:
         return edges, scores
@@ -493,9 +565,32 @@ def _deduplicate_edges(edges, scores):
     return unique_edges, sorted_scores
 
 
-def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node,
-                        is_directed, remove_loops):
-    """Prediction using FAISS for fast search"""
+def _predict_with_faiss(
+        model,
+        data,
+        h_norm,
+        existing_set,
+        k,
+        faiss_k_per_node,
+        is_directed,
+        remove_loops
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Predict top-k edges using FAISS approximate nearest-neighbor search.
+
+    Args:
+        model: Trained GNN model with a decode method.
+        data: PyG Data object with graph structure.
+        h_norm: Node embedding tensor.
+        existing_set (set): Set of (src, dst) tuples to exclude.
+        k (int): Number of top edges to return.
+        faiss_k_per_node (int): Candidates to retrieve per node via FAISS.
+        is_directed (bool): If False, normalize edges so src <= dst.
+        remove_loops (bool): If True, skip self-loops.
+
+    Returns:
+        Tuple of (top_edges tensor of shape (2, k), top_scores tensor of shape (k,)).
+    """
     import faiss
 
     num_nodes = h_norm.size(0)
@@ -587,8 +682,30 @@ def _predict_with_faiss(model, data, h_norm, existing_set, k, faiss_k_per_node,
     return top_edges.cpu(), top_scores.cpu()
 
 
-def _predict_full_enumeration(model, data, h, existing_set, k, is_directed, remove_loops):
-    """Prediction with full enumeration of all pairs (for small graphs)"""
+def _predict_full_enumeration(
+        model,
+        data,
+        h,
+        existing_set,
+        k,
+        is_directed,
+        remove_loops
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Predict top-k edges by scoring all node pairs (suitable for small graphs).
+
+    Args:
+        model: Trained GNN model with a decode method.
+        data: PyG Data object with graph structure.
+        h: Node embedding tensor.
+        existing_set (set): Set of (src, dst) tuples to exclude.
+        k (int): Number of top edges to return.
+        is_directed (bool): If False, normalize edges so src <= dst.
+        remove_loops (bool): If True, skip self-loops.
+
+    Returns:
+        Tuple of (top_edges tensor of shape (2, k), top_scores tensor of shape (k,)).
+    """
     num_nodes = h.size(0)
     device = h.device
 
@@ -704,15 +821,16 @@ def mask_to_tensor(
         mask: Union[str, int, Tuple[int], list, torch.Tensor] = 'test'
 ) -> torch.Tensor:
     """
-    Convert a mask over nodes/edges/graphs to tensor of specific size.
-    Mask can be 'train', 'val', 'test', 'all', or id, or a list of ids, or a tensor.
+    Convert a flexible mask specification to a boolean or index tensor.
 
-    :param gen_dataset: dataset
-    :param mask: part of the dataset on which the output will be obtained.
-     Can be a node id, graph id, or edge as a tuple (i,j).
-     Can be string: 'train', 'val', 'test', 'all'.
-     Can be Tensor of specific nodes/edges/graphs.
-    :return: tensor of nodes/edges/graphs
+    Args:
+        gen_dataset (GeneralDataset): Dataset that provides split masks and metadata.
+        mask (Union[str, int, Tuple[int], list, torch.Tensor]): Mask specification.
+            Can be 'train', 'val', 'test', 'all'; a node/graph id (int or list of ints);
+            an edge as a tuple (i, j); or a pre-built Tensor. Default value: `'test'`.
+
+    Returns:
+        Boolean or index tensor over nodes, edges, or graphs.
     """
     task = gen_dataset.dataset_var_config.task
 

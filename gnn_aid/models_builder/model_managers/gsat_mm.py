@@ -12,6 +12,12 @@ from . import FrameworkGNNModelManager
 
 
 class GSATModelManager(FrameworkGNNModelManager):
+    """
+    Model manager for GSAT (Graph Stochastic Attention) training.
+
+    Overrides the training loop to incorporate edge attention regularization
+    via an information-theoretic loss on the learned attention scores.
+    """
     additional_config = ConfigPattern(  # TODO check config
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -48,6 +54,23 @@ class GSATModelManager(FrameworkGNNModelManager):
             info_loss_coef: float = 1,
             **kwargs
     ):
+        """
+        Args:
+            gnn (Type): GSAT-compatible GNN model with a ``gsat_layer_name`` attribute.
+                Default value: `None`.
+            dataset_path (Union[str, Path]): Path to the dataset. Default value: `None`.
+            learn_edge_features (bool): If True, learn edge features. Default value: `False`.
+            decay_int (int): Epoch interval for decaying the target retention rate r.
+                Default value: `10`.
+            decay_r (float): Decay step for r per interval. Default value: `0.1`.
+            init_r (float): Initial value of the target retention rate r. Default value: `0.9`.
+            final_r (float): Minimum value of r. Default value: `0.1`.
+            fix_r (bool): If True, use init_r as a fixed r instead of decaying.
+                Default value: `False`.
+            pred_loss_coef (float): Coefficient for the prediction loss. Default value: `1`.
+            info_loss_coef (float): Coefficient for the information loss. Default value: `1`.
+            **kwargs: Additional arguments forwarded to FrameworkGNNModelManager.
+        """
         super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
         self.learn_edge_features = learn_edge_features
         # TODO check if learn_edge_features == True then model -> GINEConv or other compatible
@@ -66,6 +89,16 @@ class GSATModelManager(FrameworkGNNModelManager):
             batch,
             task_type: Task
     ) -> torch.Tensor:
+        """
+        Compute the GSAT loss for one batch.
+
+        Args:
+            batch: PyG batch object.
+            task_type (Task): The current task type.
+
+        Returns:
+            Loss tensor.
+        """
         if task_type == Task.GRAPH_CLASSIFICATION:
             self.optimizer.zero_grad()
             clf_logits = self.gnn(batch.x, batch.edge_index, batch.batch)
@@ -110,6 +143,18 @@ class GSATModelManager(FrameworkGNNModelManager):
             labels: torch.Tensor,
             epoch: int
     ) -> torch.Tensor:
+        """
+        Compute the combined prediction and information loss for GSAT.
+
+        Args:
+            att (torch.Tensor): Edge attention weights from the GSAT layer.
+            logits (torch.Tensor): Model predictions.
+            labels (torch.Tensor): Ground-truth labels.
+            epoch (int): Current training epoch used to compute the target retention rate r.
+
+        Returns:
+            Combined loss tensor (pred_loss + info_loss).
+        """
         pred_loss = self.loss_function(logits, labels)
 
         r = self.fix_r if self.fix_r else self.get_r(self.decay_int, self.decay_r, epoch, final_r=self.final_r,
@@ -131,6 +176,19 @@ class GSATModelManager(FrameworkGNNModelManager):
             init_r=0.9,
             final_r=0.5
     ) -> float:
+        """
+        Compute the current target edge retention rate r.
+
+        Args:
+            decay_interval (float): Number of epochs between each decay step.
+            decay_r (float): Amount by which r decreases at each interval.
+            current_epoch (int): Current training epoch.
+            init_r: Initial retention rate. Default value: `0.9`.
+            final_r: Minimum retention rate. Default value: `0.5`.
+
+        Returns:
+            Current retention rate r, clamped to final_r.
+        """
         r = init_r - current_epoch // decay_interval * decay_r
         if r < final_r:
             r = final_r

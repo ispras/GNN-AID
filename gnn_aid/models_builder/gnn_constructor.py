@@ -27,7 +27,9 @@ class GNNConstructor:
                  model_config: ModelConfig = None,
                  ):
         """
-        :param model_config:
+        Args:
+            model_config (ModelConfig): Model configuration. Defaults to an empty ModelConfig
+                if not provided. Default value: `None`.
         """
         if model_config is None:
             # raise RuntimeError("model manager config must be specified")
@@ -43,8 +45,11 @@ class GNNConstructor:
     def decode(
             self
     ):
-        """ Used for edge tasks, takes as input embeddings of two nodes.
-        Returns an unnormalized score in general case.
+        """
+        Compute an unnormalized score for an edge given embeddings of its two endpoint nodes.
+
+        Returns:
+            Unnormalized edge score.
         """
         raise NotImplementedError("decode can't be called, because it is not implemented")
 
@@ -52,7 +57,10 @@ class GNNConstructor:
             self
     ):
         """
-        :return: vectors representing the input data from the outputs of each layer of the neural network
+        Return the output embedding of each layer in the model.
+
+        Returns:
+            Vectors representing the input data from the output of each layer.
         """
         raise NotImplementedError("get_all_layer_embeddings can't be called, because it is not implemented")
 
@@ -60,7 +68,10 @@ class GNNConstructor:
             self
     ):
         """
-        :return: the architecture of the model, for display on the front
+        Return the model architecture description for display in the frontend.
+
+        Returns:
+            Model architecture object (e.g. ModelStructureConfig or dict).
         """
         raise NotImplementedError("get_architecture can't be called, because it is not implemented")
 
@@ -68,15 +79,19 @@ class GNNConstructor:
             self
     ):
         """
-        :return: the number of graph convolution layers. Required for some model interpretation algorithms to work
+        Return the number of graph convolution layers (hops).
+
+        Required for some model interpretation algorithms.
+
+        Returns:
+            Number of message-passing hops.
         """
         raise NotImplementedError("get_num_hops can't be called, because it is not implemented")
 
     def reset_parameters(
             self
     ):
-        """
-        resets all model parameters. Required for the reset button on the front to work.
+        """ Reset all model parameters. Required for the reset button in the frontend.
         """
         raise NotImplementedError("reset_parameters can't be called, because it is not implemented")
 
@@ -84,10 +99,12 @@ class GNNConstructor:
             self
     ):
         """
-        :return: a vector of estimates for the distribution of input data by class.
+        Return a probability distribution over classes for the input data.
 
-        Required for some interpretation algorithms to work.
-        Does not require a mandatory redefinition of def forward.
+        Required for some interpretation algorithms. Does not require overriding forward.
+
+        Returns:
+            Class probability vector.
         """
         raise NotImplementedError("get_predictions can't be called, because it is not implemented")
 
@@ -95,7 +112,10 @@ class GNNConstructor:
             self
     ):
         """
-        :return: matrix with model parameters
+        Return the model parameter iterator or matrix.
+
+        Returns:
+            Model parameters.
         """
         raise NotImplementedError("get_predictions can't be called, because it is not implemented")
 
@@ -103,10 +123,12 @@ class GNNConstructor:
             self
     ):
         """
-        :return: an answer to which class the input belongs to.
+        Return the hard class assignment for the input.
 
-        Required for some interpretation methods to work.
-        Does not require redefinition of def forward or get_predictions.
+        Required for some interpretation methods. Does not require overriding forward or get_predictions.
+
+        Returns:
+            Predicted class index or label for the input.
         """
         raise NotImplementedError("get_answer can't be called, because it is not implemented")
 
@@ -115,6 +137,16 @@ class GNNConstructor:
             obj_name_flag: bool = False,
             **kwargs
     ):
+        """
+        Serialize the model config and class name to a JSON string used as a unique identifier.
+
+        Args:
+            obj_name_flag (bool): If True, include the obj_name field. Default value: `False`.
+            **kwargs: Extra key-value pairs merged into the name dict.
+
+        Returns:
+            JSON string uniquely identifying this model.
+        """
         gnn_name = self.model_config.to_savable_dict().copy()
         gnn_name[CONFIG_CLASS_NAME] = self.__class__.__name__
         if obj_name_flag:
@@ -129,9 +161,12 @@ class GNNConstructor:
             self
     ):
         """
-        :return: a set of names of suitable model manager classes.
+        Return a set of model manager class names compatible with this model.
 
-        Model manager classes must be inherited from the GNNModelManager class
+        Model manager classes must inherit from GNNModelManager.
+
+        Returns:
+            Set of suitable model manager class name strings.
         """
         raise NotImplementedError("suitable_model_managers can't be called, because it is not implemented")
 
@@ -140,6 +175,12 @@ class GNNConstructor:
     def get_hash(
             self
     ) -> str:
+        """
+        Compute the SHA-256 hash of the model name string used for storage paths.
+
+        Returns:
+            Hex digest of the SHA-256 hash.
+        """
         gnn_name = self.get_name()
         json_object = json.dumps(gnn_name)
         gnn_name_hash = hash_data_sha256(json_object.encode('utf-8'))
@@ -149,7 +190,15 @@ class GNNConstructor:
             self,
             tensor_size_limit: int = None
     ) -> dict:
-        """ Get available info about model for frontend
+        """
+        Get available info about the model for the frontend.
+
+        Args:
+            tensor_size_limit (int): Maximum number of elements before a weight tensor is
+                returned as a shape string instead of values. Default value: `None`.
+
+        Returns:
+            Dict with available keys from 'architecture', 'weights', 'neurons'.
         """
         # FIXMe architecture and weights can be not accessible
         result = {}
@@ -198,7 +247,9 @@ class GNNConstructorTorch(
     def flow(
             self
     ):
-        """ Flow direction of message passing, usually 'source_to_target'
+        """
+        Return the message-passing flow direction of the first MessagePassing layer found.
+        Flow string, e.g. 'source_to_target'; defaults to 'source_to_target' if no MP layer found.
         """
         for module in self.modules():
             if isinstance(module, MessagePassing):
@@ -208,7 +259,9 @@ class GNNConstructorTorch(
     def get_neurons(
             self
     ) -> list:
-        """ Return number of neurons of each convolution layer as list: [n_1, n_2, ..., n_k]
+        """
+        Return the output size of each MessagePassing convolution layer.
+        List of neuron counts [n_1, n_2, ..., n_k], one per MP layer with parameters.
         """
         neurons = []
 
@@ -231,7 +284,16 @@ class GNNConstructorTorch(
             tensor_size_limit: Union[int, torch.Tensor] = None
     ) -> dict:
         """
-        Get model weights calling torch.nn.Module.state_dict() to draw them on the frontend.
+        Return model weights as a nested dict for the frontend.
+
+        Large tensors are replaced with their shape string when they exceed tensor_size_limit.
+
+        Args:
+            tensor_size_limit (Union[int, torch.Tensor]): Element count limit; tensors above this
+                threshold are represented as shape strings. Default value: `None`.
+
+        Returns:
+            Nested dict mirroring the state_dict key hierarchy with tensor values or shape strings.
         """
         try:
             state_dict = self.state_dict()
@@ -274,7 +336,9 @@ class FrameworkGNNConstructor(
             model_config: Union[ModelConfig, ConfigPattern] = None,
     ):
         """
-        :param model_config: description of the gnn structure
+        Args:
+            model_config (Union[ModelConfig, ConfigPattern]): Model structure configuration.
+                Default value: `None`.
         """
         super().__init__()
 
@@ -414,6 +478,12 @@ class FrameworkGNNConstructor(
             self,
             structure: Union[dict, ModelStructureConfig],
     ):
+        """
+        Validate the model structure against layer restrictions and populate model_info.
+
+        Args:
+            structure (Union[dict, ModelStructureConfig]): Layer structure to validate.
+        """
         with open(CUSTOM_LAYERS_INFO_PATH) as f:
             correctness_info = json.load(f)
         allowable_transitions = set(correctness_info["allowable_transitions"])
@@ -525,6 +595,12 @@ class FrameworkGNNConstructor(
             *args,
             **kwargs
     ) -> dict:
+        """
+        Run the forward pass in embedding-capture mode and return per-layer output tensors.
+
+        Returns:
+            Dict mapping layer index to the output tensor of that layer.
+        """
         self._save_emb_flag = True
         layer_emb_dict = self(*args, **kwargs)
         self._save_emb_flag = False
@@ -544,6 +620,12 @@ class FrameworkGNNConstructor(
             *args,
             **kwargs
     ) -> Union[torch.Tensor, Dict[int, torch.Tensor]]:
+        """
+        Execute the node/graph-level forward pass, applying skip-connections where configured.
+
+        Returns:
+            Output tensor, or a dict of layer-index → tensor when in embedding-capture mode.
+        """
         layer_ind = -1
         tensor_storage = {}
         dim_cat = 0
@@ -665,6 +747,16 @@ class FrameworkGNNConstructor(
             dst: torch.Tensor,
             # batch
     ) -> torch.Tensor:
+        """
+        Execute the decoder-level forward pass over edge node-embedding pairs.
+
+        Args:
+            src (torch.Tensor): Source node embeddings.
+            dst (torch.Tensor): Destination node embeddings.
+
+        Returns:
+            Edge score tensor (squeezed to remove trailing size-1 dimensions).
+        """
         layer_ind = -1
         # tensor_storage = {}
         # dim_cat = 0
@@ -719,6 +811,8 @@ class FrameworkGNNConstructor(
     def reset_parameters(
             self
     ) -> None:
+        """ Reset parameters of all sub-modules that expose a reset_parameters method.
+        """
         for elem in list(self.__dict__['_modules'].items()):
             if {'reset_parameters'}.issubset(dir(getattr(self, elem[0]))):
                 getattr(self, elem[0]).reset_parameters()
@@ -731,6 +825,12 @@ class FrameworkGNNConstructor(
     def get_num_hops(
             self
     ) -> int:
+        """
+        Return the total number of graph convolution hops (APPNP contributes K hops).
+
+        Returns:
+            Number of message-passing hops.
+        """
         if self.num_hops is None:
             num_hops = 0
             for module in self.modules():
@@ -750,6 +850,18 @@ class FrameworkGNNConstructor(
             edge_out: torch.Tensor = None,
             **kwargs
     ) -> torch.Tensor:
+        """
+        Return class probability distribution (node/graph) or sigmoid score (edge prediction).
+
+        Args:
+            *args: Forwarded to the model's forward pass.
+            edge_out (torch.Tensor): Pre-computed edge logits for edge prediction task.
+                If provided, applies sigmoid instead of softmax. Default value: `None`.
+            **kwargs: Forwarded to the model's forward pass.
+
+        Returns:
+            Probability tensor.
+        """
         # FIXME Kirill. tmp fix of AttributeError: 'dict' object has no attribute 'softmax' for SubgraphX
         # self._save_emb_flag = False
         if edge_out is not None:
@@ -770,6 +882,18 @@ class FrameworkGNNConstructor(
             threshold: float = None,
             **kwargs,
     ) -> torch.Tensor:
+        """
+        Return hard predictions (class indices or binary edge decisions).
+
+        Args:
+            *args: Forwarded to get_predictions.
+            threshold (float): For edge prediction: predict True when sigmoid score exceeds threshold.
+                If None, returns argmax over class probabilities. Default value: `None`.
+            **kwargs: Forwarded to get_predictions.
+
+        Returns:
+            Tensor of predicted class indices or boolean edge decisions.
+        """
         if threshold is not None:
             # Edge prediction task. Apply threshold
             return self.get_predictions(*args, **kwargs) > threshold
@@ -789,6 +913,19 @@ class FrameworkGNNConstructor(
             edge_weight: torch.Tensor = None,
             device: torch.device = None
     ) -> Tuple[torch.Tensor, torch.Tensor, Type, torch.Tensor]:
+        """
+        Move all graph tensors to the specified device.
+
+        Args:
+            x (torch.Tensor): Node feature matrix. Default value: `None`.
+            edge_index (torch.Tensor): Edge index tensor. Default value: `None`.
+            batch (Type): Batch assignment vector. Default value: `None`.
+            edge_weight (torch.Tensor): Edge weight tensor. Default value: `None`.
+            device (torch.device): Target device. Defaults to CUDA if available. Default value: `None`.
+
+        Returns:
+            Tuple of (x, edge_index, batch, edge_weight) on the target device.
+        """
         if device is None:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -807,14 +944,13 @@ class FrameworkGNNConstructor(
             *args, **kwargs
     ) -> Tuple[torch.Tensor, torch.Tensor, Type, torch.Tensor]:
         """
-        The method is launched when the forward is executed extracts from the variable data or kwargs
-        the data necessary to pass the forward: x, edge_index, batch
+        Extract (x, edge_index, batch, edge_weight) from any supported calling convention.
+        Accepts a PyG Data object, keyword arguments, or positional arguments (2, 3, or 4 tensors).
 
         !! ATTENTION: Must not be changed !!
 
-        :param args:
-        :param kwargs:
-        :return: x, edge_index, batch: TORCH TENSORS
+        Returns:
+            Tuple of (x, edge_index, batch, edge_weight) as torch Tensors.
         """
 
         data = kwargs.get('data') or None

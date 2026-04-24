@@ -20,6 +20,9 @@ from gnn_aid.models_builder import FrameworkGNNConstructor, GNNConstructor
 class GNNModelManager:
     """
     Base class providing core model operations: training, evaluation, save, and load.
+
+    Manages model state including attack/defense configurations, training hooks,
+    and serialization to/from disk.
     """
 
     def __init__(
@@ -149,7 +152,9 @@ class GNNModelManager:
     def get_name(
             self
     ) -> str:
-        """ Return a JSON string identifying this model manager by class name and config.
+        """
+        Returns:
+            JSON string identifying this model manager by class name and config.
         """
         manager_name = self.manager_config.to_savable_dict()
         # FIXME Kirill, make ModelManagerConfig and remove manager_name[CONFIG_CLASS_NAME]
@@ -660,7 +665,11 @@ class GNNModelManager:
     def get_full_info(
             self
     ) -> dict:
-        """ Get available info about this model for the frontend.
+        """
+        Get available info about this model for the frontend.
+
+        Returns:
+            Dict with keys 'manager', 'modification', and/or 'epochs'.
         """
         result = {}
         if hasattr(self, 'manager_config'):
