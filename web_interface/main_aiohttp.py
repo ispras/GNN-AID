@@ -8,7 +8,7 @@ import queue
 import shutil
 import signal
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process, Queue
 from pathlib import Path
@@ -25,7 +25,8 @@ from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR, \
-    get_sid_logger, DIR_PATCH_MODULES, CLIENTS_DATA_ROOT
+    get_sid_logger, DIR_PATCH_MODULES, CLIENTS_STORAGE_ROOT, CLIENT_META_FILENAME, \
+    CLIENT_STORAGE_TTL, CLEANUP_INTERVAL_SEC
 
 LOG_FILE = LOG_DIR / datetime.now().strftime("server_%Y-%m-%d_%H-%M-%S.log")
 CLIENT_RESTART_DELAY_SEC = 30
@@ -103,6 +104,7 @@ aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
 
 clients: Dict[str, asyncio.Task] = {}
 workers: Dict[str, Dict[str, Any]] = {}
+cleanup_task: asyncio.Task | None = None
 
 
 def queue_get_with_timeout(q, timeout=0.5):
@@ -321,6 +323,7 @@ async def handle_url(request):
     if state["is_restarting"]:
         return web.Response(status=503, text="Backend is restarting for this client")
 
+    touch_client_access(state["client_id"])
     response_queue = state["response_queue"]
     request_queue = state["request_queue"]
     proc = state["proc"]
@@ -366,6 +369,7 @@ async def connect(sid, environ, auth=None):
     mode = ClientMode(query.get('mode', None))
 
     client_id = get_client_id_from_environ(sid, environ, auth)
+    touch_client_access(client_id)
 
     sid_logger = get_sid_logger(sid)
     sid_logger.info("Client connected, mode=%s client_id=%s", mode.value, client_id)
@@ -545,7 +549,7 @@ async def emit_fatal_stop_to_all(reason: str, traceback_text: str = ""):
 
 
 async def graceful_shutdown(reason: str = "Server is shutting down"):
-    global shutdown_started
+    global shutdown_started, cleanup_task
 
     async with shutdown_lock:
         if shutdown_started:
@@ -581,6 +585,12 @@ async def graceful_shutdown(reason: str = "Server is shutting down"):
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
+        if cleanup_task is not None:
+            cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await cleanup_task
+            cleanup_task = None
+
         workers.clear()
         clients.clear()
 
@@ -606,6 +616,8 @@ def run_aiohttp_server(port=5000):
         await runner.setup()
         site = web.TCPSite(runner, host="0.0.0.0", port=port)
         await site.start()
+        global cleanup_task
+        cleanup_task = asyncio.create_task(cleanup_stale_client_storage_loop())
         server_logger.info("Server started on port %s", port)
 
     stop_event = asyncio.Event()
@@ -637,6 +649,7 @@ def run_aiohttp_server(port=5000):
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
         loop.close()
 
+# ========== Personal storage for each client
 
 def sanitize_client_id(client_id: str) -> str:
     allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
@@ -671,8 +684,8 @@ def get_client_id_from_environ(sid: str, environ: dict, auth=None) -> str:
 def ensure_client_dirs(client_id: str) -> dict[str, Path]:
     from gnn_aid.aux.utils import root_dir, GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR
 
-    CLIENTS_DATA_ROOT.mkdir(parents=True, exist_ok=True)
-    client_root = CLIENTS_DATA_ROOT / client_id
+    CLIENTS_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    client_root = CLIENTS_STORAGE_ROOT / client_id
     client_root.mkdir(parents=True, exist_ok=True)
 
     mapping = {
@@ -732,6 +745,122 @@ def patched_client_dirs(client_id: str):
             with contextlib.suppress(Exception):
                 patcher.stop()
 
+# ========== Automatic cleanup
+
+def utc_now_ts() -> float:
+    return datetime.now(timezone.utc).timestamp()
+
+
+def get_client_root(client_id: str) -> Path:
+    return CLIENTS_STORAGE_ROOT / client_id
+
+
+def get_client_meta_path(client_id: str) -> Path:
+    return get_client_root(client_id) / CLIENT_META_FILENAME
+
+
+def read_client_meta(client_id: str) -> dict:
+    meta_path = get_client_meta_path(client_id)
+    if not meta_path.exists():
+        return {}
+
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        server_logger.exception("Failed to read client meta for client_id=%s", client_id)
+        return {}
+
+
+def write_client_meta(client_id: str, meta: dict) -> None:
+    client_root = get_client_root(client_id)
+    client_root.mkdir(parents=True, exist_ok=True)
+
+    meta_path = get_client_meta_path(client_id)
+    tmp_path = meta_path.with_suffix(meta_path.suffix + ".tmp")
+
+    tmp_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp_path.replace(meta_path)
+
+
+def touch_client_access(client_id: str) -> None:
+    meta = read_client_meta(client_id)
+    meta["client_id"] = client_id
+    meta["last_access_ts"] = utc_now_ts()
+    write_client_meta(client_id, meta)
+
+
+def is_client_id_active(client_id: str) -> bool:
+    for state in workers.values():
+        if state.get("client_id") == client_id:
+            return True
+    return False
+
+
+def remove_stale_client_storage_once() -> None:
+    """ Удаление просроченных хранилищ
+    """
+    server_logger.info("Checking for outdated client storages...")
+
+    CLIENTS_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    now_ts = utc_now_ts()
+
+    for path in CLIENTS_STORAGE_ROOT.iterdir():
+        if not path.is_dir():
+            continue
+
+        client_id = path.name
+
+        if is_client_id_active(client_id):
+            continue
+
+        meta = read_client_meta(client_id)
+        last_access_ts = meta.get("last_access_ts")
+
+        # если меты нет, можно использовать mtime каталога как fallback
+        if last_access_ts is None:
+            try:
+                last_access_ts = path.stat().st_mtime
+            except Exception:
+                server_logger.exception("Failed to stat client dir %s", path)
+                continue
+
+        age_sec = now_ts - float(last_access_ts)
+        if age_sec < CLIENT_STORAGE_TTL.total_seconds():
+            continue
+
+        try:
+            shutil.rmtree(path)
+            server_logger.info(
+                "Deleted stale client storage: client_id=%s path=%s age_days=%.1f",
+                client_id, path, age_sec / 86400,
+            )
+        except Exception:
+            server_logger.exception(
+                "Failed to delete stale client storage for client_id=%s path=%s",
+                client_id, path,
+            )
+
+
+async def cleanup_stale_client_storage_loop():
+    """ Фоновая задача очистки
+    """
+    loop = asyncio.get_running_loop()
+
+    while not shutdown_started:
+        try:
+            await loop.run_in_executor(None, remove_stale_client_storage_once)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            server_logger.exception("Unhandled exception in cleanup_stale_client_storage_loop")
+
+        try:
+            await asyncio.sleep(CLEANUP_INTERVAL_SEC)
+        except asyncio.CancelledError:
+            raise
 
 if __name__ == '__main__':
     import multiprocessing as mp
