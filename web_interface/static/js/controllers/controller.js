@@ -325,30 +325,40 @@ class Controller {
 
     async ajaxRequest(url, data) {
         let result = null
-        console.assert(!('sid' in data))
-        data['sid'] = this.sid
-        data['sessionId'] = this.sessionId
-        // console.log('ajax request', data)
+        const isFormData = data instanceof FormData
+
+        if (isFormData) {
+            if (!data.has("sid")) {
+                data.append("sid", this.sid)
+            }
+            if (!data.has("sessionId")) {
+                data.append("sessionId", this.sessionId)
+            }
+        } else {
+            console.assert(!("sid" in data))
+            data["sid"] = this.sid
+            data["sessionId"] = this.sessionId
+        }
+
         await $.ajax({
-            type: 'POST',
+            type: "POST",
             url: url,
             data: data,
-            // contentType: 'application/json',
-            // contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            processData: !isFormData,
+            contentType: isFormData ? false : undefined,
             success: (res, status, jqXHR) => {
                 result = res
-                // console.log('got ajax result', result)
             },
             error: (xhr, status, error) => {
                 if (xhr.status === 503) {
-                    console.warn('Backend temporarily unavailable:', xhr.responseText)
+                    console.warn("Backend temporarily unavailable:", xhr.responseText)
                     return
                 }
-                console.error('AJAX error:', status, error)
-                console.error('Response:', xhr.responseText)
+                console.error("AJAX error:", status, error)
+                console.error("Response:", xhr.responseText)
             }
         })
-        if (result && '{['.includes(result[0])) {
+        if (result && typeof result == 'string' && "{[".includes(result[0])) {
             return JSON_parse(result)
         }
         return result

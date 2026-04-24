@@ -14,6 +14,7 @@ from gnn_aid.aux.utils import (
 from . import json_loads, ViewPoint
 from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
 from .dataset_blocks import DatasetBlock, DatasetVarBlock
+from .dataset_uploader import DatasetUploader
 from .diagram import Diagram
 from .explainer_blocks import (
     ExplainerRunBlock, ExplainerInitBlock, ExplainerWBlock, ExplainerLoadBlock)
@@ -212,7 +213,23 @@ class FrontendClient:
                     part = json_loads(part)
                     is_new = self._set_view_point(part)
 
-                if set == "visible_part":
+                if "uploadId" in args:
+                    uploader = DatasetUploader.get(args.get("uploadId"), args.get("upload_dir"))
+                    if set == "check":
+                        metainfo = args.get("metainfo")
+                        if metainfo:
+                            metainfo = json.loads(metainfo)
+                        result = uploader.check(files=args.get("files", []), metainfo=metainfo)
+                    elif set == "submit":
+                        result = uploader.submit()
+                        result = ''
+                    elif set == "cancel":
+                        uploader.cancel()
+                        result = ''
+                    else:
+                        raise WebInterfaceError(f"Unknown 'set' command ({set}) for dataset upload")
+
+                elif set == "visible_part":
                     result = self.dvcBlock.set_visible_part(self.view_point)
 
                 elif get == "data":

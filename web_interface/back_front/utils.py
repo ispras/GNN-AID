@@ -20,13 +20,6 @@ CLIENTS_STORAGE_ROOT = LOG_DIR.parent / "client_storage"
 CLIENT_STORAGE_TTL = timedelta(days=30)  # client data will be removed this period after last access
 CLEANUP_INTERVAL_SEC = 24 * 60 * 60  # how often to check for client storage cleanup
 CLIENT_META_FILENAME = ".meta.json"
-DIR_PATCH_MODULES = [
-    'gnn_aid.aux.utils',
-    'gnn_aid.aux.data_info',
-    'gnn_aid.aux.declaration',
-    'web_interface.back_front.model_blocks',
-    'web_interface.back_front.explainer_blocks',
-]
 
 
 class WebInterfaceError(Exception):

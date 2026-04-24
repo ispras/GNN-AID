@@ -101,13 +101,21 @@ class DatasetInfo:
         # self.edge_info: dict = {}
         # self.graph_info: dict = {}
 
+    def update(self, a_dict: dict):
+        """ Update fields from a given dict
+        """
+        for key, value in a_dict.items():
+            assert hasattr(self, key)
+            setattr(self, key, value)
+
     def check_validity(
             self
     ) -> None:
         """ Check existing fields have allowed values. """
         if self.format:
             from .dataset_converter import DatasetConverter
-            assert self.format == 'ij' or self.format in DatasetConverter.supported_formats
+            assert self.format == 'ij' or self.format in DatasetConverter.supported_formats,\
+                f"Format '{self.format}' is not supported, check 'ij' or one of {DatasetConverter.supported_formats}"
         assert self.count > 0
         assert len(self.node_attributes) > 0
 
@@ -155,7 +163,8 @@ class DatasetInfo:
             self
     ) -> None:
         """ Check existing fields are consistent. """
-        assert self.count == len(self.nodes)
+        assert self.count == len(self.nodes),\
+            f"count should be equal to len(nodes): {self.count} != {len(self.nodes)}"
 
         if self.hetero:
             node_types = list(self.nodes[0].keys())

@@ -20,18 +20,26 @@ import aiohttp_jinja2
 import jinja2
 import socketio
 from aiohttp import web
+from aiohttp.web_request import FileField
 
-from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR, \
-    get_sid_logger, DIR_PATCH_MODULES, CLIENTS_STORAGE_ROOT, CLIENT_META_FILENAME, \
+    get_sid_logger, CLIENTS_STORAGE_ROOT, CLIENT_META_FILENAME, \
     CLIENT_STORAGE_TTL, CLEANUP_INTERVAL_SEC
 
 LOG_FILE = LOG_DIR / datetime.now().strftime("server_%Y-%m-%d_%H-%M-%S.log")
 CLIENT_RESTART_DELAY_SEC = 30
 GRACEFUL_WORKER_STOP_SEC = 2.0
 FORCEFUL_WORKER_KILL_SEC = 1.0
+DIR_PATCH_MODULES = [
+    'gnn_aid.aux.utils',
+    'gnn_aid.aux.data_info',
+    'gnn_aid.aux.declaration',
+    'web_interface.back_front.model_blocks',
+    'web_interface.back_front.explainer_blocks',
+]
+MAX_UPLOAD_SIZE = 200 * 1024 * 1024  # 200 MB
 
 shutdown_lock = asyncio.Lock()
 shutdown_started = False
@@ -97,7 +105,7 @@ sio = socketio.AsyncServer(
     cors_allowed_origins='*',
     serializer='msgpack'
 )
-app = web.Application()
+app = web.Application(client_max_size=MAX_UPLOAD_SIZE)
 sio.attach(app)
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
@@ -323,7 +331,9 @@ async def handle_url(request):
     if state["is_restarting"]:
         return web.Response(status=503, text="Backend is restarting for this client")
 
-    touch_client_access(state["client_id"])
+    client_id = state["client_id"]
+    touch_client_access(client_id)
+
     response_queue = state["response_queue"]
     request_queue = state["request_queue"]
     proc = state["proc"]
@@ -331,8 +341,35 @@ async def handle_url(request):
     if proc is None or not proc.is_alive():
         return web.Response(status=503, text="Worker is not alive")
 
-    server_logger.info("%s http request from sid=%s args=%s", url, sid, dict(data))
-    request_queue.put({"type": url, "args": dict(data)})
+    args = {key: value for key, value in data.items() if not isinstance(value, FileField)}
+
+    # Специальный случай: загрузка файлов датасета.
+    # В очередь worker-а нельзя класть FileField, поэтому сохраняем файлы на диск,
+    # а worker-у передаем только обычный dict со строками.
+    if url == "dataset" and "uploadId" in args:
+        upload_id = args.get("uploadId")
+        upload_dir = make_upload_dir(client_id, upload_id)
+
+        # todo clear_before=False when we can process many files
+        files = save_uploaded_files(data, upload_dir, clear_before=True)
+
+        args["upload_dir"] = str(upload_dir)
+        args["files"] = files
+
+        server_logger.info(
+            "%s upload request from sid=%s upload_dir=%s files=%s",
+            url,
+            sid,
+            upload_dir,
+            [f["relative_path"] for f in files],
+        )
+    else:
+        server_logger.info("%s http request from sid=%s args=%s", url, sid, args)
+
+    request_queue.put({
+        "type": url,
+        "args": args,
+    })
 
     loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, queue_get_with_timeout, response_queue, 10.0)
@@ -350,8 +387,82 @@ async def handle_url(request):
     return web.Response(text=json.dumps(result), content_type='application/json')
 
 
+def safe_relative_upload_path(filename: str) -> Path:
+    """Безопасно превращает имя файла из multipart в относительный путь.
 
-# Register routes
+    Нужен, чтобы сохранить структуру папки из webkitRelativePath,
+    но не дать имени файла выйти за пределы upload_dir через ../.
+    """
+    filename = str(filename or "unnamed")
+    filename = filename.replace("\\", "/")
+
+    parts = []
+
+    for part in filename.split("/"):
+        part = part.strip()
+
+        if not part:
+            continue
+
+        if part in (".", ".."):
+            continue
+
+        # На всякий случай убираем совсем странные символы из имени сегмента пути.
+        safe_part = "".join(
+            ch for ch in part
+            if ch not in '<>:"|?*\0'
+        )
+
+        if safe_part:
+            parts.append(safe_part)
+
+    if not parts:
+        return Path("unnamed")
+
+    return Path(*parts)
+
+
+def make_upload_dir(client_id: str, upload_id: str | None = None) -> Path:
+    if not upload_id:
+        upload_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
+
+    upload_dir = get_client_root(client_id) / "uploads" / f"Upload_{upload_id}"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    return upload_dir
+
+
+def save_uploaded_files(post, upload_dir: Path, clear_before: bool = False) -> list[dict[str, str | None]]:
+    files = []
+
+    for field in post.getall("files", []):
+        if not isinstance(field, FileField):
+            continue
+
+        if clear_before:
+            shutil.rmtree(upload_dir)
+            clear_before = False
+
+        rel_path = safe_relative_upload_path(field.filename)
+        dst = upload_dir / rel_path
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+
+        field.file.seek(0)
+
+        with dst.open("wb") as f:
+            shutil.copyfileobj(field.file, f)
+
+        files.append({
+            "name": Path(rel_path).name,
+            "relative_path": str(rel_path),
+            "path": str(dst),
+            "content_type": field.content_type,
+        })
+
+    return files
+
+
 app.router.add_get("/", handle_analysis)
 app.router.add_get("/analysis", handle_analysis)
 app.router.add_get("/defense", handle_defense)
@@ -698,17 +809,27 @@ def ensure_client_dirs(client_id: str) -> dict[str, Path]:
     }
 
     source_mapping = {
-        "GRAPHS_DIR": GRAPHS_DIR,
+        "GRAPHS_DIR": (GRAPHS_DIR, [
+            Path('example') / 'example',
+            Path('example') / 'example3',
+            Path('example') / 'example3_gml',
+        ])
     }
 
     for key, dst in mapping.items():
         if dst.exists():
             continue
+        if key not in source_mapping:
+            continue
 
-        src = source_mapping.get(key)
+        src, subpaths = source_mapping[key]
 
         if src and src.exists():
-            shutil.copytree(src, dst)
+            print(subpaths)
+            for sub in subpaths:
+                dst_sub = dst / sub
+                dst.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(src / sub, dst_sub)
         else:
             dst.mkdir(parents=True, exist_ok=True)
 

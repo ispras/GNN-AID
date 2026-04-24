@@ -8,12 +8,17 @@ class MenuDatasetView extends MenuView {
     async init() {
         super.init()
 
-        // Start with dataset config
-        let [ps, info] = await controller.ajaxRequest('/dataset', {get: "index"})
-        // this.prefixStorage = PrefixStorage.fromJSON(ps)
-        this.tuplePrefixStorage = PrefixStorage.fromJSON(ps)
-
         this.$mainDiv.append($("<h3></h3>").text("Choose raw data"))
+
+        let $uploadBtn = $("<button></button>").text("Upload")
+        $uploadBtn.click(async () => {
+            const dialog = new DatasetUploadDialog()
+            dialog.onSuccess = this._buildDatasetsIndex.bind(this)
+            dialog.show()
+        })
+        this.$mainDiv.append($("<div></div>").attr("class", "control-block").append($uploadBtn))
+
+        // Start with dataset config
 
         this.$optionsDiv = $("<div></div>")
             .attr("style", "border: 2px solid #bbb; background: #eee;")
@@ -29,21 +34,31 @@ class MenuDatasetView extends MenuView {
             .attr("readonly", true)
         this.$selectedDiv.append($selected)
 
-        let drop = () => {
+        this._drop = () => {
             $selected.val('not selected')
             this.$acceptDiv.hide()
             // this.break()
         }
-        let set = async () => {
+        this._set = async () => {
             let text = this.tuplePrefixStorage.getConfig()
             $selected.val(text.join('/'))
             this.$acceptDiv.show()
             // await this.accept()
         }
-        this.tuplePrefixStorage.buildPopupMenu(this.$optionsDiv, drop, set)
+
+        await this._buildDatasetsIndex()
 
         this.appendAcceptBreakButtons()
         this.$acceptDiv.hide()
+    }
+
+    async _buildDatasetsIndex() {
+        // console.log('_buildDatasetsIndex')
+        let [ps, info] = await controller.ajaxRequest('/dataset', {get: "index"})
+        this.tuplePrefixStorage = PrefixStorage.fromJSON(ps)
+
+        this.$optionsDiv.empty()
+        this.tuplePrefixStorage.buildPopupMenu(this.$optionsDiv, this._drop, this._set)
     }
 
     async _accept() {
