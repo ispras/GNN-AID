@@ -5,13 +5,16 @@ import json
 import logging
 import os
 import queue
+import shutil
 import signal
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process, Queue
+from pathlib import Path
 from typing import Any
 from typing import Dict
+from unittest import mock
 
 import aiohttp_jinja2
 import jinja2
@@ -22,7 +25,8 @@ from gnn_aid.aux.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR, \
-    get_sid_logger
+    get_sid_logger, DIR_PATCH_MODULES, CLIENTS_STORAGE_ROOT, CLIENT_META_FILENAME, \
+    CLIENT_STORAGE_TTL, CLEANUP_INTERVAL_SEC
 
 LOG_FILE = LOG_DIR / datetime.now().strftime("server_%Y-%m-%d_%H-%M-%S.log")
 CLIENT_RESTART_DELAY_SEC = 30
@@ -100,6 +104,7 @@ aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
 
 clients: Dict[str, asyncio.Task] = {}
 workers: Dict[str, Dict[str, Any]] = {}
+cleanup_task: asyncio.Task | None = None
 
 
 def queue_get_with_timeout(q, timeout=0.5):
@@ -109,9 +114,13 @@ def queue_get_with_timeout(q, timeout=0.5):
         return None
 
 
-def make_worker_state(mode: ClientMode) -> Dict[str, Any]:
+def make_worker_state(mode: ClientMode, client_id: str) -> Dict[str, Any]:
+    client_dirs = ensure_client_dirs(client_id)
+
     return {
         "mode": mode,
+        "client_id": client_id,
+        "client_dirs": client_dirs,
         "response_queue": Queue(),
         "msg_queue": Queue(),
         "request_queue": Queue(),
@@ -168,6 +177,7 @@ def start_worker_for_sid(sid: str) -> Dict[str, Any]:
         target=worker_process,
         args=(
             sid,
+            state["client_id"],
             state["response_queue"],
             state["msg_queue"],
             state["request_queue"],
@@ -179,8 +189,8 @@ def start_worker_for_sid(sid: str) -> Dict[str, Any]:
     state["proc"] = proc
 
     server_logger.info(
-        "Started worker for sid=%s pid=%s mode=%s",
-        sid, proc.pid, state["mode"].value
+        "Started worker for sid=%s client_id=%s pid=%s mode=%s",
+        sid, state["client_id"], proc.pid, state["mode"].value
     )
     return state
 
@@ -188,11 +198,12 @@ def start_worker_for_sid(sid: str) -> Dict[str, Any]:
 def replace_worker_for_sid(sid: str) -> Dict[str, Any]:
     old_state = workers[sid]
     mode = old_state["mode"]
+    client_id = old_state["client_id"]
 
-    server_logger.info("Replacing worker state for sid=%s", sid)
+    server_logger.info("Replacing worker state for sid=%s client_id=%s", sid, client_id)
     close_worker_state(old_state)
 
-    new_state = make_worker_state(mode)
+    new_state = make_worker_state(mode, client_id)
     workers[sid] = new_state
     start_worker_for_sid(sid)
     return new_state
@@ -246,7 +257,6 @@ async def restart_only_this_client(sid: str, error_text: str, tb: str = "") -> N
 
 @aiohttp_jinja2.template("interpretation.html")
 async def handle_interpretation(request):
-    DataInfo.refresh_all_data_info()
     return {
         "request": request,
         "mode": ClientMode.interpretation.value
@@ -256,7 +266,6 @@ async def handle_interpretation(request):
 # Route for home and analysis
 @aiohttp_jinja2.template("analysis.html")
 async def handle_analysis(request):
-    DataInfo.refresh_all_data_info()
     return {
         "request": request,
         "mode": ClientMode.analysis.value
@@ -266,7 +275,6 @@ async def handle_analysis(request):
 # Route for defense
 @aiohttp_jinja2.template("defense.html")
 async def handle_defense(request):
-    DataInfo.refresh_all_data_info()
     return {
         "request": request,
         "mode": ClientMode.defense.value
@@ -315,6 +323,7 @@ async def handle_url(request):
     if state["is_restarting"]:
         return web.Response(status=503, text="Backend is restarting for this client")
 
+    touch_client_access(state["client_id"])
     response_queue = state["response_queue"]
     request_queue = state["request_queue"]
     proc = state["proc"]
@@ -355,15 +364,17 @@ app.router.add_static('/static/', path=str(STATIC_DIR), name='static')
 
 @sio.event
 async def connect(sid, environ, auth=None):
-    # Parse mode from query
     query_string = environ.get('QUERY_STRING', '')
-    query = dict(qc.split('=') for qc in query_string.split('&') if '=' in qc)
+    query = dict(qc.split('=', 1) for qc in query_string.split('&') if '=' in qc)
     mode = ClientMode(query.get('mode', None))
 
-    sid_logger = get_sid_logger(sid)
-    sid_logger.info("Client connected, mode=%s", mode.value)
+    client_id = get_client_id_from_environ(sid, environ, auth)
+    touch_client_access(client_id)
 
-    workers[sid] = make_worker_state(mode)
+    sid_logger = get_sid_logger(sid)
+    sid_logger.info("Client connected, mode=%s client_id=%s", mode.value, client_id)
+
+    workers[sid] = make_worker_state(mode, client_id)
     task = asyncio.create_task(client_wrapper(sid))
     clients[sid] = task
 
@@ -453,6 +464,7 @@ def set_pdeathsig(sig=signal.SIGKILL):
 
 def worker_process(
     sid: str,
+    client_id: str,
     response_queue: Queue,
     msg_queue: Queue,
     request_queue: Queue,
@@ -468,14 +480,23 @@ def worker_process(
     setup_logging(force=True)
     logger = get_sid_logger(sid)
 
-    logger.info("Process started")
+    logger.info("Process started for client_id=%s", client_id)
 
     try:
-        socket_connect = AiohttpSocketConnect(msg_queue, sid)
-        client = FrontendClient(socket_connect, mode, sid)
-        logger.info("Created FrontendClient")
+        with patched_client_dirs(client_id) as client_dirs:
+            logger.info(
+                "Patched dirs for client_id=%s data=%s models=%s explanations=%s",
+                client_id,
+                client_dirs["DATASETS_DIR"],
+                client_dirs["MODELS_DIR"],
+                client_dirs["EXPLANATIONS_DIR"],
+            )
 
-        client.run_loop(response_queue, msg_queue, request_queue)
+            socket_connect = AiohttpSocketConnect(msg_queue, sid)
+            client = FrontendClient(socket_connect, mode, sid)
+            logger.info("Created FrontendClient")
+
+            client.run_loop(response_queue, msg_queue, request_queue)
 
     except Exception as e:
         tb = traceback.format_exc()
@@ -528,7 +549,7 @@ async def emit_fatal_stop_to_all(reason: str, traceback_text: str = ""):
 
 
 async def graceful_shutdown(reason: str = "Server is shutting down"):
-    global shutdown_started
+    global shutdown_started, cleanup_task
 
     async with shutdown_lock:
         if shutdown_started:
@@ -564,6 +585,12 @@ async def graceful_shutdown(reason: str = "Server is shutting down"):
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
+        if cleanup_task is not None:
+            cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await cleanup_task
+            cleanup_task = None
+
         workers.clear()
         clients.clear()
 
@@ -589,6 +616,8 @@ def run_aiohttp_server(port=5000):
         await runner.setup()
         site = web.TCPSite(runner, host="0.0.0.0", port=port)
         await site.start()
+        global cleanup_task
+        cleanup_task = asyncio.create_task(cleanup_stale_client_storage_loop())
         server_logger.info("Server started on port %s", port)
 
     stop_event = asyncio.Event()
@@ -620,6 +649,218 @@ def run_aiohttp_server(port=5000):
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
         loop.close()
 
+# ========== Personal storage for each client
+
+def sanitize_client_id(client_id: str) -> str:
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+    sanitized = "".join(ch for ch in str(client_id) if ch in allowed)
+    if not sanitized:
+        raise ValueError("Empty client_id after sanitizing")
+    return sanitized
+
+
+def get_client_id_from_environ(sid: str, environ: dict, auth=None) -> str:
+    server_logger.info("connect auth type for sid=%s: %s", sid, type(auth).__name__)
+
+    if isinstance(auth, dict):
+        client_id = auth.get("client_id")
+        if client_id:
+            return sanitize_client_id(client_id)
+
+    query_string = environ.get("QUERY_STRING", "")
+    query = dict(
+        qc.split("=", 1)
+        for qc in query_string.split("&")
+        if "=" in qc
+    )
+
+    client_id = query.get("client_id")
+    if client_id:
+        return sanitize_client_id(client_id)
+
+    return sanitize_client_id(f"sid_{sid}")
+
+
+def ensure_client_dirs(client_id: str) -> dict[str, Path]:
+    from gnn_aid.aux.utils import root_dir, GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR
+
+    CLIENTS_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    client_root = CLIENTS_STORAGE_ROOT / client_id
+    client_root.mkdir(parents=True, exist_ok=True)
+
+    mapping = {
+        "root_dir": client_root,
+        "GRAPHS_DIR": client_root / GRAPHS_DIR.name,
+        "DATASETS_DIR": client_root / DATASETS_DIR.name,
+        "MODELS_DIR": client_root / MODELS_DIR.name,
+        "EXPLANATIONS_DIR": client_root / EXPLANATIONS_DIR.name,
+        "DATA_INFO_DIR": client_root / DATA_INFO_DIR.name,
+    }
+
+    source_mapping = {
+        "GRAPHS_DIR": GRAPHS_DIR,
+    }
+
+    for key, dst in mapping.items():
+        if dst.exists():
+            continue
+
+        src = source_mapping.get(key)
+
+        if src and src.exists():
+            shutil.copytree(src, dst)
+        else:
+            dst.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "client_root": client_root,
+        **mapping,
+    }
+
+
+def build_dir_patchers(client_dirs: dict[str, Path]) -> list[mock._patch]:
+    patchers = []
+
+    for var_name in ("root_dir", "GRAPHS_DIR", "DATASETS_DIR", "MODELS_DIR", "EXPLANATIONS_DIR", "DATA_INFO_DIR"):
+        patched_path = client_dirs[var_name]
+        for module in DIR_PATCH_MODULES:
+            patchers.append(mock.patch(f"{module}.{var_name}", patched_path))
+
+    return patchers
+
+
+@contextlib.contextmanager
+def patched_client_dirs(client_id: str):
+    client_dirs = ensure_client_dirs(client_id)
+    patchers = build_dir_patchers(client_dirs)
+
+    try:
+        for patcher in patchers:
+            try:
+                patcher.start()
+            except AttributeError: pass
+        yield client_dirs
+    finally:
+        for patcher in reversed(patchers):
+            with contextlib.suppress(Exception):
+                patcher.stop()
+
+# ========== Automatic cleanup
+
+def utc_now_ts() -> float:
+    return datetime.now(timezone.utc).timestamp()
+
+
+def get_client_root(client_id: str) -> Path:
+    return CLIENTS_STORAGE_ROOT / client_id
+
+
+def get_client_meta_path(client_id: str) -> Path:
+    return get_client_root(client_id) / CLIENT_META_FILENAME
+
+
+def read_client_meta(client_id: str) -> dict:
+    meta_path = get_client_meta_path(client_id)
+    if not meta_path.exists():
+        return {}
+
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        server_logger.exception("Failed to read client meta for client_id=%s", client_id)
+        return {}
+
+
+def write_client_meta(client_id: str, meta: dict) -> None:
+    client_root = get_client_root(client_id)
+    client_root.mkdir(parents=True, exist_ok=True)
+
+    meta_path = get_client_meta_path(client_id)
+    tmp_path = meta_path.with_suffix(meta_path.suffix + ".tmp")
+
+    tmp_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp_path.replace(meta_path)
+
+
+def touch_client_access(client_id: str) -> None:
+    meta = read_client_meta(client_id)
+    meta["client_id"] = client_id
+    meta["last_access_ts"] = utc_now_ts()
+    write_client_meta(client_id, meta)
+
+
+def is_client_id_active(client_id: str) -> bool:
+    for state in workers.values():
+        if state.get("client_id") == client_id:
+            return True
+    return False
+
+
+def remove_stale_client_storage_once() -> None:
+    """ Удаление просроченных хранилищ
+    """
+    server_logger.info("Checking for outdated client storages...")
+
+    CLIENTS_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    now_ts = utc_now_ts()
+
+    for path in CLIENTS_STORAGE_ROOT.iterdir():
+        if not path.is_dir():
+            continue
+
+        client_id = path.name
+
+        if is_client_id_active(client_id):
+            continue
+
+        meta = read_client_meta(client_id)
+        last_access_ts = meta.get("last_access_ts")
+
+        # если меты нет, можно использовать mtime каталога как fallback
+        if last_access_ts is None:
+            try:
+                last_access_ts = path.stat().st_mtime
+            except Exception:
+                server_logger.exception("Failed to stat client dir %s", path)
+                continue
+
+        age_sec = now_ts - float(last_access_ts)
+        if age_sec < CLIENT_STORAGE_TTL.total_seconds():
+            continue
+
+        try:
+            shutil.rmtree(path)
+            server_logger.info(
+                "Deleted stale client storage: client_id=%s path=%s age_days=%.1f",
+                client_id, path, age_sec / 86400,
+            )
+        except Exception:
+            server_logger.exception(
+                "Failed to delete stale client storage for client_id=%s path=%s",
+                client_id, path,
+            )
+
+
+async def cleanup_stale_client_storage_loop():
+    """ Фоновая задача очистки
+    """
+    loop = asyncio.get_running_loop()
+
+    while not shutdown_started:
+        try:
+            await loop.run_in_executor(None, remove_stale_client_storage_once)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            server_logger.exception("Unhandled exception in cleanup_stale_client_storage_loop")
+
+        try:
+            await asyncio.sleep(CLEANUP_INTERVAL_SEC)
+        except asyncio.CancelledError:
+            raise
 
 if __name__ == '__main__':
     import multiprocessing as mp

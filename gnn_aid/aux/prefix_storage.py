@@ -589,7 +589,11 @@ class FixedKeysPrefixStorage(TuplePrefixStorage):
             self
     ) -> str:
         res = super().__str__()
-        title, rest = res.split('\n', maxsplit=1)
+        if '\n' in res:
+            title, rest = res.split('\n', maxsplit=1)
+        else:
+            title = res
+            rest = ""
         res = title
         res += f"\nKeys: {self._keys}\n"
         res += rest

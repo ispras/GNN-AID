@@ -13,7 +13,6 @@ from torch_sparse import SparseTensor
 from tqdm import tqdm
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
-root_dir_len = len(root_dir.parts)
 
 GRAPHS_DIR = root_dir / 'data'
 DATASETS_DIR = root_dir / 'datasets'
