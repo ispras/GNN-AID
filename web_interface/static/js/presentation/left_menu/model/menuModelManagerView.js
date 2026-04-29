@@ -47,6 +47,13 @@ class MenuModelManagerView extends MenuView {
 
     // Model manager parameters
     async buildManager() {
+
+        /* new!!!!!! */
+        this.$div.addClass("left-menu-block_border");
+
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.Manager"));
+        /* /new!!!!!! */
+
         let $cc = this.$configManagerParamsDiv = $("<div></div>")
         this.$mainDiv.append(this.$configManagerParamsDiv)
         let $cb

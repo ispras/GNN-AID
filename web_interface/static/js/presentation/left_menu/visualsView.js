@@ -421,7 +421,18 @@ class VisualsView extends View {
 
     async onInit(block, args) {
         await super.onInit(block, args)
+
+        /* new!!!!!! */
+        this.$div.addClass("left-menu-block_border");
+        if (!this.$div.find(".left-menu-block__header").length) {
+            this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Visualization"));
+        }
+
+        $("#menu-visuals-header").hide();
+        /* /new!!!!! */
+
         if (block === "dvc") {
+            
             this.datasetInfo = args
             this._isMulti = this.datasetInfo.count > 1
             if (this._isMulti) {

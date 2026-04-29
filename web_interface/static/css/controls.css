@@ -61,7 +61,28 @@
 
 .control-block button {
     font-size: 18px;
+    /* new!!!!!! */
+    display: inline-block;
+    background-color: #997950;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    padding: 6px 10px;
+    margin: 0;
+    line-height: 18px;
+    cursor: pointer;
+    outline: 0;
+    text-align: center;
+    user-select: none;
+    min-height: 28px;
+    /* /new!!!!! */
 }
+
+/* new!!!!!! */
+.control-block button:hover {
+    background-color: #6a5232;
+}
+/* /new!!!!!! */
 
 .control-block hr {
     margin-top: 0;
@@ -87,6 +108,12 @@
     margin: 0 0 5px 0;
 }
 
+/* new!!!!!!! */
+.v-scrollable .controls-section {
+    border-bottom: none !important;
+}
+/* /new!!!!!!! */
+
 .menu-separator {
     border-bottom: 1px solid grey;
     margin: 5px;
@@ -96,3 +123,35 @@
     pointer-events: none;
     opacity: 0.4;
 }
+
+/* new!!!!!!! */
+
+.button-toggle-left-menu {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    z-index: 100;
+
+    padding: 5px; 
+    background-color: #f0f0f0;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.icon-toggle-left-menu {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-color: #000;
+    -webkit-mask-image: url("../icons/double-left.svg");
+    mask-image: url("../icons/double-left.svg");
+}
+
+.button-toggle-left-menu_collapsed .icon-toggle-left-menu {
+    -webkit-mask-image: url("../icons/double-right.svg");
+    mask-image: url("../icons/double-right.svg");
+}
+
+/* /new!!!!!!! */

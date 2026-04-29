@@ -123,6 +123,13 @@ class MenuModelTrainerView extends MenuView {
     async updateTrainerMenu() {
         console.log('updateModelManagerMenu')
 
+        /* new!!!!!! */
+        this.$div.addClass("left-menu-block_border");
+
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.Training"));
+        /* /new!!!!!! */
+
+
         let $cb
         this.$mainDiv.append($("<label></label>").html("<h3>Training & metrics</h3>"))
 

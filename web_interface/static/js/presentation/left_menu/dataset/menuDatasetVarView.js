@@ -21,6 +21,12 @@ class MenuDatasetVarView extends MenuView {
         $cc = $("<div></div>")
         this.$mainDiv.append($cc)
 
+        /* new!!!!!! */
+        this.$div.addClass("left-menu-block_border");
+
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.features"));
+        /* /new!!!!!! */
+        
         // 1. Input features
         $cc.append($("<label></label>").html("<h3>Features constructor</h3>"))
 

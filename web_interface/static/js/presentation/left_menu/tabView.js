@@ -51,6 +51,19 @@ class TabView extends MenuView {
         let firstTime = !this.reuse || this.$mainDiv == null
         super.init(args)
         if (firstTime) { // create
+
+            /* new!!!!!! */
+            this.$div.addClass("left-menu-block_border");
+
+            if (this.idPrefix === "menu-model-view") {
+                this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.Structure"));
+                $("#menu-model-header").hide();
+            } else if (this.idPrefix === "menu-explainer-view") {
+                this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Explainer.Algorithm"));
+                $("#menu-explainer-header").hide();
+            }
+            /* /new!!!!!! */
+
             this.$mainDiv.append(this.$tabDiv)
             // Additional div which is controlled by subviews
             this.$div.append(this.$subviewsDiv)

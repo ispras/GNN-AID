@@ -20,9 +20,18 @@ class MenuView extends View {
                 return console.error("Can't init " + this.constructor.name + " in state ", this.state)
 
             this.state = MVState.ACTIVE
-            this.$mainDiv = $("<div></div>").attr("id", this.idPrefix + '-main')
+            /* new!!!!!! */
+            //this.$mainDiv = $("<div></div>").attr("id", this.idPrefix + '-main')
+            this.$mainDiv = $("<div class='left-menu-block__main'></div>").attr("id", this.idPrefix + '-main');
+            /* /new!!!!!! */
             this.$div.append(this.$mainDiv)
-            this.$acceptDiv = $("<div></div>")
+
+            /* new!!!!!! */
+            this.$shortDiv = $("<div class='left-menu-block__short'></div>").attr("id", this.idPrefix + '-short');
+            this.$div.append(this.$shortDiv);
+            //this.$acceptDiv = $("<div></div>")
+            this.$acceptDiv = $("<div class='left-menu-block__button'></div>");
+            /* /new!!!!!! */
             this.$div.append(this.$acceptDiv)
         }
         else { // not the first time, reuse
@@ -33,10 +42,12 @@ class MenuView extends View {
             this.$acceptDiv.find('button').text('Accept')
             blockDiv(this.$mainDiv, false)
         }
+
     }
 
     // When this menu block is fixed by user
     async accept() {
+
         if (this._verbose)
             console.log(this.constructor.name + "[" + this.requestBlock + "].accept()")
         let ok = await this._accept()
@@ -80,6 +91,7 @@ class MenuView extends View {
         }
         else {
             this.$div.empty()
+            this.$div.removeClass("left-menu-block_border"); /* new!!!!!! */
         }
     }
 
@@ -100,6 +112,8 @@ class MenuView extends View {
         super.onUnlock(block, args)
         if (block === this.requestBlock) {
             blockLeftMenu(false)
+
+            this.$div.removeClass("left-menu-block_compact"); /* new!!!!!!!!  */
             blockDiv(this.$mainDiv, false)
             this.state = MVState.ACTIVE
         }
@@ -117,6 +131,8 @@ class MenuView extends View {
     onSubmit(block, data) {
         super.onSubmit(block, data)
         blockLeftMenu(false)
+
+        this.$div.addClass("left-menu-block_compact"); /* new!!!!!!!! */
         blockDiv(this.$mainDiv, true)
         this.state = MVState.LOCKED
     }
@@ -147,6 +163,33 @@ class MenuView extends View {
                 if (res === -1)
                     return
                 $accept.text('Edit')
+
+                /* new!!!!!!  */
+                if (this.requestBlock === "dc") {
+                    this.$shortDiv.html($("<p></p>").text("example/example"));
+                } else if (this.requestBlock === "dvc") {
+                    this.$shortDiv.html($("<p></p>").text("признаки, задача: ..."));
+                } else if (this.requestBlock === "mload") {
+                    this.$shortDiv.html($("<p></p>").text("Model.Load: !!!!!!"));
+                } else if (this.requestBlock === "mconstr") {
+                    this.$shortDiv.html($("<p></p>").text("Model.Construct: !!!!!!"));
+                } else if (this.requestBlock === "mmc") {
+                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
+                } else if (this.requestBlock === "mt") {
+                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
+                } else if (this.requestBlock === "bt") {
+                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
+                } else if (this.requestBlock === "at") {
+                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
+                } else if (this.requestBlock === "ei") {
+                    this.$shortDiv.html($("<p></p>").text("Explainer.Construct: !!!!!"));
+                } else if (this.requestBlock === "el") {
+                    this.$shortDiv.html($("<p></p>").text("Explainer.Load: !!!!!"));
+                } else if (this.requestBlock === "er") {
+                    this.$shortDiv.html($("<p></p>").text("запуск!!!!!!"));
+                }
+                /* /new!!!!!!  */
+                
             }
         })
     }

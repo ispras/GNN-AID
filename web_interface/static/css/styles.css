@@ -161,3 +161,108 @@ table {
 table th,td {
     padding: 2px 2px 2px 3px;
 }
+
+/* new!!!!!! */
+
+.left-menu-header {
+    font-size: 21px !important;
+    border: 1px solid #997950;
+    border-radius: 6px;
+    padding: 8px !important;
+    color: #997950;
+}
+
+
+.left-menu-block {
+    position: relative;
+    font-size: 16px;
+}
+
+.left-menu-block_border {
+    border: 1px solid #997950;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.left-menu-block_border + .left-menu-block_border {
+    margin-top: 8px;
+}
+
+.left-menu-block_border + .left-menu-block + .left-menu-block_border {
+    margin-top: 8px;
+}
+
+.left-menu-block_compact .left-menu-block__main {
+    display: none;
+}
+
+.left-menu-block__short {
+    display: none;
+}
+
+.left-menu-block__short p {
+    padding: 0;
+    margin: 0;
+}
+
+.left-menu-block_compact .left-menu-block__short {
+    display: block;
+}
+
+.left-menu-block__header {
+    padding-right: 70px;
+    padding-left: 20px;
+    color: #997950;
+    font-size: 21px;
+    line-height: 21px;
+    margin: 0 !important;
+    position: relative;
+    display: block;
+}
+
+.left-menu-block__header::before {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 0;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: #000;
+    -webkit-mask-image: url("../icons/down_arrow.svg");
+    mask-image: url("../icons/down_arrow.svg");
+    background-color: #997950;
+}
+
+.left-menu-block_compact .left-menu-block__header::before {
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -o-transform: rotate(-90deg);
+    transform: rotate(-90deg);
+}
+
+#menu-visuals-view .left-menu-block__header {
+    margin-bottom: 10px !important;
+}
+
+#menu-visuals-view.left-menu-block_compact .left-menu-block__header {
+    margin-bottom: 0 !important;
+}
+
+.left-menu-block__short:not(:empty),
+.left-menu-block__main {
+    margin-top: 10px;
+}
+
+.left-menu-block__button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
+.left-menu-block_compact .menu-visuals-view-class {
+    display: none !important;
+}
+
+/* /new!!!!!! */

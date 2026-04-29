@@ -68,6 +68,12 @@ class MenuAfterTrainView extends MenuView {
     async addConfigMenu() {
         console.log('addConfigMenu')
 
+        /* new!!!!! */
+        this.$div.addClass("left-menu-block_border");
+
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.AfterTraining"));
+        /* /new!!!!! */
+
         this.$mainDiv.append($("<label></label>").html("<h3>After training</h3>"))
 
         for (let name of MenuAfterTrainView.names) {
