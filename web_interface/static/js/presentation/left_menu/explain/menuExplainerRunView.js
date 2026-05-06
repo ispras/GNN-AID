@@ -60,11 +60,8 @@ class MenuExplainerRunView extends MenuView {
         this.active = true
         this.$mainDiv.children().remove()
 
-        /* new!!!!!! */
         this.$div.addClass("left-menu-block_border");
-
         this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Explainer.Run"));
-        /* /new!!!!!! */
 
         this.$constructorDiv = $("<div></div>").attr(
             "id", this.idPrefix + "-params")

@@ -61,28 +61,7 @@
 
 .control-block button {
     font-size: 18px;
-    /* new!!!!!! */
-    display: inline-block;
-    background-color: #997950;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    padding: 6px 10px;
-    margin: 0;
-    line-height: 18px;
-    cursor: pointer;
-    outline: 0;
-    text-align: center;
-    user-select: none;
-    min-height: 28px;
-    /* /new!!!!! */
 }
-
-/* new!!!!!! */
-.control-block button:hover {
-    background-color: #6a5232;
-}
-/* /new!!!!!! */
 
 .control-block hr {
     margin-top: 0;
@@ -108,11 +87,9 @@
     margin: 0 0 5px 0;
 }
 
-/* new!!!!!!! */
 .v-scrollable .controls-section {
     border-bottom: none !important;
 }
-/* /new!!!!!!! */
 
 .menu-separator {
     border-bottom: 1px solid grey;
@@ -124,7 +101,26 @@
     opacity: 0.4;
 }
 
-/* new!!!!!!! */
+.left-menu-block__button .control-block button {
+    font-size: 18px;
+    display: inline-block;
+    background-color: #997950;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    padding: 6px 10px;
+    margin: 0;
+    line-height: 18px;
+    cursor: pointer;
+    outline: 0;
+    text-align: center;
+    user-select: none;
+    min-height: 28px;
+}
+
+.left-menu-block__button .control-block button:hover {
+    background-color: #6a5232;
+}
 
 .button-toggle-left-menu {
     position: absolute;
@@ -153,5 +149,3 @@
     -webkit-mask-image: url("../icons/double-right.svg");
     mask-image: url("../icons/double-right.svg");
 }
-
-/* /new!!!!!!! */
