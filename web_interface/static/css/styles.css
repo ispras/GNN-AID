@@ -162,8 +162,6 @@ table th,td {
     padding: 2px 2px 2px 3px;
 }
 
-/* new!!!!!! */
-
 .left-menu-header {
     font-size: 21px !important;
     border: 1px solid #997950;
@@ -184,16 +182,12 @@ table th,td {
     padding: 8px;
 }
 
-.left-menu-block_border + .left-menu-block_border {
-    margin-top: 8px;
-}
-
-.left-menu-block_border + .left-menu-block + .left-menu-block_border {
+.left-menu-block + .left-menu-block_border {
     margin-top: 8px;
 }
 
 .left-menu-block_compact .left-menu-block__main {
-    display: none;
+    display: none !important;
 }
 
 .left-menu-block__short {
@@ -264,5 +258,3 @@ table th,td {
 .left-menu-block_compact .menu-visuals-view-class {
     display: none !important;
 }
-
-/* /new!!!!!! */
