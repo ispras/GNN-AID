@@ -37,6 +37,9 @@ class MenuBeforeTrainView extends MenuView {
                 }
         }
         console.log("AD paramConfigs", paramConfigs)
+
+        this.$shortDiv.html($("<p></p>").text("!!!!!!!!!"));
+
         await controller.blockRequest(this.requestBlock, 'modify', paramConfigs)
     }
 
@@ -44,11 +47,8 @@ class MenuBeforeTrainView extends MenuView {
     async addConfigMenu() {
         console.log('addConfigMenu')
 
-        /* new!!!!! */
         this.$div.addClass("left-menu-block_border");
-
-        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.BeforeTraining"));
-        /* /new!!!!! */
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.BeforeTrain"));
 
         this.$mainDiv.append($("<label></label>").html("<h3>Before training</h3>"))
 

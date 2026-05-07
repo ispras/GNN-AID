@@ -33,6 +33,9 @@ class MenuExplainerInitView extends MenuView {
         // }
         // Object.assign(explainerInitConfig, this.paramsInitBuilder.kwArgs)
         console.log("explainerInitConfig", explainerInitConfig)
+
+        this.$shortDiv.html($("<p></p>").text("Explainer.Construct:: !!!!!!!!"));
+
         await controller.blockRequest(this.requestBlock, 'modify', explainerInitConfig)
     }
 

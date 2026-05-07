@@ -20,18 +20,12 @@ class MenuView extends View {
                 return console.error("Can't init " + this.constructor.name + " in state ", this.state)
 
             this.state = MVState.ACTIVE
-            /* new!!!!!! */
-            //this.$mainDiv = $("<div></div>").attr("id", this.idPrefix + '-main')
             this.$mainDiv = $("<div class='left-menu-block__main'></div>").attr("id", this.idPrefix + '-main');
-            /* /new!!!!!! */
             this.$div.append(this.$mainDiv)
 
-            /* new!!!!!! */
             this.$shortDiv = $("<div class='left-menu-block__short'></div>").attr("id", this.idPrefix + '-short');
             this.$div.append(this.$shortDiv);
-            //this.$acceptDiv = $("<div></div>")
             this.$acceptDiv = $("<div class='left-menu-block__button'></div>");
-            /* /new!!!!!! */
             this.$div.append(this.$acceptDiv)
         }
         else { // not the first time, reuse
@@ -40,6 +34,8 @@ class MenuView extends View {
             this.$mainDiv.show()
             this.$acceptDiv.show()
             this.$acceptDiv.find('button').text('Accept')
+
+            this.$div.removeClass("left-menu-block_compact");
             blockDiv(this.$mainDiv, false)
         }
 
@@ -91,7 +87,7 @@ class MenuView extends View {
         }
         else {
             this.$div.empty()
-            this.$div.removeClass("left-menu-block_border"); /* new!!!!!! */
+            this.$div.removeClass("left-menu-block_border");
         }
     }
 
@@ -113,7 +109,7 @@ class MenuView extends View {
         if (block === this.requestBlock) {
             blockLeftMenu(false)
 
-            this.$div.removeClass("left-menu-block_compact"); /* new!!!!!!!!  */
+            this.$div.removeClass("left-menu-block_compact");
             blockDiv(this.$mainDiv, false)
             this.state = MVState.ACTIVE
         }
@@ -132,7 +128,10 @@ class MenuView extends View {
         super.onSubmit(block, data)
         blockLeftMenu(false)
 
-        this.$div.addClass("left-menu-block_compact"); /* new!!!!!!!! */
+        if (this.$div.hasClass("left-menu-block")) {
+            this.$div.addClass("left-menu-block_compact")
+        };
+        
         blockDiv(this.$mainDiv, true)
         this.state = MVState.LOCKED
     }
@@ -162,34 +161,7 @@ class MenuView extends View {
                 // Unblock will be called after submit
                 if (res === -1)
                     return
-                $accept.text('Edit')
-
-                /* new!!!!!!  */
-                if (this.requestBlock === "dc") {
-                    this.$shortDiv.html($("<p></p>").text("example/example"));
-                } else if (this.requestBlock === "dvc") {
-                    this.$shortDiv.html($("<p></p>").text("признаки, задача: ..."));
-                } else if (this.requestBlock === "mload") {
-                    this.$shortDiv.html($("<p></p>").text("Model.Load: !!!!!!"));
-                } else if (this.requestBlock === "mconstr") {
-                    this.$shortDiv.html($("<p></p>").text("Model.Construct: !!!!!!"));
-                } else if (this.requestBlock === "mmc") {
-                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
-                } else if (this.requestBlock === "mt") {
-                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
-                } else if (this.requestBlock === "bt") {
-                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
-                } else if (this.requestBlock === "at") {
-                    this.$shortDiv.html($("<p></p>").text("!!!!!!"));
-                } else if (this.requestBlock === "ei") {
-                    this.$shortDiv.html($("<p></p>").text("Explainer.Construct: !!!!!"));
-                } else if (this.requestBlock === "el") {
-                    this.$shortDiv.html($("<p></p>").text("Explainer.Load: !!!!!"));
-                } else if (this.requestBlock === "er") {
-                    this.$shortDiv.html($("<p></p>").text("запуск!!!!!!"));
-                }
-                /* /new!!!!!!  */
-                
+                $accept.text('Edit')                
             }
         })
     }

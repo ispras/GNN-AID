@@ -36,6 +36,8 @@ class MenuModelLoadView extends MenuView {
     }
 
     async _accept() {
+        this.$shortDiv.html($("<p></p>").text("Model.Load: !!!!!!"));
+
         await controller.blockRequest(this.requestBlock, 'modify',
             this.prefixStorage.getConfig())
     }

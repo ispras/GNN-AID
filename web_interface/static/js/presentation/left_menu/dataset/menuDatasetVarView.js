@@ -21,11 +21,8 @@ class MenuDatasetVarView extends MenuView {
         $cc = $("<div></div>")
         this.$mainDiv.append($cc)
 
-        /* new!!!!!! */
         this.$div.addClass("left-menu-block_border");
-
         this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.features"));
-        /* /new!!!!!! */
         
         // 1. Input features
         $cc.append($("<label></label>").html("<h3>Features constructor</h3>"))
@@ -273,6 +270,10 @@ class MenuDatasetVarView extends MenuView {
             features: features,
             dataset_ver_ind: 0, // TODO check
         }
+
+        let shortText = (datasetVarConfig.features.node_struct.length && (datasetVarConfig.features.node_struct.join([", "]) + ", ") || "") + (datasetVarConfig.features.node_attr.length && datasetVarConfig.features.node_attr.join([", "]) + ", " || "") + datasetVarConfig.task + ", " + datasetVarConfig.labeling;
+        this.$shortDiv.html($("<p></p>").text(shortText));
+
         await controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)
     }
 

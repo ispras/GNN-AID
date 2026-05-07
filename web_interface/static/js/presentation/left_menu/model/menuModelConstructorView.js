@@ -37,6 +37,9 @@ class MenuModelConstructorView extends MenuView {
             return -1
 
         console.log("architecture", mc)
+
+        this.$shortDiv.html($("<p></p>").text("Model.Construct: !!!!!!"));
+
         await controller.blockRequest(this.requestBlock, 'modify', {layers: mc})
     }
 
