@@ -3,4 +3,4 @@ if __name__ == '__main__':
     # run_flask_server()
 
     from web_interface.main_aiohttp import run_aiohttp_server
-    run_aiohttp_server()
+    run_aiohttp_server(port=8090)
