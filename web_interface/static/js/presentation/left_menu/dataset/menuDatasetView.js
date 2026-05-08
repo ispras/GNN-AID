@@ -14,7 +14,7 @@ class MenuDatasetView extends MenuView {
         this.tuplePrefixStorage = PrefixStorage.fromJSON(ps)
 
         this.$div.addClass("left-menu-block_border");
-        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.row"));
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.raw"));
         $("#menu-dataset-header").hide();
 
         this.$mainDiv.append($("<h3></h3>").text("Choose raw data"))

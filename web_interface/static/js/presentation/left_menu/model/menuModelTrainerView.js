@@ -49,7 +49,8 @@ class MenuModelTrainerView extends MenuView {
     async _accept() {
         let metrics = this.getMetrics()
 
-        this.$shortDiv.html($("<p></p>").text("!!!!!!!!"));
+        let shortText = this.progressBar.$label.text()
+        this.$shortDiv.html($("<p></p>").text(shortText))
 
         // We should pass metrics if user presses 'accept' without training
         await controller.blockRequest(

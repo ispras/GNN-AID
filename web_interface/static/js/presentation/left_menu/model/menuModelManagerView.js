@@ -43,7 +43,13 @@ class MenuModelManagerView extends MenuView {
         let mmc = this.constructManagerConfig()
         // console.log("MM config", mmc)
 
-        this.$shortDiv.html($("<p></p>").text("!!!!!!!!"));
+        let shortText = ` 
+            batch:${mmc.batch},
+            loss:${mmc.loss_function._class_name},
+            opt:${mmc.optimizer._class_name},
+            split:${(mmc.train_test_split[0]*100).toFixed(0)}/${(mmc.train_test_split[1]*100).toFixed(0)}
+        `
+        this.$shortDiv.html($("<p></p>").text(shortText));
 
         await controller.blockRequest(this.requestBlock, 'modify', mmc)
     }

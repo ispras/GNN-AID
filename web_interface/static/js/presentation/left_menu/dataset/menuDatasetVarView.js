@@ -271,8 +271,12 @@ class MenuDatasetVarView extends MenuView {
             dataset_ver_ind: 0, // TODO check
         }
 
-        let shortText = (datasetVarConfig.features.node_struct.length && (datasetVarConfig.features.node_struct.join([", "]) + ", ") || "") + (datasetVarConfig.features.node_attr.length && datasetVarConfig.features.node_attr.join([", "]) + ", " || "") + datasetVarConfig.task + ", " + datasetVarConfig.labeling;
-        this.$shortDiv.html($("<p></p>").text(shortText));
+        let shortText = datasetVarConfig.features.node_struct
+            .concat(datasetVarConfig.features.node_attr)
+            .join('+')
+        shortText = [shortText, datasetVarConfig.task, datasetVarConfig.labeling]
+            .join(' | ')
+        this.$shortDiv.html($("<p></p>").text(shortText))
 
         await controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)
     }

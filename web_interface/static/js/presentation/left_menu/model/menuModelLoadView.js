@@ -36,7 +36,8 @@ class MenuModelLoadView extends MenuView {
     }
 
     async _accept() {
-        this.$shortDiv.html($("<p></p>").text("Model.Load: !!!!!!"));
+        let config = JSON_parse(Object.values(this.info.gnn)[0]).structure.layers
+        this.$shortDiv.html($("<p></p>").text(modelShortConfig(config)))
 
         await controller.blockRequest(this.requestBlock, 'modify',
             this.prefixStorage.getConfig())
