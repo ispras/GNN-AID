@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 
 from .utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
     SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR
@@ -9,7 +9,8 @@ from .utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, hash_data_sha256, \
 
 class Declare:
     """
-    Forms a path for accessing, saving, loading for all key objects (data, model, explainer)
+    Forms a filesystem path for accessing, saving, and loading all key objects
+    (data, model, explainer).
     """
 
     @staticmethod
@@ -17,15 +18,19 @@ class Declare:
             what_save: str = None,
             previous_path: Union[str, Path] = None,
             obj_info: Union[None, list, tuple, dict, Path] = None
-    ) -> [Path, list]:
+    ) -> Tuple[str | Path, list[Path]]:
         """
-        :param what_save: the path for which object is being built.
-         Now support: data_root, datasets, models, explanations
-        :param previous_path: the path over which you need to add the folder
-         structure corresponding to the element being saved
-        :param obj_info: information about the object, which must match the dictionary keys
-         (save_dir_structure.json, including the order must match)
-        :return: new path, list of technical files paths
+        Build a filesystem path for accessing, saving, or loading a key object.
+
+        Args:
+            what_save (str): Object type to build the path for.
+                Supported: ``'data_root'``, ``'datasets'``, ``'models'``, ``'explanations'``.
+            previous_path (Union[str, Path]): Base path to extend with the directory structure.
+            obj_info (Union[None, list, tuple, dict, Path]): Object identifiers that must match
+                the keys in ``save_dir_structure.json`` (order matters for list/tuple).
+
+        Returns:
+            Tuple[str | Path, list[Path]]: Extended path and list of associated technical file paths.
         """
         if obj_info is None:
             obj_info = []
@@ -94,12 +99,15 @@ class Declare:
     @staticmethod
     def dataset_root_dir(
             dataset_config: 'DatasetConfig'
-    ) -> Tuple[Path, list]:
+    ) -> Tuple[str | Path, list[Path]]:
         """
         Directory where dataset raw files and metainfo are stored.
 
-        :param dataset_config: DatasetConfig
-        :return: path to the data folder, path to a specific dataset
+        Args:
+            dataset_config (DatasetConfig): Dataset configuration object.
+
+        Returns:
+            Path to the data folder and list of technical file paths.
         """
         path = GRAPHS_DIR
         obj_info = [
@@ -113,26 +121,22 @@ class Declare:
     def dataset_info_path(
             dataset_config: 'DatasetConfig'
     ) -> Path:
-        """
-        Path to metainfo file for a dataset.
-
-        :param dataset_config: DatasetConfig
-        :return: path to metainfo file for a specific dataset
-        """
         return Declare.dataset_root_dir(dataset_config)[0] / 'metainfo'
 
     @staticmethod
     def dataset_prepared_dir(
             dataset_config: Union['ConfigPattern', 'DatasetConfig'],
             dataset_var_config: Union['ConfigPattern', 'DatasetVarConfig']
-    ) -> Tuple[Path, list]:
+    ) -> Tuple[str | Path, list[Path]]:
         """
         Directory where the var part of a dataset is stored.
 
-        :param dataset_config: :class:`~data_structures.configs.DatasetConfig` object
-        :param dataset_var_config: :class:`~data_structures.configs.DatasetVarConfig` object
-        :return: path to the data folder, extra paths where to save dataset_config and
-         dataset_var_config.
+        Args:
+            dataset_config (ConfigPattern | DatasetConfig): Dataset configuration object.
+            dataset_var_config (ConfigPattern | DatasetVarConfig): Dataset variant configuration object.
+
+        Returns:
+            Path to the data folder and extra paths for saving dataset_config and dataset_var_config.
         """
         assert dataset_var_config.features is not None
 
@@ -162,15 +166,19 @@ class Declare:
     @staticmethod
     def models_path(
             class_obj: 'GNNModelManager'
-    ) -> Tuple[Path, list]:
+    ) -> Tuple[str | Path, list[Path]]:
         """
-        :param class_obj: class base on GNNModelManager
-        :return: The path where the model will be saved
+        Build the path where the model will be saved.
 
-        Feature of determining versions when saving: if the version is not defined,
-        then saves the model with the smallest integer index that is not in the versions folder,
-        starting from 0. If the version is defined, then the first save has the specified version,
-        and subsequent ones are determined automatically.
+        If model_ver_ind is not defined, saves with the smallest free integer index
+        starting from 0. If defined, the first save uses that version; subsequent ones
+        are determined automatically.
+
+        Args:
+            class_obj (GNNModelManager): Model manager instance.
+
+        Returns:
+            Path where the model is saved and list of technical file paths.
         """
         model_ver_ind_none_flag = \
             class_obj.modification.model_ver_ind is None or \
@@ -224,24 +232,26 @@ class Declare:
             mi_attack_hash: str,
             evasion_attack_hash: str,
             poison_attack_hash: str,
-            epochs: Union[int, str] = None,
-    ) -> Tuple[Path, list]:
+            epochs: Union[int, str] = None
+    ) -> Tuple[str | Path, list[Path]]:
         """
-        Formation of the way to save the path of the model in the root of the project
-        according to its hyperparameters and features
+        Build the model save path from its hyperparameters and features.
 
-        :param dataset_path: dataset path
-        :param GNNModelManager_hash: gnn model manager hash
-        :param model_ver_ind: index of explain version
-        :param gnn_name: gnn hash
-        :param epochs: number of epochs during which the model was trained
-        :param mi_defense_hash:
-        :param evasion_defense_hash:
-        :param poison_defense_hash:
-        :param mi_attack_hash:
-        :param evasion_attack_hash:
-        :param poison_attack_hash:
-        :return: the path where the model is saved use information from ModelConfig
+        Args:
+            dataset_path (str): Dataset path.
+            GNNModelManager_hash (str): GNN model manager hash.
+            model_ver_ind (int): Model version index.
+            gnn_name (str): GNN hash.
+            mi_defense_hash (str): MI defense hash.
+            evasion_defense_hash (str): Evasion defense hash.
+            poison_defense_hash (str): Poison defense hash.
+            mi_attack_hash (str): MI attack hash.
+            evasion_attack_hash (str): Evasion attack hash.
+            poison_attack_hash (str): Poison attack hash.
+            epochs (Union[int, str]): Number of training epochs. Default value: `None`.
+
+        Returns:
+            Path where the model is saved and list of technical file paths.
         """
         if not isinstance(model_ver_ind, int) or model_ver_ind < 0:
             raise Exception("model_ver_ind must be int type and has value >= 0")
@@ -271,17 +281,21 @@ class Declare:
             explainer_ver_ind: int = None,
             explainer_run_kwargs: dict = None,
             explainer_init_kwargs: dict = None,
-            create_dir_flag: bool = True,
-    ) -> Tuple[Path, list]:
+            create_dir_flag: bool = True
+    ) -> Tuple[str | Path, list[Path]]:
         """
+        Build the file path for an explanation result.
 
-        :param explainer_init_kwargs: dict with kwargs for explainer class
-        :param explainer_run_kwargs:dict with kwargs for run explanation
-        :param models_path: model path
-        :param explainer_name: explainer name. Example: Zorro
-        :param explainer_ver_ind: index of explain version
-        :param create_dir_flag: whether to save kwargs to file
-        :return: path for explanations result file and list with technical files
+        Args:
+            models_path (str): Model path.
+            explainer_name (str): Explainer class name, e.g. ``'Zorro'``.
+            explainer_ver_ind (int): Explanation version index. Default value: `None`.
+            explainer_run_kwargs (dict): Kwargs passed to the explainer's run method. Default value: `None`.
+            explainer_init_kwargs (dict): Kwargs passed to the explainer's constructor. Default value: `None`.
+            create_dir_flag (bool): If True, create the directory and write kwargs files. Default value: `True`.
+
+        Returns:
+            Path for the explanation result file and list of technical file paths.
         """
         explainer_init_kwargs = explainer_init_kwargs.copy()
         explainer_init_kwargs = dict(sorted(explainer_init_kwargs.items()))
@@ -338,11 +352,16 @@ class Declare:
     def explainer_kwargs_path_full(
             model_path: Union[str, Path],
             explainer_path: Union[str, Path]
-    ) -> list:
+    ) -> list[Path]:
         """
-        :param model_path: model path
-        :param explainer_path: explanation path
-        :return: list with technical files (now json files with information about init and run kwargs)
+        Return the list of technical files associated with an explanation.
+
+        Args:
+            model_path (Union[str, Path]): Model path.
+            explainer_path (Union[str, Path]): Explanation path.
+
+        Returns:
+            Technical file paths (JSON files with init and run kwargs).
         """
         path = Path(str(model_path).replace(str(MODELS_DIR), str(EXPLANATIONS_DIR)))
         what_save = "explanations"

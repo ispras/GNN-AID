@@ -8,7 +8,8 @@ from gnn_aid.attacks.mi_attacks import MIAttacker
 from gnn_aid.aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
-    ConfigPattern, FeatureConfig, Task, ModelConfig, ModelStructureConfig
+    FeatureConfig, Task, ModelConfig, ModelStructureConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor

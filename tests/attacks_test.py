@@ -11,7 +11,8 @@ from gnn_aid.models_builder import FrameworkGNNConstructor
 from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
-    ConfigPattern, FeatureConfig, Task, ModelConfig, ModelStructureConfig
+    FeatureConfig, Task, ModelConfig, ModelStructureConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH

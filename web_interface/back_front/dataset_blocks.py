@@ -1,15 +1,12 @@
-import json
-from typing import Tuple
-
 from gnn_aid.aux.data_info import DataInfo
 from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
 from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.gen_dataset import GeneralDataset
-from . import DatasetData, DatasetVarData, VisiblePart, ViewPoint
+from . import VisiblePart, ViewPoint
 from .block import Block
-from .utils import json_dumps, get_config_keys
+from .utils import get_config_keys
 
 
 class DatasetBlock(Block):
@@ -73,7 +70,8 @@ class DatasetBlock(Block):
                 self._index.add([LibPTGDataset.data_folder] + key, "Not loaded yet")
             except KeyError: pass
 
-        return json_dumps([self._index.to_json(), json_dumps('')])
+        return [self._index.to_dict(), '']
+        # return json_dumps([self._index.to_json(), json_dumps('')])
 
     # def get_dataset_data(
     #         self,

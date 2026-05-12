@@ -11,7 +11,8 @@ from gnn_aid.models_builder.attack_defense_metric import AttackMetric, DefenseMe
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
-from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 

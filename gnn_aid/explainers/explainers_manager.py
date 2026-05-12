@@ -4,7 +4,8 @@ from typing import Union, Type
 from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, all_subclasses, ProgressBar
 from gnn_aid.data_structures.configs import ExplainerInitConfig, ExplainerModificationConfig, \
-    CONFIG_OBJ, ConfigPattern, ExplainerRunConfig
+    ExplainerRunConfig
+from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from .explainer import Explainer

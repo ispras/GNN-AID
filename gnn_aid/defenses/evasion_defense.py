@@ -9,7 +9,8 @@ from gnn_aid.attacks.evasion_attacks import FGSMAttacker
 from gnn_aid.attacks.qattack import qattack
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     move_to_same_device
-from gnn_aid.data_structures.configs import ConfigPattern, EvasionAttackConfig
+from gnn_aid.data_structures.configs import EvasionAttackConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.defenses.defense_base import Defender
 
 

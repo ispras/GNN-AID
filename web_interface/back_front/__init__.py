@@ -1,5 +1,5 @@
 from .utils import SocketConnect, WebInterfaceError, json_loads, json_dumps
-from .visible_part import ViewPoint, DatasetData, DatasetVarData, DatasetIndex, VisiblePart
+from .visible_part import ViewPoint, DatasetIndex, DatasetData, DatasetVarData, VisiblePart
 from .diagram import Diagram
 from .frontend_client import FrontendClient, ClientMode
 from .block import Block, BlockConfig, WrapperBlock

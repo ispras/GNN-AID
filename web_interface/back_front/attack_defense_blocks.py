@@ -5,9 +5,10 @@ import torch
 
 from gnn_aid.attacks import MIAttacker
 from gnn_aid.aux import DataInfo
-from gnn_aid.data_structures.configs import ConfigPattern, PoisonAttackConfig, PoisonDefenseConfig, \
+from gnn_aid.data_structures.configs import PoisonAttackConfig, PoisonDefenseConfig, \
     EvasionAttackConfig, \
-    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig, CONFIG_OBJ
+    EvasionDefenseConfig, MIAttackConfig, MIDefenseConfig
+from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern
 from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, \
     MI_DEFENSE_PARAMETERS_PATH

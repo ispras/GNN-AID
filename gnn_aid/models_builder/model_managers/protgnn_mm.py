@@ -8,13 +8,19 @@ from torch.nn.utils import clip_grad_norm
 from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     move_to_same_device
 from gnn_aid.data_structures import Task
-from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_OBJ
+from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern
 from gnn_aid.datasets import GeneralDataset
 from gnn_aid.models_builder.models_utils import Metric
 from . import FrameworkGNNModelManager
 
 
 class ProtGNNModelManager(FrameworkGNNModelManager):
+    """
+    Model manager for ProtGNN training.
+
+    Extends FrameworkGNNModelManager with prototype projection,
+    cluster/separation losses, and early stopping based on validation accuracy.
+    """
     additional_config = ConfigPattern(
         _config_class="ModelManagerConfig",
         _config_kwargs={
@@ -39,10 +45,17 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
 
     def __init__(
             self,
-            gnn: Type = None,
+            gnn: torch.nn.Module = None,
             dataset_path: Union[str, Path] = None,
             **kwargs
     ):
+        """
+        Args:
+            gnn (torch.nn.Module): ProtGNN model with a ``prot_layer_name`` attribute.
+                Default value: `None`.
+            dataset_path (Union[str, Path]): Path to the dataset. Default value: `None`.
+            **kwargs: Additional arguments forwarded to FrameworkGNNModelManager.
+        """
         super().__init__(gnn=gnn, dataset_path=dataset_path, **kwargs)
 
         # Get prot layer and its params
@@ -73,10 +86,8 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             path: Union[str, Path, None] = None
     ) -> None:
         """
-        Save the model in torch format
-
-        :param path: path to save the model. By default,
-         the path is compiled based on the global class variables
+        Save the model in torch format.
+        By default, the path is compiled based on the global class variables
         """
         torch.save({"model_state_dict": self.gnn.state_dict(),
                     "best_prots": self.gnn.best_prots,
@@ -88,10 +99,13 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             **kwargs
     ) -> torch.nn.Module:
         """
-        Load model from torch save format
+        Load model weights and best prototypes from a torch checkpoint.
 
-        :param path: path to load the model. By default, the path is compiled based on the global
-         class variables
+        Args:
+            path (Union[str, Path, None]): Path to the checkpoint. Default value: `None`.
+
+        Returns:
+            The GNN module with loaded weights.
         """
         if not is_available():
             checkpoint = torch.load(path, map_location=torch.device('cpu'), )
@@ -108,6 +122,18 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             batch,
             task_type: Task
     ) -> torch.Tensor:
+        """
+        Compute the ProtGNN loss for one batch.
+
+        Includes cross-entropy, cluster, separation, and sparsity losses.
+
+        Args:
+            batch: PyG batch object.
+            task_type (Task): The current task type.
+
+        Returns:
+            Loss tensor.
+        """
         # FIXME misha it is not task type, change to getting dvc field task
         if task_type == Task.GRAPH_CLASSIFICATION:
             self.optimizer.zero_grad()
@@ -179,6 +205,8 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self,
             loss: torch.Tensor
     ) -> torch.Tensor:
+        """ Backpropagate loss, clip gradients by value, and step the optimizer.
+        """
         loss.backward()
         torch.nn.utils.clip_grad_value_(self.gnn.parameters(), clip_value=2.0)
         self.optimizer.step()
@@ -188,6 +216,12 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             self,
             gen_dataset: GeneralDataset
     ):
+        """
+        Run prototype projection and configure gradient flags before each epoch.
+
+        Args:
+            gen_dataset (GeneralDataset): The training dataset.
+        """
         cur_step = self.modification.epochs + 1
         train_ind = [n for n, x in enumerate(gen_dataset.train_mask) if x]
         # Prototype projection
@@ -210,6 +244,13 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             gen_dataset: GeneralDataset,
             **hook_kwargs
     ):
+        """
+        Evaluate validation metrics and update the best prototype cache after each epoch.
+
+        Args:
+            gen_dataset (GeneralDataset): Dataset used for evaluation.
+            **hook_kwargs: Additional kwargs forwarded to the base class hook.
+        """
         # TODO compare is_best with different metrics to be implemented
 
         # check if best model
@@ -237,6 +278,21 @@ class ProtGNNModelManager(FrameworkGNNModelManager):
             metrics: Union[List[Metric], Metric],
             steps: int
     ) -> bool:
+        """
+        Determine whether training should stop early.
+
+        Stops if the model has not improved for early_stopping_marker consecutive epochs,
+        or if the last prototype projection epoch has been reached.
+
+        Args:
+            train_loss: Training loss (required by base class interface, unused here).
+            gen_dataset (GeneralDataset): Training dataset (unused).
+            metrics (Union[List[Metric], Metric]): Metrics (unused).
+            steps (int): Total number of training steps.
+
+        Returns:
+            True if training should stop, False otherwise.
+        """
         step = self.modification.epochs
         if self.is_best:
             self.early_stop_count = 0

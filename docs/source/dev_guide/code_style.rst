@@ -41,24 +41,41 @@
 Предпочтительный стиль комментирования классов и функций в коде.
 Документирующие строки - предпочитаем Google Style
 
+1) короткий вариант (если функция getter, setter или делает что-то простое):
+
 .. code-block:: python
 
-    def function(param1, param2):
-        """Краткое описание функции.
+        def simple_function(
+                param: int
+        ) -> bool:
+            """ Short description.
+            """
+            ...
 
-        Более подробное описание, если необходимо.
+            return True
+
+
+2) длинный вариант (для сложных функций и всех классов)
+
+.. code-block:: python
+
+    def complex_function(
+            param1: int,
+            param2: str="default"
+    ) -> bool:
+        """
+        A detailed description with examples if needed in google format.
 
         Args:
-            param1 (int): Описание первого параметра.
-            param2 (str): Описание второго параметра.
+            param1 (int): First parameter description.
+            param2 (str): Second parameter description. Default value: `default`.
 
         Returns:
-            bool: Описание возвращаемого значения.
+            bool: Description of the result.
         """
+        ...
+
         return True
-
-
-
 
 Тестирование
 ===============

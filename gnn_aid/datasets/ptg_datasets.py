@@ -10,8 +10,8 @@ from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
 
 from gnn_aid.aux.declaration import Declare
 from gnn_aid.aux.utils import import_by_name, shape
-from gnn_aid.data_structures.configs import (
-    DatasetConfig, DatasetVarConfig, ConfigPattern, FeatureConfig, Task)
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo
 from .gen_dataset import GeneralDataset, LocalDataset
 
@@ -35,17 +35,15 @@ class PTGDataset(GeneralDataset):
 
     def __init__(
             self,
-            dataset_config: Union[ConfigPattern, DatasetConfig],
-            # **ptg_kwargs
+            dataset_config: Union[ConfigPattern, DatasetConfig]
     ):
-        """
-        :param dataset_config: dataset config dictionary
-        """
         super(PTGDataset, self).__init__(dataset_config)
 
     def _compute_dataset_data(
             self
     ) -> None:
+        """ Initialize variable config and define the PTG dataset, reading or creating tensors.
+        """
         self.dataset_var_config = PTGDataset.default_dataset_var_config.copy()
         results_exist = self.prepared_dir.exists()
 
@@ -87,9 +85,9 @@ class PTGDataset(GeneralDataset):
     def _compute_dataset_var_data(
             self
     ) -> None:
-        # PTG graphs have tensors by default
-        # Only different task is allowed
-        # assert self.dataset_var_config.features == PTGDataset.default_dataset_var_config.features
+        """ Validate that the requested task is supported for PTG datasets.
+        """
+        # PTG graphs have tensors by default; only a different task is allowed
         assert self.dataset_var_config.task in [
             # If you want Task.GRAPH_REGRESSION -- need to overwrite data.y after dataset is loaded
             Task.NODE_CLASSIFICATION, Task.GRAPH_CLASSIFICATION, Task.EDGE_PREDICTION]
@@ -106,7 +104,6 @@ class PTGDataset(GeneralDataset):
             attrs: List[str] = None
     ) -> Dict[str, Union[list, torch.Tensor]]:
         """ Get node attributes as a dict {name -> list}"""
-        # return {}  # features are not attributes
         assert attrs is None or attrs == [] or attrs == [PTG_FEATURE_NAME]
         return {PTG_FEATURE_NAME: [data.x.tolist() for data in self.dataset]}
 
@@ -136,9 +133,6 @@ class PTGDataset(GeneralDataset):
             res.nodes = [{nt: data0[nt].num_nodes for nt in node_types}]
             res.node_attributes = {
                 nt: {
-                    # "names": [],
-                    # "types": [],
-                    # "values": []
                     "names": [PTG_FEATURE_NAME],
                     "types": ["vector"],
                     "values": [len(data0[nt].x[0])]
@@ -206,7 +200,7 @@ class PTGDataset(GeneralDataset):
 
 class LocalPTGDataset(PTGDataset):
     """
-    A single ptg Dataset defined online by tensors.
+    A PTG dataset defined online from a list of Data tensors.
     """
     data_folder = 'locally-created-graphs'
 
@@ -217,9 +211,10 @@ class LocalPTGDataset(PTGDataset):
             dataset_config: DatasetConfig = None
     ):
         """
-        :param data_list: list of ready :class:`torch_geometric.data.data.Data` objects
-        :param name: unique dataset name
-        :param dataset_config: is optional here
+        Args:
+            data_list (List[Data]): List of ready Data objects. Default value: `None`.
+            name (Union[str, None]): Unique dataset name; auto-generated if omitted. Default value: `None`.
+            dataset_config (DatasetConfig): Optional; inferred from data_list if omitted. Default value: `None`.
         """
         self.data_list = data_list
 
@@ -230,7 +225,7 @@ class LocalPTGDataset(PTGDataset):
                 raise RuntimeError(f"{self.__class__.__name__}.__init__() must have specified"
                                    f" 'data_list' or 'dataset_config'")
             group = 'single-graph' if len(data_list) == 1 else 'multiple-graphs'
-            # TODO misha Add hetero info
+            # TODO misha add hetero info
             name = name or 'graph_' + str(time())
             dataset_config = DatasetConfig((self.data_folder, group, name))
             # dataset_config = DatasetConfig((self.data_folder, group, name), {'data_list': data_list})
@@ -240,8 +235,8 @@ class LocalPTGDataset(PTGDataset):
     def _define_ptg_dataset(
             self
     ) -> None:
-        # Create local ptg dataset
-
+        """ Load or create the local PTG dataset from self.data_list.
+        """
         if self.prepared_dir.exists():
             self.dataset = LocalDataset(None, self.prepared_dir)
         else:
@@ -250,7 +245,7 @@ class LocalPTGDataset(PTGDataset):
 
 class LibPTGDataset(PTGDataset):
     """
-    A single ptg Dataset from Pytorch-Geometric library.
+    A PTG dataset loaded from the PyTorch Geometric library.
     """
     data_folder = 'ptg-library-graphs'
 
@@ -260,9 +255,10 @@ class LibPTGDataset(PTGDataset):
             **ptg_init_kwargs
     ):
         """
-        :param dataset_config: dataset config dictionary
-        :param ptg_init_kwargs: additional parameters to init ptg class, e.g. constructor params or
-         torch_geometric.transforms. Possible only if dataset is not created yet.
+        Args:
+            dataset_config (DatasetConfig): Config identifying the dataset.
+            **ptg_init_kwargs: Additional kwargs forwarded to the PTG class constructor,
+                e.g. transforms. Only effective when the dataset is being created for the first time.
         """
         first, self._domain, self._group, *rest = dataset_config.full_name
         self._name = rest[0] if len(rest) > 0 else None
@@ -296,14 +292,8 @@ class LibPTGDataset(PTGDataset):
 
             else:
                 # Just load as LocalDataset to avoid re-generating tensors within PTG class
-
-                # if self._ptg_init_kwargs:
-                #     warnings.warn(f"Dataset {self.dataset_config} already exists, so ptg init kwargs"
-                #                   f" will be ignored.")
-
                 # NOTE: this works if `processed_file_names` does not use self - we pass None.
                 # We do not want to create object since it may make unnecessary computations
-                # processed_file_names = lambda: dataset_cls.processed_file_names.fget(None)
                 self.dataset = LocalDataset(None, prepared_dir=self.prepared_dir)
             return
 

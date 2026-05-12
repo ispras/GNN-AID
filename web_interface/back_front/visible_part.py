@@ -1,55 +1,54 @@
 import json
 from copy import copy
+from dataclasses import dataclass, asdict
 from typing import Union, List, Tuple, Dict
 
 from gnn_aid.aux.custom_decorators import timing_decorator
 from gnn_aid.aux.utils import short_str, edge_index_to_edge_list
-from gnn_aid.data_structures import Task
 from gnn_aid.datasets import GeneralDataset
-from web_interface.back_front import json_dumps
 
 
+@dataclass
 class DatasetData:
     """
     Container for a part of dataset to transfer to frontend.
     Stores jsonable lists and dicts.
     """
-    def __init__(
-            self
-    ):
-        self.edges: list = None  # list of edge lists for each graph
-        self.nodes: list = None  # list of nodes
-        self.graphs: list = None  # list of graph indices
-        self.node_attributes: dict = None  # dict {name -> list of attr dict for each graph}
-        # self.edge_attributes: dict = None
-        # self.graph_attributes: dict = None
+    node_types: list | None = None  # list of types
+    nodes: List | None = None  # list of nodes
+    edge_types: list | None = None  # list of types
+    edges: List | None = None  # list of edge lists for each graph
+    graphs: List | None = None  # list of graph indices
+    node_attributes: List | None = None  # list of lists (of lists)
+    edge_attributes: List | None = None  # list of lists (of lists)
+    graph_attributes: List | None = None  # list of lists
+    node_info: Dict | None = None  # dict
 
     def __str__(
             self
     ):
         res = f"DatasetData[\n"
-        res += f" edges: {short_str(self.edges)}\n"
         res += f" nodes: {short_str(self.nodes)}\n"
+        res += f" edges: {short_str(self.edges)}\n"
         res += f" graphs: {short_str(self.graphs)}\n"
         res += f" node_attributes: {short_str(self.node_attributes)}\n"
-        # res += f" edge_attributes: {short_str(self.edge_attributes)}\n"
-        # res += f" graph_attributes: {short_str(self.graph_attributes)}\n"
+        res += f" edge_attributes: {short_str(self.edge_attributes)}\n"
+        res += f" graph_attributes: {short_str(self.graph_attributes)}\n"
         res += "]"
         return res
+
+    def to_dict(
+            self
+    ) -> Dict:
+        """ Return this as a dict. """
+        return asdict(self)
 
     def to_json(
             self,
             **dump_args
     ) -> str:
         """ Return json string. """
-        return json.dumps({
-            "edges": self.edges,
-            "nodes": self.nodes,
-            "graphs": self.graphs,
-            "node_attributes": self.node_attributes,
-            # "edge_attributes": self.edge_attributes,
-            # "graph_attributes": self.graph_attributes,
-        }, **dump_args)
+        return json.dumps(asdict(self), **dump_args)
 
 
 class DatasetVarData:
@@ -97,6 +96,12 @@ class DatasetVarData:
         res += "]"
         return res
 
+    def to_dict(
+            self
+    ) -> Dict:
+        """ Return this.as dict. """
+        return self.__dict__
+
     def to_json(
             self,
             **dump_args
@@ -110,7 +115,7 @@ class ViewPoint:
     """
     def __init__(
             self,
-            center: Union[int, Tuple[int], None] = None,
+            center: Union[int, Tuple[int], List[int], None] = None,
             depth: Union[int, None] = None
     ) -> None:
         """
@@ -184,23 +189,25 @@ class DatasetIndex:
             assert gen_dataset.info.count == 1
 
             if center is not None:  # Get neighborhood
-                if isinstance(center, list):
-                    raise NotImplementedError
                 if depth is None:
-                    depth = 2
+                    depth = 1.5
+
+                between = depth != int(depth)  # need edges between last neighbors
 
                 if gen_dataset.info.hetero:
                     # TODO misha hetero
                     raise NotImplementedError
 
                 else:  # homo
-                    nodes = {0: {center}}  # {depth: set of ids}
+                    if not isinstance(center, list):
+                        center = [center]
+                    nodes = {0: set(center)}  # {depth: set of ids}
                     edges = {0: []}  # incoming edges
                     prev_nodes = set()  # Nodes in neighborhood Up to depth=d-1
 
                     # We need iterate all edges even for undirected graph
                     all_edges = edge_index_to_edge_list(gen_dataset.edges[0], True)
-                    for d in range(1, depth + 1):
+                    for d in range(1, int(depth) + 1):
                         ns = nodes[d - 1]
                         es_next = set()
                         ns_next = set()
@@ -215,17 +222,30 @@ class DatasetIndex:
                                 if i not in ns:
                                     ns_next.add(i)
 
-                            if not gen_dataset.info.directed:
-                                # Check also outcoming edge i -> *, excluding already added
-                                if i in ns and j not in prev_nodes:
-                                    es_next.add(ix)
-                                    # es_next.append((i, j))
-                                    if j not in ns:
-                                        ns_next.add(j)
+                            # if not gen_dataset.info.directed:
+                            # Check also outcoming edge i -> *, excluding already added
+                            if i in ns and j not in prev_nodes:
+                                es_next.add(ix)
+                                # es_next.append((i, j))
+                                if j not in ns:
+                                    ns_next.add(j)
 
                         prev_nodes.update(ns)
                         nodes[d] = ns_next
                         edges[d] = list(sorted(es_next))
+
+                    if between:
+                        d = int(depth)
+                        ns = nodes[d]
+                        es_next = set()
+                        for ix, (i, j) in enumerate(all_edges):
+                            if not gen_dataset.info.directed and i > j:
+                                continue
+
+                            if j in ns and i in ns:
+                                es_next.add(ix)
+
+                        edges[d].extend(list(sorted(es_next)))
 
                     self.node_index = [list(ns) for ns in nodes.values()]
                     self.edge_index = [list(es) for es in edges.values()]
@@ -384,23 +404,75 @@ class VisiblePart:
         dataset_data.graphs = graphs
 
         # Add attributes
-        dataset_data.node_attributes = {}
+        dataset_data.node_attributes = []
 
+        # node_attributes = self.gen_dataset.node_attributes()
+        # if self.gen_dataset.is_multi():  # multiple-graph
+        #     for a, vals_list in node_attributes.items():
+        #         dataset_data.node_attributes[a] = {ix: vals_list[ix] for ix in graphs}
+        #
+        # else:
+        #     if center is not None:  # neighborhood
+        #         for a, vals_list in node_attributes.items():
+        #             dataset_data.node_attributes[a] = [{
+        #                 n: (vals_list[0][n] if n in vals_list[0] else None) for n in self.iterate('nodes')}]
+        #
+        #     else:  # whole graph
+        #         for a, vals_list in node_attributes.items():
+        #             dataset_data.node_attributes[a] = [{
+        #                 n: vals_list[0][n] for n in range(nodes)}]
         node_attributes = self.gen_dataset.node_attributes()
+        attr_keys = self.gen_dataset.info.node_attributes["names"]
+
         if self.gen_dataset.is_multi():
-            for a, vals_list in node_attributes.items():
-                dataset_data.node_attributes[a] = {ix: vals_list[ix] for ix in graphs}
+            for ix in graphs:
+                graph_nodes = []
+                for n in range(len(next(iter(node_attributes.values()))[ix])):
+                    node_attrs = [node_attributes[a][ix][n] for a in attr_keys]
+                    graph_nodes.append(node_attrs)
+                dataset_data.node_attributes.append(graph_nodes)
 
         else:
             if center is not None:  # neighborhood
-                for a, vals_list in node_attributes.items():
-                    dataset_data.node_attributes[a] = [{
-                        n: (vals_list[0][n] if n in vals_list[0] else None) for n in self.iterate('nodes')}]
+                node_iter = list(self.iterate('nodes'))
+                for n in node_iter:
+                    node_attrs = [node_attributes[a][0][n] for a in attr_keys]
+                    dataset_data.node_attributes.append(node_attrs)
 
             else:  # whole graph
-                for a, vals_list in node_attributes.items():
-                    dataset_data.node_attributes[a] = [{
-                        n: vals_list[0][n] for n in range(nodes)}]
+                for n in range(nodes):
+                    node_attrs = [node_attributes[a][0][n] for a in attr_keys]
+                    dataset_data.node_attributes.append(node_attrs)
+
+        dataset_data.edge_attributes = []
+        edge_attributes = self.gen_dataset.edge_attributes()
+        if edge_attributes:
+            attr_keys = self.gen_dataset.info.edge_attributes["names"]
+
+            if self.gen_dataset.is_multi():
+                for ix in graphs:
+                    graph_edges = []
+                    for n in range(len(next(iter(edge_attributes.values()))[ix])):
+                        edge_attrs = [edge_attributes[a][ix][n] for a in attr_keys]
+                        graph_edges.append(edge_attrs)
+                    dataset_data.edge_attributes.append(graph_edges)
+
+            else:
+                if center is not None:  # neighborhood
+                    edge_iter = list(self.iterate('edges'))
+                    for n in edge_iter:
+                        edge_attrs = [edge_attributes[a][0][n] for a in attr_keys]
+                        dataset_data.edge_attributes.append(edge_attrs)
+
+                else:  # whole graph
+                    for n in range(len(edges)):  # FIXME check
+                        edge_attrs = [edge_attributes[a][0][n] for a in attr_keys]
+                        dataset_data.edge_attributes.append(edge_attrs)
+
+        try:
+            node_info = self.gen_dataset.node_info
+            dataset_data.node_info = node_info
+        except AttributeError: pass
 
         return dataset_data
 
@@ -546,11 +618,10 @@ if __name__ == '__main__':
     from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, \
         Task
     from gnn_aid.datasets.datasets_manager import DatasetManager
-    from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 
-    # dc = DatasetConfig(('example', 'example'))
-    # dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a'], edge_attr=['weight']),
-    #                        task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
+    dc = DatasetConfig(('example', 'example'))
+    dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['a'], edge_attr=['weight']),
+                           task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
 
     # dc = DatasetConfig(('example', 'example3'))
     # dvc = DatasetVarConfig(features=FeatureConfig(node_attr=['type'], edge_attr=[]),
@@ -560,8 +631,8 @@ if __name__ == '__main__':
     # dvc = DatasetVarConfig(features=FeatureConfig(node_struct=[FeatureConfig.ten_ones]),
     #                        task=Task.EDGE_PREDICTION, dataset_ver_ind=0)
 
-    dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
-    dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
+    # dc = DatasetConfig((LibPTGDataset.data_folder, 'Homogeneous', 'Planetoid', 'Cora'))
+    # dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     # dvc = LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.EDGE_PREDICTION})
 
     # dc = DatasetConfig(('example', 'example'))
@@ -574,8 +645,8 @@ if __name__ == '__main__':
     visible_part = VisiblePart(ViewPoint(**{'center': 2, 'depth': 2}), gen_dataset)
     dd = visible_part.get_dataset_data()
     # print(visible_part.dataset_index)
-    # print(dd)
-    print(json_dumps(dd, indent=1))
+    print(dd)
+    # print(json_dumps(dd, indent=1))
     gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
 
     dvd = visible_part.get_dataset_var_data()

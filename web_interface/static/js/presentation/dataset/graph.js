@@ -3,24 +3,81 @@ class Graph extends VisibleGraph {
         super(datasetInfo, element)
         this.layoutFreezeButtonId = this.visView.singleGraphLayoutFreezeId
 
+        // Constants
+        this.edgeColor = '#ffffff'
+
         // Variables
         this.numNodes = null // Number of nodes
         this.edges = null // List of pairs [i, j]
-
-        // Constants
-        this.edgeColor = '#ffffff'
+        this.nodes = null // List of nodes (from 0 to N-1)
     }
 
     async _build() {
         // Set graph data from dataset
-        this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
+        // this.datasetData = await controller.ajaxRequest('/dataset', {get: "data"})
+        // console.log('Graph._build()', this.datasetData)
 
         // [this.numNodes, this.adj, this.adjIn] = this.dataset.getGraph()
         this.numNodes = this.datasetData.nodes
         this.edges = this.datasetData.edges
+        this.nodes = Array.from(Array(this.numNodes).keys())
 
         await super._build()
         $(this.svgElement).css("background-color", "#404040")
+    }
+
+    _convertDatasetVar(datasetVar) {
+        if (!datasetVar) return null;
+        const converted = {};
+
+        const nodeKeys = this.getNodes()
+        const edges = this.getEdges()
+        const edgeKeys = edges.map(([i, j]) => `${i},${j}`)
+
+        for (const elem of VisibleGraph.ELEMS) {
+            if (!datasetVar[elem]) continue;
+
+            converted[elem] = {}
+            for (const [field, dataArray] of Object.entries(datasetVar[elem])) {
+                if (!dataArray || !Array.isArray(dataArray)) continue;
+
+                if (elem === "graph") {
+                    converted[elem][field] = dataArray;
+                    continue;
+                }
+
+                if (elem === "edge") {
+                    const actualArray =
+                        dataArray.length === 1 && Array.isArray(dataArray[0]) ? dataArray[0] : dataArray;
+
+                    const varDict = {};
+                    edgeKeys.forEach((key, index) => {
+                        if (index < actualArray.length && actualArray[index] !== null) {
+                            varDict[key] = actualArray[index];
+                        }
+                    });
+
+                    converted[elem][field] = varDict;
+                    continue;
+                }
+
+                const actualArray =
+                    dataArray.length === 1 && Array.isArray(dataArray[0]) ? dataArray[0] : dataArray;
+
+                const varDict = {};
+                nodeKeys.forEach((key, index) => {
+                    if (index < actualArray.length && actualArray[index] !== null) {
+                        varDict[key] = actualArray[index];
+                    }
+                });
+
+                converted[elem][field] = varDict;
+            }
+
+            if (Object.keys(converted[elem]).length === 0) delete converted[elem];
+        }
+
+        return converted
     }
 
     // Variable part of drop - to be overridden
@@ -45,14 +102,6 @@ class Graph extends VisibleGraph {
             (_, v) => this.showClassAsColor(v), this._tagVar)
     }
 
-    // Check parameters to decide whether to turn on a light mode
-    checkLightMode() {
-        this.nodesVisible = this.scale >= LIGHT_MODE_SCALE_THRESHOLD_SINGLE
-        for (const node of Object.values(this.nodePrimitives))
-            node.lightMode = !this.nodesVisible
-        super.checkLightMode(this.nodesVisible)
-    }
-
     setLayout(layout) {
         if (layout == null)
             layout = this.visView.getValue(this.visView.singleGraphLayoutId)
@@ -62,6 +111,10 @@ class Graph extends VisibleGraph {
                 break
             case "force":
                 this.layout = new ForceLayout()
+                break
+            case "forceAtlas2":
+                this.layout = new ForceAtlas2Layout()
+                this.layout.rad = 0.08
                 break
         }
         super.setLayout()
@@ -78,10 +131,7 @@ class Graph extends VisibleGraph {
     }
 
     getNodes() {
-        let nodes = [] // NOTE copying is not good
-        for (let i = 0; i < this.numNodes; i++)
-            nodes.push(i)
-        return nodes
+        return this.nodes
     }
 
     getNumNodes() {
@@ -144,32 +194,6 @@ class Graph extends VisibleGraph {
     // Get information HTML
     getInfo() {
         return '<b>Whole graph</b>'
-    }
-
-    // Create HTML for SVG primitives on the given element
-    createPrimitives() {
-        this.svgElement.innerHTML = ''
-        this.nodePrimitives = {}
-        this.edgePrimitives = {}
-        let directed = this.datasetInfo.directed
-
-        // Edges
-        // this.addEdgePrimitivesBatch(
-        //    0, this.getEdges(), this.edgeColor, this.edgeStrokeWidth, directed, true)
-
-        // Edges - create individual edge primitives
-        let edges = this.getEdges()
-        for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
-            let [i, j] = edges[edgeIdx]
-            this.createEdgePrimitive(0, `${i},${j}`, i, j, this.edgeRadius, this.edgeColor, this.edgeStrokeWidth, directed, true)
-        }
-
-        // Nodes
-        for (let n=0; n<this.numNodes; n++)
-            this.createNodePrimitive(this.svgElement, n,
-                this.nodeRadius, "circle", this.nodeStrokeWidth, this.nodeColor, true)
-
-        super.createPrimitives()
     }
 
     // Move all primitives on a specified vector

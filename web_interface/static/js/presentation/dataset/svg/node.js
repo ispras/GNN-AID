@@ -30,6 +30,8 @@ class SvgNode extends SvgElement {
         this.text.setAttribute('text-anchor', 'middle')
         this.text.setAttribute('class', 'graph-node-text')
         this.text.setAttribute('display', show ? "inline" : "none")
+        this.g.prepend(this.text)
+        this.g.prepend(this.body)
 
         // this.attrBlocks = null
         // this.attrTextBlocks = null
@@ -41,24 +43,35 @@ class SvgNode extends SvgElement {
         let predictions = this.satellites['predictions'] = new Satellite("circle", this.r)
         predictions.placeX = (ix, r, count) => this.x + 0.8 * r*(-count/2 + 1/2 + ix)
         predictions.placeY = (ix, r, count) => this.y + 1.6 * r
+        // this.g.appendChild(predictions)
 
         let features = this.satellites['features'] = new Satellite("rect", this.r)
         features.placeX = (ix, r, count) => this.x - 2*r
         features.placeY = (ix, r, count) => this.y - r + ix * 0.8 * r
+        // for (const b of features.blocks)
+        //     this.g.appendChild(b)
 
         let logits = this.satellites['logits'] = new Satellite("rect", this.r)
         logits.placeX = (ix, r, count) => this.x + 1.2*r
         logits.placeY = (ix, r, count) => this.y - r + ix * 0.8 * r
+        // this.g.appendChild(logits)
 
         let trainmask = this.satellites['train-test-mask'] = new Satellite("text", this.r)
         trainmask.placeX = (ix, r, count) => this.x
         trainmask.placeY = (ix, r, count) => this.y + 0.61 * r
+        // this.g.appendChild(trainmask)
+    }
+
+    // Add tip to this node
+    addTip(text) {
+        this.tipText["node"] = text
+        this._addTip([this.body], "node")
     }
 
     // Add node features values
     setFeatures(feats) {
-        // if (feats == null)
-        //     console.error('null')
+        if (feats == null)
+            console.error('null')
         let r = SvgElement.scaledRadius(this.r, this.s)
         let size = 0.8 * r
         let features = this.satellites['features']
@@ -100,6 +113,11 @@ class SvgNode extends SvgElement {
         }
         this._addTip(features.blocks, "feature")
         this.tipText["feature"] = tipText
+
+        this.gSat['features'].innerHTML = ''
+        for (const e of features.blocks)
+            this.gSat['features'].appendChild(e)
+
         return true
     }
 
@@ -165,8 +183,10 @@ class SvgNode extends SvgElement {
         this.x = x
         this.y = y
         if (this.form === "circle") {
-            this.body.setAttribute('cx', this.x)
-            this.body.setAttribute('cy', this.y)
+            this.body.cx.baseVal.value = x
+            this.body.cy.baseVal.value = y
+            // this.body.setAttribute('cx', this.x)
+            // this.body.setAttribute('cy', this.y)
         }
         else {
             this.body.setAttribute('points', svgPolygon(x, y, this.r*this.s, this.numEdges))
@@ -174,8 +194,10 @@ class SvgNode extends SvgElement {
         this.text.setAttribute('x', this.x)
         this.text.setAttribute('y', this.y)
 
-        for (const satellite of Object.values(this.satellites))
-            satellite.moveTo(x, y)
+        console.log('moveTo  = etAttribute')
+
+        // for (const satellite of Object.values(this.satellites))
+        //     satellite.moveTo(x, y)
     }
 
     scale(s) {
@@ -189,15 +211,17 @@ class SvgNode extends SvgElement {
         this.text.setAttribute('font-size', `${2 / 3 * r}pt`)
     }
 
-    // Set visibility for all elements
-    visible(show) {
-        this.show = show
-        this.body.setAttribute('display', show ? "inline" : "none")
-        this.text.setAttribute('display', show ? "inline" : "none")
-
-        for (const satellite of Object.values(this.satellites))
-            satellite.visible(!this.lightMode && show)
-    }
+    // // Set visibility for all elements
+    // visible(show) {
+    //     this.show = show
+    //     // this.body.setAttribute('visibility', show ? "visible" : "hidden")
+    //     // this.text.setAttribute('visibility', show ? "visible" : "hidden")
+    //     this.body.setAttribute('display', show ? "inline" : "none")
+    //     this.text.setAttribute('display', show ? "inline" : "none")
+    //
+    //     for (const satellite of Object.values(this.satellites))
+    //         satellite.visible(!this.lightMode && show)
+    // }
 
     // Set stroke color
     setColor(color, width) {
@@ -222,6 +246,20 @@ class SvgNode extends SvgElement {
     dropFillColor() {
         this.body.setAttribute('fill', this.color)
     }
+
+    // setText(text) {
+    //     if (text == null)
+    //         this.text.remove()
+    //     else {
+    //         if (this.text && this.text.textContent === text)
+    //             return
+    //         this.text = Svg.text(text, this.x, this.y, 'middle', `${2 / 3 * this.r}pt`)
+    //         this.text.setAttribute('text-anchor', 'middle')
+    //         this.text.setAttribute('class', 'graph-node-text')
+    //         this.text.setAttribute('display', this.show ? "inline" : "none")
+    //         this.g.appendChild(this.text)
+    //     }
+    // }
 }
 
 /// Create an SVG path 'points' which draws a symmetric n-polygon around point pos with radius r

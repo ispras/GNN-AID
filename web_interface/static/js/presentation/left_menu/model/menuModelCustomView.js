@@ -7,7 +7,7 @@ class MenuModelCustomView extends MenuView {
     init(args) {
         super.init(args)
         this.prefixStorage = PrefixStorage.fromJSON(args[0])
-        this.info = JSON_parse(args[1])
+        this.info = args[1]
 
         this.$mainDiv.append($("<h3></h3>").text("Choose custom model"))
 
@@ -37,7 +37,7 @@ class MenuModelCustomView extends MenuView {
         blockDiv(this.$div, true)
         let [ps, info] = await controller.ajaxRequest('/model', {do: "index", type: "custom"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
-        this.info = JSON_parse(info)
+        this.info = info
         this._build()
         blockDiv(this.$div, false)
     }

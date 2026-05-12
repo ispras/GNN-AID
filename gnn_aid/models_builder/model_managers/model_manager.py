@@ -2,7 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 from types import FunctionType
-from typing import List, Union, Type, Callable
+from typing import List, Union, Type, Callable, Tuple, Any
 
 from gnn_aid.aux import Declare, UserCodeInfo
 from gnn_aid.aux.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, all_subclasses, \
@@ -12,15 +12,17 @@ from gnn_aid.aux.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, a
 from gnn_aid.data_structures import ModelManagerConfig, ModelModificationConfig, PoisonAttackConfig, \
     EvasionAttackConfig, MIAttackConfig, PoisonDefenseConfig, EvasionDefenseConfig, MIDefenseConfig, \
     ModelConfig, Task
-from gnn_aid.data_structures.configs import ConfigPattern, CONFIG_CLASS_NAME, CONFIG_OBJ
+from gnn_aid.data_structures.gen_config import CONFIG_OBJ, CONFIG_CLASS_NAME, ConfigPattern
 from gnn_aid.datasets import GeneralDataset
-from gnn_aid.models_builder import FrameworkGNNConstructor
+from gnn_aid.models_builder import FrameworkGNNConstructor, GNNConstructor
 
 
-# TODO misha, Kirill add comments to class and all functions
 class GNNModelManager:
-    """ class of basic functions over models:
-    training, evaluation, save and load principle
+    """
+    Base class providing core model operations: training, evaluation, save, and load.
+
+    Manages model state including attack/defense configurations, training hooks,
+    and serialization to/from disk.
     """
 
     def __init__(
@@ -29,11 +31,13 @@ class GNNModelManager:
             modification: ModelModificationConfig = None
     ):
         """
-        :param manager_config: ?
-        :param modification: ?
+        Args:
+            manager_config (ModelManagerConfig): Configuration for the model manager.
+                Wrapped in a ConfigPattern if given as a plain ModelManagerConfig. Default value: `None`.
+            modification (ModelModificationConfig): Configuration for model versioning and epochs.
+                Wrapped in a ConfigPattern if given as a plain ModelModificationConfig. Default value: `None`.
         """
         if manager_config is None:
-            # raise RuntimeError("model manager config must be specified")
             manager_config = ConfigPattern(
                 _config_class="ModelManagerConfig",
                 _config_kwargs={},
@@ -43,9 +47,6 @@ class GNNModelManager:
                 _config_class="ModelManagerConfig",
                 _config_kwargs=manager_config.to_savable_dict(),
             )
-        # TODO Kirill, write raise Exception
-        # else:
-        #     raise Exception()
 
         if modification is None:
             modification = ConfigPattern(
@@ -57,9 +58,6 @@ class GNNModelManager:
                 _config_class="ModelModificationConfig",
                 _config_kwargs=modification.to_dict(),
             )
-        # TODO Kirill, write raise Exception
-        # else:
-        #     raise Exception()
 
         self.manager_config = manager_config
         self.modification = modification
@@ -110,6 +108,8 @@ class GNNModelManager:
             hook: Callable,
             where: str
     ) -> None:
+        """ Register a callback hook for a specific training event.
+        """
         if where == 'after_epoch':
             self._after_epoch_hook = hook
         else:
@@ -125,9 +125,6 @@ class GNNModelManager:
             self,
             gen_dataset: GeneralDataset
     ):
-        """ Perform 1 step of model training.
-        """
-        # raise NotImplementedError()
         pass
 
     def train_complete(
@@ -136,9 +133,6 @@ class GNNModelManager:
             steps: int = None,
             **kwargs
     ) -> None:
-        """
-        """
-        # raise NotImplementedError()
         pass
 
     def train_on_batch(
@@ -158,12 +152,13 @@ class GNNModelManager:
     def get_name(
             self
     ) -> str:
+        """
+        Returns:
+            JSON string identifying this model manager by class name and config.
+        """
         manager_name = self.manager_config.to_savable_dict()
         # FIXME Kirill, make ModelManagerConfig and remove manager_name[CONFIG_CLASS_NAME]
         manager_name[CONFIG_CLASS_NAME] = self.__class__.__name__
-        # for key, value in kwargs.items():
-        #     manager_name[key] = value
-        # manager_name = dict(sorted(manager_name.items()))
         json_str = json.dumps(manager_name, indent=2)
         return json_str
 
@@ -172,21 +167,12 @@ class GNNModelManager:
             path: Union[str, Path] = None,
             **kwargs
     ) -> Type:
-        """
-        Load model from torch save format
-        """
         raise NotImplementedError()
 
     def save_model(
             self,
             path: Union[str, Path] = None
     ) -> None:
-        """
-        Save the model in torch format
-
-        :param path: path to save the model. By default,
-         the path is compiled based on the global class variables
-        """
         raise NotImplementedError()
 
     def model_path_info(
@@ -201,12 +187,16 @@ class GNNModelManager:
             **kwargs
     ) -> Union[str, Path]:
         """
-        Load executor. Generates the download model path if no other path is specified.
+        Load the model, generating the path automatically if none is provided.
 
-        :param path: path to load the model. By default, the path is compiled based on the global
-         class variables
+        Args:
+            path (Union[str, Path, None]): Path to load the model from. If None, the path is
+                derived from the global config variables. Default value: `None`.
+            **kwargs: Additional arguments, e.g. model_ver_ind override.
+
+        Returns:
+            Path to the model directory.
         """
-
         if path is None:
             gnn_mm_name_hash = self.get_hash()
             model_dir_path, _ = Declare.declare_model_by_config(
@@ -236,8 +226,10 @@ class GNNModelManager:
             self
     ) -> str:
         """
-        calculates the hash on behalf of the model manager required for storage. The sha256
-        algorithm is used.
+        Compute the SHA-256 hash of the model manager name string used for storage paths.
+
+        Returns:
+            Hex digest of the SHA-256 hash.
         """
         gnn_MM_name = self.get_name()
         json_object = json.dumps(gnn_MM_name)
@@ -250,12 +242,16 @@ class GNNModelManager:
             files_paths: List[Union[str, Path]] = None
     ) -> Path:
         """
-        Save executor, generates paths and prepares all information about the model
-        and its parameters for saving
+        Save the model and all associated parameter files.
 
-        :param path: path to save the model. By default,
-         the path is compiled based on the global class variables
-        :param files_paths:
+        Args:
+            path (Union[str, Path, None]): Directory to save the model into. If None, the path
+                is derived from the global config variables. Default value: `None`.
+            files_paths (List[Union[str, Path]]): List of 10 file paths for the parameter files.
+                Required when path is not None.
+
+        Returns:
+            Path to the model directory.
         """
         if path is None:
             dir_path, files_paths = Declare.models_path(self)
@@ -274,7 +270,6 @@ class GNNModelManager:
         mi_defense_kwargs_file = files_paths[6]
         evasion_defense_kwargs_file = files_paths[7]
         evasion_attack_kwargs_file = files_paths[8]
-        # evasion_attack_diff_file = files_paths[9]
         mi_attack_kwargs_file = files_paths[9]
         self.save_model(path)
 
@@ -298,9 +293,6 @@ class GNNModelManager:
             f.write(self.evasion_defense_config.json_for_config())
         with open(evasion_attack_kwargs_file, "w") as f:
             f.write(self.evasion_attack_config.json_for_config())
-        # if self.evasion_attack_flag and self.evasion_attacker.attack_diff is not None:
-        #     with open(evasion_attack_diff_file, 'w') as file:
-        #         json.dump(self.evasion_attacker.attack_diff.to_json(), file, indent=2)
         with open(mi_attack_kwargs_file, "w") as f:
             f.write(self.mi_attack_config.json_for_config())
         return path.parent
@@ -310,6 +302,15 @@ class GNNModelManager:
             poison_attack_config: Union[ConfigPattern, PoisonAttackConfig] = None,
             poison_attack_name: str = None
     ) -> None:
+        """
+        Configure and instantiate the poison attacker.
+
+        Args:
+            poison_attack_config (Union[ConfigPattern, PoisonAttackConfig]): Attack config.
+                Defaults to EmptyPoisonAttacker if None. Default value: `None`.
+            poison_attack_name (str): Attacker class name. Required if config is a plain
+                PoisonAttackConfig. Default value: `None`.
+        """
         if poison_attack_config is None:
             poison_attack_config = ConfigPattern(
                 _class_name=poison_attack_name or "EmptyPoisonAttacker",
@@ -338,16 +339,11 @@ class GNNModelManager:
         self.poison_attack_name = poison_attack_name
         poison_attack_kwargs = getattr(self.poison_attack_config, CONFIG_OBJ).to_dict()
 
-        # name_klass = {e.name: e for e in PoisonAttacker.__subclasses__()}
         from gnn_aid.attacks.poison_attacks import PoisonAttacker
         name_klass = {e.name: e for e in all_subclasses(PoisonAttacker)}
 
         klass = name_klass[self.poison_attack_name]
-        self.poison_attacker = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **poison_attack_kwargs
-        )
+        self.poison_attacker = klass(**poison_attack_kwargs)
         self.poison_attack_flag = True
 
     def set_evasion_attacker(
@@ -355,6 +351,15 @@ class GNNModelManager:
             evasion_attack_config: Union[ConfigPattern, EvasionAttackConfig] = None,
             evasion_attack_name: str = None
     ) -> None:
+        """
+        Configure and instantiate the evasion attacker.
+
+        Args:
+            evasion_attack_config (Union[ConfigPattern, EvasionAttackConfig]): Attack config.
+                Defaults to EmptyEvasionAttacker if None. Default value: `None`.
+            evasion_attack_name (str): Attacker class name. Required if config is a plain
+                EvasionAttackConfig. Default value: `None`.
+        """
         if evasion_attack_config is None:
             evasion_attack_config = ConfigPattern(
                 _class_name=evasion_attack_name or "EmptyEvasionAttacker",
@@ -386,11 +391,7 @@ class GNNModelManager:
         from gnn_aid.attacks.evasion_attacks import EvasionAttacker
         name_klass = {e.name: e for e in EvasionAttacker.__subclasses__()}
         klass = name_klass[self.evasion_attack_name]
-        self.evasion_attacker = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **evasion_attack_kwargs
-        )
+        self.evasion_attacker = klass(**evasion_attack_kwargs)
         self.evasion_attack_flag = True
 
     def set_mi_attacker(
@@ -398,6 +399,15 @@ class GNNModelManager:
             mi_attack_config: Union[ConfigPattern, MIAttackConfig] = None,
             mi_attack_name: str = None
     ) -> None:
+        """
+        Configure and instantiate the membership inference attacker.
+
+        Args:
+            mi_attack_config (Union[ConfigPattern, MIAttackConfig]): Attack config.
+                Defaults to EmptyMIAttacker if None. Default value: `None`.
+            mi_attack_name (str): Attacker class name. Required if config is a plain
+                MIAttackConfig. Default value: `None`.
+        """
         if mi_attack_config is None:
             mi_attack_config = ConfigPattern(
                 _class_name=mi_attack_name or "EmptyMIAttacker",
@@ -429,11 +439,7 @@ class GNNModelManager:
         from gnn_aid.attacks.mi_attacks import MIAttacker
         name_klass = {e.name: e for e in MIAttacker.__subclasses__()}
         klass = name_klass[self.mi_attack_name]
-        self.mi_attacker = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **mi_attack_kwargs
-        )
+        self.mi_attacker = klass(**mi_attack_kwargs)
         self.mi_attack_flag = True
 
     def set_poison_defender(
@@ -441,6 +447,15 @@ class GNNModelManager:
             poison_defense_config: Union[ConfigPattern, PoisonDefenseConfig] = None,
             poison_defense_name: str = None
     ) -> None:
+        """
+        Configure and instantiate the poison defender.
+
+        Args:
+            poison_defense_config (Union[ConfigPattern, PoisonDefenseConfig]): Defense config.
+                Defaults to EmptyPoisonDefender if None. Default value: `None`.
+            poison_defense_name (str): Defender class name. Required if config is a plain
+                PoisonDefenseConfig. Default value: `None`.
+        """
         if poison_defense_config is None:
             poison_defense_config = ConfigPattern(
                 _class_name=poison_defense_name or "EmptyPoisonDefender",
@@ -472,11 +487,7 @@ class GNNModelManager:
         from gnn_aid.defenses.poison_defense import PoisonDefender
         name_klass = {e.name: e for e in all_subclasses(PoisonDefender)}
         klass = name_klass[self.poison_defense_name]
-        self.poison_defender = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **poison_defense_kwargs
-        )
+        self.poison_defender = klass(**poison_defense_kwargs)
         self.poison_defense_flag = True
 
     def set_evasion_defender(
@@ -484,6 +495,15 @@ class GNNModelManager:
             evasion_defense_config: Union[ConfigPattern, EvasionDefenseConfig] = None,
             evasion_defense_name: str = None
     ) -> None:
+        """
+        Configure and instantiate the evasion defender.
+
+        Args:
+            evasion_defense_config (Union[ConfigPattern, EvasionDefenseConfig]): Defense config.
+                Defaults to EmptyEvasionDefender if None. Default value: `None`.
+            evasion_defense_name (str): Defender class name. Required if config is a plain
+                EvasionDefenseConfig. Default value: `None`.
+        """
         if evasion_defense_config is None:
             evasion_defense_config = ConfigPattern(
                 _class_name=evasion_defense_name or "EmptyEvasionDefender",
@@ -515,11 +535,7 @@ class GNNModelManager:
         from gnn_aid.defenses.evasion_defense import EvasionDefender
         name_klass = {e.name: e for e in EvasionDefender.__subclasses__()}
         klass = name_klass[self.evasion_defense_name]
-        self.evasion_defender = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **evasion_defense_kwargs
-        )
+        self.evasion_defender = klass(**evasion_defense_kwargs)
         self.evasion_defense_flag = True
 
     def set_mi_defender(
@@ -528,7 +544,13 @@ class GNNModelManager:
             mi_defense_name: str = None
     ) -> None:
         """
+        Configure and instantiate the membership inference defender.
 
+        Args:
+            mi_defense_config (Union[ConfigPattern, MIDefenseConfig]): Defense config.
+                Defaults to EmptyMIDefender if None. Default value: `None`.
+            mi_defense_name (str): Defender class name. Required if config is a plain
+                MIDefenseConfig. Default value: `None`.
         """
         if mi_defense_config is None:
             mi_defense_config = ConfigPattern(
@@ -561,11 +583,7 @@ class GNNModelManager:
         from gnn_aid.defenses.mi_defense import MIDefender
         name_klass = {e.name: e for e in MIDefender.__subclasses__()}
         klass = name_klass[self.mi_defense_name]
-        self.mi_defender = klass(
-            # device=self.device,
-            # device=device("cpu"),
-            **mi_defense_kwargs
-        )
+        self.mi_defender = klass(**mi_defense_kwargs)
         self.mi_defense_flag = True
 
     @staticmethod
@@ -583,16 +601,18 @@ class GNNModelManager:
             model_path: dict,
             dataset_path: Union[str, Path],
             **kwargs
-    ) -> [Type, Path]:
+    ) -> Tuple[Type, Path]:
         """
-        Use information about model and model manager take gnn model,
-        create gnn model manager object and load weights to the save model
-        :param model_path: dict with information how create path to the model
-        :param dataset_path: path to the dataset
-        :param kwargs:
-        :return: gnn model manager object and path to the model directory
-        """
+        Reconstruct a model manager from saved path info and load model weights.
 
+        Args:
+            model_path (dict): Dict with keys identifying the model path components.
+            dataset_path (Union[str, Path]): Path to the dataset.
+            **kwargs: Additional arguments forwarded to the model manager constructor.
+
+        Returns:
+            Tuple of the loaded GNNModelManager instance and the model directory path.
+        """
         model_dir_path, files_paths = Declare.declare_model_by_config(
             dataset_path=dataset_path,
             GNNModelManager_hash=str(model_path['gnn_model_manager']),
@@ -620,8 +640,6 @@ class GNNModelManager:
         with open(gnn_mm_file) as f:
             params = json.load(f)
             class_name = params.pop(CONFIG_CLASS_NAME)
-            # class_name =
-            # manager_config = ModelManagerConfig(**params)
             manager_config = ConfigPattern(**params)
         with open(FRAMEWORK_PARAMETERS_PATH, 'r') as f:
             framework_model_managers_info = json.load(f)
@@ -648,7 +666,10 @@ class GNNModelManager:
             self
     ) -> dict:
         """
-        Get available info about model for frontend
+        Get available info about this model for the frontend.
+
+        Returns:
+            Dict with keys 'manager', 'modification', and/or 'epochs'.
         """
         result = {}
         if hasattr(self, 'manager_config'):
@@ -663,11 +684,13 @@ class GNNModelManager:
             self
     ) -> dict:
         """
-        :return: dict with the available functions of the model manager by the 'functions' key.
+        Return a dict with the model manager's own methods listed under the 'functions' key.
+
+        Returns:
+            Dict with key 'functions' mapping to a list of method names.
         """
         model_data = {}
 
-        # Functions
         def get_own_functions(cls):
             return [x for x, y in cls.__dict__.items()
                     if isinstance(y, (FunctionType, classmethod, staticmethod))]
@@ -678,7 +701,16 @@ class GNNModelManager:
     @staticmethod
     def take_gnn_obj(
             gnn_file: Union[str, Path]
-    ) -> Type:
+    ) -> GNNConstructor:
+        """
+        Load and return a GNN object from a saved JSON descriptor file.
+
+        Args:
+            gnn_file (Union[str, Path]): Path to the JSON file describing the GNN class and config.
+
+        Returns:
+            Instantiated GNN object (FrameworkGNNConstructor or user-defined class).
+        """
         with open(gnn_file) as f:
             params = json.load(f)
             class_name = params.pop(CONFIG_CLASS_NAME)
