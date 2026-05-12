@@ -37,6 +37,9 @@ class MenuModelConstructorView extends MenuView {
             return -1
 
         console.log("architecture", mc)
+
+        this.$shortDiv.html($("<p></p>").text(modelShortConfig(mc)))
+
         await controller.blockRequest(this.requestBlock, 'modify', {layers: mc})
     }
 
@@ -494,4 +497,23 @@ function showRecommendationDialog(message) {
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
     });
+}
+
+function modelShortConfig(config) {
+    let text = ''
+    let first = true
+    for (const layer of Object.values(config)) {
+        let _in = layer?.layer?.layer_kwargs?.in_channels || layer?.layer?.layer_kwargs?.in_features || ""
+        let name = layer?.layer?.layer_name || "?"
+        name = name.replace('Conv', '')
+        let out = layer?.layer?.layer_kwargs?.out_channels || layer?.layer?.layer_kwargs?.out_features || ""
+        let act = layer?.activation?.activation_name || ""
+        let drop = layer?.activation?.activation_name || ""
+        if (first) {
+            text += `${_in}`
+            first = false
+        }
+        text += `-${name}-${out}`
+    }
+    return text
 }

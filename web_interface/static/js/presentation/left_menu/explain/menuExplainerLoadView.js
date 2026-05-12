@@ -42,6 +42,13 @@ class MenuExplainerLoadView extends MenuView {
 
     async _accept() {
         let ep = this.prefixStorage.getConfig()
+
+        let shortText = `
+            ${ep.explainer_name}
+            (version=${ep.explainer_ver_ind})
+        `
+        this.$shortDiv.html($("<p></p>").text(shortText))
+
         await controller.blockRequest(this.requestBlock, 'modify', ep)
     }
 

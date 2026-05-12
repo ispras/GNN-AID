@@ -28,21 +28,33 @@ class MenuBeforeTrainView extends MenuView {
 
     async _accept() {
         // Form configs from selectors values where checkbox is checked
+        let shortText = []
         let paramConfigs = {}
         for (let name of MenuBeforeTrainView.names) {
-            if (this.$checkboxes[name].is(':checked'))
+            if (this.$checkboxes[name].is(':checked')) {
                 paramConfigs[name] = {
                     _class_name: this.$methodSelects[name].val(),
                     _config_kwargs: Object.assign({}, this.paramsBuilders[name].kwArgs)
                 }
+                shortText.push(`
+                    ${paramConfigs[name]._class_name}
+                    (${JSON_stringify(paramConfigs[name]._config_kwargs, 1)})
+                `)
+            }
         }
         console.log("AD paramConfigs", paramConfigs)
+
+        this.$shortDiv.html($("<p></p>").text(shortText.join(';')))
+
         await controller.blockRequest(this.requestBlock, 'modify', paramConfigs)
     }
 
     // Build buttons for model training process in model menu
     async addConfigMenu() {
         console.log('addConfigMenu')
+
+        this.$div.addClass("left-menu-block_border");
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.BeforeTrain"));
 
         this.$mainDiv.append($("<label></label>").html("<h3>Before training</h3>"))
 

@@ -432,6 +432,7 @@ class ModelTrainerBlock(Block):
             self.metrics = [Metric(**m) for m in json.loads(params.get('metrics'))]
             self._adjust_metrics()
 
+            # FIXME all hangs if FAIL here
             from threading import Thread
             Thread(target=self._train_model, args=(mode, steps)).start()
             # NOTE: we need to return context instantly to avoid main process waiting and blocking
