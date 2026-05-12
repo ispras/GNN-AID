@@ -372,6 +372,7 @@ class VisibleGraph {
         this.alive = false
         this.svgElement.innerHTML = ''
         this.svgPanel.$tip.hide()
+        $("#dataset-info-minimap").empty()
     }
 
     // Convert new datasetVar format (arrays) to old format (dicts) for compatibility
@@ -637,6 +638,7 @@ class VisibleGraph {
     }
 
     _debugInfo() {
+        return
         let html = ""
         html += `scale: ${this.scale.toPrecision(3)}`
         html += `<br> svg pos: ${this.svgPos.str(5)}`
@@ -693,23 +695,26 @@ class VisibleGraph {
 
     // Minimap setup (вызвать один раз в init)
     _initMinimap() {
-        // Создаём canvas поверх SVG-контейнера
-        const wrap = this.svgElement.parentElement
-        const mc = document.createElement('canvas')
-        mc.style.cssText = `
-            position:absolute; bottom:12px; right:12px;
-            width:160px; height:100px; border-radius:8px;
-            background:rgba(15,17,23,0.85);
-            border:1px solid rgba(100,120,255,0.25);
-            pointer-events:none; z-index:10;
-        `
-        // parentElement должен быть position:relative
-        wrap.style.position = 'relative'
-        wrap.appendChild(mc)
-        this._minimapCanvas = mc
-        this._minimapCtx   = mc.getContext('2d')
+        let $minimapDiv = $("#dataset-info-minimap")
+        $minimapDiv.empty()
 
-        // Предвычисляем фиксированную выборку и bounding box
+        const mc = document.createElement('canvas')
+        $(mc).css({
+            // position: 'absolute',
+            // bottom: '12px',
+            // right: '45px',
+            width: '100%',
+            height: '100%',
+            borderRadius: '8px',
+            // background: 'rgba(15,17,23,0.85)',
+            // border: '1px solid rgba(100,120,255,0.25)',
+            // pointerEvents: 'none',
+            // zIndex: 10,
+        })
+
+        $minimapDiv.append(mc)
+        this._minimapCanvas = mc
+        this._minimapCtx = mc.getContext('2d')
         this._minimapSample = null
         this._minimapBBox   = null
     }
@@ -755,24 +760,18 @@ class VisibleGraph {
         const mc  = this._minimapCanvas
         const ctx = this._minimapCtx
         if (!mc || !ctx || !this.layout || !this._minimapSample) return
-
         let t = performance.now()
         const MW = mc.offsetWidth  || 160
         const MH = mc.offsetHeight || 100
         mc.width  = MW
         mc.height = MH
-
         const pos = this.layout.pos
-
-        // Bbox считаем по всем точкам сэмпла каждый раз —
-        // layout мог сдвинуться после _buildMinimapCache
         let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity
         for (const k of this._minimapSample) {
             const v = pos[k]; if (!v) continue
             if (v.x < xMin) xMin = v.x; if (v.x > xMax) xMax = v.x
             if (v.y < yMin) yMin = v.y; if (v.y > yMax) yMax = v.y
         }
-        // Крайние точки из кэша — гарантируют что bbox не уже реального графа
         if (this._minimapBBox) {
             const b = this._minimapBBox
             if (b.xMin < xMin) xMin = b.xMin
@@ -780,24 +779,25 @@ class VisibleGraph {
             if (b.xMax > xMax) xMax = b.xMax
             if (b.yMax > yMax) yMax = b.yMax
         }
-
+        // Расширяем bbox углами viewport-а в world-координатах
+        const vpX0 = this.screenPos.x / this.scale
+        const vpY0 = this.screenPos.y / this.scale
+        const vpX1 = vpX0 + this.svgParentSize.x / this.scale
+        const vpY1 = vpY0 + this.svgParentSize.y / this.scale
+        if (vpX0 < xMin) xMin = vpX0; if (vpX1 > xMax) xMax = vpX1
+        if (vpY0 < yMin) yMin = vpY0; if (vpY1 > yMax) yMax = vpY1
         const ww = xMax - xMin || 1
         const wh = yMax - yMin || 1
-
         const PAD    = 4
         const availW = MW - PAD * 2
         const availH = MH - PAD * 2
         const scale  = Math.min(availW / ww, availH / wh)
-
         const offX = PAD + (availW - ww * scale) / 2
         const offY = PAD + (availH - wh * scale) / 2
-
         const toMX = (wx) => (wx - xMin) * scale + offX
         const toMY = (wy) => (wy - yMin) * scale + offY
-
         ctx.fillStyle = '#0f1117'
         ctx.fillRect(0, 0, MW, MH)
-
         ctx.fillStyle = '#6070ff'
         for (const k of this._minimapSample) {
             const v = pos[k]; if (!v) continue
@@ -805,16 +805,14 @@ class VisibleGraph {
             ctx.arc(toMX(v.x), toMY(v.y), 1.5, 0, Math.PI * 2)
             ctx.fill()
         }
-
         // Viewport
-        const vx = toMX(this.screenPos.x / this.scale)
-        const vy = toMY(this.screenPos.y / this.scale)
+        const vx = toMX(vpX0)
+        const vy = toMY(vpY0)
         const vw = (this.svgParentSize.x / this.scale) * scale
         const vh = (this.svgParentSize.y / this.scale) * scale
         ctx.strokeStyle = 'rgba(160,170,255,0.85)'
         ctx.lineWidth = 1
         ctx.strokeRect(vx, vy, vw, vh)
-
         Debug.DRAW_MINIMAP_TIME = performance.now() - t
     }
 

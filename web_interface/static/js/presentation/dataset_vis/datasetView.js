@@ -15,18 +15,64 @@ class DatasetView extends View {
         this.svgPanel = new SvgPanel($svgDiv[0])
 
         // Info panels
-        this.$upLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-upleft")
-            .attr("style", "position: fixed; background: #eeeeeeb0; padding: 5px; pointer-events: none; top: 0;")
+        this.$upLeftInfoDiv = $("<div>").attr("id", "dataset-info-upleft")
+            .css({
+                position:      'absolute',
+                top:           0,
+                left:          '45px',
+                background:    '#eeeeeeb0',
+                padding:       '5px',
+                pointerEvents: 'none',
+            })
         this.$div.append(this.$upLeftInfoDiv)
-        this.$bottomLeftInfoDiv = $("<div></div>").attr("id", "dataset-info-bottomleft")
-            .attr("style", "position: absolute; bottom: 1px; left: 2px; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
+
+        this.$bottomLeftInfoDiv = $("<div>").attr("id", "dataset-info-bottomleft")
+            .css({
+                position:      'absolute',
+                bottom:        '1px',
+                left:          '2px',
+                background:    '#eeeeeeb0',
+                padding:       '5px',
+                pointerEvents: 'none',
+            })
         this.$div.append(this.$bottomLeftInfoDiv)
-        this.$upRightInfoDiv = $("<div></div>").attr("id", "dataset-info-upright")
-            .attr("style", "position: absolute; top: 1px; right: 2px; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
+
+        this.$upRightInfoDiv = $("<div>").attr("id", "dataset-info-upright")
+            .css({
+                position:      'absolute',
+                top:           '1px',
+                right:         '2px',
+                background:    '#eeeeeeb0',
+                padding:       '5px',
+                pointerEvents: 'none',
+            })
         this.$div.append(this.$upRightInfoDiv)
-        this.$bottomRightInfoDiv = $("<div></div>").attr("id", "dataset-info-bottomright")
-            .attr("style", "position: absolute; bottom: 1px; right: 2px; background: #eeeeeeb0; padding: 5px; pointer-events: none;")
+
+        this.$bottomRightInfoDiv = $("<div>").attr("id", "dataset-info-bottomright")
+            .css({
+                position:      'absolute',
+                bottom:        '1px',
+                right:         '2px',
+                background:    '#eeeeeeb0',
+                padding:       '5px',
+                pointerEvents: 'none',
+            })
         this.$div.append(this.$bottomRightInfoDiv)
+
+        this.$bottomRightMinimapDiv = $("<div>").attr("id", "dataset-info-minimap")
+            .css({
+                position:     'absolute',
+                bottom:       '12px',
+                right:        '45px',
+                width:        '160px',
+                height:       '100px',
+                borderRadius: '8px',
+                background:   'rgba(15,17,23,0.85)',
+                border:       '1px solid rgba(100,120,255,0.25)',
+                pointerEvents: 'none',
+                zIndex:       10,
+            })
+        this.$div.append(this.$bottomRightMinimapDiv)
 
         // Draw colormap for attributes
         createColormapImage(this.$bottomLeftInfoDiv[0], IMPORTANCE_COLORMAP)
