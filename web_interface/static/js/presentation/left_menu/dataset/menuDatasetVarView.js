@@ -104,9 +104,9 @@ class MenuDatasetVarView extends MenuView {
             }
         }
         else {
-            // Global if single graph
+            // Global
+            $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
             if (this.datasetInfo.count === 1) {
-                $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
 
                 // 1-hot over nodes
                 $cb = $("<div></div>").attr("class", "control-block")
@@ -119,42 +119,43 @@ class MenuDatasetVarView extends MenuView {
                 $cb.append($("<label></label>")
                     .text(`1-hot over nodes (size=${size})`).attr("for", id))
 
-                // 10 ones
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-10ones-input"
-                this.$tenOnesNodeInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$tenOnesNodeInput)
-                $cb.append($("<label></label>")
-                    .text("10 ones (size=10)").attr("for", id))
-
-                // // Degree
-                // $cb = $("<div></div>").attr("class", "control-block")
-                // $cc.append($cb)
-                // id = this.idPrefix + "-node-degree-input"
-                // this.$nodeDegreeInput = $("<input>")
-                //     .attr("type", "checkbox").attr("id", id)
-                // $cb.append(this.$nodeDegreeInput)
-                // $cb.append($("<label></label>")
-                //     .text("degree (size=1)").attr("for", id))
-                //
-                // // Clustering
-                // $cb = $("<div></div>").attr("class", "control-block")
-                // $cc.append($cb)
-                // id = this.idPrefix + "-node-clustering-input"
-                // this.$nodeClusteringInput = $("<input>")
-                //     .attr("type", "checkbox").attr("id", id)
-                // $cb.append(this.$nodeClusteringInput)
-                // $cb.append($("<label></label>")
-                //     .text("clustering (size=1)").attr("for", id))
             }
             else {
                 this.$oneHotNodeInput = null
-                this.$tenOnesNodeInput = null
-                this.$nodeClusteringInput = null
-                this.$nodeDegreeInput = null
+                // this.$tenOnesNodeInput = null
+                // this.$nodeClusteringInput = null
+                // this.$nodeDegreeInput = null
             }
+
+            // 10 ones
+            $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            id = this.idPrefix + "-node-10ones-input"
+            this.$tenOnesNodeInput = $("<input>")
+                .attr("type", "checkbox").attr("id", id)
+            $cb.append(this.$tenOnesNodeInput)
+            $cb.append($("<label></label>")
+                .text("10 ones (size=10)").attr("for", id))
+
+            // // Degree - not implemented yet
+            // $cb = $("<div></div>").attr("class", "control-block")
+            // $cc.append($cb)
+            // id = this.idPrefix + "-node-degree-input"
+            // this.$nodeDegreeInput = $("<input>")
+            //     .attr("type", "checkbox").attr("id", id)
+            // $cb.append(this.$nodeDegreeInput)
+            // $cb.append($("<label></label>")
+            //     .text("degree (size=1)").attr("for", id))
+            //
+            // // Clustering - not implemented yet
+            // $cb = $("<div></div>").attr("class", "control-block")
+            // $cc.append($cb)
+            // id = this.idPrefix + "-node-clustering-input"
+            // this.$nodeClusteringInput = $("<input>")
+            //     .attr("type", "checkbox").attr("id", id)
+            // $cb.append(this.$nodeClusteringInput)
+            // $cb.append($("<label></label>")
+            //     .text("clustering (size=1)").attr("for", id))
 
             // Node attributes
             $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
