@@ -129,25 +129,25 @@ class MenuDatasetVarView extends MenuView {
                 $cb.append($("<label></label>")
                     .text("10 ones (size=10)").attr("for", id))
 
-                // Degree
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-degree-input"
-                this.$nodeDegreeInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$nodeDegreeInput)
-                $cb.append($("<label></label>")
-                    .text("degree (size=1)").attr("for", id))
-
-                // Clustering
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-clustering-input"
-                this.$nodeClusteringInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$nodeClusteringInput)
-                $cb.append($("<label></label>")
-                    .text("clustering (size=1)").attr("for", id))
+                // // Degree
+                // $cb = $("<div></div>").attr("class", "control-block")
+                // $cc.append($cb)
+                // id = this.idPrefix + "-node-degree-input"
+                // this.$nodeDegreeInput = $("<input>")
+                //     .attr("type", "checkbox").attr("id", id)
+                // $cb.append(this.$nodeDegreeInput)
+                // $cb.append($("<label></label>")
+                //     .text("degree (size=1)").attr("for", id))
+                //
+                // // Clustering
+                // $cb = $("<div></div>").attr("class", "control-block")
+                // $cc.append($cb)
+                // id = this.idPrefix + "-node-clustering-input"
+                // this.$nodeClusteringInput = $("<input>")
+                //     .attr("type", "checkbox").attr("id", id)
+                // $cb.append(this.$nodeClusteringInput)
+                // $cb.append($("<label></label>")
+                //     .text("clustering (size=1)").attr("for", id))
             }
             else {
                 this.$oneHotNodeInput = null
@@ -259,10 +259,10 @@ class MenuDatasetVarView extends MenuView {
             features["node_struct"].push("one_hot")
         if (this.$tenOnesNodeInput && this.$tenOnesNodeInput.is(":checked"))
             features["node_struct"].push("10-ones")
-        if (this.$nodeClusteringInput && this.$nodeClusteringInput.is(":checked"))
-            features["node_struct"].push("clustering")
-        if (this.$nodeDegreeInput && this.$nodeDegreeInput.is(":checked"))
-            features["node_struct"].push("degree")
+        // if (this.$nodeClusteringInput && this.$nodeClusteringInput.is(":checked"))
+        //     features["node_struct"].push("clustering")
+        // if (this.$nodeDegreeInput && this.$nodeDegreeInput.is(":checked"))
+        //     features["node_struct"].push("degree")
         for (let i = 0; i < attrs.length; i++) {
             if (attrsChecked[i])
                 features["node_attr"].push(attrs[i])

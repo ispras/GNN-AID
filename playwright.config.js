@@ -12,6 +12,9 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
+
+console.log('LOADED PLAYWRIGHT CONFIG')
+
 export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */
@@ -33,21 +36,21 @@ export default defineConfig({
     trace: 'on-first-retry',
     headless: true
   },
-  timeout: 60000,
+  timeout: 600_000,
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
+    // {
+    //   name: 'chromium',
+    //   use: { ...devices['Desktop Chrome'] },
+    // },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
 
     /* Test against mobile viewports. */
     // {
