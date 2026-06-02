@@ -3,6 +3,7 @@ import contextlib
 import ctypes
 import json
 import logging
+import multiprocessing as mp
 import os
 import queue
 import shutil
@@ -163,11 +164,16 @@ def close_worker_state(state: Dict[str, Any]) -> None:
         if proc.is_alive():
             server_logger.critical("Worker pid=%s is still alive after SIGKILL", proc.pid)
 
+        # 6) Освобождаем дескрипторы Process
+        with contextlib.suppress(Exception):
+            proc.close()
+
+    # Для Queue безопаснее не ждать feeder thread бесконечно
     for q in (response_queue, msg_queue, request_queue):
         with contextlib.suppress(Exception):
             q.close()
         with contextlib.suppress(Exception):
-            q.join_thread()
+            q.cancel_join_thread()
 
 
 def start_worker_for_sid(sid: str) -> Dict[str, Any]:
@@ -497,6 +503,7 @@ def worker_process(
             logger.info("Created FrontendClient")
 
             client.run_loop(response_queue, msg_queue, request_queue)
+            logger.info("worker_process finished normally")
 
     except Exception as e:
         tb = traceback.format_exc()
@@ -548,6 +555,38 @@ async def emit_fatal_stop_to_all(reason: str, traceback_text: str = ""):
             await sio.emit("message", payload, to=sid)
 
 
+def reap_all_multiprocessing_children() -> None:
+    children = mp.active_children()
+
+    if children:
+        server_logger.warning(
+            "Reaping %s active multiprocessing children: %s",
+            len(children),
+            [child.pid for child in children],
+        )
+
+    for child in children:
+        try:
+            if child.is_alive():
+                child.join(timeout=0.5)
+
+            if child.is_alive():
+                server_logger.warning("Terminating leftover child pid=%s", child.pid)
+                child.terminate()
+                child.join(timeout=1.0)
+
+            if child.is_alive():
+                server_logger.error("Killing leftover child pid=%s", child.pid)
+                os.kill(child.pid, signal.SIGKILL)
+                child.join(timeout=1.0)
+
+            with contextlib.suppress(Exception):
+                child.close()
+
+        except Exception:
+            server_logger.exception("Failed to reap child pid=%s", getattr(child, "pid", None))
+
+
 async def graceful_shutdown(reason: str = "Server is shutting down"):
     global shutdown_started, cleanup_task
 
@@ -591,6 +630,9 @@ async def graceful_shutdown(reason: str = "Server is shutting down"):
                 await cleanup_task
             cleanup_task = None
 
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, reap_all_multiprocessing_children)
+
         workers.clear()
         clients.clear()
 
@@ -610,7 +652,7 @@ def run_aiohttp_server(port=5000):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    runner = web.AppRunner(app)
+    runner = web.AppRunner(app, shutdown_timeout=1.0)
 
     async def start():
         await runner.setup()
@@ -626,8 +668,10 @@ def run_aiohttp_server(port=5000):
         try:
             await graceful_shutdown("Server is shutting down (Ctrl+C)")
         finally:
+            server_logger.info("Before runner.cleanup()")
             with contextlib.suppress(Exception):
                 await runner.cleanup()
+            server_logger.info("After runner.cleanup()")
             stop_event.set()
 
     def handle_signal():
@@ -642,12 +686,16 @@ def run_aiohttp_server(port=5000):
         loop.run_until_complete(start())
         loop.run_until_complete(stop_event.wait())
     finally:
+        with contextlib.suppress(Exception):
+            reap_all_multiprocessing_children()
+
         pending = [t for t in asyncio.all_tasks(loop) if not t.done()]
         for task in pending:
             task.cancel()
         with contextlib.suppress(Exception):
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
         loop.close()
+
 
 # ========== Personal storage for each client
 

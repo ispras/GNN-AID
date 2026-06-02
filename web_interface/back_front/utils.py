@@ -16,6 +16,7 @@ WEB_DIR = root_dir / "web_interface"
 STATIC_DIR = WEB_DIR / "static"  # js, css code
 TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
 LOG_DIR = WEB_DIR / "logs"  # server logs
+
 CLIENTS_STORAGE_ROOT = LOG_DIR.parent / "client_storage"
 CLIENT_STORAGE_TTL = timedelta(days=30)  # client data will be removed this period after last access
 CLEANUP_INTERVAL_SEC = 24 * 60 * 60  # how often to check for client storage cleanup
