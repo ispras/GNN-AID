@@ -1,0 +1,26 @@
+{
+  "name": "gnn-aid",
+  "version": "1.0.0",
+  "description": "![Image alt](https://github.com/ispras/GNN-AID/blob/develop/GNN-AID%20logo.png)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "e2e"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ispras/GNN-AID.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ispras/GNN-AID/issues"
+  },
+  "homepage": "https://github.com/ispras/GNN-AID#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.7.0"
+  }
+}
