@@ -31,6 +31,9 @@ python multi_defense_pipeline.py
 python combined_workflow.py
 ```
 
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
+
 ---
 ## Experimental results
 

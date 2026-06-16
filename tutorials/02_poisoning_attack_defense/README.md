@@ -35,6 +35,9 @@ python poisoning_attack.py  # with line 68 uncommented
 python defense_against_poisoning.py
 ```
 
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
+
 ---
 ## Description of modes
 
