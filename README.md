@@ -48,6 +48,14 @@ python -m pip install --upgrade pip
 ```
 sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config  
 ```
+
+We recommend create and activate a virtual environment, e.g.:
+```
+sudo apt-get install python3.11-venv
+python3 -m venv venv
+source venv/bin/activate
+```
+
 Then install all project dependencies
 ```
 pip install -r requirements1.txt
@@ -55,6 +63,8 @@ pip install -r requirements2.txt
 pip install -r requirements3.txt
 ```
 The 3rd pack of requirements will take around 20 minutes.
+
+To ensure everything is installed correctly, you might want to run tests from `tests` folder.
 
 ### Problems
 
@@ -105,6 +115,8 @@ You will see something like this
 Then go to [127.0.0.1:5000](http://127.0.0.1:5000) in your browser. You should see web-interface is loaded.
 
 ## Next steps
+
+You can find a full documentation at <https://gnn-aid.readthedocs.io>
 
 We suggest a series of tutorials to learn how to use GNN-AID:
 

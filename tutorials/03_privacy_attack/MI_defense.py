@@ -1,13 +1,14 @@
 import numpy as np
-
-from attacks.mi_attacks import MIAttacker
-from aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
-from models_builder.models_zoo import model_configs_zoo
 from torch import manual_seed
+
+from gnn_aid.attacks.mi_attacks import MIAttacker
+from gnn_aid.aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 manual_seed(1234)
 
