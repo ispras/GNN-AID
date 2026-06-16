@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-06-16 18:08+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -27,37 +27,721 @@ msgstr ""
 msgid "Base classes"
 msgstr ""
 
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager:1 of
+msgid ""
+"Orchestrates attack and defense pipelines over a trained GNN model "
+"manager."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager:3 of
+msgid ""
+"Provides methods to run evasion, poison, and membership inference "
+"attack/defense experiments and persist their metric results to disk."
+msgstr ""
+
+#: ../../api/models_builder.rst
+msgid "Параметры"
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.__init__:1
+#: of
+msgid "Dataset used in the attack/defense experiments."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.__init__:3
+#: of
+msgid "Trained GNN model manager instance."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.__init__:4
+#: of
+msgid "Compute device ('cpu', 'cuda', etc.). Default value: `'cpu'`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.set_clear_model:1
+#: of
+msgid "Disable all attack and defense flags on the model manager."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.return_attack_defense_flags:1
+#: of
+msgid "Restore all attack/defense flags to the state recorded at construction."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:1
+#: of
+msgid ""
+"Train the model with and without evasion attack and compute attack "
+"metrics."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:3
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:3
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:3
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:3
+#: of
+msgid "Attack metrics to evaluate."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:5
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:5
+#: of
+msgid "Number of training epochs."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:7
+#: of
+msgid "If True, save model and metrics after training. Default value: `True`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:9
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:11
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:9
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:11
+#: of
+msgid "Dataset split to evaluate on. Default value: `'test'`."
+msgstr ""
+
+#: ../../api/models_builder.rst
+msgid "Результат"
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_attack_pipeline:12
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:14
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:12
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:14
+#: of
+msgid "Dict with computed metric values."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:1
+#: of
+msgid ""
+"Run the full evasion attack+defense experiment and compute both attack "
+"and defense metrics."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:5
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:5
+#: of
+msgid "Defense metrics to evaluate."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:7
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:7
+#: of
+msgid "Number of training epochs per run."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evasion_defense_pipeline:9
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:7
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:9
+#: of
+msgid "If True, save model and metrics. Default value: `True`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_attack_pipeline:1
+#: of
+msgid ""
+"Train the model with and without poisoning attack and compute attack "
+"metrics."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.poison_defense_pipeline:1
+#: of
+msgid ""
+"Run the full poison attack+defense experiment and compute both attack and"
+" defense metrics."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.save_metrics:1
+#: of
+msgid "Persist attack and/or defense metric dicts to files under the model path."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.save_metrics:3
+#: of
+msgid "Attack metrics to save. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.save_metrics:5
+#: of
+msgid "Defense metrics to save. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:1
+#: of
+msgid "Compute attack and defense metric values from model prediction arrays."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:3
+#: models_builder.attack_defense_metric.DefenseMetric.compute:3 of
+msgid "Predictions without attack or defense."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:5
+#: of
+msgid "Dataset split used for evaluation."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:7
+#: of
+msgid "Predictions under attack only. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:10
+#: of
+msgid "Predictions with defense only. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:13
+#: of
+msgid "Predictions under attack + defense. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:16
+#: of
+msgid "Attack metrics to compute. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:18
+#: of
+msgid "Defense metrics to compute. Default value: `None`."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.evaluate_attack_defense:21
+#: of
+msgid "Tuple of (attack_metrics_dict, defense_metrics_dict)."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.update_dictionary_in_file:1
+#: of
+msgid "Merge new_dict into a JSON file, creating the file if it does not exist."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.update_dictionary_in_file:3
+#: of
+msgid "Tensor keys are serialized to lists for JSON compatibility."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.update_dictionary_in_file:5
+#: of
+msgid "Path to the JSON file."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.update_dictionary_in_file:7
+#: of
+#, python-brace-format
+msgid "Dict of mask → {metric: value} entries to merge in."
+msgstr ""
+
 #: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.available_ad_methods:1
 #: of
 msgid ""
-"Get a list of attack and defense methods applicable for current model and"
-" dataset."
+"Get a list of attack and defense methods applicable for the given model "
+"and dataset."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.available_ad_methods:3
+#: of
+msgid "Dataset to check availability against."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.available_ad_methods:5
+#: of
+msgid "Model manager to check availability against."
+msgstr ""
+
+#: models_builder.attack_defense_manager.FrameworkAttackDefenseManager.available_ad_methods:8
+#: of
+msgid ""
+"Dict mapping category keys (e.g. 'AD-pa', 'AD-ea') to lists of available "
+"method names."
+msgstr ""
+
+#: models_builder.attack_defense_metric.asr:1 of
+msgid ""
+"Compute Attack Success Rate: fraction of predictions changed by the "
+"attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.asr:3 of
+msgid "Model predictions before attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.asr:5 of
+msgid "Model predictions after attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.asr:7
+#: models_builder.attack_defense_metric.aucc_change_attack:8
+#: models_builder.attack_defense_metric.aucc_change_defense_only:9
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:9 of
+msgid "Ignored extra arguments."
+msgstr ""
+
+#: models_builder.attack_defense_metric.asr:9 of
+msgid "Fraction of predictions that differ between clean and attacked model."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_attack:1 of
+msgid "Compute the accuracy drop caused by the attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric.compute:3
+#: models_builder.attack_defense_metric.aucc_change_attack:3 of
+msgid "Predictions before attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric.compute:5
+#: models_builder.attack_defense_metric.aucc_change_attack:5 of
+msgid "Predictions after attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric.compute:7
+#: models_builder.attack_defense_metric.DefenseMetric.compute:11
+#: models_builder.attack_defense_metric.aucc_change_attack:7
+#: models_builder.attack_defense_metric.aucc_change_defense_only:7
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:7 of
+msgid "Ground-truth labels."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_attack:10 of
+msgid ""
+"Difference between clean accuracy and attacked accuracy (positive means "
+"accuracy dropped)."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_defense_only:1 of
+msgid ""
+"Compute the accuracy change caused by the defense alone (without an "
+"attack)."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_defense_only:3 of
+msgid "Predictions without defense."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric.compute:7
+#: models_builder.attack_defense_metric.aucc_change_defense_only:5 of
+msgid "Predictions with defense only."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_defense_only:11 of
+msgid "Difference between clean accuracy and defense-only accuracy."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:1 of
+msgid "Compute the accuracy recovery achieved by the defense under attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric.compute:5
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:3 of
+msgid "Predictions under attack only."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric.compute:9
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:5 of
+msgid "Predictions under attack + defense."
+msgstr ""
+
+#: models_builder.attack_defense_metric.aucc_change_defense_with_attack:11 of
+msgid ""
+"Accuracy of attack+defense minus accuracy of attack only (positive means "
+"defense helped)."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric:1 of
+msgid ""
+"Metric for evaluating the impact of an attack on model predictions. "
+"Computes scores such as ASR and accuracy drop between clean and attacked "
+"outputs."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric.compute:1 of
+msgid "Compute the attack metric value."
+msgstr ""
+
+#: models_builder.attack_defense_metric.AttackMetric.compute:10
+#: models_builder.attack_defense_metric.DefenseMetric.compute:14 of
+msgid "Numeric metric value."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric:1 of
+msgid "Metric for evaluating how well a defense mitigates an attack."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric:3 of
+msgid ""
+"Computes scores comparing clean, attack-only, defense-only, and "
+"attack+defense predictions."
+msgstr ""
+
+#: models_builder.attack_defense_metric.DefenseMetric.compute:1 of
+msgid "Compute the defense metric value."
+msgstr ""
+
+#: models_builder.custom_layers.GMM:1 of
+msgid ""
+"GMMConv wrapper that supplies a default edge attribute tensor of ones "
+"when none is provided."
 msgstr ""
 
 #: models_builder.custom_layers.DummyLayer.__init__:1
-#: models_builder.custom_layers.ExtractorMLP.__init__:1
 #: models_builder.custom_layers.GMM.__init__:1
-#: models_builder.custom_layers.GSATLayer.__init__:1
-#: models_builder.custom_layers.GSATMLP.__init__:1
-#: models_builder.custom_layers.ProtLayer.__init__:1
 #: models_builder.models_utils.Concat.__init__:1
-#: models_builder.models_utils.DotProduct.__init__:1
-#: models_builder.models_utils.EdgeMaskingWrapper.__init__:1 of
+#: models_builder.models_utils.DotProduct.__init__:1 of
 msgid ""
 "Initializes internal Module state, shared by both nn.Module and "
 "ScriptModule."
 msgstr ""
 
 #: models_builder.custom_layers.GMM.forward:1 of
-msgid "Runs the forward pass of the module."
+msgid "Run the GMM convolution, filling in ones for edge_attr if not provided."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:3 of
+msgid "Node feature matrix."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:4 of
+msgid "Edge index tensor."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:5 of
+msgid "Edge attributes. Defaults to ones tensor. Default value: `None`."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:6 of
+msgid "Optional output size. Default value: `None`."
+msgstr ""
+
+#: models_builder.custom_layers.GMM.forward:8 of
+msgid "Updated node feature matrix."
+msgstr ""
+
+#: models_builder.custom_layers.PrototypeGraph:1 of
+msgid ""
+"Stores the graph index and node coalition associated with a prototype "
+"vector."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer:1 of
+msgid ""
+"ProtGNN prototype layer that learns class-specific prototype vectors and "
+"computes cluster/separation losses via distance to prototypes."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.__init__:1 of
+msgid "id() of the parent GNN module (used to register the layer name)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.__init__:2
+#: models_builder.custom_layers.ProtLayer.__init__:2 of
+msgid "Attribute name under which this layer is stored in the GNN."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.__init__:1
+#: models_builder.custom_layers.ProtLayer.__init__:4 of
+msgid "Dimensionality of input node embeddings."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.__init__:6 of
+msgid "Number of output classes."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.__init__:8 of
+msgid "Number of prototype vectors per class. Default value: `3`."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.__init__:10 of
+msgid ""
+"Small constant for numerical stability in similarity computation. Default"
+" value: `1e-4`."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.forward:1 of
+msgid ""
+"Compute prototype activations and logits, storing min_distances on the "
+"parent GNN."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.forward:3 of
+msgid "Node/graph embedding tensor."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.__init__:1
+#: models_builder.custom_layers.ProtLayer.forward:4 of
+msgid "id() of the parent GNN module."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.forward:6 of
+msgid "Class logits tensor."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.set_last_layer_incorrect_connection:1
+#: of
+msgid "The incorrect strength will be actual strength if -0.5 then input -0.5"
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_distances:1 of
+msgid ""
+"Compute log-similarity and L2-distance of embeddings to all prototype "
+"vectors."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_distances:3
+#: models_builder.custom_layers.ProtLayer.prototype_subgraph_distances:3 of
+msgid "Embedding matrix of shape (N, in_features)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_distances:5 of
+msgid "Tuple of (similarity, distance) tensors of shape (N, num_prototypes)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_subgraph_distances:1 of
+msgid ""
+"Compute log-similarity and squared L2-distance of embeddings to a single "
+"prototype."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_subgraph_distances:4 of
+msgid "Single prototype vector of shape (in_features,)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.prototype_subgraph_distances:6 of
+msgid "Tuple of (similarity, distance) tensors of shape (N, 1)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:1 of
+msgid ""
+"Project each prototype vector onto the nearest subgraph embedding found "
+"via MCTS."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:3 of
+msgid "The parent GNN model (used to compute embeddings)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:4 of
+msgid "PyG dataset object providing per-graph Data objects."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:5 of
+msgid "Indices of training graphs to search over."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:7 of
+msgid "Full graph data (unused, kept for API compatibility)."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.projection:8 of
+msgid ""
+"Maximum number of same-class graphs to inspect per prototype. Default "
+"value: `10`."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.result_prototypes:1 of
+msgid "Return prototype metadata for explanation output."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.result_prototypes:3 of
+msgid "Best prototype graphs saved during training. Default value: `None`."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.result_prototypes:4 of
+msgid ""
+"If True, return best_prots; otherwise return current prototype_graphs. "
+"Default value: `False`."
+msgstr ""
+
+#: models_builder.custom_layers.ProtLayer.result_prototypes:8 of
+msgid ""
+"Tuple of (num_classes, num_prototypes_per_class, last_layer_weights, "
+"prototype_graphs)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer:1 of
+msgid ""
+"GSAT (Graph Stochastic Attention) layer that computes a stochastic edge "
+"attention mask and applies it to all downstream MessagePassing layers via"
+" registered hooks."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.__init__:4 of
+msgid "Dimensionality of node (or edge) embeddings. Default value: `16`."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.__init__:6 of
+msgid ""
+"If True, concatenate both endpoint embeddings for attention. Default "
+"value: `False`."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.__init__:9 of
+msgid "Dropout probability in the attention MLP. Default value: `0.5`."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.save_input_hook:1 of
+msgid ""
+"Pre-forward hook that clones the node embedding 'x' for use after the "
+"inner call returns."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.forward:1 of
+msgid ""
+"Compute stochastic edge attention and delegate the full GNN forward call "
+"with attention applied."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.forward:3 of
+msgid "Node embedding tensor."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.forward:5 of
+msgid "Graph connectivity in COO format."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.forward:7 of
+msgid "id() of the parent GNN (used to trigger its full forward pass)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.forward:9 of
+msgid ""
+"Node embeddings as they were before this layer (passed through from the "
+"saved hook value)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.concrete_sample:1 of
+msgid ""
+"Draw a concrete (hard) Bernoulli sample from logits using the concrete "
+"relaxation."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.concrete_sample:3 of
+msgid "Log-logit attention scores."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.concrete_sample:5 of
+msgid "Temperature for the concrete relaxation."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.concrete_sample:7 of
+msgid "If True, adds Gumbel noise for sampling; otherwise uses sigmoid."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.concrete_sample:10 of
+msgid "Attention weights in [0, 1]."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.reorder_like:1 of
+msgid "Reorder values so that they align with to_edge_index edge ordering."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.reorder_like:3 of
+msgid "Source edge ordering (will be sorted)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.reorder_like:5 of
+msgid "Target edge ordering to match."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.reorder_like:7 of
+msgid "Values to reorder, aligned with from_edge_index."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.reorder_like:10 of
+msgid "Values reordered to match to_edge_index."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.lift_node_att_to_edge_att:1 of
+msgid ""
+"Convert node-level attention scores to edge-level by multiplying endpoint"
+" scores."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.lift_node_att_to_edge_att:3 of
+msgid "Node attention tensor of shape (N,)."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.forward:4
+#: models_builder.custom_layers.GSATLayer.lift_node_att_to_edge_att:4 of
+msgid "Edge index tensor of shape (2, E)."
+msgstr ""
+
+#: models_builder.custom_layers.GSATLayer.lift_node_att_to_edge_att:6 of
+msgid ""
+"Edge attention tensor of shape (E + N,) including self-loop attention "
+"appended at the end."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP:1 of
+msgid ""
+"MLP that extracts log-logit attention scores from node (or edge) "
+"embeddings for GSAT."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.__init__:2 of
+msgid ""
+"If True, concatenate both endpoint embeddings as input. Default value: "
+"`False`."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.__init__:5 of
+msgid "Dropout probability. Default value: `0.5`."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.forward:1 of
+msgid "Compute log-logit attention scores for nodes or edges."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.forward:3 of
+msgid "Node embedding tensor of shape (N, hidden_size)."
+msgstr ""
+
+#: models_builder.custom_layers.ExtractorMLP.forward:6 of
+msgid ""
+"Log-logit attention tensor of shape (N, 1) or (E, 1) depending on "
+"learn_edge_features."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP:1 of
+msgid ""
+"Multi-layer perceptron with InstanceNorm and Dropout used inside GSAT's "
+"ExtractorMLP."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.__init__:1 of
+msgid "List of layer widths, e.g. [64, 128, 64, 1]."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.__init__:3 of
+msgid "Dropout probability applied between hidden layers."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.__init__:5 of
+msgid "Whether to use bias in Linear layers. Default value: `True`."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.forward:1 of
+msgid "Run the MLP, skipping InstanceNorm for single-sample batches."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.forward:3 of
+msgid "Input tensor."
+msgstr ""
+
+#: models_builder.custom_layers.GSATMLP.forward:5 of
+msgid "Output tensor after all layers."
+msgstr ""
+
+#: models_builder.custom_layers.DummyLayer:1 of
+msgid ""
+"Identity layer that passes its input through unchanged. Used as a "
+"structural placeholder."
 msgstr ""
 
 #: models_builder.custom_layers.DummyLayer.forward:1
-#: models_builder.custom_layers.ExtractorMLP.forward:1
-#: models_builder.custom_layers.GSATLayer.forward:1
-#: models_builder.custom_layers.GSATMLP.forward:1
-#: models_builder.custom_layers.ProtLayer.forward:1
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:1
 #: models_builder.models_utils.Concat.forward:1
 #: models_builder.models_utils.DotProduct.forward:1
 #: models_builder.models_utils.EdgeMaskingWrapper.forward:1 of
@@ -65,11 +749,6 @@ msgid "Defines the computation performed at every call."
 msgstr ""
 
 #: models_builder.custom_layers.DummyLayer.forward:3
-#: models_builder.custom_layers.ExtractorMLP.forward:3
-#: models_builder.custom_layers.GSATLayer.forward:3
-#: models_builder.custom_layers.GSATMLP.forward:3
-#: models_builder.custom_layers.ProtLayer.forward:3
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:3
 #: models_builder.models_utils.Concat.forward:3
 #: models_builder.models_utils.DotProduct.forward:3
 #: models_builder.models_utils.EdgeMaskingWrapper.forward:3 of
@@ -77,11 +756,6 @@ msgid "Should be overridden by all subclasses."
 msgstr ""
 
 #: models_builder.custom_layers.DummyLayer.forward:6
-#: models_builder.custom_layers.ExtractorMLP.forward:6
-#: models_builder.custom_layers.GSATLayer.forward:6
-#: models_builder.custom_layers.GSATMLP.forward:6
-#: models_builder.custom_layers.ProtLayer.forward:6
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:6
 #: models_builder.models_utils.Concat.forward:6
 #: models_builder.models_utils.DotProduct.forward:6
 #: models_builder.models_utils.EdgeMaskingWrapper.forward:6 of
@@ -92,15 +766,6 @@ msgid ""
 "while the latter silently ignores them."
 msgstr ""
 
-#: models_builder.custom_layers.ProtLayer.set_last_layer_incorrect_connection:1
-#: of
-msgid "The incorrect strength will be actual strength if -0.5 then input -0.5"
-msgstr ""
-
-#: models_builder.custom_layers.ProtLayer.result_prototypes:1 of
-msgid "saving projected prototypes"
-msgstr ""
-
 #: models_builder.gnn_constructor.GNNConstructor:1 of
 msgid ""
 "The base class of all models. Contains the following methods: forward, "
@@ -108,94 +773,149 @@ msgid ""
 "reset_parameters, get_predictions, get_answer, get_name"
 msgstr ""
 
-#: ../../api/models_builder.rst
-msgid "Параметры"
+#: models_builder.gnn_constructor.GNNConstructor.__init__:1
+#: models_builder.gnn_constructor.GNNConstructorTorch.__init__:1 of
+msgid ""
+"Model configuration. Defaults to an empty ModelConfig if not provided. "
+"Default value: `None`."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:1
 #: models_builder.gnn_constructor.GNNConstructor.decode:1 of
 msgid ""
-"Used for edge tasks, takes as input embeddings of two nodes. Returns an "
-"unnormalized score in general case."
+"Compute an unnormalized score for an edge given embeddings of its two "
+"endpoint nodes."
 msgstr ""
 
-#: ../../api/models_builder.rst
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers
-#: models_builder.gnn_constructor.GNNConstructor.get_answer
-#: models_builder.gnn_constructor.GNNConstructor.get_predictions
-#: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers of
-msgid "Результат"
+#: models_builder.gnn_constructor.GNNConstructor.decode:3 of
+msgid "Unnormalized edge score."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_all_layer_embeddings:1
 #: models_builder.gnn_constructor.GNNConstructor.get_all_layer_embeddings:1 of
-msgid ""
-"vectors representing the input data from the outputs of each layer of the"
-" neural network"
+msgid "Return the output embedding of each layer in the model."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_all_layer_embeddings:3 of
+msgid "Vectors representing the input data from the output of each layer."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.get_architecture:1
 #: models_builder.gnn_constructor.GNNConstructor.get_architecture:1 of
-msgid "the architecture of the model, for display on the front"
+msgid "Return the model architecture description for display in the frontend."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_num_hops:1
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_architecture:3
+#: models_builder.gnn_constructor.GNNConstructor.get_architecture:3 of
+msgid "Model architecture object (e.g. ModelStructureConfig or dict)."
+msgstr ""
+
 #: models_builder.gnn_constructor.GNNConstructor.get_num_hops:1 of
-msgid ""
-"the number of graph convolution layers. Required for some model "
-"interpretation algorithms to work"
+msgid "Return the number of graph convolution layers (hops)."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.reset_parameters:1
+#: models_builder.gnn_constructor.GNNConstructor.get_num_hops:3 of
+msgid "Required for some model interpretation algorithms."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_num_hops:3
+#: models_builder.gnn_constructor.GNNConstructor.get_num_hops:5 of
+msgid "Number of message-passing hops."
+msgstr ""
+
 #: models_builder.gnn_constructor.GNNConstructor.reset_parameters:1 of
-msgid ""
-"resets all model parameters. Required for the reset button on the front "
-"to work."
+msgid "Reset all model parameters. Required for the reset button in the frontend."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:1
 #: models_builder.gnn_constructor.GNNConstructor.get_predictions:1 of
-msgid "a vector of estimates for the distribution of input data by class."
+msgid "Return a probability distribution over classes for the input data."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:3
 #: models_builder.gnn_constructor.GNNConstructor.get_predictions:3 of
 msgid ""
-"Required for some interpretation algorithms to work. Does not require a "
-"mandatory redefinition of def forward."
+"Required for some interpretation algorithms. Does not require overriding "
+"forward."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_predictions:5 of
+msgid "Class probability vector."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.get_parameters:1
 #: models_builder.gnn_constructor.GNNConstructor.get_parameters:1 of
-msgid "matrix with model parameters"
+msgid "Return the model parameter iterator or matrix."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:1
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_parameters:3
+#: models_builder.gnn_constructor.GNNConstructor.get_parameters:3 of
+msgid "Model parameters."
+msgstr ""
+
 #: models_builder.gnn_constructor.GNNConstructor.get_answer:1 of
-msgid "an answer to which class the input belongs to."
+msgid "Return the hard class assignment for the input."
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:3
 #: models_builder.gnn_constructor.GNNConstructor.get_answer:3 of
 msgid ""
-"Required for some interpretation methods to work. Does not require "
-"redefinition of def forward or get_predictions."
+"Required for some interpretation methods. Does not require overriding "
+"forward or get_predictions."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_answer:5 of
+msgid "Predicted class index or label for the input."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_name:1 of
+msgid ""
+"Serialize the model config and class name to a JSON string used as a "
+"unique identifier."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_name:3 of
+msgid "If True, include the obj_name field. Default value: `False`."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_name:5 of
+msgid "Extra key-value pairs merged into the name dict."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_name:7 of
+msgid "JSON string uniquely identifying this model."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers:1
 #: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers:1 of
-msgid "a set of names of suitable model manager classes."
+msgid "Return a set of model manager class names compatible with this model."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers:3
 #: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers:3 of
-msgid "Model manager classes must be inherited from the GNNModelManager class"
+msgid "Model manager classes must inherit from GNNModelManager."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.suitable_model_managers:5
+#: models_builder.gnn_constructor.GNNConstructor.suitable_model_managers:5 of
+msgid "Set of suitable model manager class name strings."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_hash:1 of
+msgid "Compute the SHA-256 hash of the model name string used for storage paths."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_hash:3 of
+msgid "Hex digest of the SHA-256 hash."
 msgstr ""
 
 #: models_builder.gnn_constructor.GNNConstructor.get_full_info:1 of
-msgid "Get available info about model for frontend"
+msgid "Get available info about the model for the frontend."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_full_info:3 of
+msgid ""
+"Maximum number of elements before a weight tensor is returned as a shape "
+"string instead of values. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructor.get_full_info:7 of
+msgid "Dict with available keys from 'architecture', 'weights', 'neurons'."
 msgstr ""
 
 #: models_builder.gnn_constructor.GNNConstructorTorch:1 of
@@ -205,19 +925,38 @@ msgid ""
 msgstr ""
 
 #: models_builder.gnn_constructor.GNNConstructorTorch.flow:1 of
-msgid "Flow direction of message passing, usually 'source_to_target'"
+msgid ""
+"Return the message-passing flow direction of the first MessagePassing "
+"layer found. Flow string, e.g. 'source_to_target'; defaults to "
+"'source_to_target' if no MP layer found."
 msgstr ""
 
 #: models_builder.gnn_constructor.GNNConstructorTorch.get_neurons:1 of
 msgid ""
-"Return number of neurons of each convolution layer as list: [n_1, n_2, "
-"..., n_k]"
+"Return the output size of each MessagePassing convolution layer. List of "
+"neuron counts [n_1, n_2, ..., n_k], one per MP layer with parameters."
 msgstr ""
 
 #: models_builder.gnn_constructor.GNNConstructorTorch.get_weights:1 of
+msgid "Return model weights as a nested dict for the frontend."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.get_weights:3 of
 msgid ""
-"Get model weights calling torch.nn.Module.state_dict() to draw them on "
-"the frontend."
+"Large tensors are replaced with their shape string when they exceed "
+"tensor_size_limit."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.get_weights:5 of
+msgid ""
+"Element count limit; tensors above this threshold are represented as "
+"shape strings. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.GNNConstructorTorch.get_weights:9 of
+msgid ""
+"Nested dict mirroring the state_dict key hierarchy with tensor values or "
+"shape strings."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor:1 of
@@ -228,7 +967,19 @@ msgid ""
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.__init__:1 of
-msgid "description of the gnn structure"
+msgid "Model structure configuration. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_all_layer_embeddings:1
+#: of
+msgid ""
+"Run the forward pass in embedding-capture mode and return per-layer "
+"output tensors."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_all_layer_embeddings:3
+#: of
+msgid "Dict mapping layer index to the output tensor of that layer."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.register_my_forward_hook:1
@@ -236,31 +987,218 @@ msgstr ""
 msgid "Registers a forward hook on the module."
 msgstr ""
 
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:1 of
+msgid ""
+"Execute the node/graph-level forward pass, applying skip-connections "
+"where configured."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.forward:3 of
+msgid ""
+"Output tensor, or a dict of layer-index → tensor when in embedding-"
+"capture mode."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:1 of
+msgid "Execute the decoder-level forward pass over edge node-embedding pairs."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:3 of
+msgid "Source node embeddings."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:5 of
+msgid "Destination node embeddings."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.decode:8 of
+msgid "Edge score tensor (squeezed to remove trailing size-1 dimensions)."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.reset_parameters:1 of
+msgid "Reset parameters of all sub-modules that expose a reset_parameters method."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_num_hops:1 of
+msgid ""
+"Return the total number of graph convolution hops (APPNP contributes K "
+"hops)."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:1 of
+msgid ""
+"Return class probability distribution (node/graph) or sigmoid score (edge"
+" prediction)."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:3
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:7 of
+msgid "Forwarded to the model's forward pass."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:4 of
+msgid ""
+"Pre-computed edge logits for edge prediction task. If provided, applies "
+"sigmoid instead of softmax. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_predictions:9 of
+msgid "Probability tensor."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:1 of
+msgid "Return hard predictions (class indices or binary edge decisions)."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:3
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:7 of
+msgid "Forwarded to get_predictions."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:4 of
+msgid ""
+"For edge prediction: predict True when sigmoid score exceeds threshold. "
+"If None, returns argmax over class probabilities. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.get_answer:9 of
+msgid "Tensor of predicted class indices or boolean edge decisions."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:1 of
+msgid "Move all graph tensors to the specified device."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:3 of
+msgid "Node feature matrix. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:5 of
+msgid "Edge index tensor. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:7 of
+msgid "Batch assignment vector. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:9 of
+msgid "Edge weight tensor. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:11 of
+msgid "Target device. Defaults to CUDA if available. Default value: `None`."
+msgstr ""
+
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.move_to_device:14 of
+msgid "Tuple of (x, edge_index, batch, edge_weight) on the target device."
+msgstr ""
+
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:1 of
 msgid ""
-"The method is launched when the forward is executed extracts from the "
-"variable data or kwargs the data necessary to pass the forward: x, "
-"edge_index, batch"
+"Extract (x, edge_index, batch, edge_weight) from any supported calling "
+"convention. Accepts a PyG Data object, keyword arguments, or positional "
+"arguments (2, 3, or 4 tensors)."
 msgstr ""
 
 #: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:4 of
 msgid "!! ATTENTION: Must not be changed !!"
 msgstr ""
 
-#: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:8 of
-msgid "x, edge_index, batch: TORCH TENSORS"
+#: models_builder.gnn_constructor.FrameworkGNNConstructor.arguments_read:6 of
+msgid "Tuple of (x, edge_index, batch, edge_weight) as torch Tensors."
 msgstr ""
 
 #: models_builder.models_utils.apply_message_gradient_capture:1 of
-#, python-brace-format
 msgid ""
-"# Example how get Tensors # for name, layer in self.gnn.named_children():"
-" #     if isinstance(layer, MessagePassing): #         print(f\"{name}: "
-"{layer.get_message_gradients()}\")"
+"Monkey-patch a MessagePassing layer to capture gradients of incoming "
+"messages."
+msgstr ""
+
+#: models_builder.models_utils.apply_message_gradient_capture:3 of
+msgid ""
+"After calling this, the layer gains a ``get_message_gradients()`` method "
+"that returns a dict mapping layer name to the last captured message "
+"gradient tensor."
+msgstr ""
+
+#: models_builder.models_utils.apply_message_gradient_capture:6 of
+msgid "A MessagePassing layer to patch."
+msgstr ""
+
+#: models_builder.models_utils.apply_message_gradient_capture:8 of
+msgid "Key under which gradients are stored in the layer's dict."
 msgstr ""
 
 #: models_builder.models_utils.apply_decorator_to_graph_layers:1 of
-msgid "Example how use this def apply_decorator_to_graph_layers(gnn)"
+msgid ""
+"Recursively apply a decorator function to all MessagePassing layers in a "
+"model."
+msgstr ""
+
+#: models_builder.models_utils.apply_decorator_to_graph_layers:3 of
+msgid "PyTorch model whose layers will be visited."
+msgstr ""
+
+#: models_builder.models_utils.apply_decorator_to_graph_layers:5 of
+msgid ""
+"Decorator function to apply to each MessagePassing layer. Default value: "
+"`apply_message_gradient_capture`."
+msgstr ""
+
+#: models_builder.models_utils.apply_attention_to_messages:1 of
+msgid ""
+"Register message-forward hooks on all MessagePassing layers to scale "
+"messages by attention."
+msgstr ""
+
+#: models_builder.models_utils.apply_attention_to_messages:3 of
+msgid "PyTorch model to traverse."
+msgstr ""
+
+#: models_builder.models_utils.apply_attention_to_messages:5 of
+msgid "Attention weights to apply to each message."
+msgstr ""
+
+#: models_builder.models_utils.apply_attention_to_messages:8 of
+msgid "List of hook handles that can be removed after use."
+msgstr ""
+
+#: models_builder.models_utils.attention_message_hook:1 of
+msgid ""
+"Return a message-forward hook that scales messages by the given attention"
+" tensor."
+msgstr ""
+
+#: models_builder.models_utils.attention_message_hook:3 of
+msgid "Attention weights. If None, returns an identity hook."
+msgstr ""
+
+#: models_builder.models_utils.attention_message_hook:5 of
+msgid "The layer the hook will be attached to (used to check heads/loops)."
+msgstr ""
+
+#: models_builder.models_utils.attention_message_hook:8 of
+msgid "Callable hook for use with register_message_forward_hook."
+msgstr ""
+
+#: models_builder.models_utils.EdgeMaskingWrapper:1 of
+msgid ""
+"Wraps a GNN model and applies a learnable per-edge mask to all message-"
+"passing operations."
+msgstr ""
+
+#: models_builder.models_utils.EdgeMaskingWrapper:3 of
+msgid ""
+"Each edge's contribution to message passing is scaled by a trainable "
+"scalar mask parameter."
+msgstr ""
+
+#: models_builder.models_utils.EdgeMaskingWrapper.__init__:1 of
+msgid "The GNN model to wrap."
+msgstr ""
+
+#: models_builder.models_utils.EdgeMaskingWrapper.__init__:3 of
+msgid "Number of edges; determines the size of the edge mask parameter."
 msgstr ""
 
 #: models_builder.models_utils.top_k_metric:1 of
@@ -291,23 +1229,119 @@ msgid "str - metric to calculate: 'precision', 'recall', or 'f1'"
 msgstr ""
 
 #: models_builder.models_utils.top_k_metric:12 of
-msgid "float - metric value in range [0, 1]"
+msgid "Metric value in range [0, 1]."
 msgstr ""
 
-#: ../../api/models_builder.rst
-msgid "Тип результата"
+#: models_builder.models_utils.Metric:1 of
+msgid "Wrapper around a named metric function for model evaluation."
+msgstr ""
+
+#: models_builder.models_utils.Metric:3 of
+msgid ""
+"Supports standard sklearn metrics (Accuracy, F1, AUC, etc.) and edge-"
+"prediction ranking metrics (Precision@k, Recall@k, F1@k). Custom metrics "
+"can be registered via add_custom."
+msgstr ""
+
+#: models_builder.models_utils.Metric.add_custom:1 of
+msgid "Register a custom metric function under the given name."
+msgstr ""
+
+#: models_builder.models_utils.Metric.add_custom:3 of
+msgid "Name to refer to the metric. Must not conflict with existing names."
+msgstr ""
+
+#: models_builder.models_utils.Metric.add_custom:5 of
+msgid "Function with signature ``f(y_true, y_pred, **kwargs) -> value``."
+msgstr ""
+
+#: models_builder.models_utils.Metric.__init__:1 of
+msgid "Registered metric name (e.g. 'Accuracy', 'F1', 'Precision@k')."
+msgstr ""
+
+#: models_builder.models_utils.Metric.__init__:3 of
+msgid "Dataset split — 'train', 'val', 'test', or a bool mask."
+msgstr ""
+
+#: models_builder.models_utils.Metric.__init__:5 of
+msgid ""
+"Extra arguments forwarded to the compute function (e.g. average='macro', "
+"k=10)."
+msgstr ""
+
+#: models_builder.models_utils.Metric.name:1 of
+msgid "Return the metric name with kwargs appended in brace notation."
+msgstr ""
+
+#: models_builder.models_utils.Metric.name:3 of
+#, python-brace-format
+msgid "String like 'F1{average=macro}' or plain 'Accuracy'."
+msgstr ""
+
+#: models_builder.models_utils.Metric.compute:1 of
+msgid "Compute the metric value."
+msgstr ""
+
+#: models_builder.models_utils.Metric.compute:3 of
+msgid "Ground-truth labels or edges."
+msgstr ""
+
+#: models_builder.models_utils.Metric.compute:4 of
+msgid "Model predictions."
+msgstr ""
+
+#: models_builder.models_utils.Metric.compute:6 of
+msgid "Scalar metric value."
+msgstr ""
+
+#: models_builder.models_utils.Metric.needs_logits:1 of
+msgid "Return whether this metric requires raw logits instead of class labels."
+msgstr ""
+
+#: models_builder.models_utils.Metric.needs_logits:3 of
+msgid "True if the metric operates on logits (e.g. AUC)."
+msgstr ""
+
+#: models_builder.models_utils.Metric.needs_all_node_pairs:1 of
+msgid "Return whether this metric requires top-k predictions over all node pairs."
+msgstr ""
+
+#: models_builder.models_utils.Metric.needs_all_node_pairs:3 of
+msgid "True for edge-prediction ranking metrics (Precision@k, Recall@k, F1@k)."
+msgstr ""
+
+#: models_builder.models_utils.Metric.create_mask_by_target_list:1 of
+msgid "Build a boolean mask tensor with True at each index in target_list."
+msgstr ""
+
+#: models_builder.models_utils.Metric.create_mask_by_target_list:3 of
+msgid "Reference sequence whose length determines the mask size."
+msgstr ""
+
+#: models_builder.models_utils.Metric.create_mask_by_target_list:4 of
+msgid ""
+"Indices to mark as True. If None, all indices are True. Default value: "
+"`None`."
+msgstr ""
+
+#: models_builder.models_utils.Metric.create_mask_by_target_list:8 of
+msgid "Boolean tensor of the same length as y_true."
+msgstr ""
+
+#: models_builder.models_utils.GNNConstructorError:1 of
+msgid "Exception raised when the GNN model structure is invalid or unsupported."
 msgstr ""
 
 #: models_builder.models_utils.Concat:1 of
 msgid ""
-"Concatenation of tensors as a torch function. Convenient to use as a "
-"model layer."
+"Concatenation of tensors as a torch Module. Convenient to use as a model "
+"layer."
 msgstr ""
 
 #: models_builder.models_utils.DotProduct:1 of
 msgid ""
-"Dot-product of 2 tensors as a torch function. Convenient to use as a "
-"model layer."
+"Element-wise dot-product of two tensors as a torch Module. Convenient to "
+"use as a model layer."
 msgstr ""
 
 #: models_builder.models_utils.predict_top_k_edges:1 of
@@ -348,29 +1382,201 @@ msgstr ""
 
 #: models_builder.models_utils.predict_top_k_edges:12 of
 msgid ""
-"torch.Tensor shape (2, k) - indices of top-k node pairs top_scores: "
-"torch.Tensor shape (k,) - scores for these pairs"
+"Tuple of (top_edges tensor of shape (2, k), top_scores tensor of shape "
+"(k,))."
 msgstr ""
 
 #: models_builder.models_utils.mask_to_tensor:1 of
-msgid ""
-"Convert a mask over nodes/edges/graphs to tensor of specific size. Mask "
-"can be 'train', 'val', 'test', 'all', or id, or a list of ids, or a "
-"tensor."
+msgid "Convert a flexible mask specification to a boolean or index tensor."
 msgstr ""
 
-#: models_builder.models_utils.mask_to_tensor:4 of
-msgid "dataset"
+#: models_builder.models_utils.mask_to_tensor:3 of
+msgid "Dataset that provides split masks and metadata."
 msgstr ""
 
 #: models_builder.models_utils.mask_to_tensor:5 of
 msgid ""
-"part of the dataset on which the output will be obtained. Can be a node "
-"id, graph id, or edge as a tuple (i,j). Can be string: 'train', 'val', "
-"'test', 'all'. Can be Tensor of specific nodes/edges/graphs."
+"Mask specification. Can be 'train', 'val', 'test', 'all'; a node/graph id"
+" (int or list of ints); an edge as a tuple (i, j); or a pre-built Tensor."
+" Default value: `'test'`."
 msgstr ""
 
-#: models_builder.models_utils.mask_to_tensor:9 of
-msgid "tensor of nodes/edges/graphs"
+#: models_builder.models_utils.mask_to_tensor:10 of
+msgid "Boolean or index tensor over nodes, edges, or graphs."
 msgstr ""
+
+#: models_builder.models_zoo.model_configs_zoo:1 of
+msgid ""
+"Return a pre-configured FrameworkGNNConstructor by name from the model "
+"zoo."
+msgstr ""
+
+#: models_builder.models_zoo.model_configs_zoo:3 of
+msgid "Dataset used to set input/output channel sizes."
+msgstr ""
+
+#: models_builder.models_zoo.model_configs_zoo:5 of
+msgid "Name of the model to retrieve (must match a local variable name)."
+msgstr ""
+
+#: models_builder.models_zoo.model_configs_zoo:8 of
+msgid "Configured FrameworkGNNConstructor instance."
+msgstr ""
+
+#~ msgid ""
+#~ "Get a list of attack and defense"
+#~ " methods applicable for current model "
+#~ "and dataset."
+#~ msgstr ""
+
+#~ msgid "Runs the forward pass of the module."
+#~ msgstr ""
+
+#~ msgid "saving projected prototypes"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Used for edge tasks, takes as "
+#~ "input embeddings of two nodes. Returns"
+#~ " an unnormalized score in general "
+#~ "case."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "vectors representing the input data from"
+#~ " the outputs of each layer of "
+#~ "the neural network"
+#~ msgstr ""
+
+#~ msgid "the architecture of the model, for display on the front"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "the number of graph convolution layers."
+#~ " Required for some model interpretation "
+#~ "algorithms to work"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "resets all model parameters. Required "
+#~ "for the reset button on the front"
+#~ " to work."
+#~ msgstr ""
+
+#~ msgid "a vector of estimates for the distribution of input data by class."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Required for some interpretation algorithms"
+#~ " to work. Does not require a "
+#~ "mandatory redefinition of def forward."
+#~ msgstr ""
+
+#~ msgid "matrix with model parameters"
+#~ msgstr ""
+
+#~ msgid "an answer to which class the input belongs to."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Required for some interpretation methods "
+#~ "to work. Does not require redefinition"
+#~ " of def forward or get_predictions."
+#~ msgstr ""
+
+#~ msgid "a set of names of suitable model manager classes."
+#~ msgstr ""
+
+#~ msgid "Model manager classes must be inherited from the GNNModelManager class"
+#~ msgstr ""
+
+#~ msgid "Get available info about model for frontend"
+#~ msgstr ""
+
+#~ msgid "Flow direction of message passing, usually 'source_to_target'"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Return number of neurons of each "
+#~ "convolution layer as list: [n_1, n_2,"
+#~ " ..., n_k]"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Get model weights calling "
+#~ "torch.nn.Module.state_dict() to draw them on"
+#~ " the frontend."
+#~ msgstr ""
+
+#~ msgid "description of the gnn structure"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "The method is launched when the "
+#~ "forward is executed extracts from the"
+#~ " variable data or kwargs the data "
+#~ "necessary to pass the forward: x, "
+#~ "edge_index, batch"
+#~ msgstr ""
+
+#~ msgid "x, edge_index, batch: TORCH TENSORS"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "# Example how get Tensors # for"
+#~ " name, layer in self.gnn.named_children(): "
+#~ "#     if isinstance(layer, MessagePassing): #"
+#~ "         print(f\"{name}: {layer.get_message_gradients()}\")"
+#~ msgstr ""
+
+#~ msgid "Example how use this def apply_decorator_to_graph_layers(gnn)"
+#~ msgstr ""
+
+#~ msgid "float - metric value in range [0, 1]"
+#~ msgstr ""
+
+#~ msgid "Тип результата"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Concatenation of tensors as a torch "
+#~ "function. Convenient to use as a "
+#~ "model layer."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Dot-product of 2 tensors as a "
+#~ "torch function. Convenient to use as "
+#~ "a model layer."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "torch.Tensor shape (2, k) - indices "
+#~ "of top-k node pairs top_scores: "
+#~ "torch.Tensor shape (k,) - scores for "
+#~ "these pairs"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Convert a mask over nodes/edges/graphs "
+#~ "to tensor of specific size. Mask "
+#~ "can be 'train', 'val', 'test', 'all',"
+#~ " or id, or a list of ids, "
+#~ "or a tensor."
+#~ msgstr ""
+
+#~ msgid "dataset"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "part of the dataset on which the"
+#~ " output will be obtained. Can be "
+#~ "a node id, graph id, or edge "
+#~ "as a tuple (i,j). Can be string:"
+#~ " 'train', 'val', 'test', 'all'. Can "
+#~ "be Tensor of specific nodes/edges/graphs."
+#~ msgstr ""
+
+#~ msgid "tensor of nodes/edges/graphs"
+#~ msgstr ""
 

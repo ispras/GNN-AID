@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-09 21:12+0300\n"
+"POT-Creation-Date: 2026-06-16 18:08+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -27,152 +27,184 @@ msgstr ""
 msgid "Configs"
 msgstr ""
 
-#: data_structures.configs.GeneralConfig:1 of
-msgid "# TODO Kirill rename, docs"
+#: data_structures.configs.Task:1 of
+msgid "Enum of supported machine learning tasks."
 msgstr ""
 
-#: data_structures.configs.GeneralConfig.to_dict:1 of
+#: data_structures.configs.Config:1 of
+msgid "A set of named, immutable parameters."
+msgstr ""
+
+#: data_structures.configs.Config:3 of
 msgid ""
-"Represent config as a dictionary, as well as all included configs. Dict "
-"is a copy of all values."
+"Values can only be set in the constructor. Parameters may be plain "
+"values, dicts, or nested Config instances. Supports loading default "
+"parameters from a JSON file and creating a saveable representation of "
+"those parameters."
 msgstr ""
 
-#: data_structures.configs.GeneralConfig.to_json:1 of
-msgid "Special method which allows to use json.dumps() on Config object"
+#: data_structures.configs.Config.__init__:1
+#: data_structures.configs.DatasetConfig.__init__:1
+#: data_structures.configs.DatasetVarConfig.__init__:1
+#: data_structures.configs.EvasionAttackConfig.__init__:1
+#: data_structures.configs.EvasionDefenseConfig.__init__:1
+#: data_structures.configs.ExplainerInitConfig.__init__:1
+#: data_structures.configs.ExplainerModificationConfig.__init__:1
+#: data_structures.configs.ExplainerRunConfig.__init__:1
+#: data_structures.configs.FeatureConfig.__init__:1
+#: data_structures.configs.MIAttackConfig.__init__:1
+#: data_structures.configs.MIDefenseConfig.__init__:1
+#: data_structures.configs.ModelManagerConfig.__init__:1
+#: data_structures.configs.ModelStructureConfig.__init__:1
+#: data_structures.configs.PoisonAttackConfig.__init__:1
+#: data_structures.configs.PoisonDefenseConfig.__init__:1 of
+msgid "Initialize config with keyword arguments as named parameters."
 msgstr ""
 
-#: data_structures.configs.GeneralConfig.clone_with:1 of
+#: data_structures.configs.Config.__init__:3
+#: data_structures.configs.DatasetConfig.__init__:3
+#: data_structures.configs.DatasetVarConfig.__init__:3
+#: data_structures.configs.EvasionAttackConfig.__init__:3
+#: data_structures.configs.EvasionDefenseConfig.__init__:3
+#: data_structures.configs.ExplainerInitConfig.__init__:3
+#: data_structures.configs.ExplainerModificationConfig.__init__:3
+#: data_structures.configs.ExplainerRunConfig.__init__:3
+#: data_structures.configs.FeatureConfig.__init__:3
+#: data_structures.configs.MIAttackConfig.__init__:3
+#: data_structures.configs.MIDefenseConfig.__init__:3
+#: data_structures.configs.ModelManagerConfig.__init__:3
+#: data_structures.configs.ModelStructureConfig.__init__:3
+#: data_structures.configs.PoisonAttackConfig.__init__:3
+#: data_structures.configs.PoisonDefenseConfig.__init__:3 of
 msgid ""
-"Creates a deep cloned instance of a configuration object (typically "
-"derived from GeneralConfig), with specified fields overridden. This is "
-"useful when working with mostly immutable config objects that need to be "
-"reused with minor changes, without mutating the original."
+"Each value that is a dict whose keys are a subset of _TECHNICAL_KEYS is "
+"automatically converted to a ConfigPattern instance."
 msgstr ""
 
 #: ../../api/data_structures.rst
-#: data_structures.configs.GeneralConfig.clone_with of
 msgid "Параметры"
 msgstr ""
 
-#: data_structures.configs.GeneralConfig.clone_with:6 of
-msgid "A dictionary of fields to override in the clone."
+#: data_structures.configs.Config.__init__:6
+#: data_structures.configs.DatasetConfig.__init__:6
+#: data_structures.configs.DatasetVarConfig.__init__:6
+#: data_structures.configs.EvasionAttackConfig.__init__:6
+#: data_structures.configs.EvasionDefenseConfig.__init__:6
+#: data_structures.configs.ExplainerInitConfig.__init__:6
+#: data_structures.configs.ExplainerModificationConfig.__init__:6
+#: data_structures.configs.ExplainerRunConfig.__init__:6
+#: data_structures.configs.FeatureConfig.__init__:6
+#: data_structures.configs.MIAttackConfig.__init__:6
+#: data_structures.configs.MIDefenseConfig.__init__:6
+#: data_structures.configs.ModelManagerConfig.__init__:6
+#: data_structures.configs.ModelStructureConfig.__init__:6
+#: data_structures.configs.PoisonAttackConfig.__init__:6
+#: data_structures.configs.PoisonDefenseConfig.__init__:6 of
+msgid "Named parameters to store in this config."
 msgstr ""
 
-#: data_structures.configs.GeneralConfig.clone_with:7 of
-msgid ""
-"These keys should match the keys returned by to_dict() and be valid "
-"arguments for the config's constructor. :return: A new instance of the "
-"same class as config_obj, constructed using the merged dictionary of "
-"original config values and the provided overrides."
-msgstr ""
-
-#: data_structures.configs.Config.to_savable_dict:1
-#: data_structures.configs.ConfigPattern.to_savable_dict:1 of
-msgid ""
-"Create dict which values are strings without spaces and are guaranteed to"
-" be sorted by key including inner dicts and configs. Result dict is a "
-"deep copy and can be modified."
-msgstr ""
-
-#: data_structures.configs.Config.to_savable_dict:5
-#: data_structures.configs.ConfigPattern.to_savable_dict:5 of
-msgid "if compact=True, outer dict values are strings without spaces"
+#: data_structures.configs.Config.copy:1 of
+msgid "Return a shallow copy of this config with all config-key values copied."
 msgstr ""
 
 #: ../../api/data_structures.rst
 msgid "Результат"
 msgstr ""
 
-#: data_structures.configs.Config.to_savable_dict:6
-#: data_structures.configs.ConfigPattern.to_savable_dict:7 of
-msgid "dict"
-msgstr ""
-
-#: data_structures.configs.Config:1 of
-msgid ""
-"Contains a set of named parameters. Immutable - values can be set in "
-"constructor only. Parameters can be dicts or Configs themselves. Supports"
-" setting of default parameters stored in json file, which can specify "
-"complex operations over values (e.g. technical_parameter). After setting "
-"defaults, saveable representation of parameters is created."
+#: data_structures.configs.Config.copy:3 of
+msgid "New instance of the same class with copied config-key values."
 msgstr ""
 
 #: data_structures.configs.Config.merge:1 of
+msgid "Create a new config by updating this config's params with the given ones."
+msgstr ""
+
+#: data_structures.configs.Config.merge:3 of
+msgid "Override values; must be a dict or the same Config type."
+msgstr ""
+
+#: data_structures.configs.Config.merge:6 of
+msgid "New config instance of the same type with merged parameters."
+msgstr ""
+
+#: data_structures.configs.Config.to_savable_dict:1 of
+msgid "Build a sorted, deep-copy dict of config values ready for serialization."
+msgstr ""
+
+#: data_structures.configs.Config.to_savable_dict:3 of
 msgid ""
-"Create a new config with params obtained by updating self params with a "
-"given ones. Given config is a dict or a Config."
+"If True, outer dict values are strings without spaces. Default value: "
+"`False`."
+msgstr ""
+
+#: data_structures.configs.Config.to_savable_dict:6 of
+msgid "Sorted serializable dict of config values."
 msgstr ""
 
 #: data_structures.configs.DatasetConfig:1 of
 msgid ""
-"Contains a set of distinguishing characteristics to identify the dataset "
-"or family of datasets. Determines the path to the file with raw data in "
-"the inner storage."
-msgstr ""
-
-#: data_structures.configs.DatasetConfig.path:1 of
-msgid "Return all fields as a path part."
+"A set of distinguishing characteristics that identify a dataset or family"
+" of datasets. Determines the path to the raw data file in the inner "
+"storage."
 msgstr ""
 
 #: data_structures.configs.FeatureConfig:1 of
 msgid ""
-"Instructions how to form features for nodes, edges and graph based on "
-"attributes and structure."
+"Instructions for forming node, edge, and graph features from attributes "
+"and structure."
 msgstr ""
 
 #: data_structures.configs.DatasetVarConfig:1 of
 msgid ""
-"Contains description of how to obtain tensors for the dataset, having "
-"DatasetConfig. Specifies the path to the file with tensors in the inner "
+"Description of how to produce tensors for a dataset given a "
+"DatasetConfig. Specifies the path to the tensor file in the inner "
 "storage."
 msgstr ""
 
 #: data_structures.configs.ModelStructureConfig:1 of
-msgid ""
-"Contains a full description of a model structure. Represents a list of "
-"layers. Access by key and iterating behave like it is list."
+msgid "Full description of a GNN model structure as a list of layer blocks."
 msgstr ""
 
-#: data_structures.configs.ModelStructureConfig:5 of
+#: data_structures.configs.ModelStructureConfig:3 of
+msgid ""
+"Each block can specify a graph layer, batch normalization, activation, "
+"dropout, and skip connections to other layers. Access by index or "
+"iteration behaves like a list."
+msgstr ""
+
+#: data_structures.configs.ModelStructureConfig:6 of
 msgid "General principle for describing one layer of the network:"
 msgstr ""
 
-#: data_structures.configs.ModelStructureConfig:36 of
+#: data_structures.configs.ModelStructureConfig:21 of
 msgid ""
 "For connections now support variant connection between layers with "
-"labels: n -> n, n -> g, g -> g Example connections:"
+"labels: n -> n, n -> g, g -> g. Example connections:"
 msgstr ""
 
-#: data_structures.configs.ModelStructureConfig:53 of
+#: data_structures.configs.ModelStructureConfig:37 of
 msgid ""
-"into_layer: layer (block) index, numeration start from 0 For "
-"aggregation_type now support only cat pool_type has taken from "
-"torch_geometric.nn, pooling"
+"into_layer: layer (block) index, numeration starts from 0. For "
+"aggregation_type only 'cat' is currently supported. pool_type is taken "
+"from torch_geometric.nn pooling."
 msgstr ""
 
-#: data_structures.configs.ModelStructureConfig:57 of
+#: data_structures.configs.ModelStructureConfig:41 of
 msgid ""
-"In the case of using GINConv, it is necessary to write the internal "
-"structure nn.Sequential(). For this case, a universal block logic is "
-"provided in the following format:"
-msgstr ""
-
-#: data_structures.configs.ModelStructureConfig:86 of
-msgid "Examples: Example of conv layer:"
-msgstr ""
-
-#: data_structures.configs.ModelStructureConfig:119 of
-msgid "Example of gin layer:"
-msgstr ""
-
-#: data_structures.configs.ModelStructureConfig:176 of
-msgid "Example of linear layer:"
+"In the case of GINConv, provide an internal nn.Sequential structure via "
+"'gin_seq'. For a complete example see the project documentation."
 msgstr ""
 
 #: data_structures.configs.ModelConfig:1 of
 msgid ""
-"Config for GNN model. Can contain structure (for framework models) and/or"
-" additional parameters (for custom models)."
+"Config for a GNN model. Can contain structure (for framework models) "
+"and/or additional parameters (for custom models)."
+msgstr ""
+
+#: data_structures.configs.ModelConfig.__init__:1 of
+msgid ""
+"Model layer structure; dicts are automatically converted to "
+"ModelStructureConfig."
 msgstr ""
 
 #: data_structures.configs.ModelManagerConfig:1 of
@@ -181,14 +213,64 @@ msgstr ""
 
 #: data_structures.configs.ModelModificationConfig:1 of
 msgid ""
-"Variability of a model given its structure and manager. Represents model "
-"attack type and the instance version."
+"Variability of a model given its structure and manager. Represents the "
+"model attack type and the instance version index."
 msgstr ""
 
 #: data_structures.configs.ModelModificationConfig.__init__:1 of
 msgid ""
-"model index when saving. If None, then takes the nearest unoccupied index"
-" starting from 0 in ascending increments of 1"
+"Model index when saving. If None, takes the nearest free index starting "
+"from 0. Default value: `None`."
+msgstr ""
+
+#: data_structures.configs.ModelModificationConfig.__init__:4 of
+msgid "Number of training epochs."
+msgstr ""
+
+#: data_structures.configs.ModelModificationConfig.data_change_flag:1 of
+msgid ""
+"Read and reset the data-change flag; returns True if any field was "
+"modified since last check."
+msgstr ""
+
+#: data_structures.configs.EvasionAttackConfig:1 of
+msgid "Configuration for an evasion attack. Mutable to allow runtime updates."
+msgstr ""
+
+#: data_structures.configs.EvasionDefenseConfig:1 of
+msgid "Configuration for an evasion defense. Mutable to allow runtime updates."
+msgstr ""
+
+#: data_structures.configs.PoisonAttackConfig:1 of
+msgid "Configuration for a poison attack. Mutable to allow runtime updates."
+msgstr ""
+
+#: data_structures.configs.PoisonDefenseConfig:1 of
+msgid "Configuration for a poison defense. Mutable to allow runtime updates."
+msgstr ""
+
+#: data_structures.configs.MIAttackConfig:1 of
+msgid ""
+"Configuration for a membership inference attack. Mutable to allow runtime"
+" updates."
+msgstr ""
+
+#: data_structures.configs.MIDefenseConfig:1 of
+msgid ""
+"Configuration for a membership inference defense. Mutable to allow "
+"runtime updates."
+msgstr ""
+
+#: data_structures.configs.ExplainerInitConfig:1 of
+msgid "Configuration for explainer initialization parameters."
+msgstr ""
+
+#: data_structures.configs.ExplainerRunConfig:1 of
+msgid "Configuration for explainer run parameters."
+msgstr ""
+
+#: data_structures.configs.ExplainerModificationConfig:1 of
+msgid "Variability of an explainer run, including its version index."
 msgstr ""
 
 #: ../../api/data_structures.rst:16
@@ -196,52 +278,87 @@ msgid "Other"
 msgstr ""
 
 #: data_structures.explanation.Explanation:1 of
-msgid "General class to represent GNN explanation."
+msgid "General class to represent a GNN explanation."
 msgstr ""
 
-#: data_structures.explanation.AttributionExplanation.__init__:1
-#: data_structures.explanation.ConceptExplanationGlobal.__init__:1
 #: data_structures.explanation.Explanation.__init__:1 of
-msgid "True if local, False if global"
+msgid "True if local explanation, False if global."
 msgstr ""
 
-#: data_structures.explanation.ConceptExplanationGlobal.__init__:2
-#: data_structures.explanation.Explanation.__init__:2 of
-msgid "\"subgraph\", \"prototype\", etc"
-msgstr ""
-
-#: data_structures.explanation.ConceptExplanationGlobal.__init__:3
 #: data_structures.explanation.Explanation.__init__:3 of
-msgid "explanation contents"
+msgid "Explanation type, e.g. ``\"subgraph\"``, ``\"prototype\"``."
 msgstr ""
 
-#: data_structures.explanation.ConceptExplanationGlobal.__init__:4
-#: data_structures.explanation.Explanation.__init__:4 of
-msgid "additional info about explanation"
+#: data_structures.explanation.Explanation.__init__:5 of
+msgid "Explanation contents. Default value: `None`."
+msgstr ""
+
+#: data_structures.explanation.Explanation.__init__:7 of
+msgid "Additional info about the explanation. Default value: `None`."
 msgstr ""
 
 #: data_structures.explanation.AttributionExplanation:1 of
-msgid ""
-"Attribution explanation as important subgraph. Importance scores (binary "
-"or continual) can be assigned to nodes, edges, and features."
+msgid "Attribution explanation as an important subgraph."
 msgstr ""
 
-#: data_structures.explanation.AttributionExplanation.__init__:2
-#: data_structures.explanation.AttributionExplanation.__init__:3
-#: data_structures.explanation.AttributionExplanation.__init__:4 of
-msgid "\"binary\", \"continuous\", or None/False"
+#: data_structures.explanation.AttributionExplanation:3 of
+msgid ""
+"Importance scores (binary or continuous) can be assigned to nodes, edges,"
+" and features."
+msgstr ""
+
+#: data_structures.explanation.AttributionExplanation.__init__:1 of
+msgid "True if local explanation, False if global. Default value: `True`."
+msgstr ""
+
+#: data_structures.explanation.AttributionExplanation.__init__:3 of
+msgid "Whether the explanation graph is directed. Default value: `False`."
+msgstr ""
+
+#: data_structures.explanation.AttributionExplanation.__init__:5 of
+msgid ""
+"Node importance mode: ``\"binary\"``, ``\"continuous\"``, or "
+"``None``/``False`` to disable. Default value: `\"binary\"`."
+msgstr ""
+
+#: data_structures.explanation.AttributionExplanation.__init__:8 of
+msgid ""
+"Edge importance mode: ``\"binary\"``, ``\"continuous\"``, or ``False`` to"
+" disable. Default value: `False`."
+msgstr ""
+
+#: data_structures.explanation.AttributionExplanation.__init__:11 of
+msgid ""
+"Feature importance mode: ``\"binary\"``, ``\"continuous\"``, or ``False``"
+" to disable. Default value: `False`."
+msgstr ""
+
+#: data_structures.explanation.ConceptExplanationGlobal:1 of
+msgid ""
+"Global concept-based explanation that maps neurons to their associated "
+"rules and importance scores."
+msgstr ""
+
+#: data_structures.explanation.ConceptExplanationGlobal.__init__:1 of
+msgid ""
+"Raw neuron data; raw_neurons[0] maps neuron index to (rule_info, ...) and"
+" raw_neurons[1] maps neuron index to importance scores."
+msgstr ""
+
+#: data_structures.explanation.ConceptExplanationGlobal.__init__:4 of
+msgid "Total number of neurons to process."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact:1 of
 msgid ""
-"Class for storing and managing graph modifications due to poisoning and "
-"evasion attacks, as well as corresponding defenses. Supports "
-"serialization to and from JSON format."
+"Stores and manages graph modifications due to poisoning and evasion "
+"attacks, as well as corresponding defenses. Supports serialization to and"
+" from JSON format."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.__init__:1
 #: of
-msgid "Initializes the internal structures for node and edge modifications."
+msgid "Initializes internal structures for node and edge modifications."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.to_scalar_str:1
@@ -254,44 +371,28 @@ msgstr ""
 msgid "Index to convert."
 msgstr ""
 
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.to_scalar_str:4
+#: data_structures.graph_modification_artifacts.GraphModificationArtifact.to_scalar_str:5
 #: of
 msgid "String representation of the index."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_node:1
 #: of
-msgid "Adds a new node with associated features."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_node:3
-#: of
-msgid "Identifier of the node to add."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_node:4
-#: of
-msgid "Feature tensor for the node."
+msgid ""
+"Adds a new node with associated features. :param node_id: Identifier of "
+"the node to add. :param feature_tensor: Feature tensor for the node."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_nodes:1
 #: of
-msgid "Adds multiple nodes."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_nodes:3
-#: of
-msgid "Dictionary of node_id to feature_tensor."
+msgid "Adds multiple nodes from a dictionary mapping node IDs to feature tensors."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_node:1
 #: of
-msgid "Marks a node for removal."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_node:3
-#: of
-msgid "Identifier of the node to remove."
+msgid ""
+"Marks a node for removal. :param node_id: Identifier of the node to "
+"remove."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_nodes:1
@@ -299,142 +400,85 @@ msgstr ""
 msgid "Marks multiple nodes for removal."
 msgstr ""
 
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_nodes:3
-#: of
-msgid "List of node identifiers."
-msgstr ""
-
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_feature:1
 #: of
-msgid "Registers a change in a feature of a node."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_feature:3
-#: of
-msgid "Node identifier."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_feature:4
-#: of
-msgid "Index of the feature to change."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_feature:5
-#: of
-msgid "New value of the feature."
+msgid ""
+"Registers a new value for a specific feature of a node. :param node_id: "
+"Node identifier. :param feature_index: Index of the feature to change. "
+":param new_value: New value of the feature."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_features:1
 #: of
-msgid "Registers multiple feature changes."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.change_node_features:3
-#: of
-#, python-brace-format
-msgid "Dictionary mapping node_id to {feature_index: delta_value}"
+msgid "Registers multiple feature changes across multiple nodes."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_nodes:1
 #: of
-msgid "Sets all node modification fields at once."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_nodes:3
-#: of
-msgid "List of nodes to be removed."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_nodes:4
-#: of
-msgid "Dictionary of nodes to add with their feature tensors."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_nodes:5
-#: of
-msgid "Feature modifications for existing nodes."
+#, python-brace-format
+msgid ""
+"Sets all node modification fields at once. :param remove_nodes: List of "
+"node IDs to remove. :param add_nodes: Dictionary mapping node IDs to "
+"feature tensors. :param changed_features: Mapping of node IDs to "
+"{feature_index: new_value}."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edge:1
 #: of
-msgid "Adds a new edge with optional edge attributes."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edge:3
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_edge:3
-#: of
-msgid "Source node of the edge."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edge:4
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_edge:4
-#: of
-msgid "Target node of the edge."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edge:5
-#: of
-msgid "Optional tensor of edge attributes."
+msgid ""
+"Adds a new edge with optional edge attributes. :param from_node_id: "
+"Source node of the edge. :param to_node_id: Target node of the edge. "
+":param edge_attr_tensor: Optional tensor of edge attributes."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edges:1
 #: of
-msgid "Adds multiple edges with optional attributes."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.add_edges:3
-#: of
-msgid "List of [from_node_id, to_node_id, edge_attr_tensor or None]"
+msgid ""
+"Adds multiple edges, each given as [from_node_id, to_node_id, edge_attr "
+"or None]."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_edge:1
 #: of
-msgid "Marks an edge for removal."
+msgid ""
+"Marks an edge for removal. :param from_node_id: Source node of the edge. "
+":param to_node_id: Target node of the edge."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_edges:1
 #: of
-msgid "Marks multiple edges for removal."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.remove_edges:3
-#: of
-msgid "List of [from_node_id, to_node_id]"
+msgid ""
+"Marks multiple edges for removal, each given as [from_node_id, "
+"to_node_id]."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_edges:1
 #: of
-msgid "Sets all edge modification fields at once."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_edges:3
-#: of
-msgid "List of edges to remove."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.set_edges:4
-#: of
-msgid "List of edges to add with optional attributes."
+msgid ""
+"Sets all edge modification fields at once. :param remove_edges: List of "
+"[from_node_id, to_node_id] pairs to remove. :param add_edges: List of "
+"[from_node_id, to_node_id, edge_attr or None] to add."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.to_json:1
 #: of
-msgid "Serialized the artifact to a JSON format."
+msgid "Serializes the artifact to a JSON-compatible dictionary."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.from_json:1
 #: of
-msgid "Loads the artifact from a JSON file."
-msgstr ""
-
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.from_json:3
-#: of
-msgid "Path to the JSON file."
+msgid ""
+"Loads the artifact from a JSON file. :param filepath: Path to the JSON "
+"file."
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.from_json:4
 #: of
-msgid "GraphModificationArtifact instance."
+msgid "Loaded instance."
+msgstr ""
+
+#: ../../api/data_structures.rst
+msgid "Тип результата"
 msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.clear:1
@@ -444,11 +488,349 @@ msgstr ""
 
 #: data_structures.graph_modification_artifacts.GraphModificationArtifact.summary:1
 #: of
-msgid "Returns a summary of all modifications."
+msgid "Returns a summary of all modifications as counts per category."
 msgstr ""
 
-#: data_structures.graph_modification_artifacts.GraphModificationArtifact.summary:3
-#: of
-msgid "Dictionary with counts of modifications."
+#: data_structures.graph_modification_artifacts.GlobalNodeIndexer:1 of
+msgid ""
+"Builds a bidirectional mapping between local per-graph node IDs and "
+"global node IDs across an entire dataset."
 msgstr ""
+
+#: data_structures.graph_modification_artifacts.GlobalNodeIndexer.__init__:1 of
+msgid "Iterable of graph Data objects, each with a `num_nodes` attribute."
+msgstr ""
+
+#: data_structures.graph_modification_artifacts.GlobalNodeIndexer.to_global:1
+#: of
+msgid "Returns the global node ID for a given graph index and local node ID."
+msgstr ""
+
+#: data_structures.graph_modification_artifacts.GlobalNodeIndexer.to_local:1 of
+msgid "Returns (graph_idx, local_id) for a given global node ID."
+msgstr ""
+
+#: data_structures.graph_modification_artifacts.GlobalNodeIndexer.graph_offset:1
+#: of
+msgid "Returns the global ID offset for the first node in a given graph."
+msgstr ""
+
+#: data_structures.mi_results.MIResultsStore:1 of
+msgid "Storage for membership inference results, keyed by binary mask tensors."
+msgstr ""
+
+#: data_structures.mi_results.MIResultsStore:3 of
+msgid "Maps each mask (stored as raw bytes) to a boolean annotation tensor."
+msgstr ""
+
+#: data_structures.mi_results.MIResultsStore.items:1 of
+msgid "Yield (mask, annotation) pairs with masks decoded back to bool tensors."
+msgstr ""
+
+#: data_structures.mi_results.MIResultsStore.get_results:1 of
+msgid "Yield (train_annotation, test_annotation) pairs for each stored mask."
+msgstr ""
+
+#: data_structures.mi_results.MIResultsStore.get_results:3 of
+msgid ""
+"train_annotation — the stored boolean annotation; test_annotation — "
+"elements in mask that are True but not in annotation (mask XOR "
+"annotation)."
+msgstr ""
+
+#~ msgid "# TODO Kirill rename, docs"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Represent config as a dictionary, as "
+#~ "well as all included configs. Dict "
+#~ "is a copy of all values."
+#~ msgstr ""
+
+#~ msgid "Special method which allows to use json.dumps() on Config object"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Creates a deep cloned instance of "
+#~ "a configuration object (typically derived "
+#~ "from GeneralConfig), with specified fields "
+#~ "overridden. This is useful when working"
+#~ " with mostly immutable config objects "
+#~ "that need to be reused with minor"
+#~ " changes, without mutating the original."
+#~ msgstr ""
+
+#~ msgid "A dictionary of fields to override in the clone."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "These keys should match the keys "
+#~ "returned by to_dict() and be valid "
+#~ "arguments for the config's constructor. "
+#~ ":return: A new instance of the "
+#~ "same class as config_obj, constructed "
+#~ "using the merged dictionary of original"
+#~ " config values and the provided "
+#~ "overrides."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Create dict which values are strings "
+#~ "without spaces and are guaranteed to "
+#~ "be sorted by key including inner "
+#~ "dicts and configs. Result dict is "
+#~ "a deep copy and can be modified."
+#~ msgstr ""
+
+#~ msgid "if compact=True, outer dict values are strings without spaces"
+#~ msgstr ""
+
+#~ msgid "dict"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Contains a set of named parameters. "
+#~ "Immutable - values can be set in"
+#~ " constructor only. Parameters can be "
+#~ "dicts or Configs themselves. Supports "
+#~ "setting of default parameters stored in"
+#~ " json file, which can specify complex"
+#~ " operations over values (e.g. "
+#~ "technical_parameter). After setting defaults, "
+#~ "saveable representation of parameters is "
+#~ "created."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Create a new config with params "
+#~ "obtained by updating self params with"
+#~ " a given ones. Given config is "
+#~ "a dict or a Config."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Contains a set of distinguishing "
+#~ "characteristics to identify the dataset "
+#~ "or family of datasets. Determines the"
+#~ " path to the file with raw data"
+#~ " in the inner storage."
+#~ msgstr ""
+
+#~ msgid "Return all fields as a path part."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Instructions how to form features for"
+#~ " nodes, edges and graph based on "
+#~ "attributes and structure."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Contains description of how to obtain"
+#~ " tensors for the dataset, having "
+#~ "DatasetConfig. Specifies the path to the"
+#~ " file with tensors in the inner "
+#~ "storage."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Contains a full description of a "
+#~ "model structure. Represents a list of"
+#~ " layers. Access by key and iterating"
+#~ " behave like it is list."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "For connections now support variant "
+#~ "connection between layers with labels: n"
+#~ " -> n, n -> g, g -> g "
+#~ "Example connections:"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "into_layer: layer (block) index, numeration"
+#~ " start from 0 For aggregation_type "
+#~ "now support only cat pool_type has "
+#~ "taken from torch_geometric.nn, pooling"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "In the case of using GINConv, it"
+#~ " is necessary to write the internal"
+#~ " structure nn.Sequential(). For this case,"
+#~ " a universal block logic is provided"
+#~ " in the following format:"
+#~ msgstr ""
+
+#~ msgid "Examples: Example of conv layer:"
+#~ msgstr ""
+
+#~ msgid "Example of gin layer:"
+#~ msgstr ""
+
+#~ msgid "Example of linear layer:"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Config for GNN model. Can contain "
+#~ "structure (for framework models) and/or "
+#~ "additional parameters (for custom models)."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Variability of a model given its "
+#~ "structure and manager. Represents model "
+#~ "attack type and the instance version."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "model index when saving. If None, "
+#~ "then takes the nearest unoccupied index"
+#~ " starting from 0 in ascending "
+#~ "increments of 1"
+#~ msgstr ""
+
+#~ msgid "General class to represent GNN explanation."
+#~ msgstr ""
+
+#~ msgid "True if local, False if global"
+#~ msgstr ""
+
+#~ msgid "\"subgraph\", \"prototype\", etc"
+#~ msgstr ""
+
+#~ msgid "explanation contents"
+#~ msgstr ""
+
+#~ msgid "additional info about explanation"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Attribution explanation as important subgraph."
+#~ " Importance scores (binary or continual)"
+#~ " can be assigned to nodes, edges, "
+#~ "and features."
+#~ msgstr ""
+
+#~ msgid "\"binary\", \"continuous\", or None/False"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Class for storing and managing graph "
+#~ "modifications due to poisoning and "
+#~ "evasion attacks, as well as "
+#~ "corresponding defenses. Supports serialization "
+#~ "to and from JSON format."
+#~ msgstr ""
+
+#~ msgid "Initializes the internal structures for node and edge modifications."
+#~ msgstr ""
+
+#~ msgid "Adds a new node with associated features."
+#~ msgstr ""
+
+#~ msgid "Identifier of the node to add."
+#~ msgstr ""
+
+#~ msgid "Feature tensor for the node."
+#~ msgstr ""
+
+#~ msgid "Adds multiple nodes."
+#~ msgstr ""
+
+#~ msgid "Dictionary of node_id to feature_tensor."
+#~ msgstr ""
+
+#~ msgid "Marks a node for removal."
+#~ msgstr ""
+
+#~ msgid "Identifier of the node to remove."
+#~ msgstr ""
+
+#~ msgid "List of node identifiers."
+#~ msgstr ""
+
+#~ msgid "Registers a change in a feature of a node."
+#~ msgstr ""
+
+#~ msgid "Node identifier."
+#~ msgstr ""
+
+#~ msgid "Index of the feature to change."
+#~ msgstr ""
+
+#~ msgid "New value of the feature."
+#~ msgstr ""
+
+#~ msgid "Registers multiple feature changes."
+#~ msgstr ""
+
+#~ msgid "Dictionary mapping node_id to {feature_index: delta_value}"
+#~ msgstr ""
+
+#~ msgid "Sets all node modification fields at once."
+#~ msgstr ""
+
+#~ msgid "List of nodes to be removed."
+#~ msgstr ""
+
+#~ msgid "Dictionary of nodes to add with their feature tensors."
+#~ msgstr ""
+
+#~ msgid "Feature modifications for existing nodes."
+#~ msgstr ""
+
+#~ msgid "Adds a new edge with optional edge attributes."
+#~ msgstr ""
+
+#~ msgid "Source node of the edge."
+#~ msgstr ""
+
+#~ msgid "Target node of the edge."
+#~ msgstr ""
+
+#~ msgid "Optional tensor of edge attributes."
+#~ msgstr ""
+
+#~ msgid "Adds multiple edges with optional attributes."
+#~ msgstr ""
+
+#~ msgid "List of [from_node_id, to_node_id, edge_attr_tensor or None]"
+#~ msgstr ""
+
+#~ msgid "Marks an edge for removal."
+#~ msgstr ""
+
+#~ msgid "Marks multiple edges for removal."
+#~ msgstr ""
+
+#~ msgid "List of [from_node_id, to_node_id]"
+#~ msgstr ""
+
+#~ msgid "Sets all edge modification fields at once."
+#~ msgstr ""
+
+#~ msgid "List of edges to remove."
+#~ msgstr ""
+
+#~ msgid "List of edges to add with optional attributes."
+#~ msgstr ""
+
+#~ msgid "Serialized the artifact to a JSON format."
+#~ msgstr ""
+
+#~ msgid "Loads the artifact from a JSON file."
+#~ msgstr ""
+
+#~ msgid "Path to the JSON file."
+#~ msgstr ""
+
+#~ msgid "GraphModificationArtifact instance."
+#~ msgstr ""
+
+#~ msgid "Returns a summary of all modifications."
+#~ msgstr ""
+
+#~ msgid "Dictionary with counts of modifications."
+#~ msgstr ""
 

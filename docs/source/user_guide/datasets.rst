@@ -894,7 +894,7 @@ raw файлы,метаинфо,определить- node_attributes()- edge_at
 
    import json
 
-   from aux.declaration import Declare  
+   from auxil.declaration import Declare
    from data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig  
    from datasets.datasets_manager import DatasetManager
      

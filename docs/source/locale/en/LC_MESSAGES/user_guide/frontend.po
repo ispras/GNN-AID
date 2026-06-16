@@ -3,16 +3,15 @@
 # This file is distributed under the same license as the GNN-AID package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-10 22:09+0300\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2026-06-16 19:30+0400\n"
+"Last-Translator: GNN-AID team\n"
 "Language: en\n"
-"Language-Team: en <LL@li.org>\n"
+"Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -25,61 +24,70 @@ msgstr "Frontend"
 
 #: ../../user_guide/frontend.rst:6
 msgid "Содержание"
-msgstr ""
+msgstr "Contents"
 
 #: ../../user_guide/frontend.rst:8
 msgid ""
 "Фронтенд является дополнительным функционалом, дублирующим большинство "
 "возможностей бэкенда в виде взаимодействия пользователя с графическим "
-"интерфейсом в браузере. Опишем общие сценарии работы и устройство "
-"фронтенда, а далее нюансы про менеджер моделей и интерпретацию."
+"интерфейсом в браузере. Опишем общие сценарии работы и устройство фронтенда,"
+" а далее нюансы про менеджер моделей и интерпретацию."
 msgstr ""
+"The frontend is an optional component that exposes most backend capabilities"
+" through a graphical user interface in the browser. This section describes "
+"the common usage scenarios and the frontend structure, followed by details "
+"of the model manager and interpretation workflow."
 
 #: ../../user_guide/frontend.rst:11
 msgid "Сценарии использования системы"
-msgstr ""
+msgstr "System usage scenarios"
 
 #: ../../user_guide/frontend.rst:13
 msgid ""
-"Предполагаемые сценарии использования инструмента GNN-AID из браузера "
-"можно условно разделить на стандартный сценарий и его расширения. "
-"Стандартный сценарий включает:"
+"Предполагаемые сценарии использования инструмента GNN-AID из браузера можно "
+"условно разделить на стандартный сценарий и его расширения. Стандартный "
+"сценарий включает:"
 msgstr ""
+"The expected browser-based usage scenarios for GNN-AID can be divided into a"
+" standard workflow and its extensions. The standard workflow includes:"
 
 #: ../../user_guide/frontend.rst:15
 msgid "выбор/построение датасета"
-msgstr ""
+msgstr "selecting/building a dataset"
 
 #: ../../user_guide/frontend.rst:16
 msgid "построение/загрузка GNN модели"
-msgstr ""
+msgstr "building/loading a GNN model"
 
 #: ../../user_guide/frontend.rst:17
 msgid "обучение GNN модели"
-msgstr ""
+msgstr "training a GNN model"
 
 #: ../../user_guide/frontend.rst:19
 msgid "Расширениями стандартного сценария являются:"
-msgstr ""
+msgstr "Extensions of the standard workflow include:"
 
 #: ../../user_guide/frontend.rst:21
 msgid "анализ графовых данных"
-msgstr ""
+msgstr "graph data analysis"
 
 #: ../../user_guide/frontend.rst:22
 msgid "интерпретация GNN модели"
-msgstr ""
+msgstr "GNN model interpretation"
 
 #: ../../user_guide/frontend.rst:23
 msgid "применение атак и защит к GNN модели"
-msgstr ""
+msgstr "applying attacks and defenses to a GNN model"
 
 #: ../../user_guide/frontend.rst:25
 msgid ""
-"На фронтенде можно создавать процесс в отдельной вкладке. Например в "
-"одной запустить обучать модель, в другой интерпретацию предыдущей модели,"
-" в третьей исследовать атаки."
+"На фронтенде можно создавать процесс в отдельной вкладке. Например в одной "
+"запустить обучать модель, в другой интерпретацию предыдущей модели, в "
+"третьей исследовать атаки."
 msgstr ""
+"In the frontend, each process can be opened in a separate browser tab. For "
+"example, one tab can train a model, another can interpret a previously "
+"trained model, and a third can be used to investigate attacks."
 
 #: ../../user_guide/frontend.rst:27
 msgid ""
@@ -87,162 +95,193 @@ msgid ""
 "сценария: 1) Анализ, 2) Интерпретация, 3) Защиты/атаки. По умолчанию "
 "запускается режим Анализ, его возможности доступны и в двух остальных."
 msgstr ""
+"The frontend provides three modes corresponding to extensions of the "
+"standard workflow: 1) Analysis, 2) Interpretation, and 3) Attacks/Defenses. "
+"Analysis mode is opened by default, and its functionality is also available "
+"in the other two modes."
 
 #: ../../user_guide/frontend.rst:29
 msgid "Выбор режима фронтенда"
-msgstr ""
+msgstr "Selecting a frontend mode"
 
 #: ../../user_guide/frontend.rst:33
 msgid "Стандартный сценарий"
-msgstr ""
+msgstr "Standard workflow"
 
 #: ../../user_guide/frontend.rst:36
 msgid "1. Выбор/построение датасета"
-msgstr ""
+msgstr "1. Selecting/building a dataset"
 
 #: ../../user_guide/frontend.rst:38
 msgid ""
 "Пользователь задает датасет: выбирает графы (набор графов), способ "
 "построения признаков из атрибутов, задачу и разметку."
 msgstr ""
+"The user configures a dataset by selecting a graph or collection of graphs, "
+"a method for deriving features from attributes, a task, and labels."
 
 #: ../../user_guide/frontend.rst:40
 msgid ""
-"Пользователь выбирает способ отрисовки: окрестность вершины или граф "
-"целиком (если небольшой). Для датасета, состоящего из набора графов, "
-"можно смотреть на 1 или несколько графов. На панели датасета рисуется "
-"видимая часть графа, с которой можно взаимодействовать (перемещать "
-"вершины, масштабировать) и просматривать параметры вершин (id вершин ВК "
-"со ссылкой). На панели анализа можно видеть статистику по датасету: "
-"структурные свойства, распределения и т.п. Для каждой вершины/ребра можно"
-" увидеть ее атрибуты и признаки."
+"Пользователь выбирает способ отрисовки: окрестность вершины или граф целиком"
+" (если небольшой). Для датасета, состоящего из набора графов, можно смотреть"
+" на 1 или несколько графов. На панели датасета рисуется видимая часть графа,"
+" с которой можно взаимодействовать (перемещать вершины, масштабировать) и "
+"просматривать параметры вершин (id вершин ВК со ссылкой). На панели анализа "
+"можно видеть статистику по датасету: структурные свойства, распределения и "
+"т.п. Для каждой вершины/ребра можно увидеть ее атрибуты и признаки."
 msgstr ""
+"The user selects how the graph should be displayed: a node neighborhood or "
+"the entire graph, provided it is small enough. For datasets containing "
+"multiple graphs, one or several graphs can be viewed. The dataset panel "
+"displays the visible part of the graph, which can be manipulated by moving "
+"nodes and zooming, and allows the user to inspect node properties, such as "
+"VK node IDs with links. The analysis panel shows dataset statistics, "
+"including structural properties and distributions. Attributes and features "
+"can be inspected for every node and edge."
 
 #: ../../user_guide/frontend.rst:42 ../../user_guide/frontend.rst:58
 #: ../../user_guide/frontend.rst:70 ../../user_guide/frontend.rst:84
 #: ../../user_guide/frontend.rst:103
 msgid "**Возможности:**"
-msgstr ""
+msgstr "**Capabilities:**"
 
 #: ../../user_guide/frontend.rst:44
 msgid "загрузка графа/графов из хранилища"
-msgstr ""
+msgstr "loading a graph or collection of graphs from storage"
 
 #: ../../user_guide/frontend.rst:45
 msgid "разные способы построения признаков из атрибутов"
-msgstr ""
+msgstr "different methods for deriving features from attributes"
 
 #: ../../user_guide/frontend.rst:46
 msgid ""
 "разные варианты задания разметки: классификация, регрессия (будет "
 "реализована на следующих этапах)"
 msgstr ""
+"different ways to define labels: classification and regression (regression "
+"will be implemented in subsequent development stages)"
 
 #: ../../user_guide/frontend.rst:47
 msgid "двигание вершин, масштабирование, хождение по датасету"
-msgstr ""
+msgstr "moving nodes, zooming, and navigating through the dataset"
 
 #: ../../user_guide/frontend.rst:48
 msgid "способы просмотра: окрестность, 1 граф, много графов"
-msgstr ""
+msgstr "view modes: neighborhood, single graph, or multiple graphs"
 
 #: ../../user_guide/frontend.rst:49
 msgid "информация о вершинах и ребрах: атрибуты, признаки"
-msgstr ""
+msgstr "node and edge information: attributes and features"
 
 #: ../../user_guide/frontend.rst:50
 msgid "статистика графа: метрики, распределения"
-msgstr ""
+msgstr "graph statistics: metrics and distributions"
 
 #: ../../user_guide/frontend.rst:51
 msgid "статистика атрибутов: распределения, корреляции"
-msgstr ""
+msgstr "attribute statistics: distributions and correlations"
 
 #: ../../user_guide/frontend.rst:54
 msgid "2. Построение/загрузка модели"
-msgstr ""
+msgstr "2. Building/loading a model"
 
 #: ../../user_guide/frontend.rst:56
 msgid "Пользователь задает архитектуру модели или загружает существующую."
-msgstr ""
+msgstr "The user defines a model architecture or loads an existing model."
 
 #: ../../user_guide/frontend.rst:60
 msgid "no-code конструктор модели"
-msgstr ""
+msgstr "no-code model constructor"
 
 #: ../../user_guide/frontend.rst:61
 msgid "схема архитектуры модели"
-msgstr ""
+msgstr "model architecture diagram"
 
 #: ../../user_guide/frontend.rst:62
 msgid "меню загрузки модели"
-msgstr ""
+msgstr "model loading menu"
 
 #: ../../user_guide/frontend.rst:63
 msgid "меню загрузки обученной пользовательской модели (созданной вне фреймворка)"
-msgstr ""
+msgstr "menu for loading a trained custom model created outside the framework"
 
 #: ../../user_guide/frontend.rst:66
 msgid "3. Обучение модели"
-msgstr ""
+msgstr "3. Training the model"
 
 #: ../../user_guide/frontend.rst:68
 msgid ""
-"Пользователь задает параметры обучения модели. Выбирает число эпох "
-"обучения и метрики. Запускает обучение и наблюдает график метрик онлайн."
+"Пользователь задает параметры обучения модели. Выбирает число эпох обучения "
+"и метрики. Запускает обучение и наблюдает график метрик онлайн."
 msgstr ""
+"The user specifies the model training parameters, selects the number of "
+"training epochs and evaluation metrics, starts training, and monitors metric"
+" plots in real time."
 
 #: ../../user_guide/frontend.rst:72
 msgid "меню с параметрами обучения"
-msgstr ""
+msgstr "training-parameter menu"
 
 #: ../../user_guide/frontend.rst:73
 msgid "меню запуска обучения (по 1 шагу), выбора метрик"
-msgstr ""
+msgstr "menu for starting training one step at a time and selecting metrics"
 
 #: ../../user_guide/frontend.rst:74
 msgid "онлайн отрисовка графиков метрик качества"
-msgstr ""
+msgstr "real-time visualization of performance metric plots"
 
 #: ../../user_guide/frontend.rst:77
 msgid "Расширения стандартного сценария"
-msgstr ""
+msgstr "Extensions of the standard workflow"
 
 #: ../../user_guide/frontend.rst:80
 msgid "Р-1. Анализ (по умолчанию)"
-msgstr ""
+msgstr "E-1. Analysis (default)"
 
 #: ../../user_guide/frontend.rst:82
 msgid ""
-"Это расширение доступно по умолчанию при запуске веб-интерфейса. "
-"Актуально, если используются небольшие датасеты и легкие модели с "
-"известной архитектурой и весами. В этом сценарии доступна визуализация "
-"процесса обучения. Пользователь задает конфигурацию модели или загружает "
-"модель с известной архитектурой. Запускает обучение по 1 шагу и наблюдает"
-" детали в процессе: матрицы весов с каждого слоя, логиты и предсказания "
-"модели для каждой вершины, текущее качество на тренировочной, "
-"валидационной и тестовой выборках."
+"Это расширение доступно по умолчанию при запуске веб-интерфейса. Актуально, "
+"если используются небольшие датасеты и легкие модели с известной "
+"архитектурой и весами. В этом сценарии доступна визуализация процесса "
+"обучения. Пользователь задает конфигурацию модели или загружает модель с "
+"известной архитектурой. Запускает обучение по 1 шагу и наблюдает детали в "
+"процессе: матрицы весов с каждого слоя, логиты и предсказания модели для "
+"каждой вершины, текущее качество на тренировочной, валидационной и тестовой "
+"выборках."
 msgstr ""
+"This extension is available by default when the web interface is opened. It "
+"is most suitable for small datasets and lightweight models with known "
+"architectures and weights. The training process can be visualized in this "
+"scenario. The user defines a model configuration or loads a model with a "
+"known architecture, then runs training one step at a time and observes "
+"details of the process: weight matrices for each layer, logits and model "
+"predictions for every node, and current performance on the training, "
+"validation, and test sets."
 
 #: ../../user_guide/frontend.rst:86
 msgid "онлайн отрисовка архитектуры и весов GNN модели"
-msgstr ""
+msgstr "real-time visualization of the GNN architecture and weights"
 
 #: ../../user_guide/frontend.rst:87
 msgid ""
 "онлайн отрисовка векторов представлений, предсказаний для каждой "
 "вершины/ребра, графиков метрик качества"
 msgstr ""
+"real-time visualization of embeddings and predictions for each node or edge,"
+" together with performance metric plots"
 
 #: ../../user_guide/frontend.rst:90
 msgid "Р-2. Интерпретация"
-msgstr ""
+msgstr "E-2. Interpretation"
 
 #: ../../user_guide/frontend.rst:92
 msgid ""
-"Расширение влияет на этапе построения модели (самоинтерпретируемость) или"
-" после обучения модели (постфактум)."
+"Расширение влияет на этапе построения модели (самоинтерпретируемость) или "
+"после обучения модели (постфактум)."
 msgstr ""
+"This extension affects either the model-building stage, in the case of self-"
+"interpretability, or the post-training stage, in the case of post-hoc "
+"interpretation."
 
 #: ../../user_guide/frontend.rst:94
 msgid ""
@@ -250,206 +289,264 @@ msgid ""
 "сценарий и получает обученную модель. Выбирает и запускает алгоритм "
 "интерпретации, который выдает локальную или глобальную интерпретацию."
 msgstr ""
+"For post-hoc interpretation, the user completes the standard workflow and "
+"obtains a trained model. The user then selects and runs an interpretation "
+"algorithm that produces a local or global explanation."
 
 #: ../../user_guide/frontend.rst:96
 msgid ""
-"Важный подграф для предсказания вершины, элементы подграфа (вершины, "
-"ребра, признаки) раскрашены на отрисованной окрестности в соответствии с "
-"весами значимости;"
+"Важный подграф для предсказания вершины, элементы подграфа (вершины, ребра, "
+"признаки) раскрашены на отрисованной окрестности в соответствии с весами "
+"значимости;"
 msgstr ""
+"An important subgraph for a node prediction, with the subgraph "
+"elements—nodes, edges, and features—colored in the displayed neighborhood "
+"according to their importance scores;"
 
 #: ../../user_guide/frontend.rst:97
 msgid ""
 "Список подграфов-прототипов для глобальной интепретации, отображаются на "
 "панели объяснения;"
 msgstr ""
+"A list of prototype subgraphs for global interpretation, displayed in the "
+"explanation panel;"
 
 #: ../../user_guide/frontend.rst:98
 msgid ""
-"для локального объяснения в соответствующих подграфах подсвечиваются "
-"части и выводятся коэффициенты похожести/близости;"
+"для локального объяснения в соответствующих подграфах подсвечиваются части и"
+" выводятся коэффициенты похожести/близости;"
 msgstr ""
+"for a local explanation, relevant parts of the corresponding subgraphs are "
+"highlighted and similarity/proximity scores are displayed;"
 
 #: ../../user_guide/frontend.rst:99
-msgid ""
-"Выводятся логические выражения на вершины, соответствующие каждому "
-"нейрону."
-msgstr ""
+msgid "Выводятся логические выражения на вершины, соответствующие каждому нейрону."
+msgstr "Logical expressions corresponding to each neuron are displayed."
 
 #: ../../user_guide/frontend.rst:101
 msgid ""
-"Альтернативно, пользователь строит модель с возможностью "
-"самоинтерпретации. Запускает обучение и получает интерпретацию."
+"Альтернативно, пользователь строит модель с возможностью самоинтерпретации. "
+"Запускает обучение и получает интерпретацию."
 msgstr ""
+"Alternatively, the user can build a self-interpretable model, train it, and "
+"obtain an interpretation."
 
 #: ../../user_guide/frontend.rst:105
 msgid "в конструктор модели добавляются доп.слои для самоинтерпретации"
-msgstr ""
+msgstr "additional self-interpretability layers can be added in the model constructor"
 
 #: ../../user_guide/frontend.rst:106
 msgid ""
 "меню построения и запуска метода интерпретации после обучения, загрузки "
 "объяснения"
 msgstr ""
+"menu for configuring and running a post-training interpretation method and "
+"loading an explanation"
 
 #: ../../user_guide/frontend.rst:107
 msgid ""
-"отрисовка объяснения на графе (важный подграф), отображение сопутствующей"
-" информации: статистика, прототипы, формулы и т.п."
+"отрисовка объяснения на графе (важный подграф), отображение сопутствующей "
+"информации: статистика, прототипы, формулы и т.п."
 msgstr ""
+"visualization of an explanation on the graph, such as an important subgraph,"
+" together with related information: statistics, prototypes, formulas, and so"
+" on"
 
 #: ../../user_guide/frontend.rst:110
 msgid "Р-3. Attacks/Defenses"
-msgstr ""
+msgstr "E-3. Attacks/Defenses"
 
 #: ../../user_guide/frontend.rst:112
 msgid ""
-"Это расширение позволяет добавлять атаки и защиты модели в пайплайн. "
-"Влияет на 2 этапах. До обучения модели пользователь может добавить:"
+"Это расширение позволяет добавлять атаки и защиты модели в пайплайн. Влияет "
+"на 2 этапах. До обучения модели пользователь может добавить:"
 msgstr ""
+"This extension makes it possible to add attacks and defenses to the model "
+"pipeline. It affects two stages. Before model training, the user can add:"
 
 #: ../../user_guide/frontend.rst:114
 msgid "атаку отравления,"
-msgstr ""
+msgstr "a poisoning attack,"
 
 #: ../../user_guide/frontend.rst:115
 msgid "защиту от отравления,"
-msgstr ""
+msgstr "a poisoning defense,"
 
 #: ../../user_guide/frontend.rst:116
 msgid "защиту от уклонения,"
-msgstr ""
+msgstr "an evasion defense,"
 
 #: ../../user_guide/frontend.rst:117
 msgid "защиту от вывода членства."
-msgstr ""
+msgstr "a membership inference defense."
 
 #: ../../user_guide/frontend.rst:119
 msgid "После обучения модели можно добавить:"
-msgstr ""
+msgstr "After model training, the user can add:"
 
 #: ../../user_guide/frontend.rst:121 ../../user_guide/frontend.rst:218
 msgid "атака уклонения"
-msgstr ""
+msgstr "an evasion attack"
 
 #: ../../user_guide/frontend.rst:122 ../../user_guide/frontend.rst:219
 msgid "атака вывода членства"
-msgstr ""
+msgstr "a membership inference attack"
 
 #: ../../user_guide/frontend.rst:124
 msgid ""
-"Одновременно можно выбрать по 1 атаке и защите из каждого класса, то есть"
-" всего до 6. Результатом атаки отравления или уклонения является "
-"модификация датасета, которую можно отобразить на панели отрисовки "
-"датасета. Также пользователю интересны изменения метрик работы модели, их"
-" можно увидеть на панели информации об атаках/защитах."
+"Одновременно можно выбрать по 1 атаке и защите из каждого класса, то есть "
+"всего до 6. Результатом атаки отравления или уклонения является модификация "
+"датасета, которую можно отобразить на панели отрисовки датасета. Также "
+"пользователю интересны изменения метрик работы модели, их можно увидеть на "
+"панели информации об атаках/защитах."
 msgstr ""
+"One attack and one defense from each category can be selected "
+"simultaneously, for a total of up to six methods. A poisoning or evasion "
+"attack modifies the dataset, and the resulting changes can be displayed in "
+"the dataset visualization panel. Changes in model performance metrics can be"
+" viewed in the attacks/defenses information panel."
 
 #: ../../user_guide/frontend.rst:127
 msgid "Основные элементы веб-интерфейса"
-msgstr ""
+msgstr "Main elements of the web interface"
 
 #: ../../user_guide/frontend.rst:129
 msgid ""
-"Графический интерфейс как веб-страница для пользователя состоит из 3 "
-"частей: слева панель меню, в центре панель отрисовки датасета, справа "
-"информационные панели о датасете, модели, результатах интерпретации, атак"
-" и защит. Рисунок представляет скриншот страницы после выбора датасета, "
-"обучения модели и запуска метода интерпретации. Большая часть информации "
-"не видна на скриншоте, она доступна при прокрутке соответствующих "
-"панелей."
+"Графический интерфейс как веб-страница для пользователя состоит из 3 частей:"
+" слева панель меню, в центре панель отрисовки датасета, справа "
+"информационные панели о датасете, модели, результатах интерпретации, атак и "
+"защит. Рисунок представляет скриншот страницы после выбора датасета, "
+"обучения модели и запуска метода интерпретации. Большая часть информации не "
+"видна на скриншоте, она доступна при прокрутке соответствующих панелей."
 msgstr ""
+"The graphical interface is a web page divided into three areas: a menu panel"
+" on the left, a dataset visualization panel in the center, and information "
+"panels on the right containing details about the dataset, model, "
+"interpretation results, attacks, and defenses. The figure shows the page "
+"after a dataset has been selected, a model trained, and an interpretation "
+"method run. Much of the information is not visible in the screenshot and can"
+" be accessed by scrolling the corresponding panels."
 
 #: ../../user_guide/frontend.rst:131 ../../user_guide/frontend.rst:174
 #: ../../user_guide/frontend.rst:276
 msgid "План"
-msgstr ""
+msgstr "Plan"
 
 #: ../../user_guide/frontend.rst:131
 msgid "показать где какая панель"
-msgstr ""
+msgstr "show the location of each panel"
 
 #: ../../user_guide/frontend.rst:133
 msgid "Веб-интерфейс в режиме интерпретации"
-msgstr ""
+msgstr "Web interface in Interpretation mode"
 
 #: ../../user_guide/frontend.rst:136
 msgid ""
-"**Рисунок** — Скриншот веб-интерфейса в режиме интерпретации. Слева "
-"панель меню с выбором датасета, модели (частично) и т.д. (остальные "
-"элементы видны после прокрутки вниз). По центру визуализация графа с "
-"дополнительной информацией вокруг вершин и результатами объяснения "
-"классификации вершины номер 1 в виде сиреневых ребер в ее окрестности. "
-"Справа информационные панели, сверху вниз: о датасете, о модели, об "
-"интерпретации."
+"**Рисунок** — Скриншот веб-интерфейса в режиме интерпретации. Слева панель "
+"меню с выбором датасета, модели (частично) и т.д. (остальные элементы видны "
+"после прокрутки вниз). По центру визуализация графа с дополнительной "
+"информацией вокруг вершин и результатами объяснения классификации вершины "
+"номер 1 в виде сиреневых ребер в ее окрестности. Справа информационные "
+"панели, сверху вниз: о датасете, о модели, об интерпретации."
 msgstr ""
+"**Figure** — Screenshot of the web interface in Interpretation mode. The "
+"menu panel on the left contains the dataset and model selection controls, "
+"with the model section only partly visible; the remaining controls are "
+"available by scrolling down. The center shows a graph visualization with "
+"additional information around the nodes and the explanation of the "
+"classification of node 1, represented by lilac-colored edges in its "
+"neighborhood. The information panels on the right show, from top to bottom, "
+"details about the dataset, model, and interpretation."
 
 #: ../../user_guide/frontend.rst:138
 msgid "Далее опишем три части более подробно."
-msgstr ""
+msgstr "The three areas are described in greater detail below."
 
 #: ../../user_guide/frontend.rst:141
 msgid "Панель меню"
-msgstr ""
+msgstr "Menu panel"
 
 #: ../../user_guide/frontend.rst:143
 msgid ""
 "С левой части страницы располагается панель меню со следующими разделами "
 "меню:"
 msgstr ""
+"The menu panel is located on the left side of the page and contains the "
+"following sections:"
 
 #: ../../user_guide/frontend.rst:145
 msgid ""
 "Кнопка меню с выбором режима — расширения сценария — Analysis, "
 "Interpretation, Attack/Defense,"
 msgstr ""
+"a mode-selection menu for choosing a workflow extension: Analysis, "
+"Interpretation, or Attack/Defense,"
 
 #: ../../user_guide/frontend.rst:146
 msgid "Dataset — загрузка датасета в инструмент,"
-msgstr ""
+msgstr "Dataset — loading a dataset into the tool,"
 
 #: ../../user_guide/frontend.rst:147
 msgid "Model — загрузка, построение, обучение GNN модели,"
-msgstr ""
+msgstr "Model — loading, building, and training a GNN model,"
 
 #: ../../user_guide/frontend.rst:148
 msgid "Explainer — загрузка или инициализация и запуск метода интерпретации,"
-msgstr ""
+msgstr "Explainer — loading or initializing and running an interpretation method,"
 
 #: ../../user_guide/frontend.rst:149
 msgid "Visualization — управление отображением датасета"
-msgstr ""
+msgstr "Visualization — controlling how the dataset is displayed."
 
 #: ../../user_guide/frontend.rst:151
 msgid ""
 "В зависимости от выбранного режима (по умолчанию Analysis, стандартный "
 "сценарий), набор остальных элементов немного меняется. Режим Analysis "
 "является основным, остальные два предлагают различные дополнительные "
-"возможности. В режиме Interpretation в панели меню и информационной "
-"панели появляется раздел Explainer. В режиме Attack/Defense в панели меню"
-" появляются элементы для выбора атак и защит, в информационной панели "
+"возможности. В режиме Interpretation в панели меню и информационной панели "
+"появляется раздел Explainer. В режиме Attack/Defense в панели меню "
+"появляются элементы для выбора атак и защит, в информационной панели "
 "соответствующий раздел с результатами (на данном этапе не реализованы)."
 msgstr ""
+"The remaining controls vary slightly depending on the selected mode. "
+"Analysis is the default mode and implements the standard workflow; the other"
+" two modes add specialized functionality. In Interpretation mode, an "
+"Explainer section appears in both the menu panel and the information panel. "
+"In Attack/Defense mode, controls for selecting attacks and defenses appear "
+"in the menu panel, together with a corresponding results section in the "
+"information panel; this results section is not yet implemented."
 
 #: ../../user_guide/frontend.rst:154
 msgid "Dataset"
-msgstr ""
+msgstr "Dataset"
 
 #: ../../user_guide/frontend.rst:156
 msgid ""
 "В начале работы пользователю предлагается выбрать датасет исходя из "
 "имеющихся в системе. Они включают как доступные по умолчанию, так и "
 "созданные/загруженные пользователем средствами бэкенда. Все датасеты из "
-"директории будут отображены в виде иерархического выбора, "
-"соответствующего папочной структуре. Например, чтобы выбрать популярный "
-"датасет Cora, нужно пройти ptg-library-graphs -> Homogeneous -> Planetoid"
-" -> Cora. При наведении на название можно увидеть всплывающее окно с "
-"краткой инфо о числе графов, вершин, направленности ребер - в случае, "
-"если датасет уже использовался. После нажатия на имя датасета, выбор "
-"фиксируется (его можно увидеть в текстовом поле \"Selected:\" ниже), а "
-"нажатие Accept начнет загрузку датасета. После этого структурная часть "
-"отрисуется на панели отрисовки датасета."
+"директории будут отображены в виде иерархического выбора, соответствующего "
+"папочной структуре. Например, чтобы выбрать популярный датасет Cora, нужно "
+"пройти ptg-library-graphs -> Homogeneous -> Planetoid -> Cora. При наведении"
+" на название можно увидеть всплывающее окно с краткой инфо о числе графов, "
+"вершин, направленности ребер - в случае, если датасет уже использовался. "
+"После нажатия на имя датасета, выбор фиксируется (его можно увидеть в "
+"текстовом поле \"Selected:\" ниже), а нажатие Accept начнет загрузку "
+"датасета. После этого структурная часть отрисуется на панели отрисовки "
+"датасета."
 msgstr ""
+"At the beginning of a session, the user selects one of the datasets "
+"available in the system. These include both built-in datasets and datasets "
+"created or uploaded by the user through the backend. All datasets in the "
+"directory are displayed as a hierarchical selector that mirrors the folder "
+"structure. For example, to select the popular Cora dataset, navigate through"
+" ptg-library-graphs -> Homogeneous -> Planetoid -> Cora. Hovering over a "
+"dataset name displays a tooltip with brief information about the number of "
+"graphs and nodes and whether the edges are directed, provided the dataset "
+"has already been used. Clicking the dataset name selects it; the selection "
+"is shown in the ``Selected:`` text field below. Clicking ``Accept`` starts "
+"loading the dataset, after which its structural component is rendered in the"
+" dataset visualization panel."
 
 #: ../../user_guide/frontend.rst:158
 msgid ""
@@ -457,196 +554,265 @@ msgid ""
 "(способа их построения из атрибутов), разметки и решаемой задачи. При "
 "нажатии кнопки Accept на бэкенде формируются признаки, передаются на "
 "фронтенд и отображаемый граф приобретает разметку на классы (вершины "
-"раскрашены в цвета) и признаки вершин; датасет считается выбранным. "
-"Кнопка Edit сбрасывает признаки и разметку, кроме того, сбрасываются все,"
-" что зависит от датасета: текущая модель и объяснения."
+"раскрашены в цвета) и признаки вершин; датасет считается выбранным. Кнопка "
+"Edit сбрасывает признаки и разметку, кроме того, сбрасываются все, что "
+"зависит от датасета: текущая модель и объяснения."
 msgstr ""
+"Options for configuring the variable part of the dataset then appear: "
+"features and the method used to derive them from attributes, labels, and the"
+" target task. When the user clicks ``Accept``, the backend constructs the "
+"features and sends them to the frontend. The displayed graph then receives "
+"class labels, with nodes colored by class, and node features; the dataset is"
+" considered fully selected. The ``Edit`` button resets the features and "
+"labels, as well as everything that depends on the dataset, including the "
+"current model and explanations."
 
 #: ../../user_guide/frontend.rst:161
 msgid "Visualization"
-msgstr ""
+msgstr "Visualization"
 
 #: ../../user_guide/frontend.rst:163
 msgid ""
-"Раздел visualization формируется после загрузки структурной части "
-"датасета и регулирует отрисовку датасета. В него входят:"
+"Раздел visualization формируется после загрузки структурной части датасета и"
+" регулирует отрисовку датасета. В него входят:"
 msgstr ""
+"The Visualization section is created after the structural part of the "
+"dataset has been loaded and controls dataset rendering. It includes:"
 
 #: ../../user_guide/frontend.rst:165
 msgid ""
-"выбор области просмотра: neighborhood (2я окрестность), whole graph "
-"(целый граф) или all graphs (в случае датасета из множества графов). При "
-"выборе neighborhood появляются селектор Node (на какой вершине "
-"центрировать) и выбор глубины окрестности (от 1й до 4й)."
+"выбор области просмотра: neighborhood (2я окрестность), whole graph (целый "
+"граф) или all graphs (в случае датасета из множества графов). При выборе "
+"neighborhood появляются селектор Node (на какой вершине центрировать) и "
+"выбор глубины окрестности (от 1й до 4й)."
 msgstr ""
+"a view-area selector: ``neighborhood`` for a second-order neighborhood, "
+"``whole graph`` for the complete graph, or ``all graphs`` for a dataset "
+"containing multiple graphs. When ``neighborhood`` is selected, a ``Node`` "
+"selector appears for choosing the center node, together with a neighborhood-"
+"depth selector from one to four hops."
 
 #: ../../user_guide/frontend.rst:166
 msgid "выбор отображения (layout, алгоритм расположения вершин)"
-msgstr ""
+msgstr "a layout selector for choosing the node-positioning algorithm"
 
 #: ../../user_guide/frontend.rst:168
 msgid "random - случайное расположение, экономит ресурсы в случае большого графа"
-msgstr ""
+msgstr "``random`` — random placement, which saves resources for large graphs"
 
 #: ../../user_guide/frontend.rst:169
 msgid ""
-"force - силовой алгоритм. Рядом кнопка остановки/включения layout, "
-"заморозка перерасчет позиций вершин удобна для ручного изменения их "
-"позиций."
+"force - силовой алгоритм. Рядом кнопка остановки/включения layout, заморозка"
+" перерасчет позиций вершин удобна для ручного изменения их позиций."
 msgstr ""
+"``force`` — a force-directed algorithm. A nearby button stops or starts the "
+"layout; freezing position recalculation is useful when manually adjusting "
+"node positions."
 
 #: ../../user_guide/frontend.rst:171
 msgid ""
-"флаги отрисовки сопутствующих элементов для каждой вершины: признаки "
-"вершин, метки классов, предсказания модели, эмбединги модели (вектор с "
-"последнего слоя), train/validation/test маска."
+"флаги отрисовки сопутствующих элементов для каждой вершины: признаки вершин,"
+" метки классов, предсказания модели, эмбединги модели (вектор с последнего "
+"слоя), train/validation/test маска."
 msgstr ""
+"rendering flags for related elements associated with each node: node "
+"features, class labels, model predictions, model embeddings represented by "
+"the final-layer vector, and the train/validation/test mask."
 
 #: ../../user_guide/frontend.rst:172
 msgid ""
 "флаг раскраски вершин в цвета классов (спектр равномерно разбивается на "
 "число классов)."
 msgstr ""
+"a flag for coloring nodes by class, with the spectrum divided evenly by the "
+"number of classes."
 
 #: ../../user_guide/frontend.rst:174
 msgid "скрин пример"
-msgstr ""
+msgstr "example screenshot"
 
 #: ../../user_guide/frontend.rst:177
 msgid "Model"
-msgstr ""
+msgstr "Model"
 
 #: ../../user_guide/frontend.rst:179
 msgid ""
-"После выбора датасета переходим в раздел создания и управления моделью. "
-"На первом этапе доступны 3 вкладки — Load, Constructor и Custom. В Load "
-"селекторы генерируются иерархически в соответствии с вложенной "
-"структурой, описывающей доступные в хранилище модели для выбранного "
-"датасета. При выборе последнего селектора появляется кнопка Accept, ее "
-"нажатие ведет к загрузке модели и на панели модели отображается "
-"информация о ней. Вкладка Custom обладает схожим функционалом, только "
-"позволяет загружать созданные вне фреймворка модели."
+"После выбора датасета переходим в раздел создания и управления моделью. На "
+"первом этапе доступны 3 вкладки — Load, Constructor и Custom. В Load "
+"селекторы генерируются иерархически в соответствии с вложенной структурой, "
+"описывающей доступные в хранилище модели для выбранного датасета. При выборе"
+" последнего селектора появляется кнопка Accept, ее нажатие ведет к загрузке "
+"модели и на панели модели отображается информация о ней. Вкладка Custom "
+"обладает схожим функционалом, только позволяет загружать созданные вне "
+"фреймворка модели."
 msgstr ""
+"After selecting a dataset, the user proceeds to the model creation and "
+"management section. Initially, three tabs are available: Load, Constructor, "
+"and Custom. In the Load tab, selectors are generated hierarchically "
+"according to the nested structure describing the models available in storage"
+" for the selected dataset. After the final selector is chosen, an ``Accept``"
+" button appears. Clicking it loads the model and displays model information "
+"in the model panel. The Custom tab provides similar functionality but allows"
+" models created outside the framework to be loaded."
 
 #: ../../user_guide/frontend.rst:181
 msgid ""
 "В Constructor открывается конструктор для построения модели на основе "
-"библиотеки PyTorch-Geometric. Он позволяет создавать основные архитектуры"
-" графовых сетей, реализуемые с помощью библиотеки torch. В конструкторе "
-"сначала предлагается создать архитектуру модели, затем заполнить "
-"параметры менеджера моделей: оптимизатор и его параметры, функцию потерь,"
-" размер батча, разбиение на train/validation/test и т.д., после этого "
-"задать измеряемые метрики и число эпох обучения. Далее появляется кнопка "
-"старта обучения, которая запускает процесс на бэкенде. По ходу получения "
-"информации о весах модели и значений метрик, они отображаются на "
-"информационной панели справа."
+"библиотеки PyTorch-Geometric. Он позволяет создавать основные архитектуры "
+"графовых сетей, реализуемые с помощью библиотеки torch. В конструкторе "
+"сначала предлагается создать архитектуру модели, затем заполнить параметры "
+"менеджера моделей: оптимизатор и его параметры, функцию потерь, размер "
+"батча, разбиение на train/validation/test и т.д., после этого задать "
+"измеряемые метрики и число эпох обучения. Далее появляется кнопка старта "
+"обучения, которая запускает процесс на бэкенде. По ходу получения информации"
+" о весах модели и значений метрик, они отображаются на информационной панели"
+" справа."
 msgstr ""
+"The Constructor tab opens a model builder based on the PyTorch Geometric "
+"library. It supports the main graph neural network architectures that can be"
+" implemented with PyTorch. The user first creates the model architecture and"
+" then configures the model manager: the optimizer and its parameters, loss "
+"function, batch size, train/validation/test split, and other settings. The "
+"user then selects the metrics to be measured and the number of training "
+"epochs. A training button subsequently appears and starts the backend "
+"process. As information about model weights and metric values is received, "
+"it is displayed in the information panel on the right."
 
 #: ../../user_guide/frontend.rst:183
 msgid "Конструктор модели"
-msgstr ""
+msgstr "Model constructor"
 
 #: ../../user_guide/frontend.rst:187
 msgid "Explainer"
-msgstr ""
+msgstr "Explainer"
 
 #: ../../user_guide/frontend.rst:189
 msgid ""
 "Доступен в режиме Interpreation после тренировки модели. В разделе "
-"интерпретации (эксплейнера) так же доступны 2 вкладки — Load и "
-"Constructor. В Load подразделы генерируются иерархически в зависимости от"
-" состава структуры, описывающей доступные в базе методы для выбранного "
-"датасета и загруженной модели. При выборе последнего селектора и нажатии "
-"Accept загружается объяснение и на панели интерпретации отображается "
-"информация о нем. Кнопка Edit сбрасывает выбранный метод и результат "
-"объяснения. Постфактум объяснение отрисовывается в панели отрисовки "
-"датасета: подсвечивается важный подграф и вершины."
+"интерпретации (эксплейнера) так же доступны 2 вкладки — Load и Constructor. "
+"В Load подразделы генерируются иерархически в зависимости от состава "
+"структуры, описывающей доступные в базе методы для выбранного датасета и "
+"загруженной модели. При выборе последнего селектора и нажатии Accept "
+"загружается объяснение и на панели интерпретации отображается информация о "
+"нем. Кнопка Edit сбрасывает выбранный метод и результат объяснения. "
+"Постфактум объяснение отрисовывается в панели отрисовки датасета: "
+"подсвечивается важный подграф и вершины."
 msgstr ""
+"This section is available in Interpretation mode after the model has been "
+"trained. The Explainer section also contains two tabs: Load and Constructor."
+" In the Load tab, subsections are generated hierarchically according to the "
+"structure that describes the methods available in the repository for the "
+"selected dataset and loaded model. After the final selector is chosen and "
+"``Accept`` is clicked, the explanation is loaded and its information is "
+"displayed in the interpretation panel. The ``Edit`` button resets the "
+"selected method and explanation result. A post-hoc explanation is rendered "
+"in the dataset visualization panel by highlighting important nodes and the "
+"important subgraph."
 
 #: ../../user_guide/frontend.rst:191
 msgid ""
-"В Constructor появляются селекторы алгоритма, затем его параметров и "
-"номера вершины в случае локального объяснения."
+"В Constructor появляются селекторы алгоритма, затем его параметров и номера "
+"вершины в случае локального объяснения."
 msgstr ""
+"In the Constructor tab, selectors appear for the algorithm, its parameters, "
+"and, for a local explanation, the node number."
 
 #: ../../user_guide/frontend.rst:193
 msgid "Конструктор эксплейнера"
-msgstr ""
+msgstr "Explainer constructor"
 
 #: ../../user_guide/frontend.rst:197
 msgid "Before train"
-msgstr ""
+msgstr "Before training"
 
 #: ../../user_guide/frontend.rst:199
 msgid ""
-"Доступен в режиме Attacks/Defenses, появляется после определения "
-"параметров менеджера модели, перед тем как приступить к параметрам "
-"обучения. Пользователь имеет возможность добавить:"
+"Доступен в режиме Attacks/Defenses, появляется после определения параметров "
+"менеджера модели, перед тем как приступить к параметрам обучения. "
+"Пользователь имеет возможность добавить:"
 msgstr ""
+"This section is available in Attacks/Defenses mode. It appears after the "
+"model manager parameters have been defined and before the training "
+"parameters are configured. The user can add:"
 
 #: ../../user_guide/frontend.rst:201
 msgid "атаку отравления"
-msgstr ""
+msgstr "a poisoning attack"
 
 #: ../../user_guide/frontend.rst:202
 msgid "защиту от отравления"
-msgstr ""
+msgstr "a poisoning defense"
 
 #: ../../user_guide/frontend.rst:203
 msgid "защиту от уклонения"
-msgstr ""
+msgstr "an evasion defense"
 
 #: ../../user_guide/frontend.rst:204
 msgid "защиту от вывода членства"
-msgstr ""
+msgstr "a membership inference defense"
 
 #: ../../user_guide/frontend.rst:206
 msgid ""
-"Для каждого элемента из этого списка можно выбрать один из доступных "
-"методов и задать его параметры, или же не выбирать ничего. На рис. "
-"показан скриншот из этой части меню. Для примера там выбрана защита от "
-"отравления GNNGuard."
+"Для каждого элемента из этого списка можно выбрать один из доступных методов"
+" и задать его параметры, или же не выбирать ничего. На рис. показан скриншот"
+" из этой части меню. Для примера там выбрана защита от отравления GNNGuard."
 msgstr ""
+"For each item in this list, the user can select one of the available methods"
+" and configure its parameters, or leave the item unselected. The figure "
+"shows a screenshot of this menu section with the GNNGuard poisoning defense "
+"selected as an example."
 
 #: ../../user_guide/frontend.rst:208
 msgid "Выбор защит перед обучением"
-msgstr ""
+msgstr "Selecting defenses before training"
 
 #: ../../user_guide/frontend.rst:211
 msgid ""
-"После нажатия кнопки Accept, выбранные параметры фиксируются и "
-"пользователь переходит к модулю обучения модели, как и ранее. При этом "
-"выбранные методы будут применены согласно их функциям - модифицируют "
-"датасет и/или архитектуру модели."
+"После нажатия кнопки Accept, выбранные параметры фиксируются и пользователь "
+"переходит к модулю обучения модели, как и ранее. При этом выбранные методы "
+"будут применены согласно их функциям - модифицируют датасет и/или "
+"архитектуру модели."
 msgstr ""
+"After the user clicks ``Accept``, the selected parameters are fixed and the "
+"user proceeds to the model-training module as before. The selected methods "
+"are applied according to their purpose by modifying the dataset and/or the "
+"model architecture."
 
 #: ../../user_guide/frontend.rst:214
 msgid "After train"
-msgstr ""
+msgstr "After training"
 
 #: ../../user_guide/frontend.rst:216
 msgid ""
-"В режиме Attacks/Defenses, после окончания обучения пользователь "
-"фиксирует результат нажатием кнопки Accept и переходит ко второму модулю "
-"атак-защит. В этом модуле доступен выбор"
+"В режиме Attacks/Defenses, после окончания обучения пользователь фиксирует "
+"результат нажатием кнопки Accept и переходит ко второму модулю атак-защит. В"
+" этом модуле доступен выбор"
 msgstr ""
+"In Attacks/Defenses mode, after training is complete, the user confirms the "
+"result by clicking ``Accept`` and proceeds to the second attacks-and-"
+"defenses module. This module provides a choice of:"
 
 #: ../../user_guide/frontend.rst:221
 msgid ""
-"Опять же, можно выбрать по одному доступному методу для каждого элемента "
-"из списка. Пример приведен на рис. 4 с выбранной атакой уклонения PGD. "
-"После этого нажав кнопку ``Run with attacks`` выбранные методы атак "
-"применятся к обученной модели и пользователь увидит обновленные метрики в"
-" правой части панели, где находятся метрики обучения модели."
+"Опять же, можно выбрать по одному доступному методу для каждого элемента из "
+"списка. Пример приведен на рис. 4 с выбранной атакой уклонения PGD. После "
+"этого нажав кнопку ``Run with attacks`` выбранные методы атак применятся к "
+"обученной модели и пользователь увидит обновленные метрики в правой части "
+"панели, где находятся метрики обучения модели."
 msgstr ""
+"Again, one available method can be selected for each item in the list. "
+"Figure 4 shows an example with the PGD evasion attack selected. After the "
+"user clicks ``Run with attacks``, the selected attack methods are applied to"
+" the trained model, and updated metrics are displayed on the right in the "
+"panel containing the model training metrics."
 
 #: ../../user_guide/frontend.rst:223
 msgid "Выбор атак после обучения"
-msgstr ""
+msgstr "Selecting attacks after training"
 
 #: ../../user_guide/frontend.rst:227
 msgid "Панель отрисовки датасета"
-msgstr ""
+msgstr "Dataset visualization panel"
 
 #: ../../user_guide/frontend.rst:229
 msgid ""
@@ -654,156 +820,207 @@ msgid ""
 "масштабировать холст, перетаскивать вершину или холст целиком. При "
 "увеличении масштаба размер вершины и сопутствующих элементов растет "
 "медленнее, чтобы разглядеть мелкие детали, но отделить вершины друг от "
-"друга. При масштабе менее 30 при режиме whole graph включается light "
-"режим: рисуются только контуры ребер на темном фоне. При перетаскивании "
-"вершины начинает работать алгоритм расположения вершин, если он не "
-"заморожен. В углах отображается дополнительная информация при работе с "
-"датасетом:"
+"друга. При масштабе менее 30 при режиме whole graph включается light режим: "
+"рисуются только контуры ребер на темном фоне. При перетаскивании вершины "
+"начинает работать алгоритм расположения вершин, если он не заморожен. В "
+"углах отображается дополнительная информация при работе с датасетом:"
 msgstr ""
+"The dataset panel displays an interactive graph. The user can zoom the "
+"canvas and drag either individual nodes or the entire canvas. As the user "
+"zooms in, nodes and their associated elements grow more slowly than the "
+"canvas scale, making small details easier to inspect while keeping nodes "
+"visually separated. In ``whole graph`` mode, a lightweight rendering mode is"
+" enabled when the scale is below 30: only edge outlines are drawn on a dark "
+"background. When a node is dragged, the layout algorithm becomes active "
+"unless it has been frozen. Additional dataset information is displayed in "
+"the corners:"
 
 #: ../../user_guide/frontend.rst:231
 msgid ""
 "В левой верхней части — информация о выбранной вершине (доп.инфо и "
 "атрибуты). В случае режима neighborhood еще размеры окрестностей."
 msgstr ""
+"In the upper-left corner: information and attributes for the selected node. "
+"In ``neighborhood`` mode, neighborhood sizes are also shown."
 
 #: ../../user_guide/frontend.rst:232
 msgid "В левой нижней части — легенда цветовой карты для объяснений."
-msgstr ""
+msgstr "In the lower-left corner: the explanation color-map legend."
 
 #: ../../user_guide/frontend.rst:233
 msgid "В правой верхней части — отладочная информация (масштаб)."
-msgstr ""
+msgstr "In the upper-right corner: debugging information such as the current scale."
 
 #: ../../user_guide/frontend.rst:234
 msgid ""
-"В правой нижней части — кнопка скриншота, сохраняет SVG изображение с "
-"полной видимой частью в файл."
+"В правой нижней части — кнопка скриншота, сохраняет SVG изображение с полной"
+" видимой частью в файл."
 msgstr ""
+"In the lower-right corner: a screenshot button that saves an SVG image of "
+"the entire visible area to a file."
 
 #: ../../user_guide/frontend.rst:236
 msgid ""
-"Граф рисуется примитивами SVG — вершины, ребра и их сопутствующие "
-"элементы. Вершина в базовом состоянии — белый круг с номером (всегда от 0"
-" до N-1). Сопутствующие элементы (satellites) вершины включают:"
+"Граф рисуется примитивами SVG — вершины, ребра и их сопутствующие элементы. "
+"Вершина в базовом состоянии — белый круг с номером (всегда от 0 до N-1). "
+"Сопутствующие элементы (satellites) вершины включают:"
 msgstr ""
+"The graph is drawn using SVG primitives for nodes, edges, and their "
+"associated elements. In its default state, a node is a white circle labeled "
+"with its number, which always ranges from 0 to N-1. The associated node "
+"elements, or satellites, include:"
 
 #: ../../user_guide/frontend.rst:238
 msgid ""
-"признаки — колонка квадратов с левой стороны, либо белый квадрат, "
-"признаки показываются при наведении. Цветовая карта bwr (красно-синий)"
+"признаки — колонка квадратов с левой стороны, либо белый квадрат, признаки "
+"показываются при наведении. Цветовая карта bwr (красно-синий)"
 msgstr ""
+"features — a column of squares on the left, or a single white square; "
+"feature values are shown on hover. The ``bwr`` red–blue color map is used."
 
 #: ../../user_guide/frontend.rst:239
 msgid ""
 "метки класса вершины — круги сверху по числу классов. Все белые, кроме "
 "одного, соответствующему классу (либо все белые если класс не задан)."
 msgstr ""
+"node class labels — circles above the node, one for each class. All are "
+"white except the circle corresponding to the node's class; all remain white "
+"when the class is undefined."
 
 #: ../../user_guide/frontend.rst:240
 msgid ""
 "эмбединги модели — колонка квадратов с правой стороны с цветовым "
 "кодированием bwr."
 msgstr ""
+"model embeddings — a column of squares on the right using the ``bwr`` color "
+"map."
 
 #: ../../user_guide/frontend.rst:241
 msgid ""
-"предсказание модели — круги снизу по числу классов. Кодирование цветом от"
-" белого (0) к черному (1 — для удобства сравнения с исходной меткой."
+"предсказание модели — круги снизу по числу классов. Кодирование цветом от "
+"белого (0) к черному (1 — для удобства сравнения с исходной меткой."
 msgstr ""
+"model predictions — circles below the node, one for each class. Values are "
+"encoded from white for 0 to black for 1, making them easy to compare with "
+"the original label."
 
 #: ../../user_guide/frontend.rst:242
-msgid ""
-"train/validation/test маска — цветная подпись в нижней части круга "
-"вершины."
+msgid "train/validation/test маска — цветная подпись в нижней части круга вершины."
 msgstr ""
+"train/validation/test mask — a colored label at the bottom of the node "
+"circle."
 
 #: ../../user_guide/frontend.rst:244
 msgid ""
-"Ребро в базовом состоянии — серого оттенка отрезок или дуга со стрелкой "
-"(SVG path или arc). Толщина 1 для целого графа или набора и переменная "
-"для окрестности в зависимости от удаленности от центральной."
+"Ребро в базовом состоянии — серого оттенка отрезок или дуга со стрелкой (SVG"
+" path или arc). Толщина 1 для целого графа или набора и переменная для "
+"окрестности в зависимости от удаленности от центральной."
 msgstr ""
+"In its default state, an edge is a gray line segment or curved arrow "
+"represented by an SVG path or arc. Its width is 1 when displaying a whole "
+"graph or a collection of graphs, and varies with the distance from the "
+"center node in neighborhood mode."
 
 #: ../../user_guide/frontend.rst:246
 msgid ""
-"Отображение объяснения. Элементы объяснения постфактум — цветные вершины "
-"и цветные ребра. Кодирование важности выполнено цветом. Для "
-"ненаправленного графа объяснение может быть направленным."
+"Отображение объяснения. Элементы объяснения постфактум — цветные вершины и "
+"цветные ребра. Кодирование важности выполнено цветом. Для ненаправленного "
+"графа объяснение может быть направленным."
 msgstr ""
+"Explanation display. Post-hoc explanation elements are represented by "
+"colored nodes and edges, with color encoding their importance. For an "
+"undirected graph, the explanation itself may be directed."
 
 #: ../../user_guide/frontend.rst:249
 msgid "Информационная панель"
-msgstr ""
+msgstr "Information panel"
 
 #: ../../user_guide/frontend.rst:252
 msgid "Панель информации о датасете"
-msgstr ""
+msgstr "Dataset information panel"
 
 #: ../../user_guide/frontend.rst:254
 msgid ""
-"Находится справа сверху. Отображается метаинформация о датасете: "
-"название, размер, направленность, атрибуты с их типами и возможными "
-"значениями. Доступны также статистики о графе, которые будут вычислены "
-"при нажатии на кнопку возле их названия: число вершин и ребер, средняя "
-"степень, коэффициент кластеризации, диаметр, распределение степеней и "
-"другие."
+"Находится справа сверху. Отображается метаинформация о датасете: название, "
+"размер, направленность, атрибуты с их типами и возможными значениями. "
+"Доступны также статистики о графе, которые будут вычислены при нажатии на "
+"кнопку возле их названия: число вершин и ребер, средняя степень, коэффициент"
+" кластеризации, диаметр, распределение степеней и другие."
 msgstr ""
+"This panel is located at the upper right. It displays dataset metadata, "
+"including the name, size, directedness, and attributes with their types and "
+"possible values. Graph statistics are also available and are calculated when"
+" the button next to the corresponding statistic is clicked: the numbers of "
+"nodes and edges, average degree, clustering coefficient, diameter, degree "
+"distribution, and others."
 
 #: ../../user_guide/frontend.rst:257
 msgid "Панель информации о модели"
-msgstr ""
+msgstr "Model information panel"
 
 #: ../../user_guide/frontend.rst:259
 msgid "Находится справа вторая сверху. Отображается:"
-msgstr ""
+msgstr "This is the second panel from the top on the right. It displays:"
 
 #: ../../user_guide/frontend.rst:261
 msgid "описание модели — значения параметров из конструктора или из загруженной."
 msgstr ""
+"the model description — parameter values from the constructor or the loaded "
+"model."
 
 #: ../../user_guide/frontend.rst:262
 msgid ""
-"ее архитектура — картинки матриц весов с цветным кодированием (при "
-"наведении показывается точное значение), функции активации."
+"ее архитектура — картинки матриц весов с цветным кодированием (при наведении"
+" показывается точное значение), функции активации."
 msgstr ""
+"the model architecture — visualizations of weight matrices using color "
+"encoding, with exact values shown on hover, and activation functions."
 
 #: ../../user_guide/frontend.rst:263
 msgid ""
 "статистика обучения — кривая обучения (в случае создания модели из "
 "конструктора) или значения метрик на датасете (в случае загруженной)."
 msgstr ""
+"training statistics — the learning curve for a model created in the "
+"constructor, or metric values on the dataset for a loaded model."
 
 #: ../../user_guide/frontend.rst:266
 msgid "Панель информации об интерпретации"
-msgstr ""
+msgstr "Interpretation information panel"
 
 #: ../../user_guide/frontend.rst:268
 msgid "Находится справа третья сверху. Отображается:"
-msgstr ""
+msgstr "This is the third panel from the top on the right. It displays:"
 
 #: ../../user_guide/frontend.rst:270
 msgid ""
 "описание эскплейнера — значения параметров из конструктора или из "
 "загруженного."
 msgstr ""
+"the explainer description — parameter values from the constructor or the "
+"loaded explainer."
 
 #: ../../user_guide/frontend.rst:271
 msgid ""
-"информация об объяснении. Для постфактум методов это тип (важный подграф,"
-" прототип и т.п.), локальность, свойства и содержание: для важного "
-"подграфа — таблицы со значениями важности для вершин, ребер, признаков. "
-"Для ProtGNN это графы прототипов, для NeuralAnalysis это формулы для "
-"каждого объясняемого нейрона."
+"информация об объяснении. Для постфактум методов это тип (важный подграф, "
+"прототип и т.п.), локальность, свойства и содержание: для важного подграфа —"
+" таблицы со значениями важности для вершин, ребер, признаков. Для ProtGNN "
+"это графы прототипов, для NeuralAnalysis это формулы для каждого "
+"объясняемого нейрона."
 msgstr ""
+"information about the explanation. For post-hoc methods, this includes the "
+"type such as an important subgraph or prototype, its locality, properties, "
+"and content. For an important subgraph, tables show importance values for "
+"nodes, edges, and features. For ProtGNN, prototype graphs are displayed; for"
+" NeuralAnalysis, formulas are shown for each explained neuron."
 
 #: ../../user_guide/frontend.rst:274
 msgid "Панель информации об атаках/защитах"
-msgstr ""
+msgstr "Attacks/defenses information panel"
 
 #: ../../user_guide/frontend.rst:276
 msgid "описание панели атак/защит"
-msgstr ""
+msgstr "description of the attacks/defenses panel"
 
 #~ msgid "Frontend"
 #~ msgstr ""

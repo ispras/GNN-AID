@@ -55,7 +55,7 @@ GNN-AID имеет веб-интерфейс, который поддержив�
     :maxdepth: 1
     :caption: Обзор пакетов
 
-    api/aux
+    api/auxil
     api/data_structures
     api/datasets
     api/models_builder

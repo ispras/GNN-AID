@@ -21,7 +21,11 @@ Server and client
    :members:
 .. automodule:: web_interface.main
    :members:
-.. automodule:: web_interface.main_aiohttp
+.. automodule:: web_interface.main_server
+   :members:
+.. automodule:: web_interface.aiohttp_local
+   :members:
+.. automodule:: web_interface.aiohttp_server
    :members:
 
 Diagram and Blocks

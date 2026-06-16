@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-23 22:15+0300\n"
+"POT-Creation-Date: 2026-06-16 18:10+0300\n"
 "PO-Revision-Date: 2026-02-09 22:00+0300\n"
 "Last-Translator: GNN-AID team\n"
 "Language: en\n"
@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: ../../getting_started.rst:2
 msgid "Начало работы"
@@ -26,13 +26,14 @@ msgstr "Getting started"
 msgid "Установка"
 msgstr "Installation"
 
-#: ../../getting_started.rst:23
+#: ../../getting_started.rst:22
+#, fuzzy
 msgid ""
 "GNN-AID разрабатывался и тестировался под Ubuntu 20.04 и 22.04, поэтому "
-"они подходят лучше всего."
+"они подходят лучше всего. Так же проект должен запускаться под Windows."
 msgstr ""
 "GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit "
-"best for it."
+"best for it. Project also should work under Windows."
 
 #: ../../getting_started.rst:26
 msgid ""
