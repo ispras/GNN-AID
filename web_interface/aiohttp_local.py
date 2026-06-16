@@ -17,7 +17,7 @@ import jinja2
 import socketio
 from aiohttp import web
 
-from gnn_aid.aux.data_info import DataInfo
+from gnn_aid.auxil.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import (
@@ -573,7 +573,7 @@ def run_aiohttp_server(port: int = 5000):
         await runner.setup()
         site = web.TCPSite(runner, host="0.0.0.0", port=port)
         await site.start()
-        server_logger.info("Server started on port %s", port)
+        server_logger.info(f"Server started http://127.0.0.1:{port}")
 
     stop_event = asyncio.Event()
 

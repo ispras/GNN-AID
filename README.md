@@ -46,8 +46,16 @@ python -m pip install --upgrade pip
 ```
  First, get auxiliary libraries  
 ```
-sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config  
+sudo apt-get install -y build-essential libfreetype6-dev pkg-config  
 ```
+
+We recommend create and activate a virtual environment, e.g.:
+```
+sudo apt-get install python3.11-venv
+python3 -m venv venv
+source venv/bin/activate
+```
+
 Then install all project dependencies
 ```
 pip install -r requirements1.txt
@@ -55,6 +63,8 @@ pip install -r requirements2.txt
 pip install -r requirements3.txt
 ```
 The 3rd pack of requirements will take around 20 minutes.
+
+To ensure everything is installed correctly, you might want to run tests from `tests` folder.
 
 ### Problems
 
@@ -106,6 +116,8 @@ Then go to [127.0.0.1:5000](http://127.0.0.1:5000) in your browser. You should s
 
 ## Next steps
 
+You can find a full documentation at <https://gnn-aid.readthedocs.io>
+
 We suggest a series of tutorials to learn how to use GNN-AID:
 
 1. Basic GNN training [link](./tutorials/00_basics)
@@ -129,7 +141,7 @@ You can also check out a short YouTube [video](https://youtu.be/uHxaxLSQ9JM) wit
 ├── explanations - storage for interpretation results
 ├── gnn_aid - core library
 │   ├── attacks - attack methods
-│   ├── aux - auxiliary module
+│   ├── auxil - auxiliary module
 │   ├── datasets - dataset handling
 │   ├── data_structures - data structures used in the project
 │   ├── defenses - defense methods

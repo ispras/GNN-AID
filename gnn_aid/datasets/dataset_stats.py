@@ -8,8 +8,8 @@ import numpy as np
 from networkx import NetworkXError, NetworkXNotImplemented
 from torch_geometric.data import Dataset
 
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import edge_index_to_edge_list
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.utils import edge_index_to_edge_list
 from gnn_aid.data_structures.configs import DatasetVarConfig, FeatureConfig, Task
 from .gen_dataset import GeneralDataset
 from .known_format_datasets import KnownFormatDataset

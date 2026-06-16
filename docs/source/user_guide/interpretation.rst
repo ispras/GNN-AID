@@ -123,7 +123,7 @@ GNNExplainer из статьи `"GNNExplainer: Generating Explanations for Graph
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
    # Define a dataset
    gen_dataset = DatasetManager.get_by_config(
@@ -211,7 +211,7 @@ PGExplainer из статьи `"Parameterized Explainer for Graph Neural Network
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
 
    # Defining a dataset
@@ -310,7 +310,7 @@ PGMExplainer из статьи `"PGM-Explainer: Probabilistic Graphical Model Ex
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
 
    # Defining a dataset
@@ -407,7 +407,7 @@ SubgraphX из статьи `"On Explainability of Graph Neural Networks via Sub
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
 
    # Defining a dataset
@@ -503,7 +503,7 @@ Zorro
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
 
    # Defining a dataset
@@ -598,7 +598,7 @@ GraphMask
    from gnn_aid.models_builder import model_configs_zoo, Metric
    from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
    from gnn_aid.explainers import FrameworkExplainersManager
-   from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+   from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 
    # Defining a dataset
    gen_dataset = DatasetManager.get_by_config(

@@ -1,5 +1,5 @@
-from gnn_aid.aux.data_info import DataInfo
-from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
+from gnn_aid.auxil.data_info import DataInfo
+from gnn_aid.auxil.utils import TORCH_GEOM_GRAPHS_PATH
 from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig
 from gnn_aid.datasets.datasets_manager import DatasetManager
@@ -20,7 +20,7 @@ class DatasetBlock(Block):
         self.dataset_config = None
         self.gen_dataset: GeneralDataset = None
 
-        from gnn_aid.aux.prefix_storage import TuplePrefixStorage
+        from gnn_aid.auxil.prefix_storage import TuplePrefixStorage
         self._index = None
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             self._torch_geom_index = TuplePrefixStorage.from_json(f.read())

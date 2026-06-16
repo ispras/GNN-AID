@@ -4,8 +4,8 @@ from enum import Enum
 from multiprocessing import Queue
 from typing import Union
 
-from gnn_aid.aux import DataInfo
-from gnn_aid.aux.utils import (
+from gnn_aid.auxil import DataInfo
+from gnn_aid.auxil.utils import (
     FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH,
     EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH,

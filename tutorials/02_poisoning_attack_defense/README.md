@@ -22,12 +22,12 @@ Two launch modes are supported:
 
 ### 1. Clean model training
 ```bash
-python poisoning_attack.py  # with line 65 commented
+python poisoning_attack.py  # with line 68 commented
 ```
 
 ### 2. Poisoning attack
 ```bash
-python poisoning_attack.py  # with line 65 uncommented
+python poisoning_attack.py  # with line 68 uncommented
 ```
 
 ### 3. Defense against poisoning

@@ -363,7 +363,7 @@ def example_single():
     g.add_edge(17, 18, weight=3, type='medium')
 
     from gnn_aid.data_structures.configs import DatasetConfig
-    from gnn_aid.aux.declaration import Declare
+    from gnn_aid.auxil.declaration import Declare
 
     name = 'example_gml'
     dc = DatasetConfig(('single-graph', 'custom', name))
@@ -444,7 +444,7 @@ def example_multi():
     g3.add_edge(1, 5, weight=3.2)
 
     from gnn_aid.data_structures.configs import DatasetConfig
-    from gnn_aid.aux.declaration import Declare
+    from gnn_aid.auxil.declaration import Declare
 
     name = 'example_gml'
     dc = DatasetConfig(('multiple-graphs', 'custom', name))

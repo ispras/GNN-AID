@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Tuple, Union, Dict, Mapping
 
 from .prefix_storage import FixedKeysPrefixStorage, TuplePrefixStorage
-from gnn_aid.aux.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR, \
+from gnn_aid.auxil.utils import MODELS_DIR, GRAPHS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR, \
     USER_MODELS_DIR, SAVE_DIR_STRUCTURE_PATH, DATASETS_DIR, root_dir
 
 

@@ -5,8 +5,8 @@ import warnings
 
 import torch
 
-from aux.custom_decorators import timing_decorator, retry
-from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, \
+from auxil.custom_decorators import timing_decorator, retry
+from auxil.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH, \
     root_dir, \
     EVASION_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
@@ -14,7 +14,7 @@ from datasets.datasets_manager import DatasetManager
 from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from aux.utils import POISON_DEFENSE_PARAMETERS_PATH
+from auxil.utils import POISON_DEFENSE_PARAMETERS_PATH
 from models_builder.models_zoo import model_configs_zoo
 
 
@@ -387,7 +387,7 @@ def calculate_adversial_defence_metrics(
     )
 
     from defenses.evasion_defense import EvasionDefender
-    from aux.utils import all_subclasses
+    from auxil.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=at_evasion_defense_config)
 

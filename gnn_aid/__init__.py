@@ -2,7 +2,7 @@
 
 __version__ = ""
 
-import gnn_aid.aux
+import gnn_aid.auxil
 import gnn_aid.data_structures
 import gnn_aid.datasets
 import gnn_aid.models_builder

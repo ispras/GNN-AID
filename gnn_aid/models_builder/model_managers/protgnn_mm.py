@@ -5,7 +5,7 @@ import torch
 from torch.cuda import is_available
 from torch.nn.utils import clip_grad_norm
 
-from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     move_to_same_device
 from gnn_aid.data_structures import Task
 from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern

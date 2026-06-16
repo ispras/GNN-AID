@@ -3,7 +3,7 @@ from time import sleep
 from abc import ABC, abstractmethod
 from typing import Union, Callable, Any, Type
 
-from gnn_aid.aux.utils import ProgressBar
+from gnn_aid.auxil.utils import ProgressBar
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
 

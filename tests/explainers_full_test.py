@@ -6,7 +6,7 @@ import warnings
 import torch
 from torch import device
 
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, \
     Task
