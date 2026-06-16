@@ -21,56 +21,28 @@ msgstr ""
 
 #: ../../dev_guide/extend.rst:2
 msgid "Расширение"
-msgstr ""
+msgstr "Extension"
 
 #: ../../dev_guide/extend.rst:20
 msgid "Основные точки расширения"
-msgstr ""
+msgstr "Main Extension Points"
 
 #: ../../dev_guide/extend.rst:22
 msgid "GNN модель, класс GNNConstructor"
-msgstr ""
+msgstr "GNN model, the `GNNConstructor` class"
 
 #: ../../dev_guide/extend.rst:23
 msgid "менеджер моделей, класс GNNModelManager"
-msgstr ""
+msgstr "model manager, the `GNNModelManager` class"
 
 #: ../../dev_guide/extend.rst:24
 msgid "метод интерпретации, класс Explainer"
-msgstr ""
+msgstr "interpretation method, the `Explainer` class"
 
 #: ../../dev_guide/extend.rst:25
 msgid "метод атаки, класс Attack"
-msgstr ""
+msgstr "attack method, the `Attack` class"
 
 #: ../../dev_guide/extend.rst:26
 msgid "метод защиты, класс Defense"
-msgstr ""
-
-#~ msgid "How to extend"
-#~ msgstr ""
-
-#~ msgid "План"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "детали и тонкости для разработчика, как"
-#~ " помочь внести вклад или расширить "
-#~ "библиотеку"
-#~ msgstr ""
-
-#~ msgid "Архитектура кода: модули, классы, потоки данных"
-#~ msgstr ""
-
-#~ msgid "бэк фронт"
-#~ msgstr ""
-
-#~ msgid "инструкция по добавлению нового метода (интерпр, атака, защита)"
-#~ msgstr ""
-
-#~ msgid "в рамках текущего апи с расширением апи (гетерограф, предск ребер и тп)"
-#~ msgstr ""
-
-#~ msgid "Тесты, кодстайл, линтеры Соглашения по docstrings, типизации"
-#~ msgstr ""
-
+msgstr "defense method, the `Defense` class"
