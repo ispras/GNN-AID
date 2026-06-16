@@ -3,7 +3,7 @@ import json
 from enum import Enum
 from typing import Union, Any, Type, Tuple
 
-from gnn_aid.aux.utils import (
+from gnn_aid.auxil.utils import (
     OPTIMIZERS_PARAMETERS_PATH, MetaEnum)
 from gnn_aid.data_structures.gen_config import CONFIG_SAVE_KWARGS_KEY, DATA_CHANGE_FLAG, \
     GeneralConfig, ConfigPattern

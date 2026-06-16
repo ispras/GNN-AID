@@ -60,8 +60,7 @@
       "USA": [null],
       "Brazil": [null],
       "Europe": [null]
-    },
-    "TAGDataset":  [null]
+    }
   },
   "Heterogeneous": {
     "DBP15K": [null],

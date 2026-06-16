@@ -6,7 +6,7 @@ import shap
 import torch
 from tqdm import tqdm
 
-from gnn_aid.aux.utils import import_by_name
+from gnn_aid.auxil.utils import import_by_name
 from gnn_aid.data_structures.explanation import ConceptExplanationGlobal
 from gnn_aid.explainers.explainer import Explainer, finalize_decorator
 from gnn_aid.explainers.neural_analysis.orig.concept_utils import clean_concepts

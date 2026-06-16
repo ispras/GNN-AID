@@ -19,6 +19,9 @@ List of GNN-AID application areas incudes:
 * as a tool for interpreting a graph neural network in an applied task
 * as a tool for analyzing the robustness and security of a graph neural network in an applied task
 
+A demo server is available at https://gnn-aid.at.ispras.ru/
+
+
 ## Installation
   
 GNN-AID was developed and tested under Ubuntu 20.04 and 22, so they suit best for it.  
@@ -38,7 +41,7 @@ Recommended:
 - RAM: 8 GB or more
 - GPU: optional. For large-scale experiments and backend only
 
-### Dependencies
+### Run
 
 You need python of version `3.11` or higher. We advice to create virtual environment with `pip`.
 ```
@@ -46,8 +49,16 @@ python -m pip install --upgrade pip
 ```
  First, get auxiliary libraries  
 ```
-sudo apt-get install -y build-essential python3-dev libfreetype6-dev pkg-config  
+sudo apt-get install -y build-essential libfreetype6-dev pkg-config  
 ```
+
+We recommend create and activate a virtual environment, e.g.:
+```
+sudo apt-get install python3.11-venv
+python3 -m venv venv
+source venv/bin/activate
+```
+
 Then install all project dependencies
 ```
 pip install -r requirements1.txt
@@ -55,6 +66,8 @@ pip install -r requirements2.txt
 pip install -r requirements3.txt
 ```
 The 3rd pack of requirements will take around 20 minutes.
+
+To ensure everything is installed correctly, you might want to run tests from `tests` folder.
 
 ### Problems
 
@@ -74,6 +87,18 @@ where ${CUDA} should be replaced by either `cpu`, `cu117`, or `cu118` depending 
 2.  Update gcc to the most recent version.
 3.  Remove all torch modules that use С++ code.
 4.  Install all torch packages again.
+
+3\. If you get an error (probably running frontend) "RuntimeError( RuntimeError: Cannot 
+re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you must use the 
+'spawn' start method»." - this means that torch+CUDA is not compatible with running 
+multiple processes when using frontend. Then prepend `CUDA_VISIBLE_DEVICES=-1` before running 
+any commands in command line. E.g.
+```text
+CUDA_VISIBLE_DEVICES=-1 python web_interface/main.py
+```
+
+4\. If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
 
 ## Run in frontend
 
@@ -106,6 +131,8 @@ Then go to [127.0.0.1:5000](http://127.0.0.1:5000) in your browser. You should s
 
 ## Next steps
 
+You can find a full documentation at <https://gnn-aid.readthedocs.io>
+
 We suggest a series of tutorials to learn how to use GNN-AID:
 
 1. Basic GNN training [link](./tutorials/00_basics)
@@ -129,7 +156,7 @@ You can also check out a short YouTube [video](https://youtu.be/uHxaxLSQ9JM) wit
 ├── explanations - storage for interpretation results
 ├── gnn_aid - core library
 │   ├── attacks - attack methods
-│   ├── aux - auxiliary module
+│   ├── auxil - auxiliary module
 │   ├── datasets - dataset handling
 │   ├── data_structures - data structures used in the project
 │   ├── defenses - defense methods

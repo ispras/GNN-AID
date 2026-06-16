@@ -4,12 +4,14 @@ import warnings
 import torch
 from torch import device
 
-from data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
-from datasets.datasets_manager import DatasetManager
-from datasets.ptg_datasets import LibPTGDataset
-from models_builder.gnn_models import FrameworkGNNModelManager, Metric
-from models_builder.models_zoo import model_configs_zoo
-from aux.utils import POISON_ATTACK_PARAMETERS_PATH
+from gnn_aid.auxil.utils import POISON_ATTACK_PARAMETERS_PATH
+from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, \
+    Task
+from gnn_aid.datasets.datasets_manager import DatasetManager
+from gnn_aid.datasets.ptg_datasets import LibPTGDataset
+from gnn_aid.models_builder import Metric
+from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
+from gnn_aid.models_builder.models_zoo import model_configs_zoo
 
 my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.manual_seed(1234)
@@ -63,6 +65,7 @@ poison_attack_config = ConfigPattern(
 )
 
 # Pass poison attack to framework
+# Comment next line to get clean model training (not attacked)
 gnn_model_manager.set_poison_attacker(poison_attack_config=poison_attack_config)
 
 

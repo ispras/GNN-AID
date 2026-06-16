@@ -4,8 +4,8 @@ from pathlib import Path
 from types import FunctionType
 from typing import List, Union, Type, Callable, Tuple, Any
 
-from gnn_aid.aux import Declare, UserCodeInfo
-from gnn_aid.aux.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, all_subclasses, \
+from gnn_aid.auxil import Declare, UserCodeInfo
+from gnn_aid.auxil.utils import hash_data_sha256, POISON_ATTACK_PARAMETERS_PATH, all_subclasses, \
     EVASION_ATTACK_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, \
     import_by_name, model_managers_info_by_names_list, TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY

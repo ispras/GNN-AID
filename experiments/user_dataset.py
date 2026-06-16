@@ -103,7 +103,7 @@ def api():
 
 # This is to register user-defined dataset classes
 def simgnn():
-    # from aux.utils import root_dir
+    # from auxil.utils import root_dir
     # from external.simgnn_for_mdr.simgnn.data import random_data, src_dst_data
     from simgnn.data import random_data, src_dst_data
 
@@ -116,7 +116,7 @@ def simgnn():
 
 
 def nx_to_ptg_converter():
-    from aux.utils import GRAPHS_DIR
+    from auxil.utils import GRAPHS_DIR
     from datasets.dataset_converter import networkx_to_ptg
     from datasets.datasets_manager import DatasetManager
     import networkx as nx

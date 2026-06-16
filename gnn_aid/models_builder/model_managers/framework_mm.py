@@ -9,8 +9,8 @@ from torch.nn.utils import clip_grad_norm
 from torch_geometric.loader import NeighborLoader, DataLoader, LinkNeighborLoader
 from torch_geometric.utils import negative_sampling
 
-from gnn_aid.aux import Declare
-from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
+from gnn_aid.auxil import Declare
+from gnn_aid.auxil.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     FRAMEWORK_PARAMETERS_PATH, move_to_same_device
 from gnn_aid.data_structures import Task, GraphModificationArtifact
 from gnn_aid.data_structures.gen_config import CONFIG_OBJ, ConfigPattern

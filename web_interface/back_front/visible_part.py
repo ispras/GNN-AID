@@ -3,8 +3,8 @@ from copy import copy
 from dataclasses import dataclass, asdict
 from typing import Union, List, Tuple, Dict
 
-from gnn_aid.aux.custom_decorators import timing_decorator
-from gnn_aid.aux.utils import short_str, edge_index_to_edge_list
+from gnn_aid.auxil.custom_decorators import timing_decorator
+from gnn_aid.auxil.utils import short_str, edge_index_to_edge_list
 from gnn_aid.datasets import GeneralDataset
 
 

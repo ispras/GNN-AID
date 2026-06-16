@@ -14,7 +14,7 @@ from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo
 from .dataset_converter import DatasetConverter
 from .gen_dataset import LocalDataset, GeneralDataset
-from gnn_aid.aux.utils import shape
+from gnn_aid.auxil.utils import shape
 
 
 class KnownFormatDataset(

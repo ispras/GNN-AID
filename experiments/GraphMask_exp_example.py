@@ -7,7 +7,7 @@ from torch.cuda import is_available
 
 from data_structures.configs import ModelModificationConfig, ModelManagerConfig, ConfigPattern, \
     Task, DatasetConfig
-from aux.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH
+from auxil.utils import EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_INIT_PARAMETERS_PATH
 from datasets.ptg_datasets import LibPTGDataset
 from explainers.explainers_manager import FrameworkExplainersManager
 from models_builder.gnn_models import FrameworkGNNModelManager, Metric

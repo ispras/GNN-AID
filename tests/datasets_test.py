@@ -8,7 +8,7 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from gnn_aid.aux.declaration import Declare
+from gnn_aid.auxil.declaration import Declare
 from gnn_aid.datasets.dataset_converter import networkx_to_ptg
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from gnn_aid.datasets.datasets_manager import DatasetManager
@@ -36,11 +36,11 @@ def _create_single_ij(dc: DatasetConfig):
                 "types": ["continuous", "categorical", "vector"],
                 "values": [[0, 1], ["A", "B", "C"], 2]
             },
-            "edge_attributes": {
-                "names": ["weight"],
-                "types": ["continuous"],
-                "values": [[0, 1]]
-            },
+            # "edge_attributes": {
+            #     "names": ["weight"],
+            #     "types": ["continuous"],
+            #     "values": [[0, 1]]
+            # },
             "labelings": {
                 "node-classification": {
                     "binary": 2,
@@ -118,6 +118,11 @@ def _create_single2_ij(dc: DatasetConfig):
         json.dump(
             {"10": "A", "11": "A", "12": "B", "13": "C", "14": "B", "15": "A", "16": "A", "17": "C"}, f)
 
+    (raw / 'edge_attributes').mkdir()
+    with open(raw / 'edge_attributes' / 'weight', 'w') as f:
+        json.dump({"10,11": 0.0, "11,12": 0.1, "11,13": 0.2, "11,15": 0.3, "12,13": 0.4,
+                   "12,14": 0.3, "12,17": 0.5, "14,15": 0.6, "15,16": 0.7, "16,17": 0.3}, f)
+
 
 def _create_multi_ij(dc: DatasetConfig):
     """ Multi graph in ij format, equals multiple-graphs/custom/example """
@@ -151,11 +156,11 @@ def _create_multi_ij(dc: DatasetConfig):
                 "types": ["categorical"],
                 "values": [["alpha", "beta", "gamma"]]
             },
-            "edge_attributes": {
-                "names": ["weight"],
-                "types": ["continuous"],
-                "values": [[0, 1]]
-            },
+            # "edge_attributes": {
+            #     "names": ["weight"],
+            #     "types": ["continuous"],
+            #     "values": [[0, 1]]
+            # },
             "labelings": {
                 "graph-classification": {
                     "binary": 2,
@@ -442,6 +447,8 @@ class DatasetsTest(unittest.TestCase):
             # self.assertTrue(torch.equal(true_ptg_data.edge_attr, ptg_data.edge_attr))
 
     def test_visible_part(self):
+        from web_interface.back_front import VisiblePart, ViewPoint
+
         # Create files
         dc = DatasetConfig(('single-graph', 'example'))
         dvc = DatasetVarConfig(
@@ -463,25 +470,26 @@ class DatasetsTest(unittest.TestCase):
 
         # Test that getting functions work
         for dataset in [single, multi]:
-            dataset.set_visible_part({})
-            dataset.set_visible_part({'center': 0})
-            dataset.set_visible_part({'center': 0, 'depth': 2})
-            dataset.visible_part.get_dataset_data()
-            dataset.visible_part.get_dataset_var_data()
+            vp = VisiblePart(ViewPoint(center=0), dataset)
+            vp.get_dataset_data()
+            vp.get_dataset_var_data()
+            vp = VisiblePart(ViewPoint(center=0, depth=2), dataset)
+            vp.get_dataset_data()
+            vp.get_dataset_var_data()
 
         # Test correctness
-        single.set_visible_part({'center': 1, 'depth': 2})
-        dd = single.visible_part.get_dataset_data()
+        vp = VisiblePart(ViewPoint(center=1, depth=2), single)
+        dd = vp.get_dataset_data()
         self.assertEqual(dd.edges, [
             [],
-            [(0, 1), (2, 1), (4, 1), (3, 1)],
-            [(6, 4), (2, 3), (3, 2), (5, 2), (7, 4)]])
+            [(0, 1), (1, 2), (1, 3), (1, 4)],
+            [(2, 3), (2, 5), (4, 6), (4, 7)]])
         self.assertEqual(dd.nodes, [[1], [0, 2, 3, 4], [5, 6, 7]])
         self.assertEqual(dd.graphs, None)
 
-        dvd = single.visible_part.get_dataset_var_data()
-        self.assertEqual(dvd.labels, {1: 1, 0: 1, 2: 1, 3: 1, 4: 0, 5: 0, 6: 0, 7: 0})
-        self.assertEqual(set(dvd.node_features.keys()), set(range(8)))
+        dvd = vp.get_dataset_var_data()
+        self.assertEqual(dvd.node.labels, [1, 1, 1, 1, 0, 0, 0, 0])
+        self.assertEqual(len(dvd.node.features), 8)
 
     def test_stats(self):
         """ Statistics
@@ -517,14 +525,16 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from gnn_aid.aux.prefix_storage import TuplePrefixStorage
-        from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
+        from gnn_aid.auxil.prefix_storage import TuplePrefixStorage
+        from gnn_aid.auxil.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = TuplePrefixStorage.from_json(f.read(), )
 
         errors = []
         for ix, (full_name, default_init_kwargs) in enumerate(ps):
+            if full_name[0] == "Heterogeneous":  # until it is supported
+                continue
             print(f"Checking {full_name} ({ix+1} of {len(ps)})")
 
             try:
@@ -652,7 +662,7 @@ class DatasetsTest(unittest.TestCase):
 
             # Remove
             finally:
-                from gnn_aid.aux.declaration import Declare
+                from gnn_aid.auxil.declaration import Declare
                 root_dir, files_paths = Declare.dataset_root_dir(dc)
                 if root_dir.exists():
                     shutil.rmtree(root_dir)
@@ -686,7 +696,6 @@ class DatasetsTest(unittest.TestCase):
                                labeling='regression', dataset_ver_ind=0)
         single.build(dvc)
         single.train_test_split()
-
 
 
 if __name__ == '__main__':

@@ -6,10 +6,10 @@ from typing import Union, List, Any
 
 import torch
 
-from gnn_aid.aux.data_info import UserCodeInfo, DataInfo
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.prefix_storage import FixedKeysPrefixStorage
-from gnn_aid.aux.utils import (
+from gnn_aid.auxil.data_info import UserCodeInfo, DataInfo
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.prefix_storage import FixedKeysPrefixStorage
+from gnn_aid.auxil.utils import (
     import_by_name, model_managers_info_by_names_list,
     TECHNICAL_PARAMETER_KEY, IMPORT_INFO_KEY, DATASETS_DIR, ProgressBar)
 from gnn_aid.data_structures import Task

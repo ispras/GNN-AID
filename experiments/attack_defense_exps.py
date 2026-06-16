@@ -10,7 +10,7 @@ from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
-from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, \
     EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 
@@ -761,7 +761,7 @@ def test_adv_training():
         }
     )
     from gnn_aid.defenses.evasion_defense import EvasionDefender
-    from gnn_aid.aux.utils import all_subclasses
+    from gnn_aid.auxil.utils import all_subclasses
     print([e.name for e in all_subclasses(EvasionDefender)])
     gnn_model_manager.set_evasion_defender(evasion_defense_config=evasion_defense_config)
 

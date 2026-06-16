@@ -13,7 +13,7 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import to_networkx
 from tqdm import tqdm
 
-from gnn_aid.aux.utils import root_dir
+from gnn_aid.auxil.utils import root_dir
 from gnn_aid.data_structures.explanation import AttributionExplanation
 from gnn_aid.explainers.explainer import Explainer, finalize_decorator
 from gnn_aid.explainers.pgeexplainer.dig.utils import k_hop_subgraph_with_default_whole_graph, \

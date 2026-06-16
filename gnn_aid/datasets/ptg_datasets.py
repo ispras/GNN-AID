@@ -8,8 +8,8 @@ from typing import Union, List, Dict
 import torch
 from torch_geometric.data import Data, HeteroData, Dataset, InMemoryDataset
 
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import import_by_name, shape
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.utils import import_by_name, shape
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo

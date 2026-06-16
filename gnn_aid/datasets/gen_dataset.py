@@ -8,8 +8,8 @@ from torch import default_generator, randperm, tensor
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 from torch_geometric.data.collate import collate
 
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import root_dir
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.utils import root_dir
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from gnn_aid.data_structures.gen_config import ConfigPattern
 from .dataset_info import DatasetInfo
