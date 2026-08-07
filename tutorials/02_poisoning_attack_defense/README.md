@@ -9,11 +9,24 @@ Jaccard-based defender. We use the Cora dataset and the GIN model.
 - `poisoning_attack.py` — script for training GIN + attack.
 - `defense_against_poisoning.py` — script for training GIN + defense + attack.
 - `README.md` — description of the experiment.
-- `run_example.sh` — script for running the experiment.
+- `run_example.sh` — script for running all the experiments.
 
 ---
 
 ## Quick start
+
+You can run all the experiments at once by 
+```bash
+  bash run_example.sh
+```
+
+or run them one by one. For that
+activate virtual environment and add the project root directory to python dependencies
+
+```text
+source ../../venv/bin/activate
+export PYTHONPATH=../..
+```
 
 Two launch modes are supported:
 1. `clean` — only clean model training without attack.

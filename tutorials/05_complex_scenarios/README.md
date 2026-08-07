@@ -16,6 +16,19 @@ and integrated interpretation workflows. We use the Cora dataset and the GIN mod
 
 ## Quick start
 
+You can run all the experiments at once by 
+```bash
+  bash run_example.sh
+```
+
+or run them one by one. For that
+activate virtual environment and add the project root directory to python dependencies
+
+```text
+source ../../venv/bin/activate
+export PYTHONPATH=../..
+```
+
 ### 1. Multi-attack pipeline
 ```bash
 python multi_attack_pipeline.py

@@ -212,7 +212,7 @@ class DatasetsTest(unittest.TestCase):
             return Data(x=x, edge_index=edge_index, y=y)
 
     def setUp(self) -> None:
-        monkey_patch_dirs()
+        monkey_patch_dirs(include_graphs_dir=True)
 
         # Example of local user PTG dataset
         class UserLocalDataset(InMemoryDataset):
