@@ -21,6 +21,15 @@ from tests.utils import cleanup_patches, monkey_patch_dirs
 
 class ExplainersTest(unittest.TestCase):
     def setUp(self) -> None:
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Using '.*' without a 'pyg-lib' installation is deprecated.*",
+            category=UserWarning,
+        )
+
+        monkey_patch_dirs()
+        self.addCleanup(cleanup_patches)
         # Init datasets
         # Single-Graph - Example
         gen_dataset_sg_example = DatasetManager.get_by_config(
@@ -235,12 +244,6 @@ class ExplainersTest(unittest.TestCase):
             save_model_flag=False,
             metrics=[Metric("F1", mask='train', average=None)]
         )
-
-        monkey_patch_dirs()
-
-    def tearDown(self):
-        # Clean up patches and tmp dirs
-        cleanup_patches()
 
     def test_PGE_SG(self):
         # FIXME not working with another tests

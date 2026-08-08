@@ -15,6 +15,19 @@ output noise-based defense. We use the Cora dataset and the GCN model.
 
 ## Quick start
 
+You can run all the experiments at once by 
+```bash
+  bash run_example.sh
+```
+
+or run them one by one. For that
+activate virtual environment and add the project root directory to python dependencies
+
+```text
+source ../../venv/bin/activate
+export PYTHONPATH=../..
+```
+
 Two launch modes are supported:
 1. `attack` — only membership inference attack is performed.
 2. `defense` — defense is applied against membership inference attack.
