@@ -1,7 +1,7 @@
 import torch
 from torch import device
 
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH
 from gnn_aid.data_structures.configs import ConfigPattern, ModelModificationConfig, DatasetConfig, Task
 from gnn_aid.datasets.datasets_manager import DatasetManager

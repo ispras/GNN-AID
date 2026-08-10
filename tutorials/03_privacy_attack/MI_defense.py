@@ -2,7 +2,7 @@ import numpy as np
 from torch import manual_seed
 
 from gnn_aid.attacks.mi_attacks import MIAttacker
-from gnn_aid.aux.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
+from gnn_aid.auxil.utils import MI_ATTACK_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import Metric

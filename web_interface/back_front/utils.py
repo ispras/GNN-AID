@@ -9,7 +9,7 @@ from typing import Any, Union
 
 import numpy as np
 
-from gnn_aid.aux.utils import SAVE_DIR_STRUCTURE_PATH
+from gnn_aid.auxil.utils import SAVE_DIR_STRUCTURE_PATH
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 WEB_DIR = root_dir / "web_interface"
@@ -22,9 +22,9 @@ CLIENT_STORAGE_TTL = timedelta(days=30)  # client data will be removed this peri
 CLEANUP_INTERVAL_SEC = 24 * 60 * 60  # how often to check for client storage cleanup
 CLIENT_META_FILENAME = ".meta.json"
 DIR_PATCH_MODULES = [
-    'gnn_aid.aux.utils',
-    'gnn_aid.aux.data_info',
-    'gnn_aid.aux.declaration',
+    'gnn_aid.auxil.utils',
+    'gnn_aid.auxil.data_info',
+    'gnn_aid.auxil.declaration',
     'web_interface.back_front.model_blocks',
     'web_interface.back_front.explainer_blocks',
 ]

@@ -28,8 +28,8 @@ jobs:
         run: |
           echo "PYTHONPATH=$PYTHONPATH:$(pwd)/gnn_aid" >> $GITHUB_ENV
 
-      - name: Run Pylint aux
-        run: pylint aux --fail-under=9.5
+      - name: Run Pylint auxil
+        run: pylint auxil --fail-under=9.5
       - name: Run Pylint datasets
         run: pylint datasets --fail-under=9.75
       - name: Run Pylint data_structures

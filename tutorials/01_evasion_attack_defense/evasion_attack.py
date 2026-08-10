@@ -1,7 +1,7 @@
 import torch
 from torch import device
 
-from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH
+from gnn_aid.auxil.utils import EVASION_ATTACK_PARAMETERS_PATH
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.data_structures.configs import ConfigPattern, DatasetConfig, Task
 from gnn_aid.datasets.datasets_manager import DatasetManager

@@ -8,7 +8,7 @@ from typing import Union, List
 import numpy as np
 import torch
 
-from gnn_aid.aux.utils import all_subclasses
+from gnn_aid.auxil.utils import all_subclasses
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager
 

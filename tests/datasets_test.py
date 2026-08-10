@@ -8,7 +8,7 @@ import torch
 from torch import tensor
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 
-from gnn_aid.aux.declaration import Declare
+from gnn_aid.auxil.declaration import Declare
 from gnn_aid.datasets.dataset_converter import networkx_to_ptg
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from gnn_aid.datasets.datasets_manager import DatasetManager
@@ -525,8 +525,8 @@ class DatasetsTest(unittest.TestCase):
     def test_ptg_lib(self):
         """ NOTE: takes a lot of time
         """
-        from gnn_aid.aux.prefix_storage import TuplePrefixStorage
-        from gnn_aid.aux.utils import TORCH_GEOM_GRAPHS_PATH
+        from gnn_aid.auxil.prefix_storage import TuplePrefixStorage
+        from gnn_aid.auxil.utils import TORCH_GEOM_GRAPHS_PATH
         import traceback
         with open(TORCH_GEOM_GRAPHS_PATH, 'r') as f:
             ps = TuplePrefixStorage.from_json(f.read(), )
@@ -662,7 +662,7 @@ class DatasetsTest(unittest.TestCase):
 
             # Remove
             finally:
-                from gnn_aid.aux.declaration import Declare
+                from gnn_aid.auxil.declaration import Declare
                 root_dir, files_paths = Declare.dataset_root_dir(dc)
                 if root_dir.exists():
                     shutil.rmtree(root_dir)

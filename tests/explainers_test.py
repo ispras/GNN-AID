@@ -3,7 +3,7 @@ collections.Callable = collections.abc.Callable
 import unittest
 import warnings
 
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset

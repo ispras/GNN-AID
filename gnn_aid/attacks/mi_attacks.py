@@ -8,7 +8,7 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 
 from gnn_aid.attacks.attack_base import Attacker
-from gnn_aid.aux.utils import move_to_same_device
+from gnn_aid.auxil.utils import move_to_same_device
 from gnn_aid.data_structures.mi_results import MIResultsStore
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor

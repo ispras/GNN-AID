@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from gnn_aid.attacks.mi_attacks import MIAttacker
-from gnn_aid.aux.utils import POISON_DEFENSE_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import POISON_DEFENSE_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
     FeatureConfig, Task, ModelConfig, ModelStructureConfig

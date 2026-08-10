@@ -1,7 +1,7 @@
 import torch
 from torch import device
 
-from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
+from gnn_aid.auxil.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager

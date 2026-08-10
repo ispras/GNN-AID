@@ -14,7 +14,7 @@ from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConf
     FeatureConfig, Task, ModelConfig, ModelStructureConfig
 from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
-from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from .utils import monkey_patch_dirs, cleanup_patches
 

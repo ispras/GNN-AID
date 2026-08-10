@@ -22,18 +22,21 @@ Two launch modes are supported:
 
 ### 1. Clean model training
 ```bash
-python poisoning_attack.py  # with line 65 commented
+python poisoning_attack.py  # with line 68 commented
 ```
 
 ### 2. Poisoning attack
 ```bash
-python poisoning_attack.py  # with line 65 uncommented
+python poisoning_attack.py  # with line 68 uncommented
 ```
 
 ### 3. Defense against poisoning
 ```bash
 python defense_against_poisoning.py
 ```
+
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
 
 ---
 ## Description of modes

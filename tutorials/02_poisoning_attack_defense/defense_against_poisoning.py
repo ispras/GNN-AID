@@ -9,7 +9,7 @@ from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
-from gnn_aid.aux.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH
+from gnn_aid.auxil.utils import POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH
 
 my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
 

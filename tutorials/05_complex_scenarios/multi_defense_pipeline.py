@@ -3,7 +3,7 @@ import warnings
 import torch
 from torch import device
 
-from gnn_aid.aux.utils import POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     EVASION_DEFENSE_PARAMETERS_PATH
 from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, \
     Task

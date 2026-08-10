@@ -426,7 +426,7 @@ if __name__ == '__main__':
     d.from_json(string)
 
     # # Parse from a folder
-    # from aux.utils import root_dir
+    # from auxil.utils import root_dir
     # ps_test = TuplePrefixStorage()
     # ps_test.fill_from_folder(root_dir / 'data', file_pattern=r".*metainfo")
     # print(ps_test)

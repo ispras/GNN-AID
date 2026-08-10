@@ -22,7 +22,7 @@ import jinja2
 import socketio
 from aiohttp import web
 
-from gnn_aid.aux.data_info import DataInfo
+from gnn_aid.auxil.data_info import DataInfo
 from web_interface.back_front import json_dumps
 from web_interface.back_front.frontend_client import ClientMode, FrontendClient
 from web_interface.back_front.utils import SocketConnect, STATIC_DIR, TEMPLATES_DIR, LOG_DIR, \
@@ -730,7 +730,7 @@ def get_client_id_from_environ(sid: str, environ: dict, auth=None) -> str:
 
 
 def ensure_client_dirs(client_id: str) -> dict[str, Path]:
-    from gnn_aid.aux.utils import root_dir, GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR
+    from gnn_aid.auxil.utils import root_dir, GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR, DATA_INFO_DIR
 
     CLIENTS_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
     client_root = CLIENTS_STORAGE_ROOT / client_id

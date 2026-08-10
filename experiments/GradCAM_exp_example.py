@@ -10,7 +10,7 @@ from datasets.ptg_datasets import LibPTGDataset
 from models_builder.gnn_models import FrameworkGNNModelManager
 from models_builder.gnn_constructor import GNNStructure
 from explainers.gradcam.GradCAM import GradCAM, GradCAMOut
-from aux.declaration import Declare
+from auxil.declaration import Declare
 import matplotlib.pyplot as plt
 
 

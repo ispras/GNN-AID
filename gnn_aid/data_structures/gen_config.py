@@ -6,7 +6,7 @@ from json import JSONEncoder
 from pathlib import Path
 from typing import Any, Self, Union, Type, Tuple
 
-from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import OPTIMIZERS_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH, \
     hash_data_sha256, deep_update, setting_class_default_parameters, import_by_name
 
 CONFIG_SAVE_KWARGS_KEY = '__save_kwargs_to_be_used_for_saving'

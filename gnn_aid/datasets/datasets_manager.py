@@ -1,7 +1,7 @@
 import json
 
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import import_by_name
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.utils import import_by_name
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, Task
 from .dataset_info import DatasetInfo
 from .gen_dataset import GeneralDataset

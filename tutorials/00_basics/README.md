@@ -23,6 +23,9 @@ Run:
   bash run_example.sh
 ```
 
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
+
 ---
 
 ## Example of the experimental result
