@@ -57,6 +57,7 @@ class CLGAAttack(PoisonAttacker):
         """
         self.num_nodes = gen_dataset.data.x.shape[0]
         self.feature_shape = gen_dataset.num_node_features
+        self.device = gen_dataset.data.x.device
 
     @staticmethod
     def drop_edge(

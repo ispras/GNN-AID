@@ -1,5 +1,4 @@
-import collections.abc
-collections.Callable = collections.abc.Callable
+import collections.abc; collections.Callable = collections.abc.Callable
 import unittest
 import warnings
 
@@ -8,8 +7,7 @@ from torch import device
 
 from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH
-from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, \
-    Task
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task
 from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
@@ -24,7 +22,15 @@ from tests.utils import cleanup_patches, monkey_patch_dirs
 
 class ExplainersTest(unittest.TestCase):
     def setUp(self) -> None:
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Using '.*' without a 'pyg-lib' installation is deprecated.*",
+            category=UserWarning,
+        )
+
         monkey_patch_dirs()
+        self.addCleanup(cleanup_patches)
         my_device = device('cuda' if torch.cuda.is_available() else 'cpu')
         # Init datasets
         # Single-Graph - Example
@@ -41,7 +47,7 @@ class ExplainersTest(unittest.TestCase):
         # Multi-graphs - Small
         self.dataset_mg_small = DatasetManager.get_by_config(
             DatasetConfig(('example', 'example8')),
-            DatasetVarConfig(task=Task.NODE_CLASSIFICATION,
+            DatasetVarConfig(task=Task.GRAPH_CLASSIFICATION,
                              features=FeatureConfig(node_attr=['a']),
                              labeling='binary',
                              dataset_ver_ind=0)

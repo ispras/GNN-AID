@@ -16,15 +16,20 @@ from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from gnn_aid.auxil.utils import POISON_ATTACK_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH, \
     OPTIMIZERS_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
-from .utils import monkey_patch_dirs, cleanup_patches
+from tests.utils import monkey_patch_dirs, cleanup_patches
 
 
 class AttacksTest(unittest.TestCase):
     def setUp(self):
-        # os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Monkey for home coding
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Using '.*' without a 'pyg-lib' installation is deprecated.*",
+            category=UserWarning,
+        )
 
-        from gnn_aid.datasets.known_format_datasets import KnownFormatDataset
-        print('setup')
+        monkey_patch_dirs()
+        self.addCleanup(cleanup_patches)
         self.my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Init datasets
@@ -87,13 +92,6 @@ class AttacksTest(unittest.TestCase):
         self.gen_dataset_sg_cora_link.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
         self.results_dataset_path_sg_cora_link = self.gen_dataset_sg_cora_link.prepared_dir
         self.gen_dataset_sg_cora_link.data.to(self.my_device)
-
-        monkey_patch_dirs()
-
-    def tearDown(self):
-        # Clean up patches and tmp dirs
-        cleanup_patches()
-
 
     def test_metattack_full(self):
         poison_attack_config = ConfigPattern(
