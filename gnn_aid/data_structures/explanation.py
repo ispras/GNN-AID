@@ -4,7 +4,8 @@ from typing import Union, Any
 
 
 class Explanation:
-    """ General class to represent GNN explanation.
+    """
+    General class to represent a GNN explanation.
     """
 
     def __init__(
@@ -15,10 +16,11 @@ class Explanation:
             meta=None
     ):
         """
-        :param local: True if local, False if global
-        :param type: "subgraph", "prototype", etc
-        :param data: explanation contents
-        :param meta: additional info about explanation
+        Args:
+            local (bool): True if local explanation, False if global.
+            type (str): Explanation type, e.g. ``"subgraph"``, ``"prototype"``.
+            data (str): Explanation contents. Default value: `None`.
+            meta: Additional info about the explanation. Default value: `None`.
         """
         self.dictionary = {'info': {}, 'data': {}}
         self.dictionary['info']['local'] = local
@@ -40,23 +42,29 @@ class AttributionExplanation(
     Explanation
 ):
     """
-    Attribution explanation as important subgraph.
-    Importance scores (binary or continual) can be assigned to nodes, edges, and features.
+    Attribution explanation as an important subgraph.
+
+    Importance scores (binary or continuous) can be assigned to nodes, edges, and features.
     """
 
     def __init__(
             self,
             local: bool = True,
             directed: bool = False,
-            nodes: str = "binary",
-            edges: bool = False,
-            features: bool = False
+            nodes: Union[str, bool, None] = "binary",
+            edges: Union[str, bool] = False,
+            features: Union[str, bool] = False
     ):
         """
-        :param local: True if local, False if global
-        :param nodes: "binary", "continuous", or None/False
-        :param edges: "binary", "continuous", or None/False
-        :param features: "binary", "continuous", or None/False
+        Args:
+            local (bool): True if local explanation, False if global. Default value: `True`.
+            directed (bool): Whether the explanation graph is directed. Default value: `False`.
+            nodes (Union[str, bool, None]): Node importance mode: ``"binary"``, ``"continuous"``,
+                or ``None``/``False`` to disable. Default value: `"binary"`.
+            edges (Union[str, bool]): Edge importance mode: ``"binary"``, ``"continuous"``,
+                or ``False`` to disable. Default value: `False`.
+            features (Union[str, bool]): Feature importance mode: ``"binary"``, ``"continuous"``,
+                or ``False`` to disable. Default value: `False`.
         """
         meta = {
             "nodes": nodes or "none", "edges": edges or "none", "features": features or "none"}
@@ -85,11 +93,21 @@ class AttributionExplanation(
 class ConceptExplanationGlobal(
     Explanation
 ):
+    """
+    Global concept-based explanation that maps neurons to their associated rules and importance scores.
+    """
+
     def __init__(
             self,
             raw_neurons: list,
-            n_neurons: Any
+            n_neurons: int
     ):
+        """
+        Args:
+            raw_neurons (list): Raw neuron data; raw_neurons[0] maps neuron index to
+                (rule_info, ...) and raw_neurons[1] maps neuron index to importance scores.
+            n_neurons (int): Total number of neurons to process.
+        """
         Explanation.__init__(self, False, 'string')
         self.dictionary['data']['neurons'] = {}
         for n in range(n_neurons):

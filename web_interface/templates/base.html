@@ -8,15 +8,15 @@
   <link rel="shortcut icon" href="static/icons/logo.png">
   <link rel="stylesheet" type="text/css" href="static/css/datatables.css">
   <link rel="stylesheet" type="text/css" href="static/css/dropdown-menu.css">
-  <link rel="stylesheet" type="text/css" href="static/css/styles.css">
+  <link rel="stylesheet" type="text/css" href="static/css/styles.css?31"><!-- new!!!!!! -->
   <link rel="stylesheet" type="text/css" href="static/css/controls.css">
-  <link rel="stylesheet" type="text/css" href="static/css/view.css">
+  <link rel="stylesheet" type="text/css" href="static/css/view.css?7"><!-- new!!!!!! -->
   <link rel="stylesheet" type="text/css" href="static/css/graph.css">
 
 </head>
 <body>
   <div class="visualizer">
-    <div class="controls-zone">
+    <div class="controls-zone" id="left-menu-zone">
       <div class="controls-section" style="display: flex; padding: 4px">
         <!-- Dropdown menu -->
         <button class="dropdown-menu-button" onclick="$('#dropdown-menu-main').toggle()">
@@ -54,28 +54,28 @@
       <div class="v-scrollable" id="menu-left">
 <!----------        DATASET        --------------->
         <details class="controls-section" id="menu-dataset" open>
-          <summary class="header">Dataset</summary>
-          <div id="menu-dataset-view">
+          <summary class="header left-menu-header" id="menu-dataset-header">Dataset</summary>
+          <div id="menu-dataset-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
-          <div id="menu-dataset-var-view">
+          <div id="menu-dataset-var-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
         </details>
 
 <!----------        MODEL        --------------->
         <details class="controls-section" id="menu-model" open>
-          <summary class="header">Model</summary>
-          <div id="menu-model-view">
+          <summary class="header left-menu-header" id="menu-model-header">Model</summary>
+          <div id="menu-model-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
-          <div id="menu-model-manager-view">
+          <div id="menu-model-manager-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
 
           {% block menu_before_train_content %}{% endblock %}
 
-          <div id="menu-model-trainer-view">
+          <div id="menu-model-trainer-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
 
@@ -87,8 +87,8 @@
 
 <!----------        VISUALS        --------------->
         <details class="controls-section" id="menu-visuals" open>
-          <summary class="header">Visualization</summary>
-          <div id="menu-visuals-view">
+          <summary class="header left-menu-header" id="menu-visuals-header">Visualization</summary>
+          <div id="menu-visuals-view" class="left-menu-block">
             <!-- generated stuff -->
           </div>
         </details>
@@ -101,6 +101,9 @@
 <!----------------------------------------------->
 
       <div class="dataset-zone" id="dataset-graph-view">
+        <button id="button-toggle-left-menu" class="button-toggle-left-menu" title="Collapse">
+          <i class="icon-toggle-left-menu"></i>
+        </button>
       </div>
 
       <div class="left-draggable">
@@ -127,6 +130,7 @@
   </div>
 
   <script src="static/js/libs/socket.io-4.6.1.js"></script>
+  <script src="static/js/libs/socket.io-4.6.1.msgpack.min.js"></script>
   <script src="static/js/libs/jquery-3.6.0.js"></script>
   <script src="static/js/libs/chart-3.7.1.min.js"></script>
   <script src="static/js/libs/datatables-1.13.2.min.js"></script>
@@ -176,6 +180,7 @@
   <script src="static/js/presentation/dataset/layout/radialNeighborhoodLayout.js"></script>
   <script src="static/js/presentation/dataset/layout/forceNeighborhoodLayout.js"></script>
   <script src="static/js/presentation/dataset/layout/forceLayout.js"></script>
+  <script src="static/js/presentation/dataset/layout/forceAtlas2Layout.js"></script>
   <script src="static/js/presentation/dataset/neighborhood.js"></script>
   <script src="static/js/presentation/dataset/graph.js"></script>
   <script src="static/js/presentation/dataset/heteroGraph.js"></script>
@@ -268,6 +273,25 @@
     $(".dropdown-menu .has-submenu").click(function(event) {
         event.stopPropagation()
     })
+
+    $('#button-toggle-left-menu').on('click', function() {
+      const classCollapsed = "button-toggle-left-menu_collapsed";
+      $(this).toggleClass(classCollapsed);
+      let textTitle;
+      if ($(this).hasClass(classCollapsed)) {
+        textTitle = "Expand";
+      } else {
+        textTitle = "Collapse";
+      }
+      $(this).attr("title", textTitle);
+      $('#left-menu-zone').toggle();
+    });
+    
+    $("#left-menu-zone").on('click', function(event) {
+        if ($(event.target).hasClass("left-menu-block__header")) {
+          $(event.target).closest('.left-menu-block').toggleClass("left-menu-block_compact");
+        }
+    });
 
     // Throw alert when user tries to reload the page
     window.addEventListener('beforeunload', function (e) {

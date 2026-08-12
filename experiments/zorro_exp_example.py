@@ -6,7 +6,7 @@ from torch.cuda import is_available
 
 # from data_structures.configs import ConfigPattern, ModelManagerConfig, ModelModificationConfig, \
 #     Task, DatasetConfig
-# from aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+# from auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 # from datasets.ptg_datasets import LibPTGDataset
 # from explainers.explainers_manager import FrameworkExplainersManager
 # from models_builder.gnn_models import FrameworkGNNModelManager, Metric
@@ -18,9 +18,10 @@ from torch.cuda import is_available
 
 
 # from visualization.plotutils import draw_vk, draw_cora, draw
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
 from gnn_aid.data_structures import DatasetConfig, DatasetVarConfig, Task
-from gnn_aid.data_structures.configs import ConfigPattern, FeatureConfig
+from gnn_aid.data_structures.configs import FeatureConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets import DatasetManager
 from gnn_aid.explainers import FrameworkExplainersManager
 from gnn_aid.models_builder import model_configs_zoo

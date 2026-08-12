@@ -1,7 +1,6 @@
+import logging
 import time
 from functools import wraps
-import logging
-import functools
 from typing import Callable
 
 logging.basicConfig(level=logging.INFO)
@@ -74,22 +73,6 @@ def timing_decorator(
         result = func(*args, **kwargs)
         end_time = time.time()
         print(f"Function {func.__name__} took {end_time - start_time} seconds to run.")
-        return result
-
-    return wrapper
-
-
-def log_execution(
-        func: Callable
-) -> Callable:
-    """
-    Function call logging
-    """
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        logging.info(f"Executing {func.__name__}")
-        result = func(*args, **kwargs)
-        logging.info(f"Finished executing {func.__name__}")
         return result
 
     return wrapper

@@ -26,7 +26,6 @@ class ExplanationGraphs extends MultipleGraphs {
         //         this.screenPos.x += (z-1)*(this.mousePos.x + this.svgPos.x)
         //         this.screenPos.y += (z-1)*(this.mousePos.y + this.svgPos.y)
         //
-        //         this.checkLightMode()
         //         this.draw()
         //         // Update mouse pos AFTER draw
         //         this.mousePos.x = e.layerX

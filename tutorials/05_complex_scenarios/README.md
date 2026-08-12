@@ -16,6 +16,19 @@ and integrated interpretation workflows. We use the Cora dataset and the GIN mod
 
 ## Quick start
 
+You can run all the experiments at once by 
+```bash
+  bash run_example.sh
+```
+
+or run them one by one. For that
+activate virtual environment and add the project root directory to python dependencies
+
+```text
+source ../../venv/bin/activate
+export PYTHONPATH=../..
+```
+
 ### 1. Multi-attack pipeline
 ```bash
 python multi_attack_pipeline.py
@@ -30,6 +43,9 @@ python multi_defense_pipeline.py
 ```bash
 python combined_workflow.py
 ```
+
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
 
 ---
 ## Experimental results

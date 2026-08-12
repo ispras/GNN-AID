@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GNN-AID 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-10 22:09+0300\n"
+"POT-Creation-Date: 2026-04-14 14:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,49 +17,349 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: ../../user_guide/defense.rst:2
 msgid "Методы защит"
 msgstr "Defense methods"
 
-#: ../../user_guide/defense.rst:9
-msgid "методы защит GNN моделей"
-msgstr "GNN defense methods"
-
-#: ../../user_guide/defense.rst:11
-msgid "JaccardDefender"
-msgstr ""
-
-#: ../../user_guide/defense.rst:12
-msgid "GNNGuard"
-msgstr ""
-
-#: ../../user_guide/defense.rst:13
-msgid "ProGNNDefender"
-msgstr ""
-
-#: ../../user_guide/defense.rst:14
-msgid "NoiseMIDefender"
-msgstr ""
-
-#: ../../user_guide/defense.rst:15
-msgid "GradientRegularization"
+#: ../../user_guide/defense.rst:8
+msgid ""
+"Фреймворк GNN-AID предоставляет набор механизмов защиты (*defense*) для "
+"повышения робастности графовых нейронных сетей (GNN) против различных "
+"типов атак. Механизмы защиты реализованы в виде классов, которые могут "
+"модифицировать процесс обучения, изменять входные данные или выходные "
+"логиты модели, а также очищать обучающий набор от потенциально "
+"вредоносных объектов."
 msgstr ""
 
 #: ../../user_guide/defense.rst:16
-msgid "Quantization"
-msgstr ""
-
-#: ../../user_guide/defense.rst:17
-msgid "Distillation"
+msgid "Классификация защит"
 msgstr ""
 
 #: ../../user_guide/defense.rst:18
-msgid "AutoEncoder"
+msgid "По типу противодействия атакам защиты делятся на три категории:"
 msgstr ""
 
-#: ../../user_guide/defense.rst:19
+#: ../../user_guide/defense.rst:20
+msgid ""
+"**Evasion-защиты (защиты от атак уклонения)** — применяются во время "
+"обучения или инференса для повышения устойчивости модели к искажениям "
+"входных данных (структуры или признаков) на этапе тестирования. Обычно "
+"реализуются через регуляризацию, добавление шума, квантование или "
+"состязательное обучение."
+msgstr ""
+
+#: ../../user_guide/defense.rst:25
+msgid ""
+"**Poisoning-защиты (защиты от атак отравления)** — применяются до "
+"обучения модели. Они анализируют и модифицируют обучающий набор данных, "
+"удаляя или корректируя потенциально вредоносные образцы (рёбра, узлы, "
+"признаки), чтобы предотвратить ухудшение качества модели."
+msgstr ""
+
+#: ../../user_guide/defense.rst:30
+msgid ""
+"**MI-защиты (защиты от атак с выводом о членстве)** — применяются во "
+"время обучения или инференса и направлены на то, чтобы затруднить "
+"определение того, использовался ли конкретный образец при обучении "
+"модели. Обычно достигаются путём внесения возмущений в выходные логиты "
+"модели."
+msgstr ""
+
+#: ../../user_guide/defense.rst:37
+msgid "Базовые классы"
+msgstr ""
+
+#: ../../user_guide/defense.rst:39
+msgid ""
+"Все защиты наследуются от абстрактного базового класса ``Defender`` и "
+"могут реализовывать следующие методы:"
+msgstr ""
+
+#: ../../user_guide/defense.rst:42
+msgid ""
+"``pre_batch()`` — вызывается перед прямым проходом модели для одного "
+"батча (применяется в основном для evasion и MI защит)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:44
+msgid ""
+"``post_batch()`` — вызывается после прямого прохода, может модифицировать"
+" лосс или выходные логиты (применяется для evasion и MI защит)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:47
+msgid ""
+"``defense()`` — основной метод для poisoning защит; принимает датасет и "
+"возвращает модифицированную версию."
+msgstr ""
+
+#: ../../user_guide/defense.rst:49
+msgid ""
+"``dataset_diff()`` — возвращает объект ``GraphModificationArtifact``, "
+"описывающий изменения структуры или признаков (актуально для "
+"poisoning-защит, которые удаляют/добавляют рёбра или узлы)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:52
+msgid ""
+"``check_availability()`` — статический метод, проверяющий, применима ли "
+"данная защита к конкретной паре датасет/модель."
+msgstr ""
+
+#: ../../user_guide/defense.rst:56
+msgid "Defender (базовый класс)"
+msgstr ""
+
+#: ../../user_guide/defense.rst:79
+msgid "Специализированные базовые классы"
+msgstr ""
+
+#: ../../user_guide/defense.rst:81
+msgid ""
+"``EvasionDefender`` — базовый класс для защит от атак уклонения. "
+"Предоставляет методы ``pre_batch`` и ``post_batch``, которые могут быть "
+"переопределены."
+msgstr ""
+
+#: ../../user_guide/defense.rst:84
+msgid ""
+"``PoisonDefender`` — базовый класс для защит от отравляющих атак. "
+"Определяет метод ``defense()``, который должен быть реализован."
+msgstr ""
+
+#: ../../user_guide/defense.rst:86
+msgid ""
+"``MIDefender`` — базовый класс для защит от атак определения "
+"принадлежности. Также использует ``pre_batch`` / ``post_batch``."
+msgstr ""
+
+#: ../../user_guide/defense.rst:90
+#, fuzzy
+msgid "Результаты защит"
+msgstr "Defense methods"
+
+#: ../../user_guide/defense.rst:92
+msgid ""
+"Все защиты в GNN-AID могут возвращать структурированное описание "
+"изменений, внесённых в граф, с помощью объекта "
+"``GraphModificationArtifact``. Это особенно актуально для "
+"poisoning-защит, которые удаляют или добавляют рёбра/узлы. Для evasion и "
+"MI защит артефакт обычно остаётся пустым, если только защита не изменяет "
+"структуру графа (например, квантование признаков не отражается в "
+"``GraphModificationArtifact``)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:101
+msgid "Пример артефакта для poisoning-защиты"
+msgstr ""
+
+#: ../../user_guide/defense.rst:112
+msgid "Расширяемость"
+msgstr ""
+
+#: ../../user_guide/defense.rst:114
+msgid "Для добавления новой защиты необходимо:"
+msgstr ""
+
+#: ../../user_guide/defense.rst:116
+msgid ""
+"Унаследоваться от соответствующего базового класса (``EvasionDefender``, "
+"``PoisonDefender`` или ``MIDefender``)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:118
+msgid ""
+"Реализовать требуемые методы (``defense`` для poisoning, "
+"``pre_batch``/``post_batch`` для evasion/MI)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:120
+msgid ""
+"При необходимости заполнить ``self.defense_diff`` в методе "
+"``dataset_diff()``."
+msgstr ""
+
+#: ../../user_guide/defense.rst:122
+msgid "При необходимости переопределить ``check_availability()``."
+msgstr ""
+
+#: ../../user_guide/defense.rst:123
+msgid ""
+"Описать гиперпараметры защиты в файле метаинформации в формате, "
+"аналогичном используемому для атак:"
+msgstr ""
+
+#: ../../user_guide/defense.rst:135
+msgid "Пример скелета новой защиты (evasion)"
+msgstr ""
+
+#: ../../user_guide/defense.rst:152
+msgid "Примечание"
+msgstr ""
+
+#: ../../user_guide/defense.rst:154
+msgid ""
+"Все защиты оперируют объектами ``GeneralDataset`` и ``GNNModelManager``, "
+"что гарантирует совместимость в рамках фреймворка. Для poisoning-защит "
+"метод ``defense()`` должен возвращать модифицированный датасет; для "
+"evasion и MI защит методы ``pre_batch``/``post_batch`` автоматически "
+"вызываются внутри цикла обучения/инференса модели."
+msgstr ""
+
+#: ../../user_guide/defense.rst:161
+msgid "Реализованные во фреймворке методы защит"
+msgstr ""
+
+#: ../../user_guide/defense.rst:163
+msgid "*Примечание*: NC — классификация вершин, GC — классификация графов."
+msgstr ""
+
+#: ../../user_guide/defense.rst:169
+msgid "Название"
+msgstr ""
+
+#: ../../user_guide/defense.rst:170
+msgid "Тип"
+msgstr ""
+
+#: ../../user_guide/defense.rst:171
+msgid "Поддерживаемые задачи"
+msgstr ""
+
+#: ../../user_guide/defense.rst:172
+msgid "Краткое описание защиты"
+msgstr ""
+
+#: ../../user_guide/defense.rst:173
+msgid "GradientRegularizationDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:174 ../../user_guide/defense.rst:180
+#: ../../user_guide/defense.rst:185 ../../user_guide/defense.rst:191
+#: ../../user_guide/defense.rst:196
+msgid "Evasion"
+msgstr ""
+
+#: ../../user_guide/defense.rst:175 ../../user_guide/defense.rst:181
+#: ../../user_guide/defense.rst:186 ../../user_guide/defense.rst:192
+#: ../../user_guide/defense.rst:197 ../../user_guide/defense.rst:202
+#: ../../user_guide/defense.rst:208 ../../user_guide/defense.rst:215
+#: ../../user_guide/defense.rst:221
+msgid "NC/GC"
+msgstr ""
+
+#: ../../user_guide/defense.rst:176
+msgid ""
+"Внедряет дополнительную регуляризацию в градиенты модели, усложняя "
+"использование атак на их основе (например, FGSM, PGD и т. п.)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:179
+msgid "QuantizationDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:182
+msgid ""
+"Снижает чувствительность модели к малым возмущениям путём квантования "
+"входных данных (например, округления признаков)."
+msgstr ""
+
+#: ../../user_guide/defense.rst:184
+msgid "DistillationDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:187
+msgid ""
+"Сглаживает выходные распределения модели через добавление к функции "
+"потерь дивергенции Кульбака–Лейблера, что снижает чувствительность к "
+"малым возмущениям данных."
+msgstr ""
+
+#: ../../user_guide/defense.rst:190
+msgid "AutoEncoderDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:193
+msgid ""
+"Применяет предобученный автоэнкодер для «очистки» входного графа от "
+"состязательных возмущений."
+msgstr ""
+
+#: ../../user_guide/defense.rst:195
 msgid "AdvTraining"
 msgstr ""
+
+#: ../../user_guide/defense.rst:198
+msgid ""
+"Вспомогательная атака генерирует состязательные примеры, помогая целевой "
+"модели научиться их распознавать."
+msgstr ""
+
+#: ../../user_guide/defense.rst:200
+msgid "JaccardDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:201 ../../user_guide/defense.rst:207
+#: ../../user_guide/defense.rst:214
+msgid "Poison"
+msgstr ""
+
+#: ../../user_guide/defense.rst:203
+msgid ""
+"Удаляет подозрительные рёбра между узлами, у которых коэффициент Жаккара "
+"на основе признаков ниже заданного порога, поскольку атаки часто "
+"соединяют разнородные узлы."
+msgstr ""
+
+#: ../../user_guide/defense.rst:206
+msgid "GNNGuard"
+msgstr ""
+
+#: ../../user_guide/defense.rst:209
+msgid ""
+"Защищает графовые нейросети от атак отравления, исключая из процесса "
+"пересылки сообщений те рёбра, чьи соединяемые вершины имеют недостаточно "
+"схожие векторные представления, полученные в ходе работы модели."
+msgstr ""
+
+#: ../../user_guide/defense.rst:213
+msgid "ProGNNDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:216
+msgid ""
+"Выявляет и удаляет рёбра, которые с высокой вероятностью были добавлены "
+"отравляющей атакой, опираясь на статистические свойства графов."
+msgstr ""
+
+#: ../../user_guide/defense.rst:219
+msgid "NoiseMIDefender"
+msgstr ""
+
+#: ../../user_guide/defense.rst:220
+msgid "MI"
+msgstr ""
+
+#: ../../user_guide/defense.rst:222
+msgid ""
+"Добавляет контролируемый шум в выходные логиты модели, чтобы сделать "
+"ответы модели менее различимыми для атакующего.raining"
+msgstr ""
+
+#~ msgid "методы защит GNN моделей"
+#~ msgstr "GNN defense methods"
+
+#~ msgid "GradientRegularization"
+#~ msgstr ""
+
+#~ msgid "Quantization"
+#~ msgstr ""
+
+#~ msgid "Distillation"
+#~ msgstr ""
+
+#~ msgid "AutoEncoder"
+#~ msgstr ""
 

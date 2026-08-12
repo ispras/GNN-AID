@@ -5,11 +5,12 @@ import warnings
 
 from torch import device
 
-from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
+from gnn_aid.auxil.utils import EVASION_ATTACK_PARAMETERS_PATH, EVASION_DEFENSE_PARAMETERS_PATH
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager
 from gnn_aid.models_builder.models_utils import Metric
-from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern, DatasetConfig, Task
+from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 

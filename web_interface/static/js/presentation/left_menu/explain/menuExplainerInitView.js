@@ -33,6 +33,13 @@ class MenuExplainerInitView extends MenuView {
         // }
         // Object.assign(explainerInitConfig, this.paramsInitBuilder.kwArgs)
         console.log("explainerInitConfig", explainerInitConfig)
+
+        let shortText = `
+            ${explainerInitConfig._class_name}
+            (${JSON_stringify(explainerInitConfig._config_kwargs, 1)})
+        `
+        this.$shortDiv.html($("<p></p>").text(shortText))
+
         await controller.blockRequest(this.requestBlock, 'modify', explainerInitConfig)
     }
 

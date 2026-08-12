@@ -10,8 +10,9 @@ from torch_geometric.utils import dense_to_sparse
 from tqdm import tqdm
 
 from gnn_aid.attacks.poison_attacks import PoisonAttacker
-from gnn_aid.aux.utils import OPTIMIZERS_PARAMETERS_PATH, move_to_same_device
-from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern
+from gnn_aid.auxil.utils import OPTIMIZERS_PARAMETERS_PATH, move_to_same_device
+from gnn_aid.data_structures.configs import ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 from gnn_aid.models_builder.model_managers import GNNModelManager, FrameworkGNNModelManager
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
@@ -48,7 +49,7 @@ class BaseMeta(PoisonAttacker):
     device: str
         'cpu' or 'cuda'
     """
-    name = "BaseMeta (aux)"
+    name = "BaseMeta (auxil)"
 
     @staticmethod
     def check_availability(

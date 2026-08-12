@@ -1,18 +1,21 @@
 import shutil
 from time import time
 from unittest import mock
+import atexit
 
 __patched_dirs = []
 
 
-def monkey_patch_dirs() -> None:
+def monkey_patch_dirs(include_graphs_dir=False) -> None:
     """
     Patcher of directories imported in other modules. Useful for tests.
     """
-    from gnn_aid.aux.utils import GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR
-    dirs = [GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR]
+    from gnn_aid.auxil.utils import GRAPHS_DIR, DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR
+    dirs = [DATASETS_DIR, MODELS_DIR, EXPLANATIONS_DIR]
+    if include_graphs_dir:
+        dirs.append(GRAPHS_DIR)
 
-    modules = ['gnn_aid.aux.utils', 'gnn_aid.aux.data_info', 'gnn_aid.aux.declaration']
+    modules = ['gnn_aid.auxil.utils', 'gnn_aid.auxil.data_info', 'gnn_aid.auxil.declaration']
 
     l = locals()
     g = globals()
@@ -47,11 +50,17 @@ def cleanup_patches():
         if a_dir.exists():
             shutil.rmtree(a_dir)
 
+    __patched_dirs.clear()
+
+
+# In case of Ctrl+C cleanup_patches to be called
+atexit.register(cleanup_patches)
+
 
 if __name__ == '__main__':
-    from gnn_aid.aux.utils import GRAPHS_DIR
+    from gnn_aid.auxil.utils import GRAPHS_DIR
 
     monkey_patch_dirs()
 
-    from gnn_aid.aux.declaration import GRAPHS_DIR
+    from gnn_aid.auxil.declaration import GRAPHS_DIR
     print(GRAPHS_DIR)

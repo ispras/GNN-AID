@@ -31,4 +31,19 @@ class SvgPanel {
     get(id) {
         return $("#" + this.idPrefix + id)
     }
+
+    // Get satellite <g> element with a specified id
+    getSatellite(elem, id) {
+        return $("#" + this.idPrefix + elem + " > g > [id=" + id + "]")
+    }
+
+    // Remove <g> element with a specified id postfix
+    remove(id) {
+        this.svg.removeChild(this.get(id)[0])
+    }
+
+    // Remove contents of <g> element with a specified id postfix
+    clear(id) {
+        $("#" + this.idPrefix + id)[0].innerHTML = ''
+    }
 }

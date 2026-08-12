@@ -1,5 +1,7 @@
 import json
+import logging
 from collections import deque
+from datetime import timedelta
 from pathlib import Path
 from threading import Thread
 from time import sleep
@@ -7,12 +9,25 @@ from typing import Any, Union
 
 import numpy as np
 
-from gnn_aid.aux.utils import SAVE_DIR_STRUCTURE_PATH
+from gnn_aid.auxil.utils import SAVE_DIR_STRUCTURE_PATH
 
 root_dir = Path(__file__).parent.parent.parent.resolve()  # directory of source root
 WEB_DIR = root_dir / "web_interface"
 STATIC_DIR = WEB_DIR / "static"  # js, css code
 TEMPLATES_DIR = WEB_DIR / "templates"  # html templates
+LOG_DIR = WEB_DIR / "logs"  # server logs
+
+CLIENTS_STORAGE_ROOT = LOG_DIR.parent / "client_storage"
+CLIENT_STORAGE_TTL = timedelta(days=30)  # client data will be removed this period after last access
+CLEANUP_INTERVAL_SEC = 24 * 60 * 60  # how often to check for client storage cleanup
+CLIENT_META_FILENAME = ".meta.json"
+DIR_PATCH_MODULES = [
+    'gnn_aid.auxil.utils',
+    'gnn_aid.auxil.data_info',
+    'gnn_aid.auxil.declaration',
+    'web_interface.back_front.model_blocks',
+    'web_interface.back_front.explainer_blocks',
+]
 
 
 class WebInterfaceError(Exception):
@@ -86,7 +101,9 @@ class SocketConnect:
             tag: str = 'all',
             obligate: bool = True
     ):
-        """ Send info message to frontend.
+        """
+        Send info message to frontend.
+
         :param block: destination block, e.g. "" (to console), "model", "explainer"
         :param msg: dict
         :param tag: keep messages in a separate queue with this tag, all but last unobligate
@@ -94,7 +111,8 @@ class SocketConnect:
         :param obligate: if not obligate, this message would be replaced by a new one if the queue
          is not empty
         """
-        data = {"block": block or "", "msg": json_dumps(msg)}
+        data = {"block": block or "", "msg": msg}
+        # data = {"block": block or "", "msg": json_dumps(msg)}
         if func is not None:
             data["func"] = func
 
@@ -123,8 +141,8 @@ class SocketConnect:
         if data is None:
             return
 
-        size = len(json_dumps(data))
-        if size > 25e6:
+        size = len(str(data))
+        if size > 25e7:
             raise RuntimeError(f"Too big package size: {size} bytes")
         self._send_data(data)
         self.sleep_time = 0.5 * size / 25e6 * 10
@@ -265,3 +283,8 @@ def compute_stats_data(
     # Note: we update all stats data at once because it can be requested from frontend during
     # the update
     return stats_data
+
+
+def get_sid_logger(sid: str | None = None) -> logging.LoggerAdapter:
+    base_logger = logging.getLogger("gnn_aid.web")
+    return logging.LoggerAdapter(base_logger, {"sid": sid or "-"})

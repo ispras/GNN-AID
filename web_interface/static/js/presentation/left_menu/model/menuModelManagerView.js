@@ -42,11 +42,24 @@ class MenuModelManagerView extends MenuView {
     async _accept() {
         let mmc = this.constructManagerConfig()
         // console.log("MM config", mmc)
+
+        let shortText = ` 
+            batch:${mmc.batch},
+            loss:${mmc.loss_function._class_name},
+            opt:${mmc.optimizer._class_name},
+            split:${(mmc.train_test_split[0]*100).toFixed(0)}/${(mmc.train_test_split[1]*100).toFixed(0)}
+        `
+        this.$shortDiv.html($("<p></p>").text(shortText));
+
         await controller.blockRequest(this.requestBlock, 'modify', mmc)
     }
 
     // Model manager parameters
     async buildManager() {
+
+        this.$div.addClass("left-menu-block_border");
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.Manager"));
+
         let $cc = this.$configManagerParamsDiv = $("<div></div>")
         this.$mainDiv.append(this.$configManagerParamsDiv)
         let $cb

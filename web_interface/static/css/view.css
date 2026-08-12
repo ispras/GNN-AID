@@ -45,16 +45,19 @@
 
 .info-panel {
     flex: 1;
-    min-height: 20px;
+    /*min-height: 20px;*/
+    min-height: 22px; /* new!!!!!!!! */
     padding: 5px;
     display: flex;
     flex-flow: column;
-    overflow-y: scroll;
+    /*overflow-y: scroll;*/
+    overflow-y: auto; /* new!!!!! */
 }
 
 .info-panel-body {
     flex: 1;
-    overflow-y: scroll;
+    /*overflow-y: scroll;*/
+    overflow-y: auto; /* new!!!!! */
     display: flex;
     flex-flow: column;
 }
@@ -65,6 +68,7 @@
     padding-left: 3px;
     font-size: 18px;
     /*background: #e7e7e7;*/
+    line-height: 19px; /* new!!!!!! */
 }
 .info-panel-header:hover {
     border: 1px #90caf9 solid;

@@ -3,7 +3,7 @@ collections.Callable = collections.abc.Callable
 import unittest
 import warnings
 
-from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
+from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, \
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, FUNCTIONS_PARAMETERS_PATH
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
@@ -11,7 +11,8 @@ from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
 from gnn_aid.data_structures.configs import FeatureConfig, Task
 from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import FrameworkGNNModelManager, ProtGNNModelManager, GSATModelManager
-from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ConfigPattern, ModelModificationConfig
+from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
@@ -20,6 +21,15 @@ from tests.utils import cleanup_patches, monkey_patch_dirs
 
 class ExplainersTest(unittest.TestCase):
     def setUp(self) -> None:
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Using '.*' without a 'pyg-lib' installation is deprecated.*",
+            category=UserWarning,
+        )
+
+        monkey_patch_dirs()
+        self.addCleanup(cleanup_patches)
         # Init datasets
         # Single-Graph - Example
         gen_dataset_sg_example = DatasetManager.get_by_config(
@@ -234,12 +244,6 @@ class ExplainersTest(unittest.TestCase):
             save_model_flag=False,
             metrics=[Metric("F1", mask='train', average=None)]
         )
-
-        monkey_patch_dirs()
-
-    def tearDown(self):
-        # Clean up patches and tmp dirs
-        cleanup_patches()
 
     def test_PGE_SG(self):
         # FIXME not working with another tests

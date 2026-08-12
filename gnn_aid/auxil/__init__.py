@@ -1,4 +1,4 @@
-import gnn_aid.aux.utils
+import gnn_aid.auxil.utils
 
 from .custom_decorators import timing_decorator
 from .declaration import Declare

@@ -29,6 +29,9 @@ Two launch modes are supported:
   bash run_example.sh defense
 ```
 
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
+
 ---
 ## Description of modes
 

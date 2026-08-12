@@ -1,16 +1,17 @@
 import json
 import logging
 from enum import Enum
+from multiprocessing import Queue
 from typing import Union
-from multiprocessing import Process, Queue
 
-from gnn_aid.aux.utils import (
+from gnn_aid.auxil import DataInfo
+from gnn_aid.auxil.utils import (
     FUNCTIONS_PARAMETERS_PATH, FRAMEWORK_PARAMETERS_PATH, MODULES_PARAMETERS_PATH,
     EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH,
     EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, OPTIMIZERS_PARAMETERS_PATH,
     POISON_ATTACK_PARAMETERS_PATH, POISON_DEFENSE_PARAMETERS_PATH, EVASION_ATTACK_PARAMETERS_PATH,
     EVASION_DEFENSE_PARAMETERS_PATH, MI_ATTACK_PARAMETERS_PATH, MI_DEFENSE_PARAMETERS_PATH)
-from . import json_loads, json_dumps, ViewPoint
+from . import json_loads, ViewPoint
 from .attack_defense_blocks import BeforeTrainBlock, AfterTrainBlock
 from .dataset_blocks import DatasetBlock, DatasetVarBlock
 from .diagram import Diagram
@@ -19,7 +20,7 @@ from .explainer_blocks import (
 from .model_blocks import (
     ModelWBlock, ModelManagerBlock, ModelLoadBlock, ModelConstructorBlock, ModelCustomBlock,
     ModelTrainerBlock)
-from .utils import WebInterfaceError, SocketConnect
+from .utils import WebInterfaceError, SocketConnect, get_sid_logger
 
 
 class ClientMode(Enum):
@@ -74,9 +75,13 @@ class FrontendClient:
             self,
             socket_connect: SocketConnect,
             mode: ClientMode,
+            sid: str,
     ):
         self.mode = mode  # mode: analysis, interpretation, defense
         self.socket = socket_connect
+        self.logger = get_sid_logger(sid)
+
+        DataInfo.refresh_all_data_info()
 
         # Build the diagram
         self.diagram = Diagram()
@@ -176,21 +181,28 @@ class FrontendClient:
         if view_point != self.view_point:
             self.view_point = view_point
             return True
-        print('setting the same viewpoint')
+        self.logger.info('setting the same viewpoint')
         return False
 
     def run_loop(
-        self,
-        response_queue: Queue,
-        msg_queue: Queue,
-        request_queue: Queue,
+            self,
+            response_queue: Queue,
+            msg_queue: Queue,
+            request_queue: Queue,
     ) -> None:
         while True:
-            print('Worker is waiting for command...')
+            self.logger.info('Worker is waiting for command...')
             command = request_queue.get()
+
+            if not isinstance(command, dict):
+                raise WebInterfaceError(f"Unknown command format: {command!r}")
+
             type = command.get('type')
-            args = command.get('args')
-            print(f"Worker: received command: {type} with args: {args}")
+            args = command.get('args') or {}
+
+            if type == "STOP":
+                self.logger.info("Worker received STOP command; it will finish")
+                break
 
             if type == "dataset":
                 get = args.get('get')
@@ -205,7 +217,8 @@ class FrontendClient:
 
                 elif get == "data":
                     dataset_data = self.dvcBlock.visible_part.get_dataset_data(self.view_point)
-                    data = dataset_data.to_json()
+                    data = dataset_data.to_dict()
+                    # data = dataset_data.to_json()
                     logging.info(f"Length of dataset_data: {len(data)}")
                     result = data
 
@@ -214,13 +227,13 @@ class FrontendClient:
                         result = ''
                     else:
                         dataset_var_data = self.dvcBlock.visible_part.get_dataset_var_data(self.view_point)
-                        data = dataset_var_data.to_json()
+                        data = dataset_var_data.to_dict()
                         logging.info(f"Length of dataset_var_data: {len(data)}")
                         result = data
 
                 elif get == "stat":
                     stat = args.get('stat')
-                    result = json_dumps(self.dcBlock.get_stat(stat))
+                    result = self.dcBlock.get_stat(stat)
 
                 elif get == "index":
                     result = self.dcBlock.get_index()
@@ -236,24 +249,24 @@ class FrontendClient:
                 params = args.get('params')
                 if params:
                     params = json_loads(params)
-                print(f"request_block: block={block}, func={func}, params={params}")
+                self.logger.info(f"request_block: block={block}, func={func}, params={params}")
                 # TODO what if raise exception? process will stop
                 self.request_block(block, func, params)
                 response_queue.put('')
-                print("Worker puts result to response_queue")
+                self.logger.info("Worker puts result to response_queue")
 
             elif type == "model":
                 do = args.get('do')
                 get = args.get('get')
 
                 if do:
-                    print(f"model.do: do={do}, params={args}")
+                    self.logger.info(f"model.do: do={do}, params={args}")
                     if do == 'index':
                         type = args.get('type')
                         if type == "saved":
-                            result = json_dumps(self.mloadBlock.get_index())
+                            result = self.mloadBlock.get_index()
                         elif type == "custom":
-                            result = json_dumps(self.mcustomBlock.get_index())
+                            result = self.mcustomBlock.get_index()
                     elif do in ['train', 'reset', 'run', 'save']:
                         result = self.mtBlock.do(do, args)
                     elif do in ['run with attacks']:
@@ -269,7 +282,7 @@ class FrontendClient:
                                 part = json_loads(part)
                                 is_new = self._set_view_point(part)
                             dvd = self.mmcBlock.get_satellites(self.view_point)
-                            data = dvd.to_json()
+                            data = dvd.to_dict()
                             logging.info(f"Length of dataset_var_data: {len(data)}")
                             result = data
                         else:
@@ -281,7 +294,7 @@ class FrontendClient:
             elif type == "explainer":
                 do = args.get('do')
 
-                print(f"explainer.do: do={do}, params={args}")
+                self.logger.info(f"explainer.do: do={do}, params={args}")
 
                 if do in ["run", "stop"]:
                     result = self.erBlock.do(do, args)
@@ -297,8 +310,5 @@ class FrontendClient:
 
                 response_queue.put(result)
 
-            elif type == "STOP":
-                print(f"Process {sid} received STOP command; it will finish")
-                break
             else:
                 raise WebInterfaceError(f"Unknown command type: 'f{type}'")

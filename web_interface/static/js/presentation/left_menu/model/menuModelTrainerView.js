@@ -48,6 +48,10 @@ class MenuModelTrainerView extends MenuView {
 
     async _accept() {
         let metrics = this.getMetrics()
+
+        let shortText = this.progressBar.$label.text()
+        this.$shortDiv.html($("<p></p>").text(shortText))
+
         // We should pass metrics if user presses 'accept' without training
         await controller.blockRequest(
             this.requestBlock, 'modify', {'metrics': metrics})
@@ -122,6 +126,9 @@ class MenuModelTrainerView extends MenuView {
     // Build buttons for model training process in model menu
     async updateTrainerMenu() {
         console.log('updateModelManagerMenu')
+
+        this.$div.addClass("left-menu-block_border");
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Model.Training"));
 
         let $cb
         this.$mainDiv.append($("<label></label>").html("<h3>Training & metrics</h3>"))

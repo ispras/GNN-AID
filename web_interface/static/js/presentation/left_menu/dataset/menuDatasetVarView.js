@@ -21,6 +21,9 @@ class MenuDatasetVarView extends MenuView {
         $cc = $("<div></div>")
         this.$mainDiv.append($cc)
 
+        this.$div.addClass("left-menu-block_border");
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.features"));
+        
         // 1. Input features
         $cc.append($("<label></label>").html("<h3>Features constructor</h3>"))
 
@@ -101,9 +104,9 @@ class MenuDatasetVarView extends MenuView {
             }
         }
         else {
-            // Global if single graph
+            // Global
+            $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
             if (this.datasetInfo.count === 1) {
-                $cc.append($("<label></label>").html("<h4>Global structural</h4>"))
 
                 // 1-hot over nodes
                 $cb = $("<div></div>").attr("class", "control-block")
@@ -114,53 +117,58 @@ class MenuDatasetVarView extends MenuView {
                     .attr("type", "checkbox").attr("id", id)
                 $cb.append(this.$oneHotNodeInput)
                 $cb.append($("<label></label>")
-                    .text(`1-hot ovre nodes (size=${size})`).attr("for", id))
+                    .text(`1-hot over nodes (size=${size})`).attr("for", id))
 
-                // 10 ones
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-10ones-input"
-                this.$tenOnesNodeInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$tenOnesNodeInput)
-                $cb.append($("<label></label>")
-                    .text("10 ones (size=10)").attr("for", id))
-
-                // Degree
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-degree-input"
-                this.$nodeDegreeInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$nodeDegreeInput)
-                $cb.append($("<label></label>")
-                    .text("degree (size=1)").attr("for", id))
-
-                // Clustering
-                $cb = $("<div></div>").attr("class", "control-block")
-                $cc.append($cb)
-                id = this.idPrefix + "-node-clustering-input"
-                this.$nodeClusteringInput = $("<input>")
-                    .attr("type", "checkbox").attr("id", id)
-                $cb.append(this.$nodeClusteringInput)
-                $cb.append($("<label></label>")
-                    .text("clustering (size=1)").attr("for", id))
             }
             else {
                 this.$oneHotNodeInput = null
-                this.$tenOnesNodeInput = null
-                this.$nodeClusteringInput = null
-                this.$nodeDegreeInput = null
+                // this.$tenOnesNodeInput = null
+                // this.$nodeClusteringInput = null
+                // this.$nodeDegreeInput = null
             }
+
+            // 10 ones
+            $cb = $("<div></div>").attr("class", "control-block")
+            $cc.append($cb)
+            id = this.idPrefix + "-node-10ones-input"
+            this.$tenOnesNodeInput = $("<input>")
+                .attr("type", "checkbox").attr("id", id)
+            $cb.append(this.$tenOnesNodeInput)
+            $cb.append($("<label></label>")
+                .text("10 ones (size=10)").attr("for", id))
+
+            // // Degree - not implemented yet
+            // $cb = $("<div></div>").attr("class", "control-block")
+            // $cc.append($cb)
+            // id = this.idPrefix + "-node-degree-input"
+            // this.$nodeDegreeInput = $("<input>")
+            //     .attr("type", "checkbox").attr("id", id)
+            // $cb.append(this.$nodeDegreeInput)
+            // $cb.append($("<label></label>")
+            //     .text("degree (size=1)").attr("for", id))
+            //
+            // // Clustering - not implemented yet
+            // $cb = $("<div></div>").attr("class", "control-block")
+            // $cc.append($cb)
+            // id = this.idPrefix + "-node-clustering-input"
+            // this.$nodeClusteringInput = $("<input>")
+            //     .attr("type", "checkbox").attr("id", id)
+            // $cb.append(this.$nodeClusteringInput)
+            // $cb.append($("<label></label>")
+            //     .text("clustering (size=1)").attr("for", id))
 
             // Node attributes
             $cc.append($("<label></label>").html("<h4>Node attributes</h4>"))
             let attrs = this.datasetInfo["node_attributes"]["names"]
             let values = this.datasetInfo["node_attributes"]["values"]
-            if (this.$oneHotNodeInput && attrs.length === 0) {
-                this.$oneHotNodeInput.prop("checked", true)
-                this.$oneHotNodeInput.click((e) => e.preventDefault())
-            } else {
+            if (attrs.length === 0) {
+                this.$tenOnesNodeInput.prop("checked", true)
+            }
+            // if (this.$oneHotNodeInput && attrs.length === 0) {
+            //     this.$oneHotNodeInput.prop("checked", true)
+            //     // this.$oneHotNodeInput.click((e) => e.preventDefault())
+            // }
+            else {
                 let i = 0
                 for (const attr of attrs) {
                     let $cb = $("<div></div>").attr("class", "control-block")
@@ -252,10 +260,10 @@ class MenuDatasetVarView extends MenuView {
             features["node_struct"].push("one_hot")
         if (this.$tenOnesNodeInput && this.$tenOnesNodeInput.is(":checked"))
             features["node_struct"].push("10-ones")
-        if (this.$nodeClusteringInput && this.$nodeClusteringInput.is(":checked"))
-            features["node_struct"].push("clustering")
-        if (this.$nodeDegreeInput && this.$nodeDegreeInput.is(":checked"))
-            features["node_struct"].push("degree")
+        // if (this.$nodeClusteringInput && this.$nodeClusteringInput.is(":checked"))
+        //     features["node_struct"].push("clustering")
+        // if (this.$nodeDegreeInput && this.$nodeDegreeInput.is(":checked"))
+        //     features["node_struct"].push("degree")
         for (let i = 0; i < attrs.length; i++) {
             if (attrsChecked[i])
                 features["node_attr"].push(attrs[i])
@@ -267,6 +275,14 @@ class MenuDatasetVarView extends MenuView {
             features: features,
             dataset_ver_ind: 0, // TODO check
         }
+
+        let shortText = datasetVarConfig.features.node_struct
+            .concat(datasetVarConfig.features.node_attr)
+            .join('+')
+        shortText = [shortText, datasetVarConfig.task, datasetVarConfig.labeling]
+            .join(' | ')
+        this.$shortDiv.html($("<p></p>").text(shortText))
+
         await controller.blockRequest(this.requestBlock, 'modify', datasetVarConfig)
     }
 

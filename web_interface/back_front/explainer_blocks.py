@@ -3,11 +3,12 @@ import os
 from pathlib import Path
 from typing import Union
 
-from gnn_aid.aux.data_info import DataInfo
-from gnn_aid.aux.declaration import Declare
-from gnn_aid.aux.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
+from gnn_aid.auxil.data_info import DataInfo
+from gnn_aid.auxil.declaration import Declare
+from gnn_aid.auxil.utils import MODELS_DIR, EXPLAINERS_INIT_PARAMETERS_PATH, \
     EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH, EXPLAINERS_GLOBAL_RUN_PARAMETERS_PATH, ProgressBar
-from gnn_aid.data_structures.configs import ExplainerModificationConfig, ConfigPattern
+from gnn_aid.data_structures.configs import ExplainerModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
 from gnn_aid.models_builder.model_managers import GNNModelManager
 from . import VisiblePart
@@ -117,7 +118,7 @@ class ExplainerLoadBlock(Block):
 
         ps = index.filter(values_info)
         # return [ps.to_json(), json_dumps(self.info)] FIXME misha parsing error on front
-        return [ps.to_json(), '{}']
+        return [ps.to_dict(), {}]
 
     def _explainer_kwargs(
             self,
@@ -173,7 +174,7 @@ class ExplainerInitBlock(Block):
             init_config=self.explainer_init_config,
             explainer_name=self.explainer_init_config._class_name
         )
-        self._result = {"config": self.explainer_init_config}
+        self._result = {"config": self.explainer_init_config.to_dict()}
 
 
 class ExplainerRunBlock(Block):
@@ -216,7 +217,7 @@ class ExplainerRunBlock(Block):
                 _config_class="ExplainerRunConfig"
             )
 
-            print(f"explainer_run_config: {self.explainer_run_config.to_json()}")
+            print(f"explainer_run_config: {self.explainer_run_config.to_dict()}")
             from threading import Thread
             Thread(target=self._run_explainer, args=()).start()
             return ''

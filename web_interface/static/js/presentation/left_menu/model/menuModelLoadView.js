@@ -10,7 +10,7 @@ class MenuModelLoadView extends MenuView {
     async init(args) {
         super.init(args)
         this.prefixStorage = PrefixStorage.fromJSON(args[0])
-        this.info = JSON_parse(args[1])
+        this.info = args[1]
 
         // Add refresh button
         let $div = $("<div></div>").css("display", "flex")
@@ -36,6 +36,9 @@ class MenuModelLoadView extends MenuView {
     }
 
     async _accept() {
+        let config = JSON_parse(Object.values(this.info.gnn)[0]).structure.layers
+        this.$shortDiv.html($("<p></p>").text(modelShortConfig(config)))
+
         await controller.blockRequest(this.requestBlock, 'modify',
             this.prefixStorage.getConfig())
     }
@@ -52,7 +55,7 @@ class MenuModelLoadView extends MenuView {
         blockDiv(this.$div, true)
         let [ps, info] = await controller.ajaxRequest('/model', {do: "index", type: "saved"})
         this.prefixStorage = PrefixStorage.fromJSON(ps)
-        this.info = JSON_parse(info)
+        this.info = info
         this._build()
         blockDiv(this.$div, false)
     }

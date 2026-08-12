@@ -4,10 +4,11 @@ import torch
 from torch import device
 
 from gnn_aid.attacks import Attacker
-from gnn_aid.aux.utils import FUNCTIONS_PARAMETERS_PATH, all_subclasses
+from gnn_aid.auxil.utils import FUNCTIONS_PARAMETERS_PATH, all_subclasses
 from gnn_aid.data_structures import ModelStructureConfig, ModelConfig
 from gnn_aid.data_structures.configs import DatasetConfig, DatasetVarConfig, FeatureConfig, Task, \
-    ConfigPattern, ModelModificationConfig
+    ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.datasets_manager import DatasetManager
 from gnn_aid.datasets.ptg_datasets import LibPTGDataset
 from gnn_aid.models_builder import FrameworkGNNConstructor
@@ -310,7 +311,7 @@ def link_prediction():
     print(json.dumps(res.tolist(), indent=2))
     return
 
-    from gnn_aid.aux.utils import EVASION_ATTACK_PARAMETERS_PATH
+    from gnn_aid.auxil.utils import EVASION_ATTACK_PARAMETERS_PATH
     evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
         _import_path=EVASION_ATTACK_PARAMETERS_PATH,
@@ -338,7 +339,7 @@ def link_prediction():
     print(json.dumps(res, indent=2))
 
     # explainer
-    from gnn_aid.aux.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
+    from gnn_aid.auxil.utils import EXPLAINERS_INIT_PARAMETERS_PATH, EXPLAINERS_LOCAL_RUN_PARAMETERS_PATH
     from gnn_aid.explainers.explainers_manager import FrameworkExplainersManager
     explainer_init_config = ConfigPattern(
         _class_name="GNNExplainer(torch-geom)",

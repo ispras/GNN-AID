@@ -13,6 +13,10 @@ class MenuDatasetView extends MenuView {
         // this.prefixStorage = PrefixStorage.fromJSON(ps)
         this.tuplePrefixStorage = PrefixStorage.fromJSON(ps)
 
+        this.$div.addClass("left-menu-block_border");
+        this.$div.prepend($("<h3></h3>").attr("class", "left-menu-block__header").text("Dataset.raw"));
+        $("#menu-dataset-header").hide();
+
         this.$mainDiv.append($("<h3></h3>").text("Choose raw data"))
 
         this.$optionsDiv = $("<div></div>")
@@ -48,6 +52,9 @@ class MenuDatasetView extends MenuView {
 
     async _accept() {
         let dc = {'full_name': this.tuplePrefixStorage.getConfig()}
+
+        this.$shortDiv.html($("<p></p>").text(dc.full_name.join("/")));
+
         await controller.blockRequest(this.requestBlock, 'modify', dc)
     }
 }

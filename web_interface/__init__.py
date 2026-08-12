@@ -8,9 +8,7 @@ import web_interface.back_front.attack_defense_blocks
 import web_interface.back_front.diagram
 import web_interface.back_front.frontend_client
 
-from .main_aiohttp import AiohttpSocketConnect, worker_process
-# from .main_flask import FlaskSocketConnect
-# from .main_fastapi import worker_process
+from .aiohttp_local import AiohttpSocketConnect, worker_process
 
 __all__ = [
     'AiohttpSocketConnect',

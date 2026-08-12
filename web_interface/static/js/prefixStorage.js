@@ -14,7 +14,8 @@ class PrefixStorage {
 
     // Build PrefixStorage from its json
     static fromJSON(string) {
-        let obj = JSON_parse(string)
+        let obj = string
+        // let obj = JSON_parse(string)
         let ps
         if (Array.isArray(obj)) {
             ps = new PrefixStorage(obj[0])
@@ -22,7 +23,8 @@ class PrefixStorage {
         }
         else {
             ps = new PrefixStorage()
-            ps.content = JSON_parse(string)
+            ps.content = obj
+            // ps.content = JSON_parse(string)
         }
         return ps
     }

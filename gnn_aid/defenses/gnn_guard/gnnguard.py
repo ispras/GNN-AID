@@ -9,8 +9,9 @@ from scipy.sparse import lil_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 
-from gnn_aid.aux.utils import import_by_name, TECHNICAL_PARAMETER_KEY, OPTIMIZERS_PARAMETERS_PATH
-from gnn_aid.data_structures.configs import ModelModificationConfig, ConfigPattern
+from gnn_aid.auxil.utils import import_by_name, TECHNICAL_PARAMETER_KEY, OPTIMIZERS_PARAMETERS_PATH
+from gnn_aid.data_structures.configs import ModelModificationConfig
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.datasets.gen_dataset import GeneralDataset
 # from defenses.GNNGuard.base_model import BaseModel
 from gnn_aid.defenses.poison_defense import PoisonDefender

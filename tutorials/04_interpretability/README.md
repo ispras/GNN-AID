@@ -24,6 +24,9 @@ Run:
 
 The script trains a GNN model on the Cora dataset and then runs the GNNExplainer interpreter to get a local interpretation for a particular node.
 
+If you see warnings in the console with a suggestion to install 'pyg-lib', ignore them. 
+Installing 'pyg-lib' will lead to errors.
+
 ---
 
 ## Interpretation results

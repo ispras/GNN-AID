@@ -32,13 +32,13 @@
 
 .. code:: bash
 
-   sudo apt-get install -y build-essential python3.11-dev libfreetype6-dev pkg-config
+   sudo apt-get install -y build-essential libfreetype6-dev pkg-config
 
 Мы рекомендуем создать виртуальное окружение с помощью ``venv`` и активировать его:
 
 .. code:: bash
 
-   sudo apt-пуе install python3.11-venv
+   sudo apt-get install python3.11-venv
    python3 -m venv venv
    source venv/bin/activate
 

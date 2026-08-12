@@ -1,5 +1,4 @@
-import collections.abc
-collections.Callable = collections.abc.Callable
+import collections.abc; collections.Callable = collections.abc.Callable
 import unittest
 
 from gnn_aid.datasets.datasets_manager import DatasetManager
@@ -8,13 +7,23 @@ from gnn_aid.models_builder.models_utils import Metric
 from gnn_aid.models_builder.model_managers import (
     FrameworkGNNModelManager, ProtGNNModelManager, GSATModelManager)
 from gnn_aid.data_structures.configs import ModelModificationConfig, DatasetConfig, DatasetVarConfig, \
-    ConfigPattern, FeatureConfig, Task
+    FeatureConfig, Task
+from gnn_aid.data_structures.gen_config import ConfigPattern
 from gnn_aid.models_builder.models_zoo import model_configs_zoo
 from tests.utils import cleanup_patches, monkey_patch_dirs
 
 
 class ModelsTest(unittest.TestCase):
     def setUp(self) -> None:
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Using '.*' without a 'pyg-lib' installation is deprecated.*",
+            category=UserWarning,
+        )
+
+        monkey_patch_dirs()
+        self.addCleanup(cleanup_patches)
         # Init datasets
         # Single-Graph - Example
         self.gen_dataset_sg_example = DatasetManager.get_by_config(
@@ -76,12 +85,6 @@ class ModelsTest(unittest.TestCase):
                 }
             }
         )
-
-        monkey_patch_dirs()
-
-    def tearDown(self):
-        # Clean up patches and tmp dirs
-        cleanup_patches()
 
     def test_combo_model_on_single_graph(self):
         gat_gin_lin_sg_example = model_configs_zoo(dataset=self.gen_dataset_sg_example, model_name='gat_gin_lin')

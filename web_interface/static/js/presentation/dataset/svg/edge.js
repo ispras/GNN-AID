@@ -3,19 +3,22 @@ const EDGE_ARROW_SIZE = 10
 // An edge with an SVG primitive to draw it
 class SvgEdge extends SvgElement{
     constructor(x1, x2, y1, y2, r, color, width, directed, show, $tip) {
-        super(x1, y1, r, color, show, $tip)
-        this.x2 = x2
-        this.y2 = y2
+        super((x1+x2)/2, (y1+y2)/2, r, color, show, $tip)
+        this.x2 = (x2-x1)/2
+        this.y2 = (y2-y1)/2
         this.width = width
         this.directed = directed
         this.maxFeaturesShown = 1
 
         this.path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+        // this.path = document.createElementNS("http://www.w3.org/2000/svg", "line")
         this.path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`)
         this.path.setAttribute('fill', "rgba(255,255,255,0)")
         this.path.setAttribute('stroke', color)
         this.path.setAttribute('display', show ? "inline" : "none")
         this.path.setAttribute('stroke-width', width)
+        this.path.setAttribute('class', 'graph-node')
+        this.g.prepend(this.path)
 
         // Initialize satellites for edges
         let features = this.satellites['features'] = new Satellite("rect", this.r)
@@ -48,13 +51,24 @@ class SvgEdge extends SvgElement{
         this.y = y1
         this.x2 = x2
         this.y2 = y2
+        // this.x = (x1+x2)/2
+        // this.y = (y1+y2)/2
+        // this.x2 = (x2-x1)/2
+        // this.y2 = (y2-y1)/2
 
         let d
         if (this.directed)
+            // fixme
             d = svgEdge(new Vec(x1, y1), new Vec(x2, y2), this.directed)
         else
-            d = `M${x1},${y1} L${x2},${y2}`
+            // d = 'M' + (-this.x2*this.s) + ',' + (-this.y2*this.s) + ' L' + this.x2*this.s + ',' + this.y2*this.s
+            d = 'M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2
+            // d = `M${x1},${y1} L${x2},${y2}`
         this.path.setAttribute('d', d)
+        // this.path.setAttribute('x1', x1*this.s)
+        // this.path.setAttribute('y1', y1*this.s)
+        // this.path.setAttribute('x2', x2*this.s)
+        // this.path.setAttribute('y2', y2*this.s)
 
         // Update satellite positions
         for (const satellite of Object.values(this.satellites))
@@ -67,13 +81,14 @@ class SvgEdge extends SvgElement{
             satellite.scale(s)
     }
 
-    visible(show) {
-        this.show = show
-        this.path.setAttribute('display', show ? "inline" : "none")
-
-        for (const satellite of Object.values(this.satellites))
-            satellite.visible(!this.lightMode && show)
-    }
+    // visible(show) {
+    //     this.show = show
+    //     this.path.setAttribute('visibility', show ? "visible" : "hidden")
+    //     // this.path.setAttribute('display', show ? "inline" : "none")
+    //
+    //     for (const satellite of Object.values(this.satellites))
+    //         satellite.visible(!this.lightMode && show)
+    // }
 
     // Set stroke color
     setColor(color) {
