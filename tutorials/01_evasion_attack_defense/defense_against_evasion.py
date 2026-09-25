@@ -19,7 +19,7 @@ def test_attack_defense_small():
         LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
     )
     gen_dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     gnn = model_configs_zoo(dataset=gen_dataset, model_name='gcn_gcn')
 

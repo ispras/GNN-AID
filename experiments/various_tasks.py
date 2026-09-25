@@ -49,7 +49,7 @@ def node_regression():
     # )
     #
     # gnn_model_manager.gnn.to(my_device)
-    # gen_dataset.data.to(my_device)
+    # gen_dataset.to(my_device)
     #
     # gen_dataset.train_test_split()
     # gnn_model_manager.train_model(
@@ -150,7 +150,7 @@ def graph_regression():
     )
 
     gnn_model_manager.gnn.to(my_device)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     gnn_model_manager.modification.epochs = 0
     gnn_model_manager.train_model(
@@ -293,7 +293,7 @@ def link_prediction():
     )
 
     gnn_model_manager.gnn.to(my_device)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     gnn_model_manager.modification.epochs = 0
     gnn_model_manager.train_model(

@@ -145,6 +145,37 @@ class GeneralDataset(ABC):
 
         return self._data
 
+    def to(
+            self,
+            device: torch.device
+    ) -> 'GeneralDataset':
+        """Move dataset tensors to the specified device."""
+        if self.dataset is None:
+            raise RuntimeError(
+                f"PyG dataset is not defined. Didn't you forget to build() the dataset?"
+            )
+
+        # Single-graph dataset:
+        # preserve the old behaviour of `gen_dataset.data.to(device)`.
+        if not self.is_multi():
+            self.data.to(device)
+            return self
+
+        # Multi-graph InMemoryDataset:
+        # move the combined storage and invalidate cached individual graphs.
+        if isinstance(self.dataset, InMemoryDataset):
+            self.dataset._data = self.dataset._data.to(device)
+            self.dataset._data_list = None
+
+            # GeneralDataset.data is a cache over dataset._data.
+            self._data = None
+
+            return self
+
+        # Fallback for other Dataset implementations.
+        self.data.to(device)
+        return self
+    
     @property
     def edges(
             self

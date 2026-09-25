@@ -49,7 +49,7 @@ save_model_flag = False
 
 # data.x = data.x.float()
 gnn_model_manager.gnn.to(my_device)
-gen_dataset.data.to(my_device)
+gen_dataset.to(my_device)
 data = gen_dataset.data
 
 # Set poison attack config

@@ -47,7 +47,7 @@ def test_attack_defense_small():
     save_model_flag = False
 
     gnn_model_manager.gnn.to(my_device)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     fgsm_evasion_attack_config = ConfigPattern(
         _class_name="FGSM",

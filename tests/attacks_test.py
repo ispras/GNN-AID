@@ -44,7 +44,7 @@ class AttacksTest(unittest.TestCase):
 
         self.gen_dataset_mg_small.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
         self.results_dataset_path_mg_small = self.gen_dataset_mg_small.prepared_dir
-        self.gen_dataset_mg_small.data.to(self.my_device)
+        self.gen_dataset_mg_small.to(self.my_device)
 
 
         # Single-Graph - Example
@@ -56,7 +56,7 @@ class AttacksTest(unittest.TestCase):
                              dataset_ver_ind=0)
         )
         self.gen_dataset_sg_example.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.gen_dataset_sg_example.data.to(self.my_device)
+        self.gen_dataset_sg_example.to(self.my_device)
 
         # Single-graph - Cora
         self.gen_dataset_sg_cora = DatasetManager.get_by_config(
@@ -64,7 +64,7 @@ class AttacksTest(unittest.TestCase):
             LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.NODE_CLASSIFICATION})
         )
         self.gen_dataset_sg_cora.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-        self.gen_dataset_sg_cora.data.to(self.my_device)
+        self.gen_dataset_sg_cora.to(self.my_device)
 
         self.default_config = ModelModificationConfig(
             model_ver_ind=0,
@@ -91,7 +91,7 @@ class AttacksTest(unittest.TestCase):
         self.gen_dataset_sg_cora_link = DatasetManager.get_by_config(dc, dvc)
         self.gen_dataset_sg_cora_link.train_test_split(percent_train_class=0.85, percent_test_class=0.1)
         self.results_dataset_path_sg_cora_link = self.gen_dataset_sg_cora_link.prepared_dir
-        self.gen_dataset_sg_cora_link.data.to(self.my_device)
+        self.gen_dataset_sg_cora_link.to(self.my_device)
 
     def test_metattack_full(self):
         poison_attack_config = ConfigPattern(
@@ -860,7 +860,8 @@ class AttacksTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {}
                 },
-                "batch": 64
+                "batch": 64,
+                "neg_samples_ratio": 2
             }
         )
 
@@ -977,7 +978,8 @@ class AttacksTest(unittest.TestCase):
                     "_class_import_info": ["torch.nn"],
                     "_config_kwargs": {}
                 },
-                "batch": 64
+                "batch": 64,
+                "neg_samples_ratio": 2
             }
         )
 

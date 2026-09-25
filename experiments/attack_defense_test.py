@@ -61,7 +61,7 @@ def test_attack_defense_small():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     fgsm_evasion_attack_config = ConfigPattern(
         _class_name="FGSM",
@@ -275,7 +275,7 @@ def test_attack_defense():
     # data.x = data.x.float()
     gnn_model_manager.gnn.to(my_device)
     data = data.to(my_device)
-    gen_dataset.data.to(my_device)
+    gen_dataset.to(my_device)
 
     # poison_attack_config = ConfigPattern(
     #     _class_name="RandomPoisonAttack",
@@ -1121,7 +1121,7 @@ def test_pgd():
         LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
     )
     dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    dataset.dataset.data.to(my_device)
+    dataset.dataset.to(my_device)
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
 
@@ -1321,7 +1321,7 @@ def test_pgd_structure():
         LibPTGDataset.default_dataset_var_config.clone_with({"task": Task.GRAPH_CLASSIFICATION})
     )
     dataset.train_test_split(percent_train_class=0.6, percent_test_class=0.4)
-    dataset.dataset.data.to(my_device)
+    dataset.dataset.to(my_device)
 
     model = model_configs_zoo(dataset=dataset, model_name='gin_gin_gin_lin_lin_con')
 
