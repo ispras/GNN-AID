@@ -57,8 +57,11 @@ class QAttacker(EvasionAttacker):
             rewiring = self.population[i]
             adj_list = get_adj_list(dataset)
             for n in rewiring.keys():
-                adj_list[n] = list(
-                    set(adj_list[n]).union({int(rewiring[n]['add'])}).difference({int(rewiring[n]['del'])}))
+                add_node = int(rewiring[n]['add'].item())
+                del_node = int(rewiring[n]['del'].item())
+
+                adj_list[n] = list(set(adj_list[n]).union({add_node}).difference({del_node}))
+
             dataset.edge_index = from_adj_list(adj_list)
 
             # Get labels from black-box
